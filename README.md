@@ -30,6 +30,8 @@
 10. [إطار الذكاء الاصطناعي](docs/18_AI_Framework_Qarar_Arabic.md)
 11. [مواصفات API](docs/19_API_Specification_Qarar_Arabic.md)
 12. [خارطة التنفيذ](docs/21_Implementation_Roadmap_Qarar_Arabic.md)
+13. [وثيقة حالات الاستخدام](docs/22_Use_Cases_Qarar_Arabic.md)
+14. [وثيقة قصص المستخدم ومعايير القبول](docs/23_User_Stories_And_Acceptance_Criteria_Qarar_Arabic.md)
 
 ---
 
@@ -77,6 +79,8 @@
 ### 7. التخطيط والتنفيذ
 
 - [21 - خارطة التنفيذ](docs/21_Implementation_Roadmap_Qarar_Arabic.md)
+- [22 - وثيقة حالات الاستخدام](docs/22_Use_Cases_Qarar_Arabic.md)
+- [23 - وثيقة قصص المستخدم ومعايير القبول](docs/23_User_Stories_And_Acceptance_Criteria_Qarar_Arabic.md)
 
 ---
 
@@ -89,6 +93,8 @@
 - إذا أردت فهم التقارير والقيمة التحليلية، راجع [إطار التقارير](docs/11_Reporting_Framework_Qarar_Arabic.md).
 - إذا أردت فهم الاستخدام الحالي للذكاء الاصطناعي، راجع [إطار الذكاء الاصطناعي](docs/18_AI_Framework_Qarar_Arabic.md).
 - إذا أردت الانتقال نحو التنفيذ التقني، راجع [معمارية SaaS](docs/17_SaaS_Architecture_Qarar_Arabic.md) و[API Specification](docs/19_API_Specification_Qarar_Arabic.md) و[خارطة التنفيذ](docs/21_Implementation_Roadmap_Qarar_Arabic.md).
+- إذا أردت فهم تشغيل النظام كسيناريوهات فعلية من البداية إلى النهاية، راجع [وثيقة حالات الاستخدام](docs/22_Use_Cases_Qarar_Arabic.md).
+- إذا أردت تحويل التحليل إلى مادة تنفيذية واختبارية، راجع [وثيقة قصص المستخدم ومعايير القبول](docs/23_User_Stories_And_Acceptance_Criteria_Qarar_Arabic.md).
 
 ---
 
