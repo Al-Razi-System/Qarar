@@ -32,6 +32,13 @@
 12. [خارطة التنفيذ](docs/21_Implementation_Roadmap_Qarar_Arabic.md)
 13. [وثيقة حالات الاستخدام](docs/22_Use_Cases_Qarar_Arabic.md)
 14. [وثيقة قصص المستخدم ومعايير القبول](docs/23_User_Stories_And_Acceptance_Criteria_Qarar_Arabic.md)
+15. [وثيقة Product Backlog](docs/24_Product_Backlog_Qarar_Arabic.md)
+16. [وثيقة Release Planning and Sprint Structure](docs/25_Release_Planning_And_Sprint_Structure_Qarar_Arabic.md)
+17. [وثيقة System Modules and Service Decomposition](docs/26_System_Modules_And_Service_Decomposition_Qarar_Arabic.md)
+18. [وثيقة Data Flow and Integration Scenarios](docs/27_Data_Flow_And_Integration_Scenarios_Qarar_Arabic.md)
+19. [وثيقة Deployment Environment and DevOps Model](docs/28_Deployment_Environment_And_DevOps_Model_Qarar_Arabic.md)
+20. [وثيقة Testing and Quality Assurance Strategy](docs/29_Testing_And_Quality_Assurance_Strategy_Qarar_Arabic.md)
+21. [وثيقة GitHub Project and Scrumban Operating Model](docs/30_GitHub_Project_And_Scrumban_Operating_Model_Qarar_Arabic.md)
 
 ---
 
@@ -81,6 +88,23 @@
 - [21 - خارطة التنفيذ](docs/21_Implementation_Roadmap_Qarar_Arabic.md)
 - [22 - وثيقة حالات الاستخدام](docs/22_Use_Cases_Qarar_Arabic.md)
 - [23 - وثيقة قصص المستخدم ومعايير القبول](docs/23_User_Stories_And_Acceptance_Criteria_Qarar_Arabic.md)
+- [24 - وثيقة Product Backlog](docs/24_Product_Backlog_Qarar_Arabic.md)
+- [25 - وثيقة Release Planning and Sprint Structure](docs/25_Release_Planning_And_Sprint_Structure_Qarar_Arabic.md)
+- [26 - وثيقة System Modules and Service Decomposition](docs/26_System_Modules_And_Service_Decomposition_Qarar_Arabic.md)
+- [27 - وثيقة Data Flow and Integration Scenarios](docs/27_Data_Flow_And_Integration_Scenarios_Qarar_Arabic.md)
+- [28 - وثيقة Deployment Environment and DevOps Model](docs/28_Deployment_Environment_And_DevOps_Model_Qarar_Arabic.md)
+- [29 - وثيقة Testing and Quality Assurance Strategy](docs/29_Testing_And_Quality_Assurance_Strategy_Qarar_Arabic.md)
+- [30 - وثيقة GitHub Project and Scrumban Operating Model](docs/30_GitHub_Project_And_Scrumban_Operating_Model_Qarar_Arabic.md)
+- [دليل GitFlow المبسط](docs/gitflow-qarar.md)
+- [إعدادات GitHub Project التنفيذية](docs/github-project-config-qarar.md)
+- [وثيقة Initial Issues for Release 0](docs/31_Initial_Issues_Release_0_Qarar_Arabic.md)
+- [وثيقة Initial Issues for Sprint 01](docs/32_Initial_Issues_Sprint_01_Qarar_Arabic.md)
+- [وثيقة Initial Issues for Sprint 02](docs/33_Initial_Issues_Sprint_02_Qarar_Arabic.md)
+- [وثيقة Initial Issues for Sprint 03](docs/34_Initial_Issues_Sprint_03_Qarar_Arabic.md)
+- [وثيقة Initial Issues for Sprint 04](docs/35_Initial_Issues_Sprint_04_Qarar_Arabic.md)
+- [وثيقة Initial Issues for Sprint 05](docs/36_Initial_Issues_Sprint_05_Qarar_Arabic.md)
+- [وثيقة Initial Issues for Sprint 06](docs/37_Initial_Issues_Sprint_06_Qarar_Arabic.md)
+- [وثيقة Initial Issues for Wave 07 Hardening](docs/38_Initial_Issues_Wave_07_Hardening_Qarar_Arabic.md)
 
 ---
 
@@ -94,7 +118,16 @@
 - إذا أردت فهم الاستخدام الحالي للذكاء الاصطناعي، راجع [إطار الذكاء الاصطناعي](docs/18_AI_Framework_Qarar_Arabic.md).
 - إذا أردت الانتقال نحو التنفيذ التقني، راجع [معمارية SaaS](docs/17_SaaS_Architecture_Qarar_Arabic.md) و[API Specification](docs/19_API_Specification_Qarar_Arabic.md) و[خارطة التنفيذ](docs/21_Implementation_Roadmap_Qarar_Arabic.md).
 - إذا أردت فهم تشغيل النظام كسيناريوهات فعلية من البداية إلى النهاية، راجع [وثيقة حالات الاستخدام](docs/22_Use_Cases_Qarar_Arabic.md).
-- إذا أردت تحويل التحليل إلى مادة تنفيذية واختبارية، راجع [وثيقة قصص المستخدم ومعايير القبول](docs/23_User_Stories_And_Acceptance_Criteria_Qarar_Arabic.md).
+- إذا أردت تحويل القصص إلى خطة تنفيذ فعلية مرتبة حسب الأولوية والتبعيات والنطاق، راجع [وثيقة Product Backlog](docs/24_Product_Backlog_Qarar_Arabic.md).
+- إذا أردت توزيع الـ Backlog على إصدارات وموجات تسليم مع افتراضات تنفيذ واقعية، راجع [وثيقة Release Planning and Sprint Structure](docs/25_Release_Planning_And_Sprint_Structure_Qarar_Arabic.md).
+- إذا أردت فهم كيف ستترجم هذه الحزمة إلى وحدات نظام وحدود ملكية وخدمات قابلة للتوسع لاحقاً، راجع [وثيقة System Modules and Service Decomposition](docs/26_System_Modules_And_Service_Decomposition_Qarar_Arabic.md).
+- إذا أردت فهم كيف تتحرك البيانات والأحداث بين الوحدات والتكاملات في السيناريوهات التشغيلية الأساسية، راجع [وثيقة Data Flow and Integration Scenarios](docs/27_Data_Flow_And_Integration_Scenarios_Qarar_Arabic.md).
+- إذا أردت فهم نموذج البيئات والنشر والمراقبة والتشغيل و`DevOps` للمنصة، راجع [وثيقة Deployment Environment and DevOps Model](docs/28_Deployment_Environment_And_DevOps_Model_Qarar_Arabic.md).
+- إذا أردت فهم استراتيجية الاختبارات والجودة وقبول الإصدارات قبل الإطلاق، راجع [وثيقة Testing and Quality Assurance Strategy](docs/29_Testing_And_Quality_Assurance_Strategy_Qarar_Arabic.md).
+- إذا أردت فهم كيف سيدار التنفيذ اليومي فعلياً عبر `GitHub Projects` وبمنهجية `Scrumban`، راجع [وثيقة GitHub Project and Scrumban Operating Model](docs/30_GitHub_Project_And_Scrumban_Operating_Model_Qarar_Arabic.md).
+- إذا أردت مرجعاً تنفيذياً سريعاً لإدارة الفروع والدمج و`Pull Requests`، راجع [دليل GitFlow المبسط](docs/gitflow-qarar.md).
+- إذا أردت ملفاً عملياً مختصراً لإعداد حالات وحقول وقيم GitHub Project، راجع [إعدادات GitHub Project التنفيذية](docs/github-project-config-qarar.md).
+- إذا أردت حزمة Issues تأسيسية جاهزة بصياغة تشغيلية موحدة، راجع [وثيقة Initial Issues for Release 0](docs/31_Initial_Issues_Release_0_Qarar_Arabic.md).
 
 ---
 
