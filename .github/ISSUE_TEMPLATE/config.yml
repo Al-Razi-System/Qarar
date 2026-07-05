@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Qarar Documentation Index
+    url: https://github.com/Al-Razi-System/Qarar/blob/main/README.md
+    about: Start from the main documentation index before opening a new item.
