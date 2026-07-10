@@ -333,6 +333,99 @@ as $$
   ), false);
 $$;
 
+create or replace function public.bootstrap_current_user_profile(
+  p_organization_code text,
+  p_full_name_ar text,
+  p_full_name_en text default null,
+  p_employee_no text default null,
+  p_mobile text default null,
+  p_job_title text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_auth_user_id uuid := auth.uid();
+  v_email text := nullif(auth.jwt() ->> 'email', '');
+  v_organization_id uuid;
+  v_existing_organization_id uuid;
+begin
+  if v_auth_user_id is null then
+    raise exception 'bootstrap_current_user_profile requires an authenticated user';
+  end if;
+
+  if p_organization_code is null or btrim(p_organization_code) = '' then
+    raise exception 'organization code is required';
+  end if;
+
+  if p_full_name_ar is null or btrim(p_full_name_ar) = '' then
+    raise exception 'Arabic full name is required';
+  end if;
+
+  if v_email is null then
+    raise exception 'authenticated user email claim is required';
+  end if;
+
+  select id
+  into v_organization_id
+  from public.organizations
+  where code = p_organization_code
+    and status = 'active';
+
+  if v_organization_id is null then
+    raise exception 'active organization not found for code %', p_organization_code;
+  end if;
+
+  select organization_id
+  into v_existing_organization_id
+  from public.users
+  where id = v_auth_user_id;
+
+  if v_existing_organization_id = v_organization_id then
+    return v_auth_user_id;
+  elsif v_existing_organization_id is not null then
+    raise exception 'authenticated user already has an application profile in another organization';
+  end if;
+
+  if exists (
+    select 1
+    from public.users
+    where organization_id = v_organization_id
+  ) then
+    raise exception 'first user bootstrap is already completed for organization %', p_organization_code;
+  end if;
+
+  insert into public.users (
+    id,
+    organization_id,
+    employee_no,
+    full_name_ar,
+    full_name_en,
+    email,
+    mobile,
+    job_title,
+    status,
+    is_system_admin
+  )
+  values (
+    v_auth_user_id,
+    v_organization_id,
+    p_employee_no,
+    btrim(p_full_name_ar),
+    nullif(btrim(coalesce(p_full_name_en, '')), ''),
+    lower(v_email),
+    nullif(btrim(coalesce(p_mobile, '')), ''),
+    nullif(btrim(coalesce(p_job_title, '')), ''),
+    'active',
+    true
+  );
+
+  return v_auth_user_id;
+end;
+$$;
+
 grant usage on schema public to authenticated;
 grant execute on function public.current_app_user_id() to authenticated;
 grant execute on function public.current_organization_id() to authenticated;
@@ -343,6 +436,7 @@ grant execute on function public.has_unit_role_code(uuid, text[]) to authenticat
 grant execute on function public.is_user_in_current_organization(uuid) to authenticated;
 grant execute on function public.is_unit_in_current_organization(uuid) to authenticated;
 grant execute on function public.is_topic_category_in_current_organization(uuid) to authenticated;
+grant execute on function public.bootstrap_current_user_profile(text, text, text, text, text, text) to authenticated;
 
 alter table public.organizations enable row level security;
 alter table public.users enable row level security;

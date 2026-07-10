@@ -34,11 +34,36 @@ The local config currently starts the database, API gateway, Auth, Realtime, and
 
 Re-enable these services in `supabase/config.toml` when a task needs them.
 
+## First User Bootstrap
+
+`supabase/seed.sql` intentionally creates only reference data. It does not create `auth.users` rows.
+
+After creating the first account through Supabase Auth, call the bootstrap RPC as that authenticated user:
+
+```sql
+select public.bootstrap_current_user_profile(
+  p_organization_code => 'qarar-demo',
+  p_full_name_ar => 'مسؤول النظام'
+);
+```
+
+This function:
+
+- requires `auth.uid()`;
+- requires an authenticated email claim;
+- creates a matching `public.users` profile for the current Auth user;
+- marks the first user in the organization as `is_system_admin = true`;
+- returns the existing profile if the same user already bootstrapped the same organization;
+- rejects any attempt after the organization already has a user.
+
+Later user provisioning should be implemented through an explicit admin flow, not through seed data.
+
 ## Design Notes
 
 - `auth.users` remains the authentication source. `public.users` stores the Qarar application profile and organization context.
 - Every operational table added here has `organization_id` to support tenant isolation.
 - Cross-table references that carry tenant-sensitive data use composite `(id, organization_id)` constraints to prevent records from pointing to users, roles, units, categories, or topics in another organization.
+- First-user bootstrap is handled by `public.bootstrap_current_user_profile(...)`; it is limited to the first profile in an existing organization.
 - RLS is enabled on all created tables.
 - No delete policies are defined for sensitive operational tables.
 - Audit logs are append-only for authenticated users and readable only by system/governance/audit roles.
@@ -54,4 +79,6 @@ Validated locally with Supabase CLI `2.109.1`:
 - Public schema contains 10 baseline tables.
 - Public schema contains 25 RLS policies.
 - Public schema contains composite foreign keys that enforce tenant consistency on `memberships`, `topics`, `topic_status_history`, and `audit_logs`.
+- Public schema contains first-user bootstrap RPC `bootstrap_current_user_profile`.
+- First-user bootstrap RPC was tested with a local `auth.users` record and produced one `public.users` system-admin profile.
 - Seed data contains 1 organization, 7 roles, and 3 topic categories.
