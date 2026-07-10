@@ -106,6 +106,7 @@
 - [وثيقة Initial Issues for Sprint 06](docs/37_Initial_Issues_Sprint_06_Qarar_Arabic.md)
 - [وثيقة Initial Issues for Wave 07 Hardening](docs/38_Initial_Issues_Wave_07_Hardening_Qarar_Arabic.md)
 - [وثيقة GitHub Project Views Configuration](docs/39_GitHub_Project_Views_Configuration_Qarar_Arabic.md)
+- [وثيقة Execution Timeline and Team Allocation](docs/40_Execution_Timeline_And_Team_Allocation_Qarar_Arabic.md)
 
 ---
 
