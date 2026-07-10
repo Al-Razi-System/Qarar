@@ -38,6 +38,7 @@ Re-enable these services in `supabase/config.toml` when a task needs them.
 
 - `auth.users` remains the authentication source. `public.users` stores the Qarar application profile and organization context.
 - Every operational table added here has `organization_id` to support tenant isolation.
+- Cross-table references that carry tenant-sensitive data use composite `(id, organization_id)` constraints to prevent records from pointing to users, roles, units, categories, or topics in another organization.
 - RLS is enabled on all created tables.
 - No delete policies are defined for sensitive operational tables.
 - Audit logs are append-only for authenticated users and readable only by system/governance/audit roles.
@@ -52,4 +53,5 @@ Validated locally with Supabase CLI `2.109.1`:
 - `supabase/seed.sql`
 - Public schema contains 10 baseline tables.
 - Public schema contains 25 RLS policies.
+- Public schema contains composite foreign keys that enforce tenant consistency on `memberships`, `topics`, `topic_status_history`, and `audit_logs`.
 - Seed data contains 1 organization, 7 roles, and 3 topic categories.

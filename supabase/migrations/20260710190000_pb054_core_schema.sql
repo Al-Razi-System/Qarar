@@ -38,6 +38,7 @@ create table public.users (
   is_system_admin boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  unique (id, organization_id),
   unique (organization_id, email),
   unique (organization_id, employee_no)
 );
@@ -52,6 +53,7 @@ create table public.governance_unit_types (
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  unique (id, organization_id),
   unique (organization_id, code)
 );
 
@@ -67,7 +69,10 @@ create table public.governance_units (
   status text not null default 'active' check (status in ('active', 'inactive', 'archived')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (organization_id, code)
+  unique (id, organization_id),
+  unique (organization_id, code),
+  foreign key (unit_type_id, organization_id) references public.governance_unit_types(id, organization_id),
+  foreign key (parent_unit_id, organization_id) references public.governance_units(id, organization_id)
 );
 
 create table public.roles (
@@ -81,6 +86,7 @@ create table public.roles (
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  unique (id, organization_id),
   unique (organization_id, code)
 );
 
@@ -97,7 +103,10 @@ create table public.memberships (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (end_date is null or end_date >= start_date),
-  unique (organization_id, user_id, governance_unit_id, role_id, start_date)
+  unique (organization_id, user_id, governance_unit_id, role_id, start_date),
+  foreign key (user_id, organization_id) references public.users(id, organization_id),
+  foreign key (governance_unit_id, organization_id) references public.governance_units(id, organization_id),
+  foreign key (role_id, organization_id) references public.roles(id, organization_id)
 );
 
 create table public.topic_categories (
@@ -110,6 +119,7 @@ create table public.topic_categories (
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  unique (id, organization_id),
   unique (organization_id, code)
 );
 
@@ -129,7 +139,11 @@ create table public.topics (
   submitted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (organization_id, topic_no)
+  unique (id, organization_id),
+  unique (organization_id, topic_no),
+  foreign key (category_id, organization_id) references public.topic_categories(id, organization_id),
+  foreign key (current_unit_id, organization_id) references public.governance_units(id, organization_id),
+  foreign key (submitted_by_user_id, organization_id) references public.users(id, organization_id)
 );
 
 create table public.topic_status_history (
@@ -140,7 +154,9 @@ create table public.topic_status_history (
   to_status text not null,
   changed_by_user_id uuid references public.users(id) on delete set null,
   changed_at timestamptz not null default now(),
-  change_reason text
+  change_reason text,
+  foreign key (topic_id, organization_id) references public.topics(id, organization_id),
+  foreign key (changed_by_user_id, organization_id) references public.users(id, organization_id)
 );
 
 create table public.audit_logs (
@@ -154,7 +170,8 @@ create table public.audit_logs (
   previous_data jsonb,
   new_data jsonb,
   metadata jsonb not null default '{}'::jsonb,
-  occurred_at timestamptz not null default now()
+  occurred_at timestamptz not null default now(),
+  foreign key (actor_user_id, organization_id) references public.users(id, organization_id)
 );
 
 create index idx_users_organization_id on public.users(organization_id);
@@ -271,6 +288,51 @@ as $$
   ), false);
 $$;
 
+create or replace function public.is_user_in_current_organization(target_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(exists (
+    select 1
+    from public.users u
+    where u.id = target_user_id
+      and u.organization_id = public.current_organization_id()
+  ), false);
+$$;
+
+create or replace function public.is_unit_in_current_organization(target_unit_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(exists (
+    select 1
+    from public.governance_units gu
+    where gu.id = target_unit_id
+      and gu.organization_id = public.current_organization_id()
+  ), false);
+$$;
+
+create or replace function public.is_topic_category_in_current_organization(target_category_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(exists (
+    select 1
+    from public.topic_categories tc
+    where tc.id = target_category_id
+      and tc.organization_id = public.current_organization_id()
+  ), false);
+$$;
+
 grant usage on schema public to authenticated;
 grant execute on function public.current_app_user_id() to authenticated;
 grant execute on function public.current_organization_id() to authenticated;
@@ -278,6 +340,9 @@ grant execute on function public.is_system_admin() to authenticated;
 grant execute on function public.has_role_code(text[]) to authenticated;
 grant execute on function public.has_active_membership(uuid) to authenticated;
 grant execute on function public.has_unit_role_code(uuid, text[]) to authenticated;
+grant execute on function public.is_user_in_current_organization(uuid) to authenticated;
+grant execute on function public.is_unit_in_current_organization(uuid) to authenticated;
+grant execute on function public.is_topic_category_in_current_organization(uuid) to authenticated;
 
 alter table public.organizations enable row level security;
 alter table public.users enable row level security;
@@ -417,6 +482,9 @@ to authenticated
 with check (
   organization_id = public.current_organization_id()
   and submitted_by_user_id = auth.uid()
+  and public.is_user_in_current_organization(submitted_by_user_id)
+  and (category_id is null or public.is_topic_category_in_current_organization(category_id))
+  and (current_unit_id is null or public.is_unit_in_current_organization(current_unit_id))
 );
 
 create policy "review roles can update scoped topics"
@@ -430,7 +498,12 @@ using (
     or (current_unit_id is not null and public.has_unit_role_code(current_unit_id, array['council_chair', 'council_rapporteur']))
   )
 )
-with check (organization_id = public.current_organization_id());
+with check (
+  organization_id = public.current_organization_id()
+  and public.is_user_in_current_organization(submitted_by_user_id)
+  and (category_id is null or public.is_topic_category_in_current_organization(category_id))
+  and (current_unit_id is null or public.is_unit_in_current_organization(current_unit_id))
+);
 
 create policy "topic history follows topic visibility"
 on public.topic_status_history for select
