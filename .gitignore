@@ -1,0 +1,12 @@
+# Supabase local development
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+supabase/.env.*
+!supabase/.env.example
+
+# General local files
+node_modules/
+.env
+.env.*
+!.env.example
