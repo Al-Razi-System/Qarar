@@ -17,6 +17,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$SprintOption,
 
+    [Parameter(Mandatory = $true)]
+    [string]$ModuleDefault,
+
     [switch]$SkipExistingProjectItems
 )
 
@@ -54,18 +57,27 @@ function Get-OptionId {
 function Get-ModuleValue {
     param(
         [string]$BacklogId,
-        [string]$Area
+        [string]$Area,
+        [string]$DefaultModule
     )
 
     if ($Area -eq "Security") {
         return "Security"
     }
 
+    if ($Area -eq "Reporting") {
+        return "Reporting"
+    }
+
+    if ($Area -eq "AI") {
+        return "Minutes"
+    }
+
     if ($BacklogId -eq "PB-043") {
         return "Governance"
     }
 
-    return "Platform"
+    return $DefaultModule
 }
 
 function Get-RiskValue {
@@ -74,6 +86,10 @@ function Get-RiskValue {
     )
 
     if ($Area -eq "Security") {
+        return "High"
+    }
+
+    if ($Area -eq "AI") {
         return "High"
     }
 
@@ -153,7 +169,7 @@ $acceptance
     }
 
     $itemId = $item.id
-    $module = Get-ModuleValue -BacklogId $backlogId -Area $area
+    $module = Get-ModuleValue -BacklogId $backlogId -Area $area -DefaultModule $ModuleDefault
     $risk = Get-RiskValue -Area $area
 
     gh project item-edit --id $itemId --project-id $ProjectId --field-id $fieldMap["Priority"].id --single-select-option-id (Get-OptionId -FieldName "Priority" -OptionName $priority) | Out-Null
