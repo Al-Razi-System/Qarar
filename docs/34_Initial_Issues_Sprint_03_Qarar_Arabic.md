@@ -61,6 +61,7 @@
 ## Issue 01
 
 **Title:** `PB-015: تنفيذ فتح الاجتماع وتسجيل الحضور`  
+**Feature Request:** `FR-03-01
 **Backlog ID:** `PB-015`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -100,6 +101,7 @@
 ## Issue 02
 
 **Title:** `PB-016: تنفيذ احتساب النصاب وفق القاعدة المعتمدة`  
+**Feature Request:** `FR-03-02
 **Backlog ID:** `PB-016`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -138,6 +140,7 @@
 ## Issue 03
 
 **Title:** `PB-017: تطبيق نتائج عدم تحقق النصاب من تعليق أو تأجيل`  
+**Feature Request:** `FR-03-03
 **Backlog ID:** `PB-017`  
 **Priority:** `Medium`  
 **Owner:** `Supabase / Integration`  
@@ -176,6 +179,7 @@
 ## Issue 04
 
 **Title:** `PB-018: تنفيذ فتح التصويت على بند أو قرار`  
+**Feature Request:** `FR-03-04
 **Backlog ID:** `PB-018`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -214,6 +218,7 @@
 ## Issue 05
 
 **Title:** `PB-019: تنفيذ تسجيل صوت العضو والتحقق من أهليته`  
+**Feature Request:** `FR-03-05
 **Backlog ID:** `PB-019`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -252,6 +257,7 @@
 ## Issue 06
 
 **Title:** `PB-020: تنفيذ احتساب النتيجة النهائية للتصويت`  
+**Feature Request:** `FR-03-06
 **Backlog ID:** `PB-020`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  

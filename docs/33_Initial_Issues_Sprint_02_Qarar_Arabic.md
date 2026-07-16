@@ -64,6 +64,7 @@
 ## Issue 01
 
 **Title:** `PB-006: تنفيذ إحالة الموضوع بين الوحدات الحوكمية`  
+**Feature Request:** `FR-02-01
 **Backlog ID:** `PB-006`  
 **Priority:** `Medium`  
 **Owner:** `Supabase / Integration`  
@@ -102,6 +103,7 @@
 ## Issue 02
 
 **Title:** `PB-008: بناء سجل انتقالات الموضوع داخل المسار`  
+**Feature Request:** `FR-02-02
 **Backlog ID:** `PB-008`  
 **Priority:** `Medium`  
 **Owner:** `Supabase / Integration`  
@@ -140,6 +142,7 @@
 ## Issue 03
 
 **Title:** `PB-009: بناء إنشاء اجتماع جديد بالبيانات الأساسية`  
+**Feature Request:** `FR-02-03
 **Backlog ID:** `PB-009`  
 **Priority:** `High`  
 **Owner:** `Flutter`  
@@ -179,6 +182,7 @@
 ## Issue 04
 
 **Title:** `PB-010: تنفيذ حالات الاجتماع الأساسية وانتقالاتها`  
+**Feature Request:** `FR-02-04
 **Backlog ID:** `PB-010`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -217,6 +221,7 @@
 ## Issue 05
 
 **Title:** `PB-011: بناء قائمة الاجتماعات والبحث والتصفية الأساسية`  
+**Feature Request:** `FR-02-05
 **Backlog ID:** `PB-011`  
 **Priority:** `Medium`  
 **Owner:** `Flutter`  
@@ -255,6 +260,7 @@
 ## Issue 06
 
 **Title:** `PB-012: تنفيذ إدراج موضوع مؤهل في جدول الأعمال`  
+**Feature Request:** `FR-02-06
 **Backlog ID:** `PB-012`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -293,6 +299,7 @@
 ## Issue 07
 
 **Title:** `PB-013: دعم ترتيب بنود جدول الأعمال`  
+**Feature Request:** `FR-02-07
 **Backlog ID:** `PB-013`  
 **Priority:** `Medium`  
 **Owner:** `Flutter`  
@@ -331,6 +338,7 @@
 ## Issue 08
 
 **Title:** `PB-014: منع إدراج موضوع غير مؤهل إلا بإجراء استثنائي مخول`  
+**Feature Request:** `FR-02-08
 **Backlog ID:** `PB-014`  
 **Priority:** `Medium`  
 **Owner:** `Supabase / Integration`  

@@ -67,6 +67,7 @@
 ## Issue 01
 
 **Title:** `PB-030: إنشاء قرار وربطه بالموضوع والاجتماع`  
+**Feature Request:** `FR-05-01
 **Backlog ID:** `PB-030`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -106,6 +107,7 @@
 ## Issue 02
 
 **Title:** `PB-031: تنفيذ دورة حالات القرار الأساسية`  
+**Feature Request:** `FR-05-02
 **Backlog ID:** `PB-031`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -144,6 +146,7 @@
 ## Issue 03
 
 **Title:** `PB-033: تنفيذ إحالة القرار للتنفيذ`  
+**Feature Request:** `FR-05-03
 **Backlog ID:** `PB-033`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -182,6 +185,7 @@
 ## Issue 04
 
 **Title:** `PB-034: إنشاء تكليف تنفيذي مرتبط بالقرار`  
+**Feature Request:** `FR-05-04
 **Backlog ID:** `PB-034`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -220,6 +224,7 @@
 ## Issue 05
 
 **Title:** `PB-035: تنفيذ تحديث حالة التكليف ونسبة الإنجاز`  
+**Feature Request:** `FR-05-05
 **Backlog ID:** `PB-035`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -258,6 +263,7 @@
 ## Issue 06
 
 **Title:** `PB-036: تحويل القرار إلى قيد المتابعة عند بدء التنفيذ`  
+**Feature Request:** `FR-05-06
 **Backlog ID:** `PB-036`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  

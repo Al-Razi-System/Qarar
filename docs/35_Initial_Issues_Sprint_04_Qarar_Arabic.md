@@ -71,6 +71,7 @@
 ## Issue 01
 
 **Title:** `PB-022: إنشاء كيان المحضر وربطه بالاجتماع`  
+**Feature Request:** `FR-04-01
 **Backlog ID:** `PB-022`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -109,6 +110,7 @@
 ## Issue 02
 
 **Title:** `PB-050: تكامل خدمة الذكاء الاصطناعي الخاصة بمسودة المحضر`  
+**Feature Request:** `FR-04-02
 **Backlog ID:** `PB-050`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -147,6 +149,7 @@
 ## Issue 03
 
 **Title:** `PB-023: تنفيذ توليد مسودة المحضر بالذكاء الاصطناعي`  
+**Feature Request:** `FR-04-03
 **Backlog ID:** `PB-023`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -185,6 +188,7 @@
 ## Issue 04
 
 **Title:** `PB-024: بناء واجهة مراجعة وتحرير المحضر`  
+**Feature Request:** `FR-04-04
 **Backlog ID:** `PB-024`  
 **Priority:** `High`  
 **Owner:** `Flutter`  
@@ -223,6 +227,7 @@
 ## Issue 05
 
 **Title:** `PB-025: تنفيذ تمييز واضح بين المسودة المولدة والمحضر المعتمد`  
+**Feature Request:** `FR-04-05
 **Backlog ID:** `PB-025`  
 **Priority:** `High`  
 **Owner:** `Flutter`  
@@ -261,6 +266,7 @@
 ## Issue 06
 
 **Title:** `PB-026: تنفيذ تحويل المحضر إلى جاهز للمصادقة`  
+**Feature Request:** `FR-04-06
 **Backlog ID:** `PB-026`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -299,6 +305,7 @@
 ## Issue 07
 
 **Title:** `PB-027: تنفيذ اعتماد المحضر وتسجيل المعتمدين`  
+**Feature Request:** `FR-04-07
 **Backlog ID:** `PB-027`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -337,6 +344,7 @@
 ## Issue 08
 
 **Title:** `PB-028: تنفيذ إغلاق الاجتماع بعد اكتمال المصادقة`  
+**Feature Request:** `FR-04-08
 **Backlog ID:** `PB-028`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  

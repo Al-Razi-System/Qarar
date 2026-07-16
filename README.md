@@ -105,6 +105,9 @@
 - [وثيقة Initial Issues for Sprint 05](docs/36_Initial_Issues_Sprint_05_Qarar_Arabic.md)
 - [وثيقة Initial Issues for Sprint 06](docs/37_Initial_Issues_Sprint_06_Qarar_Arabic.md)
 - [وثيقة Initial Issues for Wave 07 Hardening](docs/38_Initial_Issues_Wave_07_Hardening_Qarar_Arabic.md)
+- [طلبات الميزات التفصيلية - Sprint 00](docs/39_Feature_Requests_Sprint_00_Qarar_Arabic.md)
+- [طلبات الميزات التفصيلية - Sprint 01](docs/40_Feature_Requests_Sprint_01_Qarar_Arabic.md)
+- [سجل طلبات الميزات](docs/41_Feature_Request_Register_Qarar_Arabic.md)
 
 ---
 
