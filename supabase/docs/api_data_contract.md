@@ -1,14 +1,63 @@
 <div dir="rtl" style="text-align: right;">
 
 # Qarar API / Data Contract Specification
-**النسخة:** 1.0  
-**النطاق:** Sprint 01 إلى Sprint 05 (الموضوعات، الاجتماعات، المحاضر، القرارات، التكليفات)
+**النسخة:** 1.1  
+**النطاق:** Sprint 00 إلى Sprint 06 (المصادقة، الموضوعات، الاجتماعات، المحاضر، القرارات، التكليفات)
 
 هذا المستند يمثل العقد البياني (Data Contract) المعتمد بين واجهة المستخدم (Flutter) والخلفية (Supabase). يجب الاعتماد على الهياكل الموضحة هنا عند بناء واجهات التطبيق وإجراء الطلبات.
 
 ---
 
-## 1. نماذج 주제 (Topics) - Sprint 01
+## 1. نماذج المصادقة والمستخدمين (Sprint 00)
+
+### تسجيل الدخول / إنشاء حساب `Supabase Auth`
+يتم استخدام مكتبة `supabase-flutter` لإدارة جلسات المستخدم وتسجيل الدخول (OTP, Magic Link, أو Email/Password).
+```dart
+// تسجيل الدخول
+final AuthResponse res = await supabase.auth.signInWithPassword(
+  email: 'user@example.com',
+  password: 'password',
+);
+```
+
+### تهيئة ملف المستخدم لأول مرة (Profile Bootstrapping)
+بعد تسجيل الدخول لأول مرة، يجب استدعاء دالة `RPC` لربط المستخدم بمؤسسته وإنشاء ملفه في جدول `users`.
+**الدالة في Supabase:** `bootstrap_current_user_profile`
+
+```json
+{
+  "p_organization_code": "razisys",
+  "p_full_name_ar": "أحمد عبدالله",
+  "p_full_name_en": "Ahmed Abdullah",
+  "p_employee_no": "EMP-1001",
+  "p_mobile": "0500000000",
+  "p_job_title": "محلل نظم"
+}
+```
+**استدعاء Flutter:**
+```dart
+await supabase.rpc('bootstrap_current_user_profile', params: {
+  'p_organization_code': 'razisys',
+  'p_full_name_ar': 'أحمد عبدالله',
+});
+```
+
+### الاستعلام عن صلاحيات المستخدم الحالي (RBAC)
+يمكن للمطور قراءة ملف المستخدم مع الصلاحيات لمعرفة ما إذا كان الإداري أو لديه أدوار في اللجان.
+```dart
+final userProfile = await supabase
+  .from('users')
+  .select('*, memberships(*, roles(*), governance_units(*))')
+  .eq('id', supabase.auth.currentUser!.id)
+  .single();
+
+// للتحقق هل هو مدير نظام:
+bool isAdmin = userProfile['is_system_admin'] == true;
+```
+
+---
+
+## 2. نماذج الموضوعات (Topics) - Sprint 01
 
 ### إنشاء موضوع جديد `POST /rest/v1/topics`
 **الجدول في Supabase:** `topics`
@@ -31,7 +80,7 @@
 
 ---
 
-## 2. نماذج الاجتماعات (Meetings & Agenda) - Sprint 02 & 03
+## 3. نماذج الاجتماعات (Meetings & Agenda) - Sprint 02 & 03
 
 ### إنشاء اجتماع `POST /rest/v1/meetings`
 **الجدول:** `meetings`
@@ -94,7 +143,7 @@
 
 ---
 
-## 3. نماذج القرارات (Decisions) - Sprint 05
+## 4. نماذج القرارات (Decisions) - Sprint 05
 
 ### إصدار قرار جديد `POST /rest/v1/decisions`
 **الجدول:** `decisions`
@@ -116,7 +165,7 @@
 
 ---
 
-## 4. نماذج التنفيذ (Action Items) - Sprint 06
+## 5. نماذج التنفيذ (Action Items) - Sprint 06
 
 ### إنشاء تكليف تنفيذي `POST /rest/v1/action_items`
 **الجدول:** `action_items`
@@ -146,7 +195,7 @@
 
 ---
 
-## 5. نماذج المحاضر (Minutes) - Sprint 04
+## 6. نماذج المحاضر (Minutes) - Sprint 04
 
 ### حفظ المحضر (أو حفظ المسودة المولدة بالذكاء الاصطناعي) `POST /rest/v1/meeting_minutes`
 **الجدول:** `meeting_minutes`
@@ -164,7 +213,7 @@
 
 ---
 
-## 6. ملاحظات عامة حول الـ API
+## 7. ملاحظات عامة حول الـ API
 1. **الاسترجاع (Fetching):**
    - يمكن للواجهات الأمامية استرجاع البيانات باستخدام ميزات `Supabase Client` مثل:
      ```dart
