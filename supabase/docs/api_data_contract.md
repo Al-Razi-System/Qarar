@@ -290,3 +290,58 @@ bool isAdmin = userProfile['is_system_admin'] == true;
 }
 ```
 *ظ…ظ„ط§ط­ط¸ط©: ظٹطھظ… ط§ط³طھظ‡ط¯ط§ظپ ط§ظ„ظ€ `id` ط§ظ„ط®ط§طµ ط¨ط³ط¬ظ„ ط§ظ„ظ…طµط§ط¯ظ‚ط© ط§ظ„ظ…ظˆظ„ط¯ ط¢ظ„ظٹط§ظ‹. ط¹ظ†ط¯ظ…ط§ ظٹط¹طھظ…ط¯ ط¬ظ…ظٹط¹ ط§ظ„ط£ط´ط®ط§طµ ط§ظ„ظ…ط·ظ„ظˆط¨ظٹظ† ط­ط³ط¨ `minute_approval_rule` ط§ظ„ظ…ط­ط¶ط±طŒ ط³ظٹطھظ… ط¥ط؛ظ„ط§ظ‚ ط§ظ„ط§ط¬طھظ…ط§ط¹ طھظ„ظ‚ط§ط¦ظٹط§ظ‹.*
+
+## Sprint 05: Decisions & Execution
+
+### `GET /decisions`
+Retrieve decisions for a specific meeting, topic, or agenda item.
+- **Query Params:** `meeting_id`, `topic_id`, `decision_status`
+- **Response:**
+  ```json
+  [
+    {
+      "id": "uuid",
+      "decision_no": "text",
+      "decision_text": "text",
+      "decision_status": "draft | under_review | ready_for_approval | approved | sent_to_execution | under_follow_up | closed | cancelled | rejected",
+      "topic_id": "uuid",
+      "meeting_id": "uuid"
+    }
+  ]
+  ```
+
+### `PATCH /decisions/:id`
+Update a decision's text or state.
+- **Body:**
+  ```json
+  {
+    "decision_status": "approved",
+    "decision_text": "text"
+  }
+  ```
+
+### `POST /action_items`
+Create a new action item execution task (Decision status must be approved or later).
+- **Body:**
+  ```json
+  {
+    "action_no": "text",
+    "decision_id": "uuid",
+    "topic_id": "uuid",
+    "assigned_unit_id": "uuid (optional)",
+    "assigned_user_id": "uuid (optional)",
+    "title_ar": "text",
+    "description": "text",
+    "due_date": "date"
+  }
+  ```
+
+### `PATCH /action_items/:id`
+Update action item status and progress. When status is set to `in_progress`, the parent decision is automatically moved to `under_follow_up`.
+- **Body:**
+  ```json
+  {
+    "status": "new | in_progress | completed | overdue | cancelled | closed",
+    "progress_percent": "integer (0-100)"
+  }
+  ```
