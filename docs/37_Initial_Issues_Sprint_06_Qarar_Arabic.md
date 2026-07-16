@@ -67,6 +67,7 @@
 ## Issue 01
 
 **Title:** `PB-038: بناء لوحة مؤشرات تنفيذية أساسية`  
+**Feature Request:** `FR-06-01
 **Backlog ID:** `PB-038`  
 **Priority:** `High`  
 **Owner:** `Flutter`  
@@ -105,6 +106,7 @@
 ## Issue 02
 
 **Title:** `PB-039: تنفيذ تقارير تشغيلية أساسية للاجتماعات والقرارات`  
+**Feature Request:** `FR-06-02
 **Backlog ID:** `PB-039`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -143,6 +145,7 @@
 ## Issue 03
 
 **Title:** `PB-041: تنفيذ إرسال إشعار اعتماد أو مهمة جديدة`  
+**Feature Request:** `FR-06-03
 **Backlog ID:** `PB-041`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -181,6 +184,7 @@
 ## Issue 04
 
 **Title:** `PB-042: تنفيذ تنبيه التأخر وتصعيده`  
+**Feature Request:** `FR-06-04
 **Backlog ID:** `PB-042`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -219,6 +223,7 @@
 ## Issue 05
 
 **Title:** `PB-048: بناء واجهات API الأساسية للنواة التشغيلية`  
+**Feature Request:** `FR-06-05
 **Backlog ID:** `PB-048`  
 **Priority:** `High`  
 **Owner:** `Supabase / Integration`  
@@ -257,6 +262,7 @@
 ## Issue 06
 
 **Title:** `PB-051: تهيئة مراقبة الأخطاء والتشغيل والسجلات التشغيلية`  
+**Feature Request:** `FR-06-06
 **Backlog ID:** `PB-051`  
 **Priority:** `Medium`  
 **Owner:** `Supabase / Integration`  

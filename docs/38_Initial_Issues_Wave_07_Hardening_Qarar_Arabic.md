@@ -65,6 +65,7 @@
 ## Issue 01
 
 **Title:** `H-001: إغلاق العيوب الحرجة في المسارات الأساسية قبل الإطلاق`  
+**Feature Request:** `FR-07-01
 **Backlog Reference:** `Wave 07 Hardening`  
 **Priority:** `High`  
 **Owner:** `Project Lead`  
@@ -103,6 +104,7 @@
 ## Issue 02
 
 **Title:** `H-002: تنفيذ حزمة الانحدار والقبول على السلسلة التشغيلية الكاملة`  
+**Feature Request:** `FR-07-02
 **Backlog Reference:** `Wave 07 Hardening`  
 **Priority:** `High`  
 **Owner:** `QA`  
@@ -141,6 +143,7 @@
 ## Issue 03
 
 **Title:** `H-003: مراجعة الاتساق بين الحالات والصلاحيات والتقارير`  
+**Feature Request:** `FR-07-03
 **Backlog Reference:** `Wave 07 Hardening`  
 **Priority:** `High`  
 **Owner:** `Project Lead`  
@@ -179,6 +182,7 @@
 ## Issue 04
 
 **Title:** `H-004: تنفيذ تحسينات الأداء والتشغيل الحرجة`  
+**Feature Request:** `FR-07-04
 **Backlog Reference:** `Wave 07 Hardening`  
 **Priority:** `Medium`  
 **Owner:** `Supabase / Integration`  
@@ -217,6 +221,7 @@
 ## Issue 05
 
 **Title:** `H-005: تنفيذ تحسينات UX الضرورية قبل الإطلاق`  
+**Feature Request:** `FR-07-05
 **Backlog Reference:** `Wave 07 Hardening`  
 **Priority:** `Medium`  
 **Owner:** `Flutter`  
@@ -255,6 +260,7 @@
 ## Issue 06
 
 **Title:** `H-006: تنفيذ مراجعة الجاهزية النهائية للإصدار واتخاذ قرار الإطلاق`  
+**Feature Request:** `FR-07-06
 **Backlog Reference:** `Wave 07 Hardening`  
 **Priority:** `High`  
 **Owner:** `Project Lead`  
