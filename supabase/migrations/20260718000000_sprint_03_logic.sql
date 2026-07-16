@@ -88,6 +88,21 @@ begin
 end;
 $$ language plpgsql security definer;
 
+create or replace function public.on_attendance_change() returns trigger as $$
+begin
+  if TG_OP = 'DELETE' then
+    perform public.calculate_meeting_quorum(OLD.meeting_id);
+  else
+    perform public.calculate_meeting_quorum(NEW.meeting_id);
+  end if;
+  return null; -- After trigger
+end;
+$$ language plpgsql security definer;
+
+create trigger auto_calculate_quorum
+  after insert or update of attendance_status or delete on public.attendance_records
+  for each row execute function public.on_attendance_change();
+
 -- Update the guard to prevent 'waiting_for_minutes' if quorum is not met
 create or replace function public.guard_meeting_status_transitions() returns trigger as $$
 begin
