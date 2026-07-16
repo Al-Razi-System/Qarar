@@ -78,6 +78,19 @@ bool isAdmin = userProfile['is_system_admin'] == true;
 ```
 *ملاحظة: الـ `organization_id` يتم تحديده من خلال الـ RLS ولا يلزم تمريره إذا كان الـ Trigger أو הـ Default يعالجه، ولكن يفضل تمريره في واجهات الـ REST المباشرة أو الاعتماد على `current_organization_id()` كقيمة افتراضية.*
 
+### إحالة الموضوع لوحدة أخرى `POST /rest/v1/topic_referrals` (Sprint 02)
+**الجدول في Supabase:** `topic_referrals`
+
+```json
+{
+  "topic_id": "<uuid>",
+  "from_unit_id": "<uuid>",
+  "to_unit_id": "<uuid>",
+  "referred_by_user_id": "<uuid>",
+  "referral_reason": "للمناقشة في اللجنة الأكاديمية",
+  "status": "pending"
+}
+```
 ---
 
 ## 3. نماذج الاجتماعات (Meetings & Agenda) - Sprint 02 & 03
@@ -109,9 +122,12 @@ bool isAdmin = userProfile['is_system_admin'] == true;
   "meeting_id": "<uuid>",
   "topic_id": "<uuid>",
   "agenda_order": 1,
-  "agenda_status": "pending"
+  "agenda_status": "pending",
+  "is_exception": false,
+  "exception_reason": null
 }
 ```
+*ملاحظة: إذا كان الموضوع ليس في حالة `approved`، سيتم رفض الإدراج من قاعدة البيانات. لتجاوز ذلك يجب تمرير `is_exception: true` مع ذكر `exception_reason` (صلاحية خاصة لمدير النظام أو مدير الحوكمة).*
 
 ### إثبات الحضور `POST /rest/v1/attendance_records` أو `PATCH`
 **الجدول:** `attendance_records`
