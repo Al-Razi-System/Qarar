@@ -47,7 +47,7 @@ await supabase.rpc('bootstrap_current_user_profile', params: {
 ```dart
 final userProfile = await supabase
   .from('users')
-  .select('*, memberships(*, roles(*), governance_units(*))')
+  .select('*, memberships(*, roles(*), governance_units(*)))')
   .eq('id', supabase.auth.currentUser!.id)
   .single();
 
@@ -95,6 +95,22 @@ bool isAdmin = userProfile['is_system_admin'] == true;
 
 ## 3. نماذج الاجتماعات (Meetings & Agenda) - Sprint 02 & 03
 
+### هيكل وحدات الحوكمة `governance_units`
+- `level_no` (integer, default 1)
+- `status` (text: 'active', 'inactive', 'archived')
+- `quorum_percentage` (integer: 1-100, default 51) - **[Sprint 03] نسبة النصاب المطلوبة لانعقاد الاجتماع**
+- `minute_approval_rule` (text: 'chair_and_rapporteur', 'all_present_members') - **[Sprint 04] قاعدة المصادقة على المحضر**
+- `created_at`, `updated_at` (timestamptz)
+
+```json
+{
+  "code": "committee_1",
+  "name_ar": "اللجنة الأكاديمية",
+  "quorum_percentage": 51,
+  "minute_approval_rule": "chair_and_rapporteur"
+}
+```
+
 ### إنشاء اجتماع `POST /rest/v1/meetings`
 **الجدول:** `meetings`
 
@@ -124,9 +140,12 @@ bool isAdmin = userProfile['is_system_admin'] == true;
   "agenda_order": 1,
   "agenda_status": "pending",
   "is_exception": false,
-  "exception_reason": null
+  "exception_reason": null,
+  "voting_status": "not_started",
+  "voting_result": "pending"
 }
 ```
+*ملاحظة: حقول `voting_status` و `voting_result` تمت إضافتها في Sprint 03 لإدارة التصويت وحفظ نتيجته المجمدة.*
 *ملاحظة: إذا كان الموضوع ليس في حالة `approved`، سيتم رفض الإدراج من قاعدة البيانات. لتجاوز ذلك يجب تمرير `is_exception: true` مع ذكر `exception_reason` (صلاحية خاصة لمدير النظام أو مدير الحوكمة).*
 
 ### إثبات الحضور `POST /rest/v1/attendance_records` أو `PATCH`
@@ -241,3 +260,33 @@ bool isAdmin = userProfile['is_system_admin'] == true;
    - يرجى من الـ Frontend التأكد من عدم عرض أزرار (مثلاً: التصويت) إلا إذا كانت حالة الاجتماع أو البند تسمح بذلك، علماً بأن الـ Backend محمي بالـ RLS ولن يقبل تعديلات في سياق خاطئ.
 
 </div>
+
+
+---
+
+## 4. ظ†ظ…ط§ط°ط¬ ط§ظ„ظ…ط­ط§ط¶ط± ظˆط§ظ„طھظˆظ‚ظٹط¹ط§طھ (Sprint 04)
+
+### ط¥ظ†ط´ط§ط، ط£ظˆ طھط¹ط¯ظٹظ„ ظ…ط³ظˆط¯ط© ط§ظ„ظ…ط­ط¶ط± `POST/PATCH /rest/v1/meeting_minutes`
+**ط§ظ„ط¬ط¯ظˆظ„:** `meeting_minutes`
+
+```json
+{
+  "meeting_id": "<uuid>",
+  "content_draft": "ظ†طµ ط§ظ„ظ…ط³ظˆط¯ط© ط§ظ„ظ…ظˆظ„ط¯ ظ…ظ† ط§ظ„ط°ظƒط§ط، ط§ظ„ط§طµط·ظ†ط§ط¹ظٹ ط£ظˆ ط§ظ„ظ…ط¯ط®ظ„ ظٹط¯ظˆظٹط§ظ‹...",
+  "content_final": "ط§ظ„ظ†طµ ط§ظ„ظ†ظ‡ط§ط¦ظٹ ط§ظ„ظ…ظ†ظ‚ط­ ظ„ظ„ظ…ط­ط¶ط±...",
+  "status": "draft",
+  "generated_by_ai": true
+}
+```
+*ظ…ظ„ط§ط­ط¸ط©: ط­ط§ظ„ط§طھ ط§ظ„ظ…ط­ط¶ط± ط§ظ„ظ…طھط§ط­ط© (`draft`, `generated`, `ready_for_approval`, `approved`). ط¹ظ†ط¯ طھط­ظˆظٹظ„ظ‡ ط¥ظ„ظ‰ `ready_for_approval` ظٹظ‚ظˆظ… ط§ظ„ظ†ط¸ط§ظ… ط¨طھظˆظ„ظٹط¯ ط³ط¬ظ„ط§طھ ط§ظ„ظ…طµط§ط¯ظ‚ط© طھظ„ظ‚ط§ط¦ظٹط§ظ‹.*
+
+### طھظˆظ‚ظٹط¹/ظ…طµط§ط¯ظ‚ط© ط§ظ„ظ…ط­ط¶ط± `PATCH /rest/v1/minute_approvals`
+**ط§ظ„ط¬ط¯ظˆظ„:** `minute_approvals`
+
+```json
+{
+  "approval_status": "approved",
+  "notes": "ظ…ظˆط§ظپظ‚ ط¨ط¯ظˆظ† ظ…ظ„ط§ط­ط¸ط§طھ"
+}
+```
+*ظ…ظ„ط§ط­ط¸ط©: ظٹطھظ… ط§ط³طھظ‡ط¯ط§ظپ ط§ظ„ظ€ `id` ط§ظ„ط®ط§طµ ط¨ط³ط¬ظ„ ط§ظ„ظ…طµط§ط¯ظ‚ط© ط§ظ„ظ…ظˆظ„ط¯ ط¢ظ„ظٹط§ظ‹. ط¹ظ†ط¯ظ…ط§ ظٹط¹طھظ…ط¯ ط¬ظ…ظٹط¹ ط§ظ„ط£ط´ط®ط§طµ ط§ظ„ظ…ط·ظ„ظˆط¨ظٹظ† ط­ط³ط¨ `minute_approval_rule` ط§ظ„ظ…ط­ط¶ط±طŒ ط³ظٹطھظ… ط¥ط؛ظ„ط§ظ‚ ط§ظ„ط§ط¬طھظ…ط§ط¹ طھظ„ظ‚ط§ط¦ظٹط§ظ‹.*
