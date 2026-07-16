@@ -1,5 +1,7 @@
 -- PB-006 to PB-050: Sprints 01 to 05 schema: Meetings, Decisions, Action Items, Minutes
 
+alter table public.memberships add unique (id, organization_id);
+
 -- 1. Meeting Entities
 create table public.meeting_types (
   id uuid primary key default gen_random_uuid(),
@@ -333,7 +335,3 @@ create policy "escalations follow action item visibility" on public.escalations 
 
 create policy "minutes follow meeting visibility" on public.meeting_minutes for select to authenticated using (organization_id = public.current_organization_id());
 create policy "unit members can manage minutes" on public.meeting_minutes for all to authenticated using (organization_id = public.current_organization_id() and (public.is_system_admin() or public.has_role_code(array['governance_admin']) or exists (select 1 from public.meetings m where m.id = meeting_id and public.has_unit_role_code(m.governance_unit_id, array['council_chair', 'council_rapporteur']))));
-g r a n t   a l l   p r i v i l e g e s   o n   a l l   t a b l e s   i n   s c h e m a   p u b l i c   t o   a u t h e n t i c a t e d ;  
- g r a n t   a l l   p r i v i l e g e s   o n   a l l   t a b l e s   i n   s c h e m a   p u b l i c   t o   a n o n ;  
- g r a n t   a l l   p r i v i l e g e s   o n   a l l   t a b l e s   i n   s c h e m a   p u b l i c   t o   s e r v i c e _ r o l e ;  
- 
