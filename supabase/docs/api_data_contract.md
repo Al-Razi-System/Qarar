@@ -124,9 +124,12 @@ bool isAdmin = userProfile['is_system_admin'] == true;
   "agenda_order": 1,
   "agenda_status": "pending",
   "is_exception": false,
-  "exception_reason": null
+  "exception_reason": null,
+  "voting_status": "not_started",
+  "voting_result": "pending"
 }
 ```
+*ملاحظة: حقول `voting_status` و `voting_result` تمت إضافتها في Sprint 03 لإدارة التصويت وحفظ نتيجته المجمدة.*
 *ملاحظة: إذا كان الموضوع ليس في حالة `approved`، سيتم رفض الإدراج من قاعدة البيانات. لتجاوز ذلك يجب تمرير `is_exception: true` مع ذكر `exception_reason` (صلاحية خاصة لمدير النظام أو مدير الحوكمة).*
 
 ### إثبات الحضور `POST /rest/v1/attendance_records` أو `PATCH`
