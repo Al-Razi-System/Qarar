@@ -198,4 +198,4 @@ Do not reconstruct history from the current topic status.
 | Topic not awaiting review | Refresh queue; another reviewer completed it |
 | Duplicate reference | Treat as server conflict and log; numbers are generated backend-side |
 
-Referral operations are documented and implemented under Sprint 02, not this Sprint 01 contract.
+Referral operations are documented separately in [06-topic-referrals.md](./06-topic-referrals.md).
