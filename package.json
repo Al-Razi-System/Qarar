@@ -9,6 +9,7 @@
     "test:iam-edge": "node --experimental-strip-types --test supabase/tests/functions/iam-admin_handler_test.ts",
     "test:iam-http": "node supabase/tests/integration/iam-admin-http.mjs",
     "test:sprint01-http": "node supabase/tests/integration/sprint-01-topics-http.mjs",
+    "test:sprint03-http": "node supabase/tests/integration/sprint-03-session-voting-http.mjs",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:status": "supabase status",
