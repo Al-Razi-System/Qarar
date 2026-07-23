@@ -60,8 +60,10 @@ async function cleanup() {
        delete from public.voting_eligible_members where organization_id='${created.organizationId}';
        delete from public.voting_rounds where organization_id='${created.organizationId}';
        delete from public.quorum_snapshots where organization_id='${created.organizationId}';
+       delete from public.attendance_events where organization_id='${created.organizationId}';
        delete from public.attendance_history where organization_id='${created.organizationId}';
        delete from public.attendance_records where organization_id='${created.organizationId}';
+       delete from public.meeting_checkin_sessions where organization_id='${created.organizationId}';
        delete from public.meeting_status_history where organization_id='${created.organizationId}';
        delete from public.agenda_items where organization_id='${created.organizationId}';
        delete from public.meetings where organization_id='${created.organizationId}';
@@ -108,6 +110,10 @@ try {
     ["quorum.read", "quorum", "read"], ["quorum.manage", "quorum", "manage"],
     ["voting.read", "voting", "read"], ["voting.manage", "voting", "manage"],
     ["voting.cast", "voting", "cast"], ["meetings.manage", "meetings", "manage"],
+    ["attendance.check_in", "attendance", "check_in"],
+    ["attendance.verify", "attendance", "verify"],
+    ["attendance.override", "attendance", "override"],
+    ["attendance.lock", "attendance", "lock"],
   ].map(([code, module, action]) => ({
     organization_id: organization.id, code, module, action,
     context_scope: "governance_unit", name_ar: code,
@@ -118,7 +124,7 @@ try {
     ...permissions.map((permission) => ({
       organization_id: organization.id, role_id: managerRole.id, permission_id: permission.id,
     })),
-    ...["attendance.read", "quorum.read", "voting.read", "voting.cast"].map((code) => ({
+    ...["attendance.read", "attendance.check_in", "quorum.read", "voting.read", "voting.cast"].map((code) => ({
       organization_id: organization.id, role_id: memberRole.id, permission_id: permissionByCode[code],
     })),
   ])
@@ -152,22 +158,52 @@ try {
   assert.equal(opened.body.meeting.status, "in_progress")
   assert.equal(opened.body.attendance.length, 2)
 
-  for (const attendance of opened.body.attendance) {
-    const recorded = await rest("rpc/record_attendance", "POST", {
-      p_attendance_record_id: attendance.id, p_status: "present",
-      p_remarks: "HTTP check-in", p_expected_updated_at: attendance.updated_at,
-    }, managerHeaders)
-    assert.equal(recorded.response.status, 200, JSON.stringify(recorded.body))
-  }
+  const checkinSession = await rest("rpc/create_checkin_session", "POST", {
+    p_meeting_id: meeting.id, p_valid_for_minutes: 15,
+  }, managerHeaders)
+  assert.equal(checkinSession.response.status, 200, JSON.stringify(checkinSession.body))
+  assert.ok(checkinSession.body.token.length >= 20)
+  const memberClaim = await rest("rpc/self_check_in", "POST", {
+    p_meeting_id: meeting.id, p_token: checkinSession.body.token, p_device_label: "HTTP member device",
+  }, memberHeaders)
+  assert.equal(memberClaim.response.status, 200, JSON.stringify(memberClaim.body))
+  assert.equal(memberClaim.body.verification_status, "pending_verification")
+
+  const claimedSession = await rest("rpc/get_meeting_session_detail", "POST", {
+    p_meeting_id: meeting.id,
+  }, managerHeaders)
+  const memberAttendance = claimedSession.body.attendance.find((row) => row.user_id === member.id)
+  const managerAttendance = claimedSession.body.attendance.find((row) => row.user_id === manager.id)
+  assert.equal(memberAttendance.verification_status, "pending_verification")
+  const verifiedMember = await rest("rpc/verify_attendance", "POST", {
+    p_attendance_record_id: memberAttendance.id, p_status: "present",
+    p_note: "HTTP QR claim verified", p_expected_updated_at: memberAttendance.updated_at,
+  }, managerHeaders)
+  assert.equal(verifiedMember.response.status, 200, JSON.stringify(verifiedMember.body))
+  const verifiedManager = await rest("rpc/verify_attendance", "POST", {
+    p_attendance_record_id: managerAttendance.id, p_status: "present",
+    p_note: "HTTP manual chair verification", p_expected_updated_at: managerAttendance.updated_at,
+  }, managerHeaders)
+  assert.equal(verifiedManager.response.status, 200, JSON.stringify(verifiedManager.body))
+
   const session = await rest("rpc/get_meeting_session_detail", "POST", {
     p_meeting_id: meeting.id,
   }, managerHeaders)
   assert.equal(session.body.quorum.quorum_status, "met")
   assert.equal(session.body.quorum.present_members, 2)
+  const locked = await rest("rpc/lock_attendance_roster", "POST", {
+    p_meeting_id: meeting.id, p_expected_updated_at: session.body.meeting.updated_at,
+  }, managerHeaders)
+  assert.equal(locked.response.status, 200, JSON.stringify(locked.body))
+  assert.equal(locked.body.attendance_locked, true)
+  const lockedSession = await rest("rpc/get_meeting_session_detail", "POST", {
+    p_meeting_id: meeting.id,
+  }, managerHeaders)
+  assert.equal(lockedSession.body.meeting.attendance_locked, true)
 
   const round = await rest("rpc/open_voting_round", "POST", {
     p_agenda_item_id: agendaItem.id,
-    p_expected_meeting_updated_at: session.body.meeting.updated_at,
+    p_expected_meeting_updated_at: lockedSession.body.meeting.updated_at,
   }, managerHeaders)
   assert.equal(round.response.status, 200, JSON.stringify(round.body))
   assert.equal(round.body.eligible_voter_count, 2)
@@ -202,8 +238,9 @@ try {
   }, managerHeaders)
   assert.equal(detail.body.votes.length, 2)
 
-  console.log("ok - HTTP meeting session opened with an active-member attendance snapshot")
-  console.log("ok - HTTP attendance updates recalculated and persisted quorum")
+  console.log("ok - HTTP meeting session and short-lived check-in token were created")
+  console.log("ok - HTTP member self check-in was independently verified and the roster was locked")
+  console.log("ok - HTTP governed attendance recalculated and persisted quorum")
   console.log("ok - HTTP eligible voting, direct-write denial, and frozen result completed end to end")
 } finally {
   await cleanup()

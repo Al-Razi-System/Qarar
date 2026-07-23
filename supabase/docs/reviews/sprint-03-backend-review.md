@@ -15,14 +15,18 @@ concurrency, tenant isolation, and end-to-end operation.
 - Separate manager/member read contracts that do not leak other members' votes.
 - Permission-scoped RLS and revoked direct workflow writes.
 - Legacy quorum, direct meeting-start, and aggregate-result bypasses closed.
+- Short-lived hashed QR sessions with token rotation/revocation.
+- Member self check-in as a claim, not authoritative attendance.
+- Independent verification, self-verification prevention, and a locked roster.
+- Reasoned override workflow that preserves prior evidence and recalculates quorum.
 
 Frontend source of truth:
 [Meeting Session, Attendance, Quorum, and Voting API](../api/07-session-attendance-voting.md).
 
 ## Verification
 
-- Sprint 03 defensive and production-contract tests: 42/42.
-- Database regression assertions excluding the known legacy Sprint 04 test: 183/183.
+- Sprint 03 defensive and production-contract tests: 54/54.
+- Database regression assertions excluding the known legacy Sprint 04 test: 195/195.
 - Real Auth/Kong/PostgREST session and voting flow: passed.
 - IAM Edge/HTTP and Sprint 01 HTTP regressions: passed.
 

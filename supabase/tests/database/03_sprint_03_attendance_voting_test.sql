@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(7);
+select plan(10);
 
 select ok(
  not has_table_privilege('authenticated','public.attendance_records','INSERT'),
@@ -23,6 +23,15 @@ select ok(
 select ok(
  not has_function_privilege('anon','public.cast_vote(uuid,text,text)','EXECUTE'),
  'anonymous clients cannot cast votes');
+select ok(
+ not has_function_privilege('authenticated','public.record_attendance(uuid,text,text,timestamptz)','EXECUTE'),
+ 'legacy direct attendance RPC is not client callable');
+select ok(
+ has_function_privilege('authenticated','public.self_check_in(uuid,text,text)','EXECUTE'),
+ 'authenticated members can use governed self check-in');
+select ok(
+ not has_function_privilege('anon','public.self_check_in(uuid,text,text)','EXECUTE'),
+ 'anonymous clients cannot submit check-in claims');
 
 select * from finish();
 rollback;

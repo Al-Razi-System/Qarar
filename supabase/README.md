@@ -167,6 +167,7 @@ Validated locally with Supabase CLI `2.109.1`:
 - `npm run test:iam-http` passed the real Kong/Auth/REST/Edge/SMTP user-provisioning and rollback flow.
 - `npm run test:sprint01-http` passed the real topic creation, direct-write denial, reviewer queue,
   approval, status history, and audit flow through Kong/PostgREST.
-- Sprint 03 defensive and production-contract tests pass 42/42 assertions.
-- `npm run test:sprint03-http` passes the real session opening, attendance, quorum, eligible voting,
-  direct-write denial, and frozen-result flow through Auth/Kong/PostgREST.
+- Sprint 03 defensive and production-contract tests pass 54/54 assertions.
+- `npm run test:sprint03-http` passes the real short-lived QR session, member self check-in,
+  independent verification, roster lock, quorum, eligible voting, direct-write denial, and
+  frozen-result flow through Auth/Kong/PostgREST.
