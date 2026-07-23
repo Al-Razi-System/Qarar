@@ -160,6 +160,8 @@ Validated locally with Supabase CLI `2.109.1`:
 - Database test `supabase/tests/database/06_iam_rbac_sso_test.sql` passed 22/22 assertions.
 - IAM operations test `supabase/tests/database/07_iam_operations_hardening_test.sql` passed 17/17 assertions.
 - Critical IAM closure test `supabase/tests/database/08_iam_critical_closure_test.sql` passed 16/16 assertions.
-- All nine database test files passed 84/84 assertions against the Compose PostgreSQL service.
+- All eleven database test files passed 124/124 assertions against the Compose PostgreSQL service.
 - `npm run test:iam-edge` passed 7/7 TypeScript handler tests.
 - `npm run test:iam-http` passed the real Kong/Auth/REST/Edge/SMTP user-provisioning and rollback flow.
+- `npm run test:sprint01-http` passed the real topic creation, direct-write denial, reviewer queue,
+  approval, status history, and audit flow through Kong/PostgREST.

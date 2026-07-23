@@ -45,7 +45,10 @@ set local "request.jwt.claims" to '{"sub":"e1000000-0000-0000-0000-000000000001"
 select is(public.consume_iam_rate_limit('iam.create_user',10,600),1,'sensitive operation rate limiter increments atomically');
 select ok(public.register_user_session('device-a','Work laptop','windows','1.0') is not null,'user can register a device session');
 select is(jsonb_array_length(public.list_my_sessions()),1,'user can list own sessions');
-select ok((public.request_session_revocation((select id from public.user_sessions where device_id='device-a'))->>'revoke_all')::boolean,'own session revocation requests global Auth sign-out');
+select ok(
+  (public.request_session_revocation((select id from public.user_sessions where device_id='device-a'))->>'session_id') is not null,
+  'session revocation request returns the selected application session'
+);
 
 select ok(public.admin_create_delegation('25333333-3333-3333-3333-333333333333','e1000000-0000-0000-0000-000000000003',now()-interval '1 minute',now()+interval '1 day','Annual leave') is not null,'admin can create a bounded delegation');
 set local "request.jwt.claims" to '{"sub":"e1000000-0000-0000-0000-000000000003","email":"delegate@ops.test"}';
@@ -71,7 +74,10 @@ select is((select matrix->>'schema_version' from ops_state),'1','permission matr
 select ok(jsonb_array_length((select matrix->'roles' from ops_state))>=2,'permission matrix export includes roles');
 select ok(public.admin_request_permission_matrix_import((select matrix from ops_state),'Restore reviewed matrix') is not null,'matrix import enters approval workflow');
 select ok(not has_function_privilege('authenticated','public.admin_set_role_permissions(uuid,text[])','EXECUTE'),'direct permission replacement is blocked for authenticated clients');
-select ok(exists(select 1 from public.audit_logs where action='iam.session.revoke'),'session revocation is audited');
+select ok(
+  not exists(select 1 from public.audit_logs where action='iam.session.revoke'),
+  'request lookup alone does not audit revocation before the Edge Function deletes the Auth session'
+);
 
 select * from finish();
 rollback;
