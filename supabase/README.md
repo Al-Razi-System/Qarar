@@ -160,7 +160,9 @@ Validated locally with Supabase CLI `2.109.1`:
 - Database test `supabase/tests/database/06_iam_rbac_sso_test.sql` passed 22/22 assertions.
 - IAM operations test `supabase/tests/database/07_iam_operations_hardening_test.sql` passed 17/17 assertions.
 - Critical IAM closure test `supabase/tests/database/08_iam_critical_closure_test.sql` passed 16/16 assertions.
-- All eleven database test files passed 124/124 assertions against the Compose PostgreSQL service.
+- Sprint 02 defensive and production-contract tests pass 32/32 assertions.
+- The complete database suite currently stops at the legacy Sprint 03 direct-meeting-write tests;
+  Sprint 03 requires RPC hardening before it can run under the stricter Sprint 02 write boundary.
 - `npm run test:iam-edge` passed 7/7 TypeScript handler tests.
 - `npm run test:iam-http` passed the real Kong/Auth/REST/Edge/SMTP user-provisioning and rollback flow.
 - `npm run test:sprint01-http` passed the real topic creation, direct-write denial, reviewer queue,

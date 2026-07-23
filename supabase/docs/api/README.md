@@ -28,7 +28,8 @@ This is the entry point for frontend, integration, and backend developers. Qarar
 | Roles and permissions | [03-roles-permissions.md](./03-roles-permissions.md) | IAM administration |
 | SSO and identity federation | [04-sso.md](./04-sso.md) | SSO administration/login |
 | Sessions, delegation, approvals | [05-security-operations.md](./05-security-operations.md) | Security administration |
-| Topics and referrals | [06-topics.md](./06-topics.md) | Topic workflows |
+| Topics | [06-topics.md](./06-topics.md) | Topic workflows |
+| Topic referrals and route history | [06-topic-referrals.md](./06-topic-referrals.md) | Referral workflows |
 | Meetings, attendance, voting | [07-meetings.md](./07-meetings.md) | Meeting workflows |
 | Minutes | [08-minutes.md](./08-minutes.md) | Minutes workflows |
 | Decisions and execution | [09-decisions-execution.md](./09-decisions-execution.md) | Decision follow-up |
