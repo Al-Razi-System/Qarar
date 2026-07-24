@@ -30,6 +30,7 @@ jobs:
         run: docker logs qarar-supabase-db --tail 300
 
   integration:
+    needs: migration-upgrade
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -43,7 +44,13 @@ jobs:
         run: |
           cp supabase/docker/.env.example supabase/docker/.env
           npm run docker:config
-          npm run docker:start
+          for attempt in 1 2 3 4; do
+            npm run docker:pull && break
+            [ "$attempt" -lt 4 ] || exit 1
+            sleep $((attempt * 20))
+          done
+          docker compose --env-file supabase/docker/.env \
+            -f supabase/docker/docker-compose.yml up -d --pull never
       - name: Wait for API health
         run: |
           for attempt in $(seq 1 90); do

@@ -2,7 +2,13 @@
 set -eu
 
 compose="docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml"
-$compose up -d db
+attempt=0
+until $compose pull db; do
+  attempt=$((attempt + 1))
+  [ "$attempt" -lt 4 ] || { echo "database image pull failed" >&2; exit 1; }
+  sleep $((attempt * 15))
+done
+$compose up -d --pull never db
 
 attempt=0
 until docker exec qarar-supabase-db pg_isready -U supabase_admin -d postgres >/dev/null 2>&1; do
@@ -29,7 +35,7 @@ SQL
 
 for migration in $(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
   case "$(basename "$migration")" in
-    20260724040000_*|20260724040100_*|20260724040200_*|20260724040300_*|20260724040400_*) continue ;;
+    20260724040*) continue ;;
   esac
   docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
     -v ON_ERROR_STOP=1 --single-transaction < "$migration"
