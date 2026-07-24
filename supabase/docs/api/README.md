@@ -37,6 +37,7 @@ This is the entry point for frontend, integration, and backend developers. Qarar
 | Edge Functions and storage | [10-edge-storage.md](./10-edge-storage.md) | Implemented, with noted compatibility surface | Integrations/uploads |
 | Audit logs | [11-audit-logs.md](./11-audit-logs.md) | Implemented | Auditors/security administration |
 | Exact RPC contract reference | [12-contract-reference.md](./12-contract-reference.md) | Generated from runtime registry | All API developers |
+| Flutter integration and screen map | [13-frontend-integration-guide.md](./13-frontend-integration-guide.md) | Implemented-scope handoff | Flutter developers |
 
 ## Source of Truth
 

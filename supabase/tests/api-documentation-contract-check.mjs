@@ -91,6 +91,10 @@ const markdownFiles = readdirSync(docsDirectory)
   .map((name) => ({ name, content: readFileSync(join(docsDirectory, name), "utf8") }));
 
 const errors = [];
+const operationalDocumentation = markdownFiles
+  .filter(({ name }) => !["12-contract-reference.md"].includes(name))
+  .map(({ content }) => content)
+  .join("\n");
 const directTablePath = /\/rest\/v1\/(?!rpc\/)[a-z][a-z0-9_]*/g;
 const mojibake = /(?:ط§|ط£|ط¹|ظ…|ظ„|ظٹ|ط±|Ã|â|�)/g;
 
@@ -103,6 +107,14 @@ for (const { name, content } of markdownFiles) {
     errors.push(`${name}: contains likely mojibake text`);
   }
   mojibake.lastIndex = 0;
+}
+
+for (const contract of contracts.filter(({ audience }) => audience === "authenticated")) {
+  if (!operationalDocumentation.includes(contract.name)) {
+    errors.push(
+      `${contract.name}: authenticated contract is missing from operational frontend documentation`,
+    );
+  }
 }
 
 if (errors.length > 0) {
