@@ -255,7 +255,11 @@ security definer
 set search_path = pg_catalog
 as $$
 begin
-  if to_regclass('auth.sessions') is not null then
+  if to_regclass('auth.sessions') is not null
+     and (
+       not has_table_privilege('qarar_iam_executor','auth.sessions','select')
+       or not has_table_privilege('qarar_iam_executor','auth.sessions','delete')
+     ) then
     grant select, delete on auth.sessions to qarar_iam_executor;
   end if;
 end;

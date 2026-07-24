@@ -47,9 +47,11 @@ Local entry points:
 - Mailpit: `http://localhost:8025`
 - PostgreSQL pooler: `localhost:54322`
 
-The `db-migrate` one-shot service applies each file in `supabase/migrations` once, records it in
-`qarar_internal.applied_migrations`, then applies `seed.sql` once. Existing data lives under the
-ignored `supabase/docker/volumes/db/data` and `volumes/storage` directories.
+The `db-migrate` one-shot service serializes runners with a PostgreSQL advisory lock, applies each
+file in `supabase/migrations` once, and records its SHA-256 in
+`qarar_internal.applied_migrations`. A changed applied file is rejected. Each migration and ledger
+entry is one transaction, then `seed.sql` is handled with the same checksum rule. Existing data
+lives under the ignored `supabase/docker/volumes/db/data` and `volumes/storage` directories.
 
 The Supabase CLI stack remains available for isolated CLI-oriented testing:
 
@@ -177,9 +179,11 @@ Validated locally with Supabase CLI `2.109.1`:
   frozen-result flow through Auth/Kong/PostgREST.
 - Modular architecture migrations move all 48 application entities out of `public` and register
   78 reviewed `api_v1` RPC contracts.
-- Database tests for completed scope (Sprint 00 through Sprint 03, IAM, and architecture) pass
-  223/223 assertions. Sprint 04 legacy specifications remain intentionally excluded until Sprint 04.
+- Database tests for completed scope (Sprint 00 through Sprint 03, IAM, architecture, and migration
+  runtime controls) pass 236/236 assertions. Sprint 04 legacy specifications remain intentionally
+  excluded until Sprint 04.
 - `api_v1` works through the Docker PostgREST/Kong path, while internal module schemas return HTTP
   `406` and are not exposed.
 - CI independently rehearses an existing-data upgrade, injects a migration failure to prove atomic
-  rollback, and runs the complete Docker/DB/Edge/HTTP verification suite on every PR to `dev`.
+  rollback, rejects a tampered migration checksum, verifies advisory-lock cleanup, and runs the
+  complete Docker/DB/Edge/HTTP verification suite on every PR to `dev`.

@@ -15,8 +15,15 @@ operations that require Supabase Auth administration, SMTP, external systems, or
 
 `qarar_api_executor` owns the API wrappers but has no table privileges. Each internal function is
 owned by one `qarar_<module>_executor` NOLOGIN role. Module roles can mutate their own tables, read
-shared state, append audit events, and use only the explicitly registered cross-module table locks
-required by tested workflows.
+their own state, and use only cross-module reads and calls registered in
+`module_table_read_allowlist` and `module_function_execute_allowlist`. Architecture tests compare
+effective PostgreSQL privileges and source-level qualified references to these registries.
+
+Internal module roles use `BYPASSRLS` because SECURITY DEFINER commands must enforce a complete
+transaction across protected tables. They are never login or client roles. Every exposed contract
+must derive its tenant from the validated actor, constrain rows by `organization_id`, and include a
+cross-tenant behavioral test. CI also rejects contract implementations that contain no explicit
+tenant or actor guard.
 
 ## Module Ownership
 
@@ -42,8 +49,9 @@ inventories. Architecture tests fail when a table or API wrapper bypasses those 
 - New application tables are forbidden in `public`.
 - Frontends never call `public` implementation functions.
 - New frontend commands and queries require a registered `api_v1` RPC and domain documentation.
-- Modules may read reference data owned by Core/IAM, but must not mutate another module's aggregate
-  except through its command function.
+- A cross-module table read or function call requires an allowlist row with a review rationale.
+- Modules must not mutate another module's aggregate except through its command function or an
+  explicitly tested write grant recorded by the architecture security test.
 - Edge Functions validate the caller, then invoke `api_v1`; they do not duplicate domain rules.
 - Edge-only mutations use `service_role` contracts with an explicit actor id revalidated in the
   database. There is no `edge_authenticated` pseudo-boundary.
@@ -54,9 +62,11 @@ inventories. Architecture tests fail when a table or API wrapper bypasses those 
 ## Adding a Contract
 
 1. Add the table or function in a versioned migration under its owning schema.
-2. Add entity/API registry metadata in the same migration.
+2. Add entity/API registry metadata and every required cross-module dependency in the same
+   migration. Broad schema/table/function grants are forbidden.
 3. Expose a versioned wrapper in `api_v1` with explicit grants and a controlled `search_path`.
-4. Add pgTAP authorization, tenant-isolation, state, concurrency, and rollback tests as applicable.
+4. Add pgTAP authorization, cross-tenant denial, state, concurrency, and rollback tests. Tenant
+   isolation is mandatory for every new contract because module executors use `BYPASSRLS`.
 5. Add a real HTTP integration test for multi-service flows.
 6. Update the matching file under `docs/api`.
 
@@ -78,3 +88,15 @@ Current consumers are limited to integration-test fixture setup, the pre-Sprint-
 Function `.from(...)` dependency. Sprint 04 must migrate `generate-minutes` to governed contracts;
 the general compatibility views are scheduled for removal no earlier than 2026-09-30 and the
 reporting view no earlier than 2026-10-31.
+
+## Migration Runtime
+
+The self-hosted migration role must be `SUPERUSER`, `CREATEROLE`, and `BYPASSRLS`; the runner fails
+its preflight otherwise. This is required for NOLOGIN executor ownership and the narrowly scoped
+Auth lifecycle event trigger. The production stack must use the pinned PostgreSQL image and the
+same `supabase_admin` migration role validated by CI.
+
+One session-level PostgreSQL advisory lock serializes the complete migration batch. Every applied
+file and the development seed are recorded with a SHA-256 checksum. A changed historical file
+stops startup; corrections must be delivered as a new migration. Each migration and its ledger row
+remain one transaction.

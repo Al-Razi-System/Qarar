@@ -23,6 +23,13 @@ performed through `api_v1`. Registry tables make ownership and exposed contracts
 API wrappers and module implementations use separate NOLOGIN owners with least-privilege table
 grants. Migrations and their ledger entries execute in one transaction. Edge-only operations use
 service-role contracts rather than granting a nominal Edge audience to authenticated clients.
+Cross-module reads and function calls are explicit allowlists, checked against effective grants and
+qualified source references. Module executors use `BYPASSRLS`, so tenant derivation and
+cross-tenant denial tests are mandatory contract requirements.
+
+The self-hosted migration runner takes a PostgreSQL advisory lock for the whole batch and verifies
+the SHA-256 checksum of every historical migration. It also fails early unless the migration role
+supports the PostgreSQL role and event-trigger capabilities required by this architecture.
 
 ## Consequences
 

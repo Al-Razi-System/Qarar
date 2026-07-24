@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(18);
+select plan(24);
 
 select is(
  (select count(*)::integer from pg_proc p join pg_namespace n on n.oid=p.pronamespace
@@ -170,7 +170,98 @@ select is(
  (select count(*)::integer
   from qarar_architecture.compatibility_surface_registry
   where not client_read_only),
- 0,'all compatibility surfaces are client read-only');
+0,'all compatibility surfaces are client read-only');
+
+select is(
+ (select count(*)::integer
+  from pg_roles source
+  join qarar_architecture.module_registry source_module
+   on source.rolname=format('qarar_%s_executor',source_module.module_code)
+  join qarar_architecture.entity_registry entity on entity.module_code<>source_module.module_code
+  join qarar_architecture.module_registry target_module on target_module.module_code=entity.module_code
+  join pg_class c on c.relnamespace=target_module.schema_name::regnamespace
+   and c.relname=entity.entity_name
+  where source_module.module_code not in('api','architecture')
+   and has_table_privilege(source.rolname,c.oid,'select')
+   and not exists(
+    select 1 from qarar_architecture.module_table_read_allowlist a
+    where a.source_module=source_module.module_code
+     and a.target_schema=target_module.schema_name
+     and a.table_name=entity.entity_name)),
+ 0,'module executors have no unregistered cross-module reads');
+
+select is(
+ (select count(*)::integer
+  from qarar_architecture.module_table_read_allowlist a
+  join qarar_architecture.module_registry m on m.module_code=a.source_module
+  where not has_table_privilege(
+   format('qarar_%s_executor',m.module_code),
+   format('%I.%I',a.target_schema,a.table_name),
+   'select')),
+ 0,'every registered cross-module table read is granted');
+
+select is(
+ (select count(*)::integer
+  from pg_roles source
+  join qarar_architecture.module_registry source_module
+   on source.rolname=format('qarar_%s_executor',source_module.module_code)
+  join qarar_architecture.function_registry implementation
+   on implementation.module_code<>source_module.module_code
+  join pg_proc p on p.oid=implementation.function_oid
+  where source_module.module_code not in('api','architecture')
+   and has_function_privilege(source.rolname,p.oid,'execute')
+   and not exists(
+    select 1 from qarar_architecture.module_function_execute_allowlist a
+    where a.source_module=source_module.module_code
+     and a.target_schema=implementation.owning_schema
+     and a.function_name=implementation.function_name
+     and a.identity_arguments=implementation.identity_arguments)),
+ 0,'module executors have no unregistered cross-module function execution');
+
+select is(
+ (select count(*)::integer
+  from qarar_architecture.module_function_execute_allowlist a
+  join pg_namespace n on n.nspname=a.target_schema
+  join pg_proc p on p.pronamespace=n.oid and p.proname=a.function_name
+   and pg_get_function_identity_arguments(p.oid)=a.identity_arguments
+  where not has_function_privilege(
+   format('qarar_%s_executor',a.source_module),p.oid,'execute')),
+ 0,'every registered cross-module function dependency is granted');
+
+with discovered as (
+ select distinct r.module_code,m[1]::name target_schema,m[2]::name target_name
+ from qarar_architecture.function_registry r
+ join pg_proc p on p.oid=r.function_oid
+ cross join lateral regexp_matches(
+  pg_get_functiondef(p.oid),
+  '(qarar_[a-z_]+)\.([a-z][a-z0-9_]*)',
+  'g'
+ ) m
+ where m[1] <> format('qarar_%s',r.module_code)
+)
+select is(
+ (select count(*)::integer
+  from discovered d
+  where not exists(
+   select 1 from qarar_architecture.module_table_read_allowlist a
+   where a.source_module=d.module_code and a.target_schema=d.target_schema
+    and a.table_name=d.target_name)
+   and not exists(
+    select 1 from qarar_architecture.module_function_execute_allowlist a
+    where a.source_module=d.module_code and a.target_schema=d.target_schema
+     and a.function_name=d.target_name)),
+ 0,'all source-level cross-module dependencies are registered');
+
+select is(
+ (select count(*)::integer
+  from qarar_architecture.api_contract_registry c
+  join pg_proc p on p.proname=c.implementation_name
+   and pg_get_function_identity_arguments(p.oid)=c.identity_arguments
+  join pg_namespace n on n.oid=p.pronamespace and n.nspname=c.implementation_schema
+  where pg_get_functiondef(p.oid) !~
+   '(current_organization_id|organization_id|assert_permission|has_permission|is_system_admin|auth\.uid|users where id=p_actor_user_id)'
+ ),
+ 0,'every API contract implementation contains an explicit tenant or actor guard');
 
 select * from finish();
 rollback;
