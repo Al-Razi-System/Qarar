@@ -10,6 +10,7 @@
     "test:iam-http": "node supabase/tests/integration/iam-admin-http.mjs",
     "test:sprint01-http": "node supabase/tests/integration/sprint-01-topics-http.mjs",
     "test:sprint03-http": "node supabase/tests/integration/sprint-03-session-voting-http.mjs",
+    "test:compatibility": "node supabase/tests/compatibility-surface-check.mjs",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "supabase:status": "supabase status",

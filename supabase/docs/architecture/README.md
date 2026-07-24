@@ -13,6 +13,11 @@ operations that require Supabase Auth administration, SMTP, external systems, or
 5. Cross-module integrity uses explicit foreign keys; cross-module behavior uses reviewed functions.
 6. RLS and audit remain defense-in-depth controls, not substitutes for command validation.
 
+`qarar_api_executor` owns the API wrappers but has no table privileges. Each internal function is
+owned by one `qarar_<module>_executor` NOLOGIN role. Module roles can mutate their own tables, read
+shared state, append audit events, and use only the explicitly registered cross-module table locks
+required by tested workflows.
+
 ## Module Ownership
 
 | Module | Schema | Owned capability |
@@ -40,6 +45,8 @@ inventories. Architecture tests fail when a table or API wrapper bypasses those 
 - Modules may read reference data owned by Core/IAM, but must not mutate another module's aggregate
   except through its command function.
 - Edge Functions validate the caller, then invoke `api_v1`; they do not duplicate domain rules.
+- Edge-only mutations use `service_role` contracts with an explicit actor id revalidated in the
+  database. There is no `edge_authenticated` pseudo-boundary.
 - `public` views are temporary compatibility adapters for existing trusted integrations. No new
   frontend dependency may use them.
 - Authentication secrets and service-role credentials exist only in server environments.
@@ -53,5 +60,21 @@ inventories. Architecture tests fail when a table or API wrapper bypasses those 
 5. Add a real HTTP integration test for multi-service flows.
 6. Update the matching file under `docs/api`.
 
+The complete v1 name/signature/result/audience surface is frozen by
+`qarar_architecture.api_release_registry`. Its reviewed hash fails migrations and tests if an
+existing v1 contract changes. Breaking changes require `api_v2`.
+
 The decision and migration rationale is recorded in
 [ADR-001-database-centric-modular-monolith.md](./ADR-001-database-centric-modular-monolith.md).
+
+## Compatibility Retirement
+
+Every remaining `public` view is registered in
+`qarar_architecture.compatibility_surface_registry` with its consumers, owner, replacement, and
+earliest removal date. Authenticated and anonymous roles have no DML privileges on these views.
+
+Current consumers are limited to integration-test fixture setup, the pre-Sprint-04
+`generate-minutes` Edge Function, and the legacy voting report. CI rejects any additional Edge
+Function `.from(...)` dependency. Sprint 04 must migrate `generate-minutes` to governed contracts;
+the general compatibility views are scheduled for removal no earlier than 2026-09-30 and the
+reporting view no earlier than 2026-10-31.

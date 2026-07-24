@@ -127,7 +127,7 @@ insert into iam_test_state(role_id)
 select api_v1.admin_upsert_role(null, 'topic_reviewer', 'Topic Reviewer', 'Topic Reviewer', 'Reviews topics', 'governance_unit', true);
 
 select throws_ok(
-  $$ select public.admin_set_role_permissions((select role_id from iam_test_state), array['topics.review']) $$,
+  $$ select qarar_iam.admin_set_role_permissions((select role_id from iam_test_state), array['topics.review']) $$,
   '42501',
   'permission denied for function admin_set_role_permissions',
   'direct role permission replacement is closed'

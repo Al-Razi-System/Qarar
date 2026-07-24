@@ -70,5 +70,7 @@ passed to `expired`. Permission checks also enforce the time boundary independen
 
 ## Rate Limits
 
-Trusted operations call `consume_iam_rate_limit(operation, limit, window_seconds)`. Clients should
-handle HTTP `429` without immediate retry. Rate-limit storage is operational and not user editable.
+The `iam-admin` Edge Function calls the service-only
+`service_consume_iam_rate_limit(actor_user_id, operation, limit, window_seconds)` contract.
+Flutter and browser clients cannot execute this contract. They receive HTTP `429` from the Edge
+Function and must not retry immediately. Rate-limit storage is operational and not user editable.

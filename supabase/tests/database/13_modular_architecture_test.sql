@@ -84,12 +84,15 @@ select is(
    join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'api_v1'
      and (not p.prosecdef
-       or not coalesce(p.proconfig, '{}'::text[]) @> array['search_path=pg_catalog, public'])),
+       or not (
+        coalesce(p.proconfig, '{}'::text[]) @> array['search_path=pg_catalog, public']
+        or coalesce(p.proconfig, '{}'::text[]) @> array['search_path=pg_catalog'
+       ]))),
   0,
   'all API wrappers use security definer with a controlled search path');
 
 select ok(
-  not has_function_privilege('authenticated', 'public.create_topic(text,text,uuid,uuid,text,text,text,uuid)', 'EXECUTE'),
+  not has_function_privilege('authenticated', 'qarar_topics.create_topic(text,text,uuid,uuid,text,text,text,uuid)', 'EXECUTE'),
   'implementation RPCs are not executable by authenticated clients');
 
 select ok(

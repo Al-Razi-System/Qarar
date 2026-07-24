@@ -42,7 +42,9 @@ select p.organization_id,'24242424-2424-2424-2424-242424242424',p.id from public
 set local role authenticated;
 set local "request.jwt.claims" to '{"sub":"e1000000-0000-0000-0000-000000000001","email":"admin1@ops.test"}';
 
-select is(api_v1.consume_iam_rate_limit('iam.create_user',10,600),1,'sensitive operation rate limiter increments atomically');
+select ok(
+ not has_function_privilege('authenticated','api_v1.service_consume_iam_rate_limit(uuid,text,integer,integer)','execute'),
+ 'client cannot invoke the Edge rate limiter service contract');
 select ok(api_v1.register_user_session('device-a','Work laptop','windows','1.0') is not null,'user can register a device session');
 select is(jsonb_array_length(api_v1.list_my_sessions()),1,'user can list own sessions');
 select ok(
@@ -55,8 +57,10 @@ set local "request.jwt.claims" to '{"sub":"e1000000-0000-0000-0000-000000000003"
 select ok(api_v1.has_permission('topics.review','22222222-2222-2222-2222-222222222222'),'delegate receives source membership permission');
 
 set local "request.jwt.claims" to '{"sub":"e1000000-0000-0000-0000-000000000001","email":"admin1@ops.test","sso_provider_id":"26262626-2626-2626-2626-262626262626"}';
+reset role;
 insert into public.sso_identity_providers(id,organization_id,provider_type,provider_name,supabase_sso_provider_id,provisioning_mode,status)
 values('27272727-2727-2727-2727-272727272727','20202020-2020-2020-2020-202020202020','saml','Ops SSO','26262626-2626-2626-2626-262626262626','jit','active');
+set local role authenticated;
 select ok(api_v1.admin_upsert_sso_group_mapping('27272727-2727-2727-2727-272727272727','Reviewers','24242424-2424-2424-2424-242424242424','22222222-2222-2222-2222-222222222222') is not null,'admin maps an SSO group to role and unit');
 select is(api_v1.sync_current_sso_groups(array['Reviewers']),1,'SSO group sync creates the mapped membership');
 
@@ -73,7 +77,7 @@ update ops_state set matrix=api_v1.admin_export_permission_matrix();
 select is((select matrix->>'schema_version' from ops_state),'1','permission matrix export is versioned');
 select ok(jsonb_array_length((select matrix->'roles' from ops_state))>=2,'permission matrix export includes roles');
 select ok(api_v1.admin_request_permission_matrix_import((select matrix from ops_state),'Restore reviewed matrix') is not null,'matrix import enters approval workflow');
-select ok(not has_function_privilege('authenticated','public.admin_set_role_permissions(uuid,text[])','EXECUTE'),'direct permission replacement is blocked for authenticated clients');
+select ok(not has_function_privilege('authenticated','qarar_iam.admin_set_role_permissions(uuid,text[])','EXECUTE'),'direct permission replacement is blocked for authenticated clients');
 select ok(
   not exists(select 1 from public.audit_logs where action='iam.session.revoke'),
   'request lookup alone does not audit revocation before the Edge Function deletes the Auth session'

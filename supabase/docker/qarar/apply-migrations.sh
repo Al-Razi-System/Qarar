@@ -33,13 +33,17 @@ for migration in $(find /migrations -maxdepth 1 -type f -name '*.sql' | sort); d
   fi
 
   echo "Applying migration: $version"
-  psql -v ON_ERROR_STOP=1 -f "$migration"
-  psql -v ON_ERROR_STOP=1 -c "insert into qarar_internal.applied_migrations(version) values ('$version')"
+  # Apply the migration and its ledger entry in one transaction. A statement
+  # failure or container interruption cannot leave an unrecorded partial schema.
+  psql -v ON_ERROR_STOP=1 --single-transaction \
+    -f "$migration" \
+    -c "insert into qarar_internal.applied_migrations(version) values ('$version')"
 done
 
 seed_applied=$(psql -Atqc "select 1 from qarar_internal.applied_migrations where version = 'seed'")
 if [ "$seed_applied" != "1" ]; then
   echo "Applying development seed"
-  psql -v ON_ERROR_STOP=1 -f /seed/seed.sql
-  psql -v ON_ERROR_STOP=1 -c "insert into qarar_internal.applied_migrations(version) values ('seed')"
+  psql -v ON_ERROR_STOP=1 --single-transaction \
+    -f /seed/seed.sql \
+    -c "insert into qarar_internal.applied_migrations(version) values ('seed')"
 fi

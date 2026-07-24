@@ -20,6 +20,10 @@ Tables are moved to their owning schemas. `public` contains no application base 
 security-invoker views preserve compatibility while clients migrate, but business writes are
 performed through `api_v1`. Registry tables make ownership and exposed contracts testable.
 
+API wrappers and module implementations use separate NOLOGIN owners with least-privilege table
+grants. Migrations and their ledger entries execute in one transaction. Edge-only operations use
+service-role contracts rather than granting a nominal Edge audience to authenticated clients.
+
 ## Consequences
 
 - Atomic cross-table workflows remain straightforward in one PostgreSQL transaction.
