@@ -34,6 +34,10 @@ its refresh-token chain. The UI must still clear local credentials immediately a
 Success is `{ "revoked": true, "session_id": "<uuid>", "auth_sessions_revoked": 1 }`; a zero count means
 the Auth session had already ended while the application record was still marked revoked.
 
+`request_session_revocation(p_session_id)` records and audits an application-level revocation request,
+but it cannot delete Supabase Auth refresh tokens. Frontend clients must use the `iam-admin`
+`revoke_session` action above for effective revocation.
+
 ## Temporary Delegation
 
 `admin_create_delegation(...)` delegates the permissions of one active source membership:
@@ -74,3 +78,19 @@ The `iam-admin` Edge Function calls the service-only
 `service_consume_iam_rate_limit(actor_user_id, operation, limit, window_seconds)` contract.
 Flutter and browser clients cannot execute this contract. They receive HTTP `429` from the Edge
 Function and must not retry immediately. Rate-limit storage is operational and not user editable.
+
+## Service-Role IAM Contracts
+
+The following `service_role` contracts are implementation details of `iam-admin` and are denied to
+authenticated clients:
+
+| Contract | Purpose |
+|---|---|
+| `service_apply_user_status` | Apply the synchronized application status after the Auth ban/unban step |
+| `service_finalize_invited_user` | Create the profile and optional membership after Auth invitation |
+| `service_record_iam_event` | Record an Edge-orchestrated IAM audit event |
+| `service_revoke_auth_sessions` | Mark application sessions revoked after Auth session deletion |
+| `service_consume_iam_rate_limit` | Enforce per-actor operation limits |
+
+Their exact signatures are listed in [12-contract-reference.md](./12-contract-reference.md). They are
+documented for backend maintainers only and are not frontend endpoints.

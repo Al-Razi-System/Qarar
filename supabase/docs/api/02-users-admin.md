@@ -67,6 +67,11 @@ The function validates the caller, limits creation to 10 attempts per 10 minutes
 invitation, creates the application profile, and assigns the optional initial role. If profile or
 role creation fails, it deletes the newly created Auth user as compensation.
 
+The underlying `admin_create_user_profile(...)` RPC only finalizes an application profile for an
+already-created Auth user. It does not create an Auth identity or send email and is not the normal
+frontend entry point. User-management screens must use the `iam-admin` `create_user` action so the
+Auth, profile, membership, invitation, audit, and rollback steps remain one governed operation.
+
 ## Update Profile
 
 `POST /rest/v1/rpc/admin_update_user_profile` requires `iam.users.manage`.

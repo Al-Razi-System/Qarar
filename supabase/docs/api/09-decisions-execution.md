@@ -1,77 +1,22 @@
 # Decisions and Execution
 
-## List Decisions
+## Implementation Status
 
-```http
-GET /rest/v1/decisions?select=*,topics(*),meetings(*)&meeting_id=eq.<uuid>&order=created_at.desc
-```
-Useful filters include `topic_id`, `meeting_id`, `agenda_item_id`, `decision_status`, and governance unit.
+Frontend contracts for decisions and execution follow-up are **not implemented yet**. They belong to
+Sprint 5. No supported `api_v1` contract currently exists for listing, creating, updating, approving,
+or closing decisions or action items. Clients must not access the `decisions` or `action_items`
+compatibility views directly through PostgREST.
 
-## Create Decision
+The target API requires versioned contracts for:
 
-`POST /rest/v1/decisions`
+- searching and loading decisions with topic, meeting, and agenda context;
+- drafting and editing a decision with optimistic concurrency;
+- enforcing review, approval, issuance, cancellation, and closure transitions;
+- creating assignments only from an executable decision;
+- updating progress, evidence, due dates, reassignment, completion, and closure;
+- querying overdue work and execution dashboards with tenant and unit scoping;
+- exposing immutable status history and audit references.
 
-```json
-{
-  "decision_no": "D-2026-010",
-  "topic_id": "<uuid>",
-  "meeting_id": "<uuid>",
-  "agenda_item_id": "<uuid>",
-  "governance_unit_id": "<uuid>",
-  "decision_type_id": "<uuid>",
-  "decision_text": "يعتمد المجلس التعديل وفق النسخة المرفقة.",
-  "decision_status": "draft",
-  "issued_by_user_id": "<current-user-uuid>",
-  "requires_approval": true
-}
-```
-
-Decision statuses include `draft`, `under_review`, `ready_for_approval`, `approved`,
-`sent_to_execution`, `under_follow_up`, `closed`, `cancelled`, and `rejected`.
-
-## Update Decision
-
-```http
-PATCH /rest/v1/decisions?id=eq.<uuid>
-```
-
-```json
-{
-  "decision_status": "ready_for_approval",
-  "decision_text": "النص المنقح"
-}
-```
-
-Database guards enforce legal transitions and protect approved history.
-
-## Create Action Item
-
-Action items may be created only for decisions in an approved or later executable state.
-
-```json
-{
-  "action_no": "ACT-2026-055",
-  "decision_id": "<uuid>",
-  "topic_id": "<uuid>",
-  "assigned_unit_id": "<uuid-or-null>",
-  "assigned_user_id": "<uuid-or-null>",
-  "title_ar": "تعميم اللائحة الجديدة",
-  "description": "إرسال النسخة المعتمدة للجهات",
-  "priority": "high",
-  "due_date": "2026-09-01",
-  "status": "new"
-}
-```
-
-## Update Progress
-
-```http
-PATCH /rest/v1/action_items?id=eq.<uuid>
-```
-
-```json
-{ "status": "in_progress", "progress_percent": 45 }
-```
-
-Statuses are `new`, `in_progress`, `completed`, `overdue`, `cancelled`, and `closed`.
-Starting execution moves the parent decision to follow-up according to database logic.
+The backend must enforce organization isolation, scoped permissions, transition rules, and audit
+events atomically. Exact request and response contracts will be added here with the Sprint 5
+implementation; frontend development must not infer them from physical tables.
