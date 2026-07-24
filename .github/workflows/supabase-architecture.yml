@@ -56,8 +56,10 @@ jobs:
           $compose up -d --pull never
       - name: Wait for API health
         run: |
+          anon_key=$(sed -n 's/^ANON_KEY=//p' supabase/docker/.env)
           for attempt in $(seq 1 90); do
-            if curl --fail --silent http://localhost:54321/auth/v1/health >/dev/null; then exit 0; fi
+            if curl --fail --silent --header "apikey: $anon_key" \
+              http://localhost:54321/auth/v1/health >/dev/null; then exit 0; fi
             sleep 3
           done
           exit 1
