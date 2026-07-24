@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(27);
+select plan(28);
 
 insert into public.organizations(id,code,name_ar) values
 ('43000000-0000-0000-0000-000000000001','s02-prod','Sprint 02 Production'),
@@ -51,67 +51,71 @@ grant select,insert,update,delete on s02_state to authenticated;
 
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"43000000-0000-0000-0000-000000000011","role":"authenticated"}';
-select is(jsonb_array_length(public.get_sprint02_form_options()->'meeting_units'),1,'form options expose manageable meeting unit');
-update s02_state set referral_id=(public.refer_topic(
+select is(jsonb_array_length(api_v1.get_sprint02_form_options()->'meeting_units'),1,'form options expose manageable meeting unit');
+update s02_state set referral_id=(api_v1.refer_topic(
  '43000000-0000-0000-0000-000000000051','43000000-0000-0000-0000-000000000023',
  'Forward for target council review',(select updated_at from public.topics where id='43000000-0000-0000-0000-000000000051')
 )->>'referral_id')::uuid;
 select is((select status from public.topic_referrals where id=(select referral_id from s02_state)),'pending','referral starts pending');
 select is((select current_unit_id from public.topics where id='43000000-0000-0000-0000-000000000051'),'43000000-0000-0000-0000-000000000022'::uuid,'pending referral does not move topic');
 select throws_ok(
- $$select public.refer_topic('43000000-0000-0000-0000-000000000051','43000000-0000-0000-0000-000000000023','Duplicate referral request',(select updated_at from public.topics where id='43000000-0000-0000-0000-000000000051'))$$,
+ $$select api_v1.refer_topic('43000000-0000-0000-0000-000000000051','43000000-0000-0000-0000-000000000023','Duplicate referral request',(select updated_at from public.topics where id='43000000-0000-0000-0000-000000000051'))$$,
  'P0001','topic already has a pending referral','duplicate pending referral is blocked');
 
 set local "request.jwt.claims"='{"sub":"43000000-0000-0000-0000-000000000012","role":"authenticated"}';
-select is(public.respond_topic_referral((select referral_id from s02_state),'accept','Accepted by target unit')->>'status','accepted','destination accepts referral');
+select is(api_v1.respond_topic_referral((select referral_id from s02_state),'accept','Accepted by target unit')->>'status','accepted','destination accepts referral');
 reset role;
 select is((select current_unit_id from public.topics where id='43000000-0000-0000-0000-000000000051'),'43000000-0000-0000-0000-000000000023'::uuid,'acceptance atomically moves topic');
 select is((select responded_by_user_id from public.topic_referrals where id=(select referral_id from s02_state)),'43000000-0000-0000-0000-000000000012'::uuid,'referral stores responder');
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"43000000-0000-0000-0000-000000000012","role":"authenticated"}';
-select is(jsonb_array_length(public.get_topic_route_history('43000000-0000-0000-0000-000000000051')),1,'route history returns referral');
+select is(jsonb_array_length(api_v1.get_topic_route_history('43000000-0000-0000-0000-000000000051')),1,'route history returns referral');
 
 set local "request.jwt.claims"='{"sub":"43000000-0000-0000-0000-000000000011","role":"authenticated"}';
-update s02_state set meeting_id=(public.create_meeting(
+update s02_state set meeting_id=(api_v1.create_meeting(
  '43000000-0000-0000-0000-000000000022','43000000-0000-0000-0000-000000000024',
  'Production council meeting',current_date+7,'09:00','10:00','hybrid','Room and link',null,
  '43000000-0000-0000-0000-000000000099'
 )->>'id')::uuid;
 select matches((select meeting_no from public.meetings where id=(select meeting_id from s02_state)),'^MTG-','server generates meeting number');
-select is(public.create_meeting(
+select is(api_v1.create_meeting(
  '43000000-0000-0000-0000-000000000022','43000000-0000-0000-0000-000000000024',
  'Production council meeting',current_date+7,'09:00','10:00','hybrid','Room and link',null,
  '43000000-0000-0000-0000-000000000099'
 )->>'id',(select meeting_id::text from s02_state),'idempotent create returns same meeting');
-select is((public.search_meetings('Production',null,null,null,null,25,0)->>'total')::int,1,'meeting search filters and counts');
-select is(jsonb_array_length(public.get_meeting_detail((select meeting_id from s02_state))->'status_history'),1,'meeting detail includes initial history');
+select is((api_v1.search_meetings('Production',null,null,null,null,25,0)->>'total')::int,1,'meeting search filters and counts');
+select is(jsonb_array_length(api_v1.get_meeting_detail((select meeting_id from s02_state))->'status_history'),1,'meeting detail includes initial history');
 update s02_state set updated_at=(select updated_at from public.meetings where id=meeting_id);
-select is(public.update_meeting((select meeting_id from s02_state),'Updated production meeting',current_date+8,'10:00','11:00','online','Secure link',null,
+select is(api_v1.update_meeting((select meeting_id from s02_state),'Updated production meeting',current_date+8,'10:00','11:00','online','Secure link',null,
  '43000000-0000-0000-0000-000000000024',(select updated_at from s02_state))->>'title_ar','Updated production meeting','manager updates editable meeting');
 select throws_ok(
-  format('select public.transition_meeting(%L,%L,%L,%L)',(select meeting_id from s02_state),'in_progress','Invalid jump',(select updated_at from public.meetings where id=(select meeting_id from s02_state))),
+  format('select api_v1.transition_meeting(%L,%L,%L,%L)',(select meeting_id from s02_state),'in_progress','Invalid jump',(select updated_at from public.meetings where id=(select meeting_id from s02_state))),
   'P0001','use open_meeting_session to start the meeting','meeting start is delegated to the Sprint 03 session contract');
-select is(public.transition_meeting((select meeting_id from s02_state),'scheduled','Ready for invitations',
+select is(api_v1.transition_meeting((select meeting_id from s02_state),'scheduled','Ready for invitations',
  (select updated_at from public.meetings where id=(select meeting_id from s02_state)))->>'status','scheduled','valid lifecycle transition succeeds');
 select is((select count(*) from public.meeting_status_history where meeting_id=(select meeting_id from s02_state))::int,2,'lifecycle appends status history');
-select is((public.search_eligible_agenda_topics((select meeting_id from s02_state),null,25,0)->>'total')::int,1,'eligible search returns approved topics in meeting unit only');
-update s02_state set item1=(public.add_agenda_item((select meeting_id from s02_state),'43000000-0000-0000-0000-000000000052',false,null)->>'id')::uuid;
+select is((api_v1.search_eligible_agenda_topics((select meeting_id from s02_state),null,25,0)->>'total')::int,1,'eligible search returns approved topics in meeting unit only');
+update s02_state set item1=(api_v1.add_agenda_item((select meeting_id from s02_state),'43000000-0000-0000-0000-000000000052',false,null)->>'id')::uuid;
+select ok(
+  (api_v1.get_meeting_detail((select meeting_id from s02_state))->'agenda_items'->0) ?& array['voting_status','voting_result'],
+  'meeting detail agenda exposes voting state required by frontend'
+);
 select throws_ok(
- format('select public.add_agenda_item(%L,%L,false,null)',(select meeting_id from s02_state),'43000000-0000-0000-0000-000000000053'),
+ format('select api_v1.add_agenda_item(%L,%L,false,null)',(select meeting_id from s02_state),'43000000-0000-0000-0000-000000000053'),
  'P0001','topic is not eligible for agenda','ineligible topic requires exception');
-update s02_state set item2=(public.add_agenda_item((select meeting_id from s02_state),'43000000-0000-0000-0000-000000000053',true,'Urgent statutory deadline')->>'id')::uuid;
+update s02_state set item2=(api_v1.add_agenda_item((select meeting_id from s02_state),'43000000-0000-0000-0000-000000000053',true,'Urgent statutory deadline')->>'id')::uuid;
 select ok((select is_exception from public.agenda_items where id=(select item2 from s02_state)),'authorized exception is recorded');
 update s02_state set updated_at=(select updated_at from public.meetings where id=meeting_id);
-select is((public.reorder_agenda_items((select meeting_id from s02_state),array[(select item2 from s02_state),(select item1 from s02_state)],(select updated_at from s02_state))->0->>'id'),
+select is((api_v1.reorder_agenda_items((select meeting_id from s02_state),array[(select item2 from s02_state),(select item1 from s02_state)],(select updated_at from s02_state))->0->>'id'),
  (select item2::text from s02_state),'agenda reorder persists requested order');
 select throws_ok(
- format('select public.reorder_agenda_items(%L,array[%L]::uuid[],%L)',(select meeting_id from s02_state),(select item1 from s02_state),(select updated_at from public.meetings where id=(select meeting_id from s02_state))),
+ format('select api_v1.reorder_agenda_items(%L,array[%L]::uuid[],%L)',(select meeting_id from s02_state),(select item1 from s02_state),(select updated_at from public.meetings where id=(select meeting_id from s02_state))),
  'P0001','ordered item ids must contain every agenda item exactly once','partial reorder is blocked');
-select is(public.remove_agenda_item((select item2 from s02_state),'No longer urgent')->>'removed','true','agenda item can be removed');
+select is(api_v1.remove_agenda_item((select item2 from s02_state),'No longer urgent')->>'removed','true','agenda item can be removed');
 select is((select agenda_order from public.agenda_items where id=(select item1 from s02_state)),1,'removal normalizes remaining order');
 select throws_ok(
  $$insert into public.meetings(organization_id,meeting_no,governance_unit_id,title_ar,scheduled_date,created_by_user_id) values('43000000-0000-0000-0000-000000000001','BYPASS','43000000-0000-0000-0000-000000000022','Bypass',current_date,'43000000-0000-0000-0000-000000000011')$$,
- '42501','permission denied for table meetings','direct meeting insert is revoked');
+ '42501','permission denied for view meetings','direct meeting insert is revoked');
 
 reset role;
 select cmp_ok((select count(*) from public.audit_logs
@@ -122,8 +126,8 @@ select cmp_ok((select count(*) from public.audit_logs
 
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"43000000-0000-0000-0000-000000000013","role":"authenticated"}';
-select is((public.search_meetings(null,null,null,null,null,25,0)->>'total')::int,0,'foreign tenant cannot discover meetings');
-select throws_ok(format('select public.get_meeting_detail(%L)',(select meeting_id from s02_state)),'P0002','meeting not found','foreign tenant detail is hidden');
+select is((api_v1.search_meetings(null,null,null,null,null,25,0)->>'total')::int,0,'foreign tenant cannot discover meetings');
+select throws_ok(format('select api_v1.get_meeting_detail(%L)',(select meeting_id from s02_state)),'P0002','meeting not found','foreign tenant detail is hidden');
 
 select * from finish();
 rollback;

@@ -30,9 +30,12 @@ async function request(path, options = {}, expected = null) {
 }
 
 async function rest(path, method = "GET", body, headers = serviceHeaders) {
+  const schemaHeaders = path.startsWith("rpc/")
+    ? { "Accept-Profile": "api_v1", "Content-Profile": "api_v1" }
+    : { "Accept-Profile": "public", "Content-Profile": "public" }
   return request(`/rest/v1/${path}`, {
     method,
-    headers: { ...headers, Prefer: method === "POST" ? "return=representation" : "return=minimal" },
+    headers: { ...headers, ...schemaHeaders, Prefer: method === "POST" ? "return=representation" : "return=minimal" },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 }

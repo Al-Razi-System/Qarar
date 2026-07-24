@@ -15,10 +15,6 @@ const build = (options: { finalizeError?: string } = {}) => {
     rpc: async (name: string, args: any) => {
       calls.push({ name, args })
       if (name === "has_permission") return { data: true, error: null }
-      if (name === "consume_iam_rate_limit") return { data: 1, error: null }
-      if (name === "admin_finalize_invited_user") return options.finalizeError
-        ? { data: null, error: { message: options.finalizeError } }
-        : { data: { user_id: "new-user", membership_id: "membership-id" }, error: null }
       if (name === "request_session_revocation") return { data: { user_id: "target-id", auth_session_id: "auth-session-id" }, error: null }
       if (name === "admin_get_user_detail") return { data: { id: args.p_user_id, email: "target@example.test" }, error: null }
       return { data: null, error: null }
@@ -34,6 +30,10 @@ const build = (options: { finalizeError?: string } = {}) => {
     } },
     rpc: async (name: string, args: any) => {
       calls.push({ name, args })
+      if (name === "service_consume_iam_rate_limit") return { data: 1, error: null }
+      if (name === "service_finalize_invited_user") return options.finalizeError
+        ? { data: null, error: { message: options.finalizeError } }
+        : { data: { user_id: "new-user", membership_id: "membership-id" }, error: null }
       if (name === "service_apply_user_status") return { data: { user_id: args.p_user_id, status: args.p_status, auth_sessions_revoked: 2 }, error: null }
       if (name === "service_revoke_auth_sessions") return { data: 1, error: null }
       if (name === "service_record_iam_event") return { data: "audit-id", error: null }
@@ -55,7 +55,7 @@ test("creates Auth user and finalizes profile plus role atomically", async () =>
   const response = await handler(request({ action: "create_user", email: "new@example.test", full_name_ar: "New", role_id: "role", governance_unit_id: "unit" }))
   assert.equal(response.status, 201)
   assert.equal((await response.json()).membership_id, "membership-id")
-  assert.ok(calls.some((call) => call.name === "admin_finalize_invited_user"))
+  assert.ok(calls.some((call) => call.name === "service_finalize_invited_user"))
 })
 
 test("deletes Auth user when atomic application provisioning fails", async () => {

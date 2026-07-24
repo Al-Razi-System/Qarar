@@ -39,13 +39,13 @@ select throws_ok(
  $$insert into public.meetings(organization_id,meeting_no,governance_unit_id,title_ar,scheduled_date,created_by_user_id)
  values('11111111-1111-1111-1111-111111111111','BYPASS','44444444-4444-4444-4444-444444444444',
  'Bypass',current_date,'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')$$,
- '42501','permission denied for table meetings',
+ '42501','permission denied for view meetings',
  'authenticated clients cannot bypass meeting RPCs');
 select throws_ok(
  $$insert into public.agenda_items(organization_id,meeting_id,topic_id,agenda_order)
  values('11111111-1111-1111-1111-111111111111','66666666-6666-6666-6666-666666666666',
  '55555555-5555-5555-5555-555555555555',1)$$,
- '42501','permission denied for table agenda_items',
+ '42501','permission denied for view agenda_items',
  'authenticated clients cannot bypass agenda RPCs');
 
 select * from finish();

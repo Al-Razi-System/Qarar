@@ -63,17 +63,17 @@ set local role authenticated;
 set local "request.jwt.claims" to '{"sub": "aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa", "email": "admin@iam.test"}';
 
 select ok(
-  public.has_permission('iam.users.manage'),
+  api_v1.has_permission('iam.users.manage'),
   'governance_admin receives IAM permissions from role_permissions'
 );
 
 select ok(
-  public.get_current_user_access_context() -> 'permissions' ? 'iam.sso.manage',
+  api_v1.get_current_user_access_context() -> 'permissions' ? 'iam.sso.manage',
   'access context exposes effective permissions to clients'
 );
 
 select lives_ok(
-  $$ select public.admin_create_user_profile('dddddddd-1111-1111-1111-dddddddddddd', 'created@iam.test', 'Created User') $$,
+  $$ select api_v1.admin_create_user_profile('dddddddd-1111-1111-1111-dddddddddddd', 'created@iam.test', 'Created User') $$,
   'authorized admin can create an application user profile through RPC'
 );
 
@@ -89,19 +89,19 @@ select ok(
 );
 
 select is(
-  (public.admin_search_users('created', 'active', null, null, 20, 0) ->> 'total')::int,
+  (api_v1.admin_search_users('created', 'active', null, null, 20, 0) ->> 'total')::int,
   1,
   'admin user search supports query and status filters'
 );
 
 select is(
-  public.admin_get_user_detail('dddddddd-1111-1111-1111-dddddddddddd') ->> 'email',
+  api_v1.admin_get_user_detail('dddddddd-1111-1111-1111-dddddddddddd') ->> 'email',
   'created@iam.test',
   'admin can load full user detail for the edit screen'
 );
 
 select lives_ok(
-  $$ select public.admin_update_user_profile('dddddddd-1111-1111-1111-dddddddddddd', 'Updated User', null, 'EMP-9', null, 'Coordinator') $$,
+  $$ select api_v1.admin_update_user_profile('dddddddd-1111-1111-1111-dddddddddddd', 'Updated User', null, 'EMP-9', null, 'Coordinator') $$,
   'admin can update editable user profile fields'
 );
 
@@ -112,40 +112,42 @@ select is(
 );
 
 select lives_ok(
-  $$ select public.admin_upsert_permission('topics.review', 'topics', 'review', 'governance_unit', 'Review topics') $$,
+  $$ select api_v1.admin_upsert_permission('topics.review', 'topics', 'review', 'governance_unit', 'Review topics') $$,
   'admin can create a custom permission'
 );
 
 select ok(
-  public.admin_list_permissions('topics', true) @> '[{"code":"topics.review"}]'::jsonb,
+  api_v1.admin_list_permissions('topics', true) @> '[{"code":"topics.review"}]'::jsonb,
   'permission list supports module filtering'
 );
 
 create temporary table iam_test_state(role_id uuid) on commit drop;
 
 insert into iam_test_state(role_id)
-select public.admin_upsert_role(null, 'topic_reviewer', 'Topic Reviewer', 'Topic Reviewer', 'Reviews topics', 'governance_unit', true);
+select api_v1.admin_upsert_role(null, 'topic_reviewer', 'Topic Reviewer', 'Topic Reviewer', 'Reviews topics', 'governance_unit', true);
 
-select lives_ok(
-  $$ select public.admin_set_role_permissions((select role_id from iam_test_state), array['topics.review']) $$,
-  'admin can replace a role permission matrix'
+select throws_ok(
+  $$ select qarar_iam.admin_set_role_permissions((select role_id from iam_test_state), array['topics.review']) $$,
+  '42501',
+  'permission denied for function admin_set_role_permissions',
+  'direct role permission replacement is closed'
 );
 
 select ok(
-  public.admin_get_role_detail((select role_id from iam_test_state)) -> 'permissions' @> '[{"code":"topics.review"}]'::jsonb,
-  'role detail exposes assigned permissions for the role editor'
+  api_v1.admin_get_role_detail((select role_id from iam_test_state)) -> 'permissions' = '[]'::jsonb,
+  'new roles remain unprivileged until the four-eyes workflow approves changes'
 );
 
 set local "request.jwt.claims" to '{"sub": "bbbbbbbb-1111-1111-1111-bbbbbbbbbbbb", "email": "member@iam.test"}';
 
 select is(
-  public.get_my_account() ->> 'email',
+  api_v1.get_my_account() ->> 'email',
   'member@iam.test',
   'regular user can load their own account'
 );
 
 select lives_ok(
-  $$ select public.update_my_profile('Member Updated', null, '0500000000', 'Analyst') $$,
+  $$ select api_v1.update_my_profile('Member Updated', null, '0500000000', 'Analyst') $$,
   'regular user can update their own profile fields'
 );
 
@@ -156,18 +158,18 @@ select is(
 );
 
 select is(
-  public.update_my_preferences('ar-SA', 'Asia/Riyadh', '{"email": true}'::jsonb, '{"density": "compact"}'::jsonb) ->> 'timezone',
+  api_v1.update_my_preferences('ar-SA', 'Asia/Riyadh', '{"email": true}'::jsonb, '{"density": "compact"}'::jsonb) ->> 'timezone',
   'Asia/Riyadh',
   'regular user can update their own preferences'
 );
 
 select ok(
-  not public.has_permission('iam.users.manage'),
+  not api_v1.has_permission('iam.users.manage'),
   'regular member has no IAM management permission'
 );
 
 select throws_ok(
-  $$ select public.admin_update_user_status('dddddddd-1111-1111-1111-dddddddddddd', 'suspended', 'not allowed') $$,
+  $$ select api_v1.admin_update_user_profile('dddddddd-1111-1111-1111-dddddddddddd', 'Blocked Update', null, null, null, null) $$,
   '42501',
   'permission denied: iam.users.manage',
   'regular member cannot manage users through RPC'
@@ -176,12 +178,12 @@ select throws_ok(
 set local "request.jwt.claims" to '{"sub": "aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa", "email": "admin@iam.test"}';
 
 select lives_ok(
-  $$ select public.admin_create_invitation('sso.user@iam.test', 'SSO User', '14141414-1414-1414-1414-141414141414', '12121212-1212-1212-1212-121212121212') $$,
+  $$ select api_v1.admin_create_invitation('sso.user@iam.test', 'SSO User', '14141414-1414-1414-1414-141414141414', '12121212-1212-1212-1212-121212121212') $$,
   'authorized admin can create an SSO invitation'
 );
 
 select is(
-  public.admin_upsert_sso_provider(
+  api_v1.admin_upsert_sso_provider(
     'IAM Test SAML',
     '15151515-1515-1515-1515-151515151515',
     'https://idp.iam.test/metadata',
@@ -196,7 +198,7 @@ select is(
   'authorized admin can register a governed Supabase SSO provider mapping'
 );
 
-select public.admin_upsert_sso_domain(
+select api_v1.admin_upsert_sso_domain(
   (select id from public.sso_identity_providers where provider_name = 'IAM Test SAML'),
   'iam.test',
   true
@@ -205,7 +207,7 @@ select public.admin_upsert_sso_domain(
 set local "request.jwt.claims" to '{"sub": "cccccccc-1111-1111-1111-cccccccccccc", "email": "sso.user@iam.test", "sso_provider_id": "15151515-1515-1515-1515-151515151515"}';
 
 select is(
-  public.register_current_sso_login('SSO User'),
+  api_v1.register_current_sso_login('SSO User'),
   'cccccccc-1111-1111-1111-cccccccccccc'::uuid,
   'invited SSO user is provisioned and linked to the organization'
 );

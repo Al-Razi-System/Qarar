@@ -47,9 +47,11 @@ Local entry points:
 - Mailpit: `http://localhost:8025`
 - PostgreSQL pooler: `localhost:54322`
 
-The `db-migrate` one-shot service applies each file in `supabase/migrations` once, records it in
-`qarar_internal.applied_migrations`, then applies `seed.sql` once. Existing data lives under the
-ignored `supabase/docker/volumes/db/data` and `volumes/storage` directories.
+The `db-migrate` one-shot service serializes runners with a PostgreSQL advisory lock, applies each
+file in `supabase/migrations` once, and records its SHA-256 in
+`qarar_internal.applied_migrations`. A changed applied file is rejected. Each migration and ledger
+entry is one transaction, then `seed.sql` is handled with the same checksum rule. Existing data
+lives under the ignored `supabase/docker/volumes/db/data` and `volumes/storage` directories.
 
 The Supabase CLI stack remains available for isolated CLI-oriented testing:
 
@@ -72,6 +74,10 @@ kept in separate files for accounts, user administration, roles and permissions,
 operations, topics, meetings, minutes, decisions, Edge Functions, and Storage. Update the relevant
 domain file whenever an API contract changes.
 
+The implemented backend is a database-centric modular monolith. Application tables are physically
+owned by `qarar_*` schemas, frontend RPCs are versioned in `api_v1`, and architecture registries
+make ownership testable. See [`docs/architecture/README.md`](docs/architecture/README.md).
+
 ## First User Bootstrap
 
 `supabase/seed.sql` intentionally creates only reference data. It does not create `auth.users` rows.
@@ -79,7 +85,7 @@ domain file whenever an API contract changes.
 After creating the first account through Supabase Auth, call the bootstrap RPC as that authenticated user:
 
 ```sql
-select public.bootstrap_current_user_profile(
+select api_v1.bootstrap_current_user_profile(
   p_organization_code => 'qarar-demo',
   p_full_name_ar => 'مسؤول النظام'
 );
@@ -89,7 +95,7 @@ This function:
 
 - requires `auth.uid()`;
 - requires an authenticated email claim;
-- creates a matching `public.users` profile for the current Auth user;
+- creates a matching `qarar_iam.users` profile for the current Auth user;
 - marks the first user in the organization as `is_system_admin = true`;
 - returns the existing profile if the same user already bootstrapped the same organization;
 - rejects any attempt after the organization already has a user.
@@ -133,10 +139,10 @@ SSO setup is intentionally split:
 
 ## Design Notes
 
-- `auth.users` remains the authentication source. `public.users` stores the Qarar application profile and organization context.
+- `auth.users` remains the authentication source. `qarar_iam.users` stores the Qarar application profile and organization context.
 - Every operational table added here has `organization_id` to support tenant isolation.
 - Cross-table references that carry tenant-sensitive data use composite `(id, organization_id)` constraints to prevent records from pointing to users, roles, units, categories, or topics in another organization.
-- First-user bootstrap is handled by `public.bootstrap_current_user_profile(...)`; it is limited to the first profile in an existing organization.
+- First-user bootstrap is exposed as `api_v1.bootstrap_current_user_profile(...)`; it is limited to the first profile in an existing organization.
 - RLS is enabled on all created tables.
 - No delete policies are defined for sensitive operational tables.
 - Audit logs are append-only for authenticated users and readable only by system/governance/audit roles.
@@ -171,3 +177,14 @@ Validated locally with Supabase CLI `2.109.1`:
 - `npm run test:sprint03-http` passes the real short-lived QR session, member self check-in,
   independent verification, roster lock, quorum, eligible voting, direct-write denial, and
   frozen-result flow through Auth/Kong/PostgREST.
+- Modular architecture migrations move all 48 application entities out of `public` and register
+  78 reviewed `api_v1` RPC contracts.
+- Database tests for completed scope (Sprint 00 through Sprint 03, IAM, architecture, and migration
+  runtime controls) pass 243/243 assertions. Sprint 04 legacy specifications remain intentionally
+  excluded until Sprint 04.
+- `api_v1` works through the Docker PostgREST/Kong path, while internal module schemas return HTTP
+  `406` and are not exposed.
+- CI independently rehearses an existing-data upgrade, injects a migration failure to prove atomic
+  rollback, rejects a tampered migration checksum, runs two migration containers concurrently to
+  prove lock serialization, and runs the complete Docker/DB/Edge/HTTP verification suite on every
+  PR to `dev`.

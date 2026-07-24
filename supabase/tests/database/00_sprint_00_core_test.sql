@@ -37,13 +37,13 @@ set local "request.jwt.claims" to '{"sub": "55555555-5555-5555-5555-555555555555
 
 -- Test 1: RBAC `is_system_admin()` correctly returns false for regular user
 select ok(
-  not public.is_system_admin(),
+  not qarar_iam.is_system_admin(),
   'Regular user should not be identified as system admin'
 );
 
 -- Test 2: RBAC `has_role_code()` returns true for assigned membership
 select ok(
-  public.has_role_code(array['council_member']),
+  qarar_iam.has_role_code(array['council_member']),
   'User X should have council_member role from active membership'
 );
 
@@ -56,7 +56,8 @@ select is_empty(
 -- Test 4: Governance Units RLS - regular users cannot insert units
 select throws_ok(
   $$ insert into public.governance_units (organization_id, unit_type_id, code, name_ar) values ('33333333-3333-3333-3333-333333333333', '77777777-7777-7777-7777-777777777777', 'U-02', 'Unit 2') $$,
-  'new row violates row-level security policy for table "governance_units"',
+  '42501',
+  'permission denied for view governance_units',
   'Regular user should NOT be able to create a governance unit'
 );
 

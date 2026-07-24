@@ -67,16 +67,16 @@ grant select,insert,update,delete on s03_state to authenticated;
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"44000000-0000-0000-0000-000000000011","role":"authenticated"}';
 select throws_ok(
- $$select public.transition_meeting('44000000-0000-0000-0000-000000000081','in_progress',null,
+ $$select api_v1.transition_meeting('44000000-0000-0000-0000-000000000081','in_progress',null,
  (select updated_at from public.meetings where id='44000000-0000-0000-0000-000000000081'))$$,
  'P0001','use open_meeting_session to start the meeting','generic transition cannot bypass session initialization');
-select is(public.open_meeting_session('44000000-0000-0000-0000-000000000081',
+select is(api_v1.open_meeting_session('44000000-0000-0000-0000-000000000081',
  (select updated_at from public.meetings where id='44000000-0000-0000-0000-000000000081'))->'meeting'->>'status',
  'in_progress','manager opens meeting session');
 select is((select count(*) from public.attendance_records where meeting_id='44000000-0000-0000-0000-000000000081')::int,3,'opening snapshots all active members');
 select is((select count(*) from public.attendance_history where meeting_id='44000000-0000-0000-0000-000000000081')::int,3,'roster initialization appends attendance history');
 select is((select quorum_status from public.meetings where id='44000000-0000-0000-0000-000000000081'),'not_met','empty attendance starts below quorum');
-update s03_state set checkin_token=public.create_checkin_session(
+update s03_state set checkin_token=api_v1.create_checkin_session(
  '44000000-0000-0000-0000-000000000081',15)->>'token';
 select ok(char_length((select checkin_token from s03_state))>=20,'manager creates a short-lived check-in token');
 update s03_state set
@@ -85,101 +85,101 @@ update s03_state set
  member2_attendance=(select id from public.attendance_records where meeting_id='44000000-0000-0000-0000-000000000081' and user_id='44000000-0000-0000-0000-000000000013');
 
 set local "request.jwt.claims"='{"sub":"44000000-0000-0000-0000-000000000012","role":"authenticated"}';
-select is(public.self_check_in('44000000-0000-0000-0000-000000000081',
+select is(api_v1.self_check_in('44000000-0000-0000-0000-000000000081',
  (select checkin_token from s03_state),'Member mobile')->>'verification_status',
  'pending_verification','member self check-in creates an unverified claim');
 select throws_ok(
- format('select public.verify_attendance(%L,%L,%L,%L)',(select member1_attendance from s03_state),
+ format('select api_v1.verify_attendance(%L,%L,%L,%L)',(select member1_attendance from s03_state),
  'present','Self approval attempt',(select updated_at from public.attendance_records where id=(select member1_attendance from s03_state))),
  '42501','permission denied: attendance.verify','member cannot verify attendance');
 set local "request.jwt.claims"='{"sub":"44000000-0000-0000-0000-000000000013","role":"authenticated"}';
-select is(public.self_check_in('44000000-0000-0000-0000-000000000081',
+select is(api_v1.self_check_in('44000000-0000-0000-0000-000000000081',
  (select checkin_token from s03_state),'Second member device')->>'verification_status',
  'pending_verification','second member can submit a separate check-in claim');
 
 set local "request.jwt.claims"='{"sub":"44000000-0000-0000-0000-000000000011","role":"authenticated"}';
-select is(public.verify_attendance((select manager_attendance from s03_state),'present','Chair manually verified',
+select is(api_v1.verify_attendance((select manager_attendance from s03_state),'present','Chair manually verified',
  (select updated_at from public.attendance_records where id=(select manager_attendance from s03_state)))->>'attendance_status',
  'present','authorized verifier records manual presence with reason');
-select is(public.verify_attendance((select member1_attendance from s03_state),'late','QR claim confirmed',
+select is(api_v1.verify_attendance((select member1_attendance from s03_state),'late','QR claim confirmed',
  (select updated_at from public.attendance_records where id=(select member1_attendance from s03_state)))->>'attendance_status',
  'late','verifier confirms member claim as late');
-select is(public.verify_attendance((select member2_attendance from s03_state),'absent','No response',
+select is(api_v1.verify_attendance((select member2_attendance from s03_state),'absent','No response',
  (select updated_at from public.attendance_records where id=(select member2_attendance from s03_state)))->>'verification_status',
  'rejected','verifier rejects an unsupported QR claim');
-select is(jsonb_array_length(public.get_attendance_history((select member1_attendance from s03_state))),2,
+select is(jsonb_array_length(api_v1.get_attendance_history((select member1_attendance from s03_state))),2,
  'attendance history exposes initialization and latest change');
 select throws_ok(
- format('select public.verify_attendance(%L,%L,%L,%L)',(select member2_attendance from s03_state),'present','Stale update','2000-01-01T00:00:00Z'),
+ format('select api_v1.verify_attendance(%L,%L,%L,%L)',(select member2_attendance from s03_state),'present','Stale update','2000-01-01T00:00:00Z'),
  '40001','attendance was modified; refresh before verification','stale attendance verification is blocked');
-select is((public.recalculate_meeting_quorum('44000000-0000-0000-0000-000000000081',true)->>'quorum_status'),'met','quorum uses attendance roster snapshot');
+select is((api_v1.recalculate_meeting_quorum('44000000-0000-0000-0000-000000000081',true)->>'quorum_status'),'met','quorum uses attendance roster snapshot');
 select is((select present_members from public.quorum_snapshots where meeting_id='44000000-0000-0000-0000-000000000081' order by calculated_at desc,id desc limit 1),2,'quorum snapshot stores present count');
 select cmp_ok((select actual_percentage from public.quorum_snapshots where meeting_id='44000000-0000-0000-0000-000000000081' order by calculated_at desc,id desc limit 1),'>=',66.66::numeric,'quorum snapshot stores actual percentage');
-select is(public.lock_attendance_roster('44000000-0000-0000-0000-000000000081',
+select is(api_v1.lock_attendance_roster('44000000-0000-0000-0000-000000000081',
  (select updated_at from public.meetings where id='44000000-0000-0000-0000-000000000081'))->>'attendance_locked',
  'true','authorized verifier locks the fully resolved roster');
 update s03_state set meeting_updated_at=(select updated_at from public.meetings where id='44000000-0000-0000-0000-000000000081');
-update s03_state set round_id=(public.open_voting_round('44000000-0000-0000-0000-000000000091',
+update s03_state set round_id=(api_v1.open_voting_round('44000000-0000-0000-0000-000000000091',
  (select meeting_updated_at from s03_state))->>'voting_round_id')::uuid;
 select is((select eligible_voter_count from public.voting_rounds where id=(select round_id from s03_state)),2,'voting round snapshots present eligible members');
-select is(jsonb_array_length(public.get_my_open_votes('44000000-0000-0000-0000-000000000081')),1,'manager sees eligible open vote');
+select is(jsonb_array_length(api_v1.get_my_open_votes('44000000-0000-0000-0000-000000000081')),1,'manager sees eligible open vote');
 
 set local "request.jwt.claims"='{"sub":"44000000-0000-0000-0000-000000000012","role":"authenticated"}';
-select is(jsonb_array_length(public.get_my_open_votes('44000000-0000-0000-0000-000000000081')),1,'eligible member sees open vote');
-select is(public.cast_vote((select round_id from s03_state),'approve','Supports proposal')->>'accepted','true','eligible member casts vote');
-select throws_ok(format('select public.cast_vote(%L,%L,null)',(select round_id from s03_state),'reject'),
+select is(jsonb_array_length(api_v1.get_my_open_votes('44000000-0000-0000-0000-000000000081')),1,'eligible member sees open vote');
+select is(api_v1.cast_vote((select round_id from s03_state),'approve','Supports proposal')->>'accepted','true','eligible member casts vote');
+select throws_ok(format('select api_v1.cast_vote(%L,%L,null)',(select round_id from s03_state),'reject'),
  '23505','vote already cast for this round','duplicate vote is blocked');
-select is(public.get_voting_round_detail((select round_id from s03_state))->>'my_vote','approve','member sees own vote');
-select is(public.get_voting_round_detail((select round_id from s03_state))->'votes','null'::jsonb,'member cannot inspect other votes');
+select is(api_v1.get_voting_round_detail((select round_id from s03_state))->>'my_vote','approve','member sees own vote');
+select is(api_v1.get_voting_round_detail((select round_id from s03_state))->'votes','null'::jsonb,'member cannot inspect other votes');
 
 set local "request.jwt.claims"='{"sub":"44000000-0000-0000-0000-000000000013","role":"authenticated"}';
-select throws_ok(format('select public.cast_vote(%L,%L,null)',(select round_id from s03_state),'approve'),
+select throws_ok(format('select api_v1.cast_vote(%L,%L,null)',(select round_id from s03_state),'approve'),
  '42501','current user is not eligible for this voting round','absent member cannot vote');
 
 set local "request.jwt.claims"='{"sub":"44000000-0000-0000-0000-000000000011","role":"authenticated"}';
-select is(public.cast_vote((select round_id from s03_state),'reject','Opposes proposal')->>'accepted','true','second eligible member casts vote');
-select is(public.close_voting_round((select round_id from s03_state),'Voting completed')->>'result','tied','close freezes calculated result');
+select is(api_v1.cast_vote((select round_id from s03_state),'reject','Opposes proposal')->>'accepted','true','second eligible member casts vote');
+select is(api_v1.close_voting_round((select round_id from s03_state),'Voting completed')->>'result','tied','close freezes calculated result');
 select is((select voting_result from public.agenda_items where id='44000000-0000-0000-0000-000000000091'),'tied','agenda stores final result');
-select is(jsonb_array_length(public.get_voting_round_detail((select round_id from s03_state))->'votes'),2,'manager sees vote audit details');
-select is(jsonb_array_length(public.get_voting_round_detail((select round_id from s03_state))->'eligible_members'),2,
+select is(jsonb_array_length(api_v1.get_voting_round_detail((select round_id from s03_state))->'votes'),2,'manager sees vote audit details');
+select is(jsonb_array_length(api_v1.get_voting_round_detail((select round_id from s03_state))->'eligible_members'),2,
  'manager sees snapshotted electorate and participation');
-select throws_ok(format('select public.cast_vote(%L,%L,null)',(select round_id from s03_state),'approve'),
+select throws_ok(format('select api_v1.cast_vote(%L,%L,null)',(select round_id from s03_state),'approve'),
  'P0001','voting round is not open','closed round rejects votes');
-update s03_state set round_id=(public.open_voting_round('44000000-0000-0000-0000-000000000091',
+update s03_state set round_id=(api_v1.open_voting_round('44000000-0000-0000-0000-000000000091',
  (select updated_at from public.meetings where id='44000000-0000-0000-0000-000000000081'))->>'voting_round_id')::uuid;
 select is((select round_number from public.voting_rounds where id=(select round_id from s03_state)),2,
  'manager can open a later voting round');
 select throws_ok(
- format('select public.override_attendance(%L,%L,%L,%L)',(select member2_attendance from s03_state),
+ format('select api_v1.override_attendance(%L,%L,%L,%L)',(select member2_attendance from s03_state),
  'excused','Correction attempted during active voting',
  (select updated_at from public.attendance_records where id=(select member2_attendance from s03_state))),
  'P0001','attendance override is blocked while voting is open',
  'attendance override cannot race an open voting round');
-select is(public.cancel_voting_round((select round_id from s03_state),'Agenda item requires clarification')->>'status',
+select is(api_v1.cancel_voting_round((select round_id from s03_state),'Agenda item requires clarification')->>'status',
  'cancelled','manager cancels an open round with reason');
 
-select is(public.open_meeting_session('44000000-0000-0000-0000-000000000082',
+select is(api_v1.open_meeting_session('44000000-0000-0000-0000-000000000082',
  (select updated_at from public.meetings where id='44000000-0000-0000-0000-000000000082'))->'meeting'->>'status',
  'in_progress','second meeting session opens');
-select is(public.verify_attendance(
+select is(api_v1.verify_attendance(
  (select id from public.attendance_records where meeting_id='44000000-0000-0000-0000-000000000082' and user_id='44000000-0000-0000-0000-000000000011'),
  'present','Only attendee manually verified',
  (select updated_at from public.attendance_records where meeting_id='44000000-0000-0000-0000-000000000082' and user_id='44000000-0000-0000-0000-000000000011')
  )->>'attendance_status','present','failed-quorum meeting records one attendee');
-select is(public.verify_attendance(
+select is(api_v1.verify_attendance(
  (select id from public.attendance_records where meeting_id='44000000-0000-0000-0000-000000000082' and user_id='44000000-0000-0000-0000-000000000012'),
  'absent','Member did not attend',
  (select updated_at from public.attendance_records where meeting_id='44000000-0000-0000-0000-000000000082' and user_id='44000000-0000-0000-0000-000000000012')
  )->>'attendance_status','absent','failed-quorum roster resolves first absence');
-select is(public.verify_attendance(
+select is(api_v1.verify_attendance(
  (select id from public.attendance_records where meeting_id='44000000-0000-0000-0000-000000000082' and user_id='44000000-0000-0000-0000-000000000013'),
  'excused','Approved absence excuse',
  (select updated_at from public.attendance_records where meeting_id='44000000-0000-0000-0000-000000000082' and user_id='44000000-0000-0000-0000-000000000013')
  )->>'attendance_status','excused','failed-quorum roster resolves excused absence');
-select is(public.lock_attendance_roster('44000000-0000-0000-0000-000000000082',
+select is(api_v1.lock_attendance_roster('44000000-0000-0000-0000-000000000082',
  (select updated_at from public.meetings where id='44000000-0000-0000-0000-000000000082'))->>'attendance_locked',
  'true','failed-quorum roster is locked before action');
-select is(public.apply_quorum_failure('44000000-0000-0000-0000-000000000082','postpone','Quorum threshold was not reached',
+select is(api_v1.apply_quorum_failure('44000000-0000-0000-0000-000000000082','postpone','Quorum threshold was not reached',
  (select updated_at from public.meetings where id='44000000-0000-0000-0000-000000000082'))->>'status',
  'postponed','failed quorum applies authorized postponement');
 select throws_ok(
@@ -187,7 +187,7 @@ select throws_ok(
  values('44000000-0000-0000-0000-000000000001','44000000-0000-0000-0000-000000000081',
  '44000000-0000-0000-0000-000000000071','44000000-0000-0000-0000-000000000011',
  '44000000-0000-0000-0000-000000000061','approve')$$,
- '42501','permission denied for table votes','direct vote insert is revoked');
+ '42501','permission denied for view votes','direct vote insert is revoked');
 
 reset role;
 select cmp_ok((select count(*) from public.audit_logs
@@ -199,7 +199,7 @@ select cmp_ok((select count(*) from public.audit_logs
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"44000000-0000-0000-0000-000000000014","role":"authenticated"}';
 select throws_ok(
- $$select public.get_meeting_session_detail('44000000-0000-0000-0000-000000000081')$$,
+ $$select api_v1.get_meeting_session_detail('44000000-0000-0000-0000-000000000081')$$,
  'P0002','meeting not found','foreign tenant cannot discover session');
 
 select * from finish();

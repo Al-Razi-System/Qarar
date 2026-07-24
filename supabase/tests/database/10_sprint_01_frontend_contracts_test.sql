@@ -36,18 +36,18 @@ insert into public.memberships(organization_id,user_id,governance_unit_id,role_i
 
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"42000000-0000-0000-0000-000000000011","role":"authenticated"}';
-select is(jsonb_array_length(public.get_topic_form_options()->'governance_units'),1,'form options expose only creatable units');
-select is(jsonb_array_length(public.get_topic_form_options()->'categories'),1,'form options expose active tenant categories');
+select is(jsonb_array_length(api_v1.get_topic_form_options()->'governance_units'),1,'form options expose only creatable units');
+select is(jsonb_array_length(api_v1.get_topic_form_options()->'categories'),1,'form options expose active tenant categories');
 
 create temporary table contract_state(topic_id uuid, request_id uuid, updated_at timestamptz);
 insert into contract_state(request_id) values('42000000-0000-0000-0000-000000000099');
 update contract_state set topic_id=(
-  public.create_topic('Idempotent topic','Complete idempotent topic description',
+  api_v1.create_topic('Idempotent topic','Complete idempotent topic description',
     '42000000-0000-0000-0000-000000000023','42000000-0000-0000-0000-000000000022',
     'medium','new',null,request_id)->>'id'
 )::uuid;
 select is(
-  public.create_topic('Idempotent topic','Complete idempotent topic description',
+  api_v1.create_topic('Idempotent topic','Complete idempotent topic description',
     '42000000-0000-0000-0000-000000000023','42000000-0000-0000-0000-000000000022',
     'medium','new',null,(select request_id from contract_state))->>'id',
   (select topic_id::text from contract_state),
@@ -56,39 +56,39 @@ select is(
 select is((select count(*) from public.topics)::integer,1,'idempotent replay creates no duplicate');
 create temporary table review_outcomes(action text primary key, topic_id uuid, updated_at timestamptz);
 insert into review_outcomes(action,topic_id)
-select 'return',(public.create_topic(
+select 'return',(api_v1.create_topic(
   'Return workflow topic','Description for successful return workflow',
   '42000000-0000-0000-0000-000000000023','42000000-0000-0000-0000-000000000022'
 )->>'id')::uuid
 union all
-select 'reject',(public.create_topic(
+select 'reject',(api_v1.create_topic(
   'Reject workflow topic','Description for successful rejection workflow',
   '42000000-0000-0000-0000-000000000023','42000000-0000-0000-0000-000000000022'
 )->>'id')::uuid;
 update review_outcomes o set updated_at=t.updated_at from public.topics t where t.id=o.topic_id;
-select is((public.search_my_topics(null,null,null,25,0)->>'total')::integer,3,'my topics endpoint returns submitter records');
+select is((api_v1.search_my_topics(null,null,null,25,0)->>'total')::integer,3,'my topics endpoint returns submitter records');
 select is(
-  public.get_topic_detail((select topic_id from contract_state))->>'topic_no',
+  api_v1.get_topic_detail((select topic_id from contract_state))->>'topic_no',
   (select topic_no from public.topics where id=(select topic_id from contract_state)),
   'submitter can load complete detail'
 );
-select is(jsonb_array_length(public.get_topic_detail((select topic_id from contract_state))->'history'),1,'detail includes ordered history');
+select is(jsonb_array_length(api_v1.get_topic_detail((select topic_id from contract_state))->'history'),1,'detail includes ordered history');
 update contract_state s set updated_at=t.updated_at from public.topics t where t.id=s.topic_id;
 
 set local "request.jwt.claims"='{"sub":"42000000-0000-0000-0000-000000000012","role":"authenticated"}';
-select is(jsonb_array_length(public.get_topic_detail((select topic_id from contract_state))->'allowed_review_actions'),5,'review detail exposes allowed actions');
-select is(public.review_topic((select topic_id from contract_state),'start_review',null,(select updated_at from contract_state))->>'status','under_review','reviewer can start review');
+select is(jsonb_array_length(api_v1.get_topic_detail((select topic_id from contract_state))->'allowed_review_actions'),5,'review detail exposes allowed actions');
+select is(api_v1.review_topic((select topic_id from contract_state),'start_review',null,(select updated_at from contract_state))->>'status','under_review','reviewer can start review');
 update contract_state s set updated_at=t.updated_at from public.topics t where t.id=s.topic_id;
-select is(public.review_topic((select topic_id from contract_state),'defer','Waiting for policy input',(select updated_at from contract_state))->>'status','deferred','reviewer can defer');
+select is(api_v1.review_topic((select topic_id from contract_state),'defer','Waiting for policy input',(select updated_at from contract_state))->>'status','deferred','reviewer can defer');
 update contract_state s set updated_at=t.updated_at from public.topics t where t.id=s.topic_id;
-select is(public.review_topic((select topic_id from contract_state),'resume','Policy input received',(select updated_at from contract_state))->>'status','under_review','reviewer can resume deferred topic');
+select is(api_v1.review_topic((select topic_id from contract_state),'resume','Policy input received',(select updated_at from contract_state))->>'status','under_review','reviewer can resume deferred topic');
 update contract_state s set updated_at=t.updated_at from public.topics t where t.id=s.topic_id;
-select is(public.review_topic((select topic_id from contract_state),'approve','Approved after review',(select updated_at from contract_state))->>'status','approved','reviewer can approve');
-select is(public.review_topic(
+select is(api_v1.review_topic((select topic_id from contract_state),'approve','Approved after review',(select updated_at from contract_state))->>'status','approved','reviewer can approve');
+select is(api_v1.review_topic(
   (select topic_id from review_outcomes where action='return'),'return','Missing financial details',
   (select updated_at from review_outcomes where action='return')
 )->>'status','returned','reviewer can return topic with a reason');
-select is(public.review_topic(
+select is(api_v1.review_topic(
   (select topic_id from review_outcomes where action='reject'),'reject','Outside governance mandate',
   (select updated_at from review_outcomes where action='reject')
 )->>'status','rejected','reviewer can reject topic with a reason');
@@ -101,7 +101,7 @@ select is((select count(*) from public.audit_logs where action in('topics.review
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"42000000-0000-0000-0000-000000000013","role":"authenticated"}';
 select throws_ok(
-  format('select public.get_topic_detail(%L)',(select topic_id from contract_state)),
+  format('select api_v1.get_topic_detail(%L)',(select topic_id from contract_state)),
   'P0002','topic not found','foreign tenant cannot discover topic detail'
 );
 select is((select count(*) from public.topics)::integer,0,'foreign tenant cannot read topic rows through RLS');

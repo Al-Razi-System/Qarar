@@ -34,7 +34,7 @@ SSO login is rejected when the authenticated email domain is not active for that
 After Supabase Auth login, call:
 
 ```dart
-await supabase.rpc('register_current_sso_login', params: {
+await supabase.schema('api_v1').rpc('register_current_sso_login', params: {
   'p_full_name_ar': displayName,
 });
 ```

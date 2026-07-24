@@ -180,11 +180,10 @@ atomically. Returned-topic editing and resubmission belong to PB-005 and are not
 
 ## Read Topic History
 
-Visible users can read the immutable workflow trail:
-
-```http
-GET /rest/v1/topic_status_history?topic_id=eq.<uuid>&select=*&order=changed_at.asc
-```
+Visible users receive the immutable, ordered workflow trail in the `history` field returned by
+`get_topic_detail`. Referral-specific movements are returned by `get_topic_route_history`, documented
+in [06-topic-referrals.md](./06-topic-referrals.md). There is no supported direct table endpoint for
+`topic_status_history`.
 
 Do not reconstruct history from the current topic status.
 

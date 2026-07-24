@@ -2,6 +2,28 @@
 
 These operations are available to every authenticated active user and only affect the caller.
 
+## Bootstrap My Profile
+
+`POST /rest/v1/rpc/bootstrap_current_user_profile`
+
+Use this once after a permitted non-SSO Auth registration when no application profile exists:
+
+```json
+{
+  "p_organization_code": "QARAR",
+  "p_full_name_ar": "عمر محمد",
+  "p_full_name_en": "Omar Mohammed",
+  "p_employee_no": "EMP-1024",
+  "p_mobile": "0500000000",
+  "p_job_title": "أمين مجلس"
+}
+```
+
+The contract derives identity and email from the authenticated JWT, validates the organization, and
+creates only the caller's profile. Do not use it for SSO login, invitations, or administrative user
+creation; those flows are documented in [04-sso.md](./04-sso.md) and
+[02-users-admin.md](./02-users-admin.md).
+
 ## Get My Account
 
 `POST /rest/v1/rpc/get_my_account`
@@ -12,7 +34,7 @@ Returns profile fields, organization, preferences, active roles, and effective p
 
 ```dart
 final account = Map<String, dynamic>.from(
-  await supabase.rpc('get_my_account') as Map,
+  await supabase.schema('api_v1').rpc('get_my_account') as Map,
 );
 ```
 

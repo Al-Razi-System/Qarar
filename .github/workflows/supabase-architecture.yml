@@ -1,0 +1,89 @@
+name: Supabase Architecture
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - "supabase/**"
+      - ".github/workflows/supabase-architecture.yml"
+      - "package.json"
+      - "package-lock.json"
+  push:
+    branches: [dev]
+
+concurrency:
+  group: supabase-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migration-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - name: Configure local stack
+        run: cp supabase/docker/.env.example supabase/docker/.env
+      - name: Rehearse existing-data upgrade and failure rollback
+        run: sh supabase/tests/migration-upgrade-rehearsal.sh
+      - name: Database logs
+        if: failure()
+        run: docker logs qarar-supabase-db --tail 300
+
+  integration:
+    needs: migration-upgrade
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Configure and start Supabase
+        run: |
+          cp supabase/docker/.env.example supabase/docker/.env
+          npm run docker:config
+          compose="docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml"
+          for service in $($compose config --services); do
+            for attempt in 1 2 3 4 5 6; do
+              $compose pull "$service" && break
+              [ "$attempt" -lt 6 ] || exit 1
+              sleep $((attempt * 20))
+            done
+            sleep 5
+          done
+          $compose up -d --pull never
+      - name: Wait for API health
+        run: |
+          anon_key=$(sed -n 's/^ANON_KEY=//p' supabase/docker/.env)
+          for attempt in $(seq 1 90); do
+            if curl --fail --silent --header "apikey: $anon_key" \
+              http://localhost:54321/auth/v1/health >/dev/null; then exit 0; fi
+            sleep 3
+          done
+          exit 1
+      - name: Database contracts and security boundaries
+        run: sh supabase/tests/run-completed-db-tests.sh
+      - name: API documentation contract parity
+        run: npm run test:api-docs
+      - name: Migration checksum and lock cleanup
+        run: sh supabase/tests/migration-integrity-check.sh
+      - name: Concurrent migration runner serialization
+        run: sh supabase/tests/migration-concurrency-check.sh
+      - name: Edge handler
+        run: npm run test:iam-edge
+      - name: Compatibility dependency allowlist
+        run: npm run test:compatibility
+      - name: IAM HTTP
+        run: npm run test:iam-http
+      - name: Sprint 01 HTTP
+        run: npm run test:sprint01-http
+      - name: Sprint 03 HTTP
+        run: npm run test:sprint03-http
+      - name: Compose status and logs
+        if: failure()
+        run: |
+          npm run docker:status
+          docker compose --env-file supabase/docker/.env \
+            -f supabase/docker/docker-compose.yml logs --tail 300
