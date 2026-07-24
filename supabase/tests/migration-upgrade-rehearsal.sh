@@ -23,6 +23,15 @@ create table if not exists qarar_internal.applied_migrations(
  version text primary key,
  applied_at timestamptz not null default now()
 );
+-- The database image initializes auth.users, while GoTrue normally creates
+-- auth.sessions on first start. The upgrade rehearsal runs without GoTrue so
+-- project migrations cannot be applied accidentally by its Compose dependency.
+create table if not exists auth.sessions(
+ id uuid primary key,
+ user_id uuid not null references auth.users(id) on delete cascade,
+ created_at timestamptz not null default now(),
+ updated_at timestamptz not null default now()
+);
 create or replace function auth.jwt()
 returns jsonb language sql stable as $$
  select coalesce(
