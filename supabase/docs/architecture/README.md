@@ -23,7 +23,10 @@ Internal module roles use `BYPASSRLS` because SECURITY DEFINER commands must enf
 transaction across protected tables. They are never login or client roles. Every exposed contract
 must derive its tenant from the validated actor, constrain rows by `organization_id`, and include a
 cross-tenant behavioral test. CI also rejects contract implementations that contain no explicit
-tenant or actor guard.
+tenant or actor guard, but this source-text check is only an early review gate. Behavioral pgTAP
+tests are the isolation proof. The shared negative suite exercises IAM, Topics, Meetings,
+Attendance, Voting, and Audit using valid foreign-tenant identifiers, including access attempted by
+a system administrator from another tenant.
 
 ## Module Ownership
 
@@ -99,4 +102,6 @@ same `supabase_admin` migration role validated by CI.
 One session-level PostgreSQL advisory lock serializes the complete migration batch. Every applied
 file and the development seed are recorded with a SHA-256 checksum. A changed historical file
 stops startup; corrections must be delivered as a new migration. Each migration and its ledger row
-remain one transaction.
+remain one transaction. CI starts two real `db-migrate` containers concurrently, observes one
+granted advisory lock and one waiting lock in PostgreSQL, then requires both runners to finish
+successfully with no leaked lock.

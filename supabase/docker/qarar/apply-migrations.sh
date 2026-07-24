@@ -43,6 +43,17 @@ case "$lock_backend_pid" in
     ;;
 esac
 
+lock_hold_seconds=${QARAR_MIGRATION_LOCK_HOLD_SECONDS:-0}
+case "$lock_hold_seconds" in
+  ''|*[!0-9]*)
+    echo "QARAR_MIGRATION_LOCK_HOLD_SECONDS must be a non-negative integer" >&2
+    exit 1
+    ;;
+esac
+if [ "$lock_hold_seconds" -gt 0 ]; then
+  sleep "$lock_hold_seconds"
+fi
+
 psql -v ON_ERROR_STOP=1 <<'SQL'
 do $$
 declare migration_role record;

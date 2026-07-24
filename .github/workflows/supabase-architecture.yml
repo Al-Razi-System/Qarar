@@ -67,6 +67,8 @@ jobs:
         run: sh supabase/tests/run-completed-db-tests.sh
       - name: Migration checksum and lock cleanup
         run: sh supabase/tests/migration-integrity-check.sh
+      - name: Concurrent migration runner serialization
+        run: sh supabase/tests/migration-concurrency-check.sh
       - name: Edge handler
         run: npm run test:iam-edge
       - name: Compatibility dependency allowlist
