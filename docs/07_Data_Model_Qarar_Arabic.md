@@ -3,6 +3,11 @@
 # Qarar
 ## Data Model Document
 
+> Implementation status: this document contains the original conceptual model. The current
+> as-built physical model, module ownership map, and dependency rules are maintained in
+> [`supabase/docs/architecture/README.md`](../supabase/docs/architecture/README.md).
+> Database migrations and `qarar_architecture` registries are the executable source of truth.
+
 **اسم المنتج:** Qarar  
 **التموضع:** Enterprise Governance & Decision Management Platform  
 **نوع الوثيقة:** Data Model Document  

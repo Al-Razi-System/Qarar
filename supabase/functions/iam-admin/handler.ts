@@ -14,13 +14,15 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   headers: { ...corsHeaders, "Content-Type": "application/json" },
 })
 
+const api = (client: any) => typeof client.schema === "function" ? client.schema("api_v1") : client
+
 const requirePermission = async (caller: any, code: string) => {
-  const { data, error } = await caller.rpc("has_permission", { permission_code: code })
+  const { data, error } = await api(caller).rpc("has_permission", { permission_code: code })
   if (error || data !== true) throw Object.assign(new Error(`permission denied: ${code}`), { status: 403 })
 }
 
 const requireRateLimit = async (caller: any, operation: string, limit = 10, windowSeconds = 600) => {
-  const { error } = await caller.rpc("consume_iam_rate_limit", {
+  const { error } = await api(caller).rpc("consume_iam_rate_limit", {
     p_operation: operation,
     p_limit: limit,
     p_window_seconds: windowSeconds,
@@ -29,7 +31,7 @@ const requireRateLimit = async (caller: any, operation: string, limit = 10, wind
 }
 
 const getManagedUser = async (caller: any, userId: string) => {
-  const { data, error } = await caller.rpc("admin_get_user_detail", { p_user_id: userId })
+  const { data, error } = await api(caller).rpc("admin_get_user_detail", { p_user_id: userId })
   if (error || !data?.email) throw Object.assign(new Error("managed user not found"), { status: 404 })
   return data
 }
@@ -65,7 +67,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
       if (inviteError || !invited?.user) return json({ error: "auth_user_creation_failed", detail: inviteError?.message }, 409)
 
       const userId = invited.user.id
-      const { data: finalized, error: finalizeError } = await caller.rpc("admin_finalize_invited_user", {
+      const { data: finalized, error: finalizeError } = await api(caller).rpc("admin_finalize_invited_user", {
         p_auth_user_id: userId,
         p_email: email,
         p_full_name_ar: payload.full_name_ar.trim(),
@@ -98,7 +100,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
       })
       if (authError) throw new Error(`Auth status update failed: ${authError.message}`)
 
-      const { data, error } = await dependencies.admin.rpc("service_apply_user_status", {
+      const { data, error } = await api(dependencies.admin).rpc("service_apply_user_status", {
         p_actor_user_id: actorUserId,
         p_user_id: payload.user_id,
         p_status: status,
@@ -115,9 +117,9 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
 
     if (payload.action === "revoke_session") {
       if (!payload.session_id) return json({ error: "session_id_required" }, 400)
-      const { data: session, error } = await caller.rpc("request_session_revocation", { p_session_id: payload.session_id })
+      const { data: session, error } = await api(caller).rpc("request_session_revocation", { p_session_id: payload.session_id })
       if (error) throw Object.assign(new Error(error.message), { status: 403 })
-      const { data: revokedCount, error: revokeError } = await dependencies.admin.rpc("service_revoke_auth_sessions", {
+      const { data: revokedCount, error: revokeError } = await api(dependencies.admin).rpc("service_revoke_auth_sessions", {
         p_actor_user_id: actorUserId,
         p_user_id: session.user_id,
         p_auth_session_id: session.auth_session_id,
@@ -147,7 +149,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
         text: `Use this secure link to ${action}: ${data.properties.action_link}`,
         html: `<p>Use the secure link below to ${action}.</p><p><a href="${data.properties.action_link}">${title}</a></p>`,
       })
-      const { error: auditError } = await dependencies.admin.rpc("service_record_iam_event", {
+      const { error: auditError } = await api(dependencies.admin).rpc("service_record_iam_event", {
         p_actor_user_id: actorUserId,
         p_target_user_id: payload.user_id,
         p_action: type === "invite" ? "iam.invitation.resent" : "iam.password_reset.sent",

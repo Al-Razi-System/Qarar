@@ -30,7 +30,7 @@ values('30303030-3030-3030-3030-303030303030','f1000000-0000-0000-0000-000000000
 
 set local role service_role;
 set local "request.jwt.claims" to '{"role":"service_role"}';
-select is((public.service_apply_user_status('f1000000-0000-0000-0000-000000000001','f1000000-0000-0000-0000-000000000002','suspended','security lock')->>'status'),'suspended','service status operation updates application status');
+select is((api_v1.service_apply_user_status('f1000000-0000-0000-0000-000000000001','f1000000-0000-0000-0000-000000000002','suspended','security lock')->>'status'),'suspended','service status operation updates application status');
 reset role;
 select ok(not exists(select 1 from auth.sessions where id='35353535-3535-3535-3535-353535353535'),'suspending user deletes Auth sessions');
 select ok((select revoked_at is not null from public.user_sessions where device_id='target-device'),'suspending user marks application sessions revoked');
@@ -38,7 +38,7 @@ select ok((select revoked_at is not null from public.user_sessions where device_
 set local role authenticated;
 set local "request.jwt.claims" to '{"sub":"f1000000-0000-0000-0000-000000000001","email":"admin@critical.test"}';
 select ok(not has_function_privilege('authenticated','public.admin_update_user_status(uuid,text,text)','EXECUTE'),'direct status RPC is blocked from clients');
-select throws_ok($$select public.admin_finalize_invited_user('f1000000-0000-0000-0000-000000000004','atomic@critical.test','Atomic',null,null,null,'99999999-9999-9999-9999-999999999999','32323232-3232-3232-3232-323232323232',null)$$,'active role not found in current organization','atomic provisioning rejects an invalid role');
+select throws_ok($$select api_v1.admin_finalize_invited_user('f1000000-0000-0000-0000-000000000004','atomic@critical.test','Atomic',null,null,null,'99999999-9999-9999-9999-999999999999','32323232-3232-3232-3232-323232323232',null)$$,'active role not found in current organization','atomic provisioning rejects an invalid role');
 select ok(not exists(select 1 from public.users where id='f1000000-0000-0000-0000-000000000004'),'failed atomic provisioning leaves no application profile');
 
 insert into public.sso_identity_providers(id,organization_id,provider_type,provider_name,supabase_sso_provider_id,provisioning_mode,status)
@@ -47,9 +47,9 @@ insert into public.sso_group_role_mappings(id,organization_id,provider_id,extern
 values('38383838-3838-3838-3838-383838383838','30303030-3030-3030-3030-303030303030','36363636-3636-3636-3636-363636363636','Reviewers','33333333-3333-3333-3333-333333333333','32323232-3232-3232-3232-323232323232');
 
 set local "request.jwt.claims" to '{"sub":"f1000000-0000-0000-0000-000000000003","email":"sso@critical.test","sso_provider_id":"37373737-3737-3737-3737-373737373737"}';
-select is(public.sync_current_sso_groups(array['Reviewers']),1,'SSO sync creates current group membership');
+select is(api_v1.sync_current_sso_groups(array['Reviewers']),1,'SSO sync creates current group membership');
 select ok(exists(select 1 from public.sso_group_membership_links where user_id='f1000000-0000-0000-0000-000000000003'),'SSO-created membership has provenance link');
-select is(public.sync_current_sso_groups(array[]::text[]),0,'SSO sync accepts removal of all groups');
+select is(api_v1.sync_current_sso_groups(array[]::text[]),0,'SSO sync accepts removal of all groups');
 select is((select membership_status from public.memberships where user_id='f1000000-0000-0000-0000-000000000003' and role_id='33333333-3333-3333-3333-333333333333'),'ended','removed IdP group ends SSO-owned membership');
 
 set local "request.jwt.claims" to '{"sub":"f1000000-0000-0000-0000-000000000001","email":"admin@critical.test"}';
@@ -58,9 +58,9 @@ values('30303030-3030-3030-3030-303030303030','f1000000-0000-0000-0000-000000000
 select is(public.expire_access_delegations(),1,'delegation expiry job updates elapsed records');
 select is((select status from public.access_delegations where reason='expired coverage'),'expired','elapsed delegation stores expired status');
 
-select ok((public.admin_search_audit_logs(null,'iam.user.status_update',null,null,null,null,null,20,0)->>'total')::int>=1,'audit search filters and returns total');
-select is(public.admin_get_audit_log((select id from public.audit_logs where organization_id='30303030-3030-3030-3030-303030303030' order by occurred_at desc limit 1))->>'organization_id','30303030-3030-3030-3030-303030303030','audit detail is tenant scoped');
-select is(public.admin_export_audit_logs(null,null,null,null,null,null)->>'schema_version','1','audit export is versioned');
+select ok((api_v1.admin_search_audit_logs(null,'iam.user.status_update',null,null,null,null,null,20,0)->>'total')::int>=1,'audit search filters and returns total');
+select is(api_v1.admin_get_audit_log((select id from public.audit_logs where organization_id='30303030-3030-3030-3030-303030303030' order by occurred_at desc limit 1))->>'organization_id','30303030-3030-3030-3030-303030303030','audit detail is tenant scoped');
+select is(api_v1.admin_export_audit_logs(null,null,null,null,null,null)->>'schema_version','1','audit export is versioned');
 reset role;
 select ok(exists(select 1 from cron.job where jobname='qarar-expire-access-delegations'),'delegation expiry cron job is installed');
 

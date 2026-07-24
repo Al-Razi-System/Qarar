@@ -34,7 +34,7 @@ SSO login is rejected when the authenticated email domain is not active for that
 After Supabase Auth login, call:
 
 ```dart
-await supabase.rpc('register_current_sso_login', params: {
+await supabase.schema('api_v1').rpc('register_current_sso_login', params: {
   'p_full_name_ar': displayName,
 });
 ```
@@ -52,7 +52,7 @@ external identity, accepts a matching invitation, and assigns the invitation/def
   "p_external_group": "Council-Secretaries",
   "p_role_id": "<uuid>",
   "p_governance_unit_id": "<uuid>",
-  "p_membership_title": "أمين المجلس",
+  "p_membership_title": "ط£ظ…ظٹظ† ط§ظ„ظ…ط¬ظ„ط³",
   "p_is_active": true
 }
 ```

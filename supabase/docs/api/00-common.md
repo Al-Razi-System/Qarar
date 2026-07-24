@@ -10,6 +10,14 @@ apikey: <anon-key>
 Content-Type: application/json
 ```
 
+All application RPCs are versioned in the `api_v1` PostgREST schema. Raw HTTP RPC requests must
+also include:
+
+```http
+Accept-Profile: api_v1
+Content-Profile: api_v1
+```
+
 Never expose the service-role key to Flutter, browsers, logs, crash reports, or source control.
 Only trusted Edge Functions receive it through server environment variables.
 
@@ -20,24 +28,24 @@ curl "$SUPABASE_URL/rest/v1/rpc/get_my_account" \
   -X POST \
   -H "apikey: $SUPABASE_ANON_KEY" \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Accept-Profile: api_v1" \
+  -H "Content-Profile: api_v1" \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
 
 ```dart
-final account = await supabase.rpc('get_my_account');
-final meetings = await supabase
-    .from('meetings')
-    .select('*, governance_units(name_ar)')
-    .order('scheduled_date');
+final account = await supabase.schema('api_v1').rpc('get_my_account');
 ```
 
 RPC arguments are JSON object keys matching PostgreSQL parameter names exactly. Omitted optional
 arguments use database defaults; send `null` only when the operation explicitly supports it.
+Frontend code must not call RPCs in `public` or write compatibility views. Read models required by
+screens should be exposed through a reviewed `api_v1` contract.
 
 ## Tenant Isolation
 
-The access token identifies the user. `public.users.organization_id` determines the tenant.
+The access token identifies the user. `qarar_iam.users.organization_id` determines the tenant.
 RLS and security-definer RPC checks prevent cross-organization access. Clients must not rely on
 hiding UI controls as authorization; the backend permission check remains authoritative.
 
@@ -91,5 +99,5 @@ deletion. Historical audit, decisions, votes, and minutes must retain their refe
 ## Deferred Auth Features
 
 Primary email change and MFA/2FA enforcement are intentionally deferred. Do not update
-`public.users.email` directly. Those features require complete Supabase Auth confirmation,
+the application profile email directly. Those features require complete Supabase Auth confirmation,
 recovery, assurance-level, and organization-policy flows before being exposed.

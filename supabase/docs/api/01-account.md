@@ -12,7 +12,7 @@ Returns profile fields, organization, preferences, active roles, and effective p
 
 ```dart
 final account = Map<String, dynamic>.from(
-  await supabase.rpc('get_my_account') as Map,
+  await supabase.schema('api_v1').rpc('get_my_account') as Map,
 );
 ```
 
@@ -25,10 +25,10 @@ role assignment, delegation, or permission approval.
 
 ```json
 {
-  "p_full_name_ar": "عمر محمد",
+  "p_full_name_ar": "ط¹ظ…ط± ظ…ط­ظ…ط¯",
   "p_full_name_en": "Omar Mohammed",
   "p_mobile": "0500000000",
-  "p_job_title": "أمين مجلس"
+  "p_job_title": "ط£ظ…ظٹظ† ظ…ط¬ظ„ط³"
 }
 ```
 

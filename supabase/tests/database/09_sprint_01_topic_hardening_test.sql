@@ -39,7 +39,7 @@ set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"41000000-0000-0000-0000-000000000011","role":"authenticated"}';
 
 select throws_ok(
-  $$select public.create_topic('Bad', 'short', '41000000-0000-0000-0000-000000000023', '41000000-0000-0000-0000-000000000022')$$,
+  $$select api_v1.create_topic('Bad', 'short', '41000000-0000-0000-0000-000000000023', '41000000-0000-0000-0000-000000000022')$$,
   'title_ar must contain between 5 and 300 characters',
   'PB-002 rejects invalid required fields atomically'
 );
@@ -47,7 +47,7 @@ select is((select count(*) from public.topics)::integer, 0, 'invalid request cre
 
 create temporary table sprint01_state(topic_id uuid, updated_at timestamptz);
 insert into sprint01_state(topic_id)
-select (public.create_topic(
+select (api_v1.create_topic(
     'Valid governance topic', 'A sufficiently detailed topic description',
     '41000000-0000-0000-0000-000000000023',
     '41000000-0000-0000-0000-000000000022',
@@ -71,21 +71,21 @@ select ok(not has_table_privilege('authenticated','public.topics','INSERT'), 'di
 select ok(not has_table_privilege('authenticated','public.topics','UPDATE'), 'direct topic update is revoked');
 
 set local "request.jwt.claims" = '{"sub":"41000000-0000-0000-0000-000000000012","role":"authenticated"}';
-select is((public.search_topic_review_queue(null,'new',null,null,null,25,0)->>'total')::integer, 1, 'PB-003 reviewer queue returns scoped topic');
-select is(public.search_topic_review_queue('TOP-',null,'high',null,null,25,0)->>'limit', '25', 'queue supports query filters and pagination');
+select is((api_v1.search_topic_review_queue(null,'new',null,null,null,25,0)->>'total')::integer, 1, 'PB-003 reviewer queue returns scoped topic');
+select is(api_v1.search_topic_review_queue('TOP-',null,'high',null,null,25,0)->>'limit', '25', 'queue supports query filters and pagination');
 select throws_ok(
-  $$select public.review_topic((select topic_id from sprint01_state),'return','no', (select updated_at from sprint01_state))$$,
+  $$select api_v1.review_topic((select topic_id from sprint01_state),'return','no', (select updated_at from sprint01_state))$$,
   'a reason of at least 5 characters is required for this action',
   'PB-004 requires reason for return'
 );
 select throws_ok(
-  $$select public.review_topic((select topic_id from sprint01_state),'approve',null, now() - interval '1 day')$$,
+  $$select api_v1.review_topic((select topic_id from sprint01_state),'approve',null, now() - interval '1 day')$$,
   '40001',
   'topic was modified; refresh before reviewing',
   'PB-004 rejects stale review'
 );
 select is(
-  public.review_topic(
+  api_v1.review_topic(
     (select topic_id from sprint01_state),'defer','Waiting for legal opinion',
     (select updated_at from sprint01_state)
   )->>'status',
@@ -99,14 +99,14 @@ select is((select count(*) from public.audit_logs where action='topics.review.de
 set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"41000000-0000-0000-0000-000000000012","role":"authenticated"}';
 select throws_ok(
-  $$select public.review_topic((select topic_id from sprint01_state),'approve',null,(select updated_at from public.topics where id=(select topic_id from sprint01_state)))$$,
+  $$select api_v1.review_topic((select topic_id from sprint01_state),'approve',null,(select updated_at from public.topics where id=(select topic_id from sprint01_state)))$$,
   'action approve is not allowed from status deferred',
   'deferred topic accepts resume rather than a direct decision'
 );
 
 set local "request.jwt.claims" = '{"sub":"41000000-0000-0000-0000-000000000011","role":"authenticated"}';
 select throws_ok(
-  $$select public.review_topic((select topic_id from sprint01_state),'approve',null,(select updated_at from public.topics where id=(select topic_id from sprint01_state)))$$,
+  $$select api_v1.review_topic((select topic_id from sprint01_state),'approve',null,(select updated_at from public.topics where id=(select topic_id from sprint01_state)))$$,
   '42501',
   'permission denied: topics.review',
   'submitter without review permission cannot review'

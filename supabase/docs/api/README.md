@@ -3,7 +3,7 @@
 This is the entry point for frontend, integration, and backend developers. Qarar exposes three API styles:
 
 - Supabase Auth endpoints under `/auth/v1` for identity and sessions.
-- PostgREST tables and RPC functions under `/rest/v1` for application data.
+- Versioned PostgREST RPC contracts in schema `api_v1` under `/rest/v1/rpc/*`.
 - Edge Functions under `/functions/v1` for trusted operations requiring server secrets.
 
 ## Base URLs
@@ -41,3 +41,5 @@ This is the entry point for frontend, integration, and backend developers. Qarar
 
 Database migrations remain the executable source of truth. Documentation changes must accompany
 any changed table, RPC signature, Edge Function payload, permission requirement, or status enum.
+The physical module map and dependency rules are documented in
+[../architecture/README.md](../architecture/README.md).
