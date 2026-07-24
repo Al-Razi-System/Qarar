@@ -248,7 +248,34 @@ grant update on qarar_meetings.meetings
 grant insert on qarar_meetings.meeting_status_history to qarar_attendance_executor,qarar_minutes_executor;
 grant update on qarar_topics.topics to qarar_meetings_executor;
 grant update on qarar_meetings.agenda_items to qarar_voting_executor;
-grant select,delete on auth.sessions to qarar_iam_executor;
+create or replace function qarar_architecture.grant_iam_auth_session_access()
+returns event_trigger
+language plpgsql
+security definer
+set search_path = pg_catalog
+as $$
+begin
+  if to_regclass('auth.sessions') is not null then
+    grant select, delete on auth.sessions to qarar_iam_executor;
+  end if;
+end;
+$$;
+
+revoke all on function qarar_architecture.grant_iam_auth_session_access() from public;
+
+do $$
+begin
+  if to_regclass('auth.sessions') is not null then
+    grant select, delete on auth.sessions to qarar_iam_executor;
+  end if;
+end;
+$$;
+
+drop event trigger if exists grant_iam_auth_session_access;
+create event trigger grant_iam_auth_session_access
+  on ddl_command_end
+  when tag in ('CREATE TABLE')
+  execute function qarar_architecture.grant_iam_auth_session_access();
 
 do $$
 declare source_role record;f record;
