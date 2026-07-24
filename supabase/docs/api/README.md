@@ -31,6 +31,7 @@ This is the entry point for frontend, integration, and backend developers. Qarar
 | Topics | [06-topics.md](./06-topics.md) | Topic workflows |
 | Topic referrals and route history | [06-topic-referrals.md](./06-topic-referrals.md) | Referral workflows |
 | Meetings, attendance, voting | [07-meetings.md](./07-meetings.md) | Meeting workflows |
+| Session, attendance, quorum, voting | [07-session-attendance-voting.md](./07-session-attendance-voting.md) | Live meeting workflows |
 | Minutes | [08-minutes.md](./08-minutes.md) | Minutes workflows |
 | Decisions and execution | [09-decisions-execution.md](./09-decisions-execution.md) | Decision follow-up |
 | Edge Functions and storage | [10-edge-storage.md](./10-edge-storage.md) | Integrations/uploads |

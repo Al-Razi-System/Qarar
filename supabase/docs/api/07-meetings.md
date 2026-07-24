@@ -99,5 +99,5 @@ leaves `draft` or `scheduled`. Reorder must send every current item exactly once
 | Agenda locked | Disable agenda editing |
 | Duplicate topic/item | Reload agenda; do not create a second item |
 
-Attendance, voting, quorum, and minutes contracts belong to later Sprint documentation and are not
-part of the Sprint 02 meeting/agenda contract.
+Live-session attendance, quorum, and voting are documented in
+[07-session-attendance-voting.md](./07-session-attendance-voting.md).

@@ -89,8 +89,8 @@ update s02_state set updated_at=(select updated_at from public.meetings where id
 select is(public.update_meeting((select meeting_id from s02_state),'Updated production meeting',current_date+8,'10:00','11:00','online','Secure link',null,
  '43000000-0000-0000-0000-000000000024',(select updated_at from s02_state))->>'title_ar','Updated production meeting','manager updates editable meeting');
 select throws_ok(
- format('select public.transition_meeting(%L,%L,%L,%L)',(select meeting_id from s02_state),'in_progress','Invalid jump',(select updated_at from public.meetings where id=(select meeting_id from s02_state))),
- 'P0001','Invalid transition from draft to in_progress','invalid lifecycle jump is blocked');
+  format('select public.transition_meeting(%L,%L,%L,%L)',(select meeting_id from s02_state),'in_progress','Invalid jump',(select updated_at from public.meetings where id=(select meeting_id from s02_state))),
+  'P0001','use open_meeting_session to start the meeting','meeting start is delegated to the Sprint 03 session contract');
 select is(public.transition_meeting((select meeting_id from s02_state),'scheduled','Ready for invitations',
  (select updated_at from public.meetings where id=(select meeting_id from s02_state)))->>'status','scheduled','valid lifecycle transition succeeds');
 select is((select count(*) from public.meeting_status_history where meeting_id=(select meeting_id from s02_state))::int,2,'lifecycle appends status history');
