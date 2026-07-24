@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "../..");
 const docsDirectory = join(root, "supabase/docs/api");
 const referencePath = join(docsDirectory, "12-contract-reference.md");
+const responseContractsPath = join(docsDirectory, "14-json-response-contracts.md");
 const writeMode = process.argv.includes("--write");
 
 const query = String.raw`
@@ -95,6 +96,7 @@ const operationalDocumentation = markdownFiles
   .filter(({ name }) => !["12-contract-reference.md"].includes(name))
   .map(({ content }) => content)
   .join("\n");
+const responseContractsDocumentation = readFileSync(responseContractsPath, "utf8");
 const directTablePath = /\/rest\/v1\/(?!rpc\/)[a-z][a-z0-9_]*/g;
 const mojibake = /(?:ط§|ط£|ط¹|ظ…|ظ„|ظٹ|ط±|Ã|â|�)/g;
 
@@ -114,6 +116,14 @@ for (const contract of contracts.filter(({ audience }) => audience === "authenti
     errors.push(
       `${contract.name}: authenticated contract is missing from operational frontend documentation`,
     );
+  }
+}
+
+for (const contract of contracts.filter(
+  ({ audience, result }) => audience === "authenticated" && result === "jsonb",
+)) {
+  if (!responseContractsDocumentation.includes(`\`${contract.name}\``)) {
+    errors.push(`${contract.name}: jsonb response contract is missing from the response catalog`);
   }
 }
 

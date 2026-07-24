@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(27);
+select plan(28);
 
 insert into public.organizations(id,code,name_ar) values
 ('43000000-0000-0000-0000-000000000001','s02-prod','Sprint 02 Production'),
@@ -96,6 +96,10 @@ select is(api_v1.transition_meeting((select meeting_id from s02_state),'schedule
 select is((select count(*) from public.meeting_status_history where meeting_id=(select meeting_id from s02_state))::int,2,'lifecycle appends status history');
 select is((api_v1.search_eligible_agenda_topics((select meeting_id from s02_state),null,25,0)->>'total')::int,1,'eligible search returns approved topics in meeting unit only');
 update s02_state set item1=(api_v1.add_agenda_item((select meeting_id from s02_state),'43000000-0000-0000-0000-000000000052',false,null)->>'id')::uuid;
+select ok(
+  (api_v1.get_meeting_detail((select meeting_id from s02_state))->'agenda_items'->0) ?& array['voting_status','voting_result'],
+  'meeting detail agenda exposes voting state required by frontend'
+);
 select throws_ok(
  format('select api_v1.add_agenda_item(%L,%L,false,null)',(select meeting_id from s02_state),'43000000-0000-0000-0000-000000000053'),
  'P0001','topic is not eligible for agenda','ineligible topic requires exception');

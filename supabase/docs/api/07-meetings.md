@@ -37,7 +37,8 @@ and returns `{id, meeting_no, status, idempotent_replay}`. Reuse one client requ
 plus `p_limit` (1-100) and `p_offset`. It returns `{items,total,limit,offset}`.
 
 `get_meeting_detail` takes `{"p_meeting_id":"<uuid>"}` and returns the meeting, unit, meeting type,
-ordered agenda items with topic summaries, and chronological `status_history`.
+ordered agenda items with topic summaries, `voting_status` and frozen `voting_result`, and
+chronological `status_history`.
 
 ## Update Meeting
 

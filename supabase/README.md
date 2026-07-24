@@ -180,7 +180,7 @@ Validated locally with Supabase CLI `2.109.1`:
 - Modular architecture migrations move all 48 application entities out of `public` and register
   78 reviewed `api_v1` RPC contracts.
 - Database tests for completed scope (Sprint 00 through Sprint 03, IAM, architecture, and migration
-  runtime controls) pass 242/242 assertions. Sprint 04 legacy specifications remain intentionally
+  runtime controls) pass 243/243 assertions. Sprint 04 legacy specifications remain intentionally
   excluded until Sprint 04.
 - `api_v1` works through the Docker PostgREST/Kong path, while internal module schemas return HTTP
   `406` and are not exposed.
