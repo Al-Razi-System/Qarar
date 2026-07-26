@@ -31,6 +31,7 @@
 | `Sprint 01 - Core Topic Flow` | `FR-01-01` إلى `FR-01-04` | [Initial Issues - Sprint 01](32_Initial_Issues_Sprint_01_Qarar_Arabic.md) |
 | `Sprint 02 - Meetings & Agenda` | `FR-02-01` إلى `FR-02-08` | [Initial Issues - Sprint 02](33_Initial_Issues_Sprint_02_Qarar_Arabic.md) |
 | `Sprint 03 - Attendance, Quorum & Voting` | `FR-03-01` إلى `FR-03-06` | [Initial Issues - Sprint 03](34_Initial_Issues_Sprint_03_Qarar_Arabic.md) |
+| `Sprint 03.5 - Regulation Engine & Governed Routing` | `FR-03.5-01` إلى `FR-03.5-11` | [Initial Issues - Sprint 03.5 - Final](42_Initial_Issues_Sprint_03_5_Regulation_Engine_Qarar_Arabic_Complete.md) |
 | `Sprint 04 - AI Minutes & Approval` | `FR-04-01` إلى `FR-04-08` | [Initial Issues - Sprint 04](35_Initial_Issues_Sprint_04_Qarar_Arabic.md) |
 | `Sprint 05 - Decisions & Execution` | `FR-05-01` إلى `FR-05-06` | [Initial Issues - Sprint 05](36_Initial_Issues_Sprint_05_Qarar_Arabic.md) |
 | `Sprint 06 - Reporting, Notifications & Ops` | `FR-06-01` إلى `FR-06-06` | [Initial Issues - Sprint 06](37_Initial_Issues_Sprint_06_Qarar_Arabic.md) |

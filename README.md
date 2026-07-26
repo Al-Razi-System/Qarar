@@ -108,6 +108,7 @@
 - [طلبات الميزات التفصيلية - Sprint 00](docs/39_Feature_Requests_Sprint_00_Qarar_Arabic.md)
 - [طلبات الميزات التفصيلية - Sprint 01](docs/40_Feature_Requests_Sprint_01_Qarar_Arabic.md)
 - [سجل طلبات الميزات](docs/41_Feature_Request_Register_Qarar_Arabic.md)
+- [Initial Issues - Sprint 03.5 Regulation Engine - Final](docs/42_Initial_Issues_Sprint_03_5_Regulation_Engine_Qarar_Arabic_Complete.md)
 
 ---
 
