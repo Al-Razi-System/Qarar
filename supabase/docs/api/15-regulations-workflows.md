@@ -100,7 +100,10 @@ governance_unit > governance_class > governance_level >
 governance_unit_type > unit_subtree > organization
 ```
 
-Configured priority is added within that specificity. Equal winning scores return
+Configured priority applies only inside the same specificity tier. A broad scope cannot beat a
+council-specific scope using a larger priority. An active `is_included=true` override is the most
+specific candidate, while `is_included=false` excludes that council. `match_criteria` is evaluated
+against the topic and council context. Equal winning scores return
 `multiple_policy_conflict`; the engine never silently selects one candidate.
 
 Outcomes include `resolved`, `no_applicable_policy`, `multiple_policy_conflict`,
@@ -128,7 +131,9 @@ the policy and route, resolves the council for every step, opens the initial ste
 history, and emits an outbox event.
 
 If routing is unresolved, the topic remains visible but receives `routing_blocked` or
-`routing_conflict`. Meeting, agenda, and voting transitions must treat any status other than
+`routing_conflict`. Policies allowing a custom or regulated fallback route receive
+`governance_source=custom` and `routing_exception_pending`. Meeting, agenda, and voting
+transitions must treat any status other than
 `routing_ready` as non-actionable.
 
 Routing states are `routing_pending`, `routing_resolved`, `routing_conflict`, `routing_blocked`,
@@ -139,9 +144,12 @@ Routing states are `routing_pending`, `routing_resolved`, `routing_conflict`, `r
 - `get_topic_governance`: policy/version/item/scope IDs, source, routing decision, explanation,
   candidates, and immutable mapping snapshot.
 - `get_topic_workflow`: workflow status, current step, and ordered step snapshots.
-- `complete_topic_workflow_step`: accepts an allowed `p_outcome_code`.
-- `return_topic_workflow_step`: uses the `returned` outcome and requires a comment.
-- `reject_topic_workflow_step`: uses the `rejected` outcome and requires a comment.
+- `act_topic_workflow_step`: requires a unique `p_idempotency_key` and current
+  `p_expected_version`. Replays are safe and stale writes return SQLSTATE `40001`.
+- Voting steps cannot be completed manually. Closing the voting round maps the stored result to
+  the workflow outcome and advances the route atomically.
+- Legacy complete/return/reject commands return migration guidance and must not be used by new
+  clients.
 
 Only the current active step can be acted upon. Its resolved council and required permission are
 checked on every command.
@@ -156,6 +164,18 @@ optional expiry.
 request. Approval snapshots and starts the exceptional workflow. Rejection returns the topic to
 `routing_blocked`.
 
+For a policy-authorized custom or fallback route, use `request_custom_workflow`, followed by
+`approve_custom_workflow` from an independent reviewer. The topic and mapping preserve
+`governance_source=custom` throughout execution.
+
+## Council Classifications
+
+- `admin_list_governance_unit_classes`: searchable, paginated list with assigned council count.
+- `admin_create_governance_unit_class`: creates a tenant-owned classification.
+- `admin_update_governance_unit_class`: updates or deactivates with optimistic concurrency.
+- `admin_assign_governance_unit_class`: assigns an active classification to a council with
+  optimistic concurrency.
+
 ## Error Handling
 
 - `42501`: missing authentication, permission, or independent reviewer.
@@ -165,6 +185,7 @@ request. Approval snapshots and starts the exceptional workflow. Rejection retur
 - `23514`: incomplete workflow, invalid scope, or unresolved council.
 - `23P01`: overlapping effective policy dates.
 - `55000`: illegal lifecycle or workflow transition.
+- `40001`: stale workflow step or council-classification update.
 
 Display the server message for administrative forms. For topic creation also inspect `outcome`,
 `routing_status`, and `explanation` to render blocked/conflict recovery actions.

@@ -269,12 +269,23 @@ try {
   assert.equal(route.steps.length, 1)
   assert.equal(route.steps[0].assigned_unit_id, unit.id)
   assert.equal(route.steps[0].snapshot.responsibility, "final_approve")
-  const completed = await rpc("complete_topic_workflow_step", {
+  const actionKey = crypto.randomUUID()
+  const completed = await rpc("act_topic_workflow_step", {
     p_topic_id: topic.topic_id,
     p_outcome_code: "completed",
     p_comment: "HTTP governed approval complete",
+    p_idempotency_key: actionKey,
+    p_expected_version: 0,
   }, approverHeaders)
   assert.equal(completed.workflow_status, "completed")
+  const replay = await rpc("act_topic_workflow_step", {
+    p_topic_id: topic.topic_id,
+    p_outcome_code: "completed",
+    p_comment: "HTTP governed approval complete",
+    p_idempotency_key: actionKey,
+    p_expected_version: 0,
+  }, approverHeaders)
+  assert.equal(replay.idempotent_replay, true)
 
   const search = await rpc("admin_search_policies", {
     p_query: `policy-${suffix}`, p_limit: 25, p_offset: 0,

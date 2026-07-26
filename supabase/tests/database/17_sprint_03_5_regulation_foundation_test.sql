@@ -193,6 +193,7 @@ select is(
   7,
   'governance cross-module reads are explicitly allowlisted'
 );
+set local role qarar_iam_executor;
 select is(
   (select count(distinct code)::integer
    from qarar_iam.permissions
@@ -200,6 +201,7 @@ select is(
   8,
   'migration seeds the complete governance permission vocabulary'
 );
+reset role;
 select is(
   (select governance_level
    from qarar_governance.governance_unit_classes

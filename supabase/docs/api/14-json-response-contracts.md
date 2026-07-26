@@ -261,6 +261,13 @@ All contracts below return one JSON object.
 | `complete_topic_workflow_step` | `topic_id`, `workflow_instance_id`, `completed_step_id`, `outcome`, `next_step_id`, `workflow_status` |
 | `return_topic_workflow_step` | same workflow-action keys with `outcome=returned` |
 | `reject_topic_workflow_step` | same workflow-action keys with `outcome=rejected` |
+| `act_topic_workflow_step` | `topic_id`, `completed_step_id`, `next_step_id`, `workflow_status`, `version`; replay includes `idempotent_replay=true` |
+| `request_custom_workflow` | `id`, `topic_id`, `status`, `governance_source` |
+| `approve_custom_workflow` | exception approval keys plus `governance_source=custom` |
+| `admin_list_governance_unit_classes` | `items`, `limit`, `offset`; items include `council_count` |
+| `admin_create_governance_unit_class` | `id`, `code`, `is_active` |
+| `admin_update_governance_unit_class` | `id`, `updated_at`, `is_active` |
+| `admin_assign_governance_unit_class` | `governance_unit_id`, `governance_class_id`, `updated_at` |
 | `request_workflow_exception` | `id`, `topic_id`, `status` |
 | `approve_workflow_exception` | `id`, `status`; approvals also include workflow and current-step IDs |
 | `admin_search_policies` | `items`, `total`, `limit`, `offset` |

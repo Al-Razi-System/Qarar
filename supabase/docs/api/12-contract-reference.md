@@ -26,17 +26,21 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `admin_export_audit_logs` | `audit` | `authenticated` | `p_action text, p_entity_type text, p_actor_user_id uuid, p_result text, p_from timestamp with time zone, p_to timestamp with time zone` | `jsonb` |
 | `admin_get_audit_log` | `audit` | `authenticated` | `p_audit_log_id uuid` | `jsonb` |
 | `admin_search_audit_logs` | `audit` | `authenticated` | `p_query text, p_action text, p_entity_type text, p_actor_user_id uuid, p_result text, p_from timestamp with time zone, p_to timestamp with time zone, p_limit integer, p_offset integer` | `jsonb` |
+| `admin_assign_governance_unit_class` | `core` | `authenticated` | `p_governance_unit_id uuid, p_class_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `act_topic_workflow_step` | `governance` | `authenticated` | `p_topic_id uuid, p_outcome_code text, p_comment text, p_idempotency_key uuid, p_expected_version integer` | `jsonb` |
 | `admin_activate_policy_version` | `governance` | `authenticated` | `p_policy_version_id uuid, p_effective_from date, p_effective_to date` | `jsonb` |
 | `admin_activate_workflow_template_version` | `governance` | `authenticated` | `p_workflow_template_version_id uuid` | `jsonb` |
 | `admin_add_policy_item` | `governance` | `authenticated` | `p_policy_version_id uuid, p_item_code text, p_title_ar text, p_sort_order integer, p_parent_item_id uuid, p_item_type text, p_title_en text, p_body_text text, p_governance_mode text, p_topic_category_id uuid, p_match_criteria jsonb, p_workflow_template_version_id uuid` | `jsonb` |
 | `admin_add_workflow_step` | `governance` | `authenticated` | `p_workflow_template_version_id uuid, p_step_code text, p_name_ar text, p_sequence_no integer, p_step_type text, p_responsibility text, p_governance_unit_id uuid, p_governance_class_id uuid, p_required_permission_code text, p_is_initial boolean, p_is_terminal boolean, p_entry_conditions jsonb, p_exit_conditions jsonb, p_allowed_outcomes text[]` | `jsonb` |
 | `admin_add_workflow_transition` | `governance` | `authenticated` | `p_workflow_template_version_id uuid, p_from_step_id uuid, p_outcome_code text, p_to_step_id uuid, p_transition_type text, p_conditions jsonb` | `jsonb` |
 | `admin_approve_policy_version` | `governance` | `authenticated` | `p_policy_version_id uuid` | `jsonb` |
+| `admin_create_governance_unit_class` | `governance` | `authenticated` | `p_code text, p_name_ar text, p_name_en text, p_governance_level text, p_description text` | `jsonb` |
 | `admin_create_policy` | `governance` | `authenticated` | `p_code text, p_name_ar text, p_name_en text, p_policy_type text, p_description text, p_owner_user_id uuid` | `jsonb` |
 | `admin_create_policy_version` | `governance` | `authenticated` | `p_policy_id uuid, p_version_label text, p_change_summary text` | `jsonb` |
 | `admin_create_workflow_template` | `governance` | `authenticated` | `p_code text, p_name_ar text, p_name_en text, p_description text` | `jsonb` |
 | `admin_create_workflow_version` | `governance` | `authenticated` | `p_workflow_template_id uuid, p_clone_version_id uuid` | `jsonb` |
 | `admin_get_policy_detail` | `governance` | `authenticated` | `p_policy_id uuid` | `jsonb` |
+| `admin_list_governance_unit_classes` | `governance` | `authenticated` | `p_query text, p_is_active boolean, p_limit integer, p_offset integer` | `jsonb` |
 | `admin_remove_policy_item` | `governance` | `authenticated` | `p_policy_item_id uuid` | `jsonb` |
 | `admin_remove_policy_scope` | `governance` | `authenticated` | `p_scope_assignment_id uuid` | `jsonb` |
 | `admin_remove_workflow_step` | `governance` | `authenticated` | `p_step_id uuid` | `jsonb` |
@@ -45,14 +49,17 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `admin_set_policy_scope` | `governance` | `authenticated` | `p_policy_version_id uuid, p_scope_type text, p_target_id uuid, p_governance_level text, p_include_descendants boolean, p_priority integer, p_valid_from date, p_valid_to date` | `jsonb` |
 | `admin_submit_policy_for_review` | `governance` | `authenticated` | `p_policy_version_id uuid` | `jsonb` |
 | `admin_suspend_policy_version` | `governance` | `authenticated` | `p_policy_version_id uuid, p_reason text` | `jsonb` |
+| `admin_update_governance_unit_class` | `governance` | `authenticated` | `p_class_id uuid, p_name_ar text, p_name_en text, p_governance_level text, p_description text, p_is_active boolean, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `admin_update_policy` | `governance` | `authenticated` | `p_policy_id uuid, p_name_ar text, p_name_en text, p_description text, p_owner_user_id uuid, p_status text` | `jsonb` |
 | `admin_update_policy_item` | `governance` | `authenticated` | `p_policy_item_id uuid, p_title_ar text, p_title_en text, p_body_text text, p_sort_order integer, p_governance_mode text, p_topic_category_id uuid, p_match_criteria jsonb, p_workflow_template_version_id uuid, p_is_active boolean` | `jsonb` |
 | `admin_update_workflow_step` | `governance` | `authenticated` | `p_step_id uuid, p_name_ar text, p_sequence_no integer, p_responsibility text, p_governance_unit_id uuid, p_governance_class_id uuid, p_required_permission_code text, p_is_initial boolean, p_is_terminal boolean, p_entry_conditions jsonb, p_exit_conditions jsonb, p_allowed_outcomes text[]` | `jsonb` |
+| `approve_custom_workflow` | `governance` | `authenticated` | `p_exception_id uuid, p_approve boolean, p_review_comment text` | `jsonb` |
 | `approve_workflow_exception` | `governance` | `authenticated` | `p_exception_id uuid, p_approve boolean, p_review_comment text` | `jsonb` |
 | `complete_topic_workflow_step` | `governance` | `authenticated` | `p_topic_id uuid, p_outcome_code text, p_comment text` | `jsonb` |
 | `get_topic_governance` | `governance` | `authenticated` | `p_topic_id uuid` | `jsonb` |
 | `get_topic_workflow` | `governance` | `authenticated` | `p_topic_id uuid` | `jsonb` |
 | `reject_topic_workflow_step` | `governance` | `authenticated` | `p_topic_id uuid, p_comment text` | `jsonb` |
+| `request_custom_workflow` | `governance` | `authenticated` | `p_topic_id uuid, p_workflow_template_version_id uuid, p_reason text, p_valid_until timestamp with time zone` | `jsonb` |
 | `request_workflow_exception` | `governance` | `authenticated` | `p_topic_id uuid, p_workflow_template_version_id uuid, p_reason text, p_valid_until timestamp with time zone` | `jsonb` |
 | `resolve_topic_governance` | `governance` | `authenticated` | `p_governance_unit_id uuid, p_topic_category_id uuid, p_effective_on date, p_topic_id uuid` | `jsonb` |
 | `return_topic_workflow_step` | `governance` | `authenticated` | `p_topic_id uuid, p_comment text` | `jsonb` |

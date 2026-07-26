@@ -44,7 +44,7 @@ SQL
 
 for migration in $(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
   case "$(basename "$migration")" in
-    20260724040*) continue ;;
+    20260724040*|20260726*) continue ;;
   esac
   docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
     -v ON_ERROR_STOP=1 --single-transaction < "$migration"
@@ -73,6 +73,11 @@ values('91000000-0000-0000-0000-000000000031',
 SQL
 
 for migration in $(find supabase/migrations -maxdepth 1 -type f -name '20260724040*.sql' | sort); do
+  docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
+    -v ON_ERROR_STOP=1 --single-transaction < "$migration"
+done
+
+for migration in $(find supabase/migrations -maxdepth 1 -type f -name '20260726*.sql' | sort); do
   docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
     -v ON_ERROR_STOP=1 --single-transaction < "$migration"
 done
