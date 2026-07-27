@@ -261,7 +261,7 @@ All contracts below return one JSON object.
 | `complete_topic_workflow_step` | `topic_id`, `workflow_instance_id`, `completed_step_id`, `outcome`, `next_step_id`, `workflow_status` |
 | `return_topic_workflow_step` | same workflow-action keys with `outcome=returned` |
 | `reject_topic_workflow_step` | same workflow-action keys with `outcome=rejected` |
-| `act_topic_workflow_step` | `topic_id`, `completed_step_id`, `next_step_id`, `workflow_status`, `version`; replay includes `idempotent_replay=true` |
+| `act_topic_workflow_step` | `topic_id`, `completed_step_id`, `next_step_id`, `workflow_status`, `version`; an idempotent replay returns the same fields from the original action plus `idempotent_replay=true` |
 | `request_custom_workflow` | `id`, `topic_id`, `status`, `governance_source`, `valid_until` |
 | `approve_custom_workflow` | exception approval keys plus `governance_source=custom` |
 | `admin_list_governance_unit_classes` | `items`, `limit`, `offset`; items include `council_count` |

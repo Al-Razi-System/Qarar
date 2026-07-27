@@ -302,6 +302,11 @@ try {
     p_expected_version: 0,
   }, approverHeaders)
   assert.equal(replay.idempotent_replay, true)
+  assert.equal(replay.topic_id, completed.topic_id)
+  assert.equal(replay.completed_step_id, completed.completed_step_id)
+  assert.equal(replay.next_step_id, completed.next_step_id)
+  assert.equal(replay.workflow_status, completed.workflow_status)
+  assert.equal(replay.version, completed.version)
 
   const votingWorkflow = await rpc("admin_create_workflow_template", {
     p_code: `vote-route-${suffix}`, p_name_ar: "مسار تصويت المجلس",
