@@ -36,15 +36,6 @@ drop trigger if exists workflow_template_steps_normalize_voting_outcomes on qara
 create trigger workflow_template_steps_normalize_voting_outcomes before insert or update of step_type,allowed_outcomes on qarar_governance.workflow_template_steps for each row execute function qarar_governance.normalize_voting_step_outcomes();
 update qarar_governance.workflow_template_steps set allowed_outcomes=(select array_agg(outcome order by array_position(array['approved','rejected','tie','no_vote'],outcome)) from unnest(allowed_outcomes) outcome) where step_type='voting';
 
-delete from qarar_architecture.module_function_execute_allowlist
-where source_module='voting' and target_schema='qarar_governance'
-  and function_name='act_topic_workflow_step_core';
-insert into qarar_architecture.module_function_execute_allowlist(source_module,target_schema,function_name,identity_arguments,rationale)
-values('voting','qarar_governance','act_topic_workflow_step','p_topic_id uuid, p_outcome_code text, p_comment text, p_idempotency_key uuid, p_expected_version integer','Advance a governed voting step from the authoritative closed result')
-on conflict do nothing;
-revoke execute on function qarar_governance.act_topic_workflow_step_core(uuid,text,text,uuid,integer) from qarar_voting_executor;
-grant execute on function qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer) to qarar_voting_executor;
-
 create or replace function qarar_governance.expire_governance_exceptions(p_as_of timestamptz default now())
 returns integer language plpgsql security definer set search_path=pg_catalog,qarar_governance as $$
 declare e record;step_id uuid;instance_id uuid;count_expired integer:=0;
@@ -87,6 +78,14 @@ end $$;
 alter function qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer) owner to qarar_governance_executor;
 revoke all on function qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer) from public,anon,authenticated,service_role;
 grant execute on function qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer) to qarar_api_executor;
+delete from qarar_architecture.module_function_execute_allowlist
+where source_module='voting' and target_schema='qarar_governance'
+  and function_name='act_topic_workflow_step_core';
+insert into qarar_architecture.module_function_execute_allowlist(source_module,target_schema,function_name,identity_arguments,rationale)
+values('voting','qarar_governance','act_topic_workflow_step','p_topic_id uuid, p_outcome_code text, p_comment text, p_idempotency_key uuid, p_expected_version integer','Advance a governed voting step from the authoritative closed result')
+on conflict do nothing;
+revoke execute on function qarar_governance.act_topic_workflow_step_core(uuid,text,text,uuid,integer) from qarar_voting_executor;
+grant execute on function qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer) to qarar_voting_executor;
 update qarar_architecture.function_registry set function_name='act_topic_workflow_step_core'
 where function_oid='qarar_governance.act_topic_workflow_step_core(uuid,text,text,uuid,integer)'::regprocedure;
 insert into qarar_architecture.function_registry(function_oid,function_name,identity_arguments,module_code,owning_schema,is_rls_predicate)
