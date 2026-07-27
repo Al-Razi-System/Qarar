@@ -164,12 +164,22 @@ try {
       context_scope: code.startsWith("governance.") ? "organization" : "governance_unit",
       name_ar: code,
     })
+    if (permissionResult.response.status === 201) {
+      permissions.push(permissionResult.body[0])
+      continue
+    }
     assert.equal(
       permissionResult.response.status,
-      201,
+      409,
       `permission bootstrap failed for ${code}: ${JSON.stringify(permissionResult.body)}`,
     )
-    permissions.push(permissionResult.body[0])
+    const existingPermission = await rest(
+      `permissions?organization_id=eq.${organization.id}&code=eq.${encodeURIComponent(code)}`,
+      "GET",
+    )
+    assert.equal(existingPermission.response.status, 200)
+    assert.equal(existingPermission.body.length, 1, `existing permission lookup failed for ${code}`)
+    permissions.push(existingPermission.body[0])
   }
   await rest("role_permissions", "POST", permissions.map((permission) => ({
     organization_id: organization.id, role_id: role.id, permission_id: permission.id,
