@@ -45,6 +45,8 @@ Responsibilities are `present`, `review`, `discuss`, `recommend`, `initial_appro
 
 Step types are `review`, `discussion`, `recommendation`, `approval`, `voting`, `execution`, and
 `follow_up`. Use `voting` only when the step must be completed from a frozen voting-round result.
+A voting step must define exactly `approved`, `rejected`, `tie`, and `no_vote`; a template that
+omits any of these outcomes cannot be activated.
 
 ## Administrative Contracts
 
@@ -173,6 +175,14 @@ workflow. Rejection returns the topic to `routing_blocked`.
 For a policy-authorized custom or fallback route, use `request_custom_workflow`, followed by
 `approve_custom_workflow` from an independent reviewer. `p_valid_until` is mandatory and must be
 in the future. The topic and mapping preserve `governance_source=custom` throughout execution.
+
+At expiry, the background worker marks the request and its active workflow `expired`, cancels the
+active step, and changes the topic route to `routing_expired`. Every workflow action also checks the
+validity boundary directly, so an expired route cannot execute while waiting for the worker. To
+renew it, submit `request_custom_workflow` again for the expired topic with the same active template,
+a new future `p_valid_until`, and a new reason; an independent `approve_custom_workflow` review
+reactivates the suspended step. A different template requires a new governed route rather than an
+implicit replacement of an in-flight route.
 
 ## Council Classifications
 

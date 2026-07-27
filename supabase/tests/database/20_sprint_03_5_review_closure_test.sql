@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(25);
+select plan(28);
 
 select ok(qarar_governance.conditions_match('{"priority":"urgent"}','{"priority":"urgent"}'),
  'matching condition object is executed');
@@ -92,6 +92,18 @@ select ok(
  position('new.valid_until is null or new.valid_until<=now()' in pg_get_functiondef(
   'qarar_governance.enforce_exception_validity()'::regprocedure))>0,
  'missing and expired temporary routes are rejected before approval');
+select function_returns(
+ 'qarar_governance','expire_governance_exceptions',array['timestamp with time zone'],'integer',
+ 'expired temporary routes have a scheduled lifecycle operation');
+select ok(
+ position('routing_expired' in pg_get_constraintdef(
+  (select oid from pg_constraint where conrelid='qarar_topics.topics'::regclass and conname='topics_routing_status_check')
+ ))>0,
+ 'topic routing exposes the expired temporary-route state');
+select ok(
+ position('array[''approved'',''rejected'',''tie'',''no_vote'']' in pg_get_functiondef(
+  'qarar_governance.validate_workflow_template_version(uuid)'::regprocedure))>0,
+ 'workflow validation requires every voting result to be handled');
 
 select * from finish();
 rollback;

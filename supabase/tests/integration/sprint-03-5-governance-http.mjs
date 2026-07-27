@@ -154,14 +154,23 @@ try {
     "quorum.read", "quorum.manage",
     "voting.read", "voting.manage", "voting.cast",
   ]
-  const permissions = (await rest("permissions", "POST", permissionCodes.map((code) => ({
-    organization_id: organization.id,
-    code,
-    module: code.split(".")[0],
-    action: code.split(".").at(-1),
-    context_scope: code.startsWith("governance.") ? "organization" : "governance_unit",
-    name_ar: code,
-  })))).body
+  const permissions = []
+  for (const code of permissionCodes) {
+    const permissionResult = await rest("permissions", "POST", {
+      organization_id: organization.id,
+      code,
+      module: code.split(".")[0],
+      action: code.split(".").at(-1),
+      context_scope: code.startsWith("governance.") ? "organization" : "governance_unit",
+      name_ar: code,
+    })
+    assert.equal(
+      permissionResult.response.status,
+      201,
+      `permission bootstrap failed for ${code}: ${JSON.stringify(permissionResult.body)}`,
+    )
+    permissions.push(permissionResult.body[0])
+  }
   await rest("role_permissions", "POST", permissions.map((permission) => ({
     organization_id: organization.id, role_id: role.id, permission_id: permission.id,
   })))
@@ -305,6 +314,27 @@ try {
     p_workflow_template_version_id: votingWorkflow.draft_version_id,
   }, builderHeaders)
 
+  const incompleteVotingWorkflow = await rpc("admin_create_workflow_template", {
+    p_code: `incomplete-vote-${suffix}`, p_name_ar: "Incomplete voting route",
+  }, builderHeaders)
+  await rpc("admin_add_workflow_step", {
+    p_workflow_template_version_id: incompleteVotingWorkflow.draft_version_id,
+    p_step_code: "incomplete_vote",
+    p_name_ar: "Incomplete council vote",
+    p_sequence_no: 1,
+    p_step_type: "voting",
+    p_responsibility: "final_approve",
+    p_governance_class_id: classId,
+    p_required_permission_code: "topics.review",
+    p_is_initial: true,
+    p_is_terminal: true,
+    p_allowed_outcomes: ["approved"],
+  }, builderHeaders)
+  const incompleteVotingActivation = await rest("rpc/admin_activate_workflow_template_version", "POST", {
+    p_workflow_template_version_id: incompleteVotingWorkflow.draft_version_id,
+  }, builderHeaders)
+  assert.ok(incompleteVotingActivation.response.status >= 400, "incomplete voting template was activated")
+
   const votingPolicy = await rpc("admin_create_policy", {
     p_code: `vote-policy-${suffix}`, p_name_ar: "لائحة التصويت الحوكمية",
   }, builderHeaders)
@@ -385,16 +415,38 @@ try {
   const expiringRequest = await rpc("request_custom_workflow", {
     p_topic_id: customRouteTopic.topic_id,
     p_workflow_template_version_id: votingWorkflow.draft_version_id,
-    p_reason: "Temporary route expires before approval for this test.",
+    p_reason: "Temporary route expires during execution for this test.",
     p_valid_until: new Date(Date.now() + 2500).toISOString(),
   }, builderHeaders)
-  await new Promise((resolve) => setTimeout(resolve, 3000))
-  const expiredApproval = await rest("rpc/approve_custom_workflow", "POST", {
+  const approvedTemporaryRoute = await rpc("approve_custom_workflow", {
     p_exception_id: expiringRequest.id,
     p_approve: true,
-    p_review_comment: "Attempt approval after temporary route expiry.",
+    p_review_comment: "Approve the temporary route before it expires.",
   }, approverHeaders)
-  assert.ok(expiredApproval.response.status >= 400, "expired temporary route was approved")
+  assert.equal(approvedTemporaryRoute.status, "approved")
+  await new Promise((resolve) => setTimeout(resolve, 3000))
+  const expiredAction = await rest("rpc/act_topic_workflow_step", "POST", {
+    p_topic_id: customRouteTopic.topic_id,
+    p_outcome_code: "approved",
+    p_comment: "An expired temporary route must not execute.",
+    p_idempotency_key: crypto.randomUUID(),
+    p_expected_version: 0,
+  }, approverHeaders)
+  assert.ok(expiredAction.response.status >= 400, "expired temporary route executed a workflow step")
+  sql("select qarar_governance.expire_governance_exceptions()")
+  assert.equal(sql(`select status from qarar_governance.governance_exceptions where id='${expiringRequest.id}'`), "expired")
+  const renewalRequest = await rpc("request_custom_workflow", {
+    p_topic_id: customRouteTopic.topic_id,
+    p_workflow_template_version_id: votingWorkflow.draft_version_id,
+    p_reason: "Renew the expired temporary route after independent review.",
+    p_valid_until: new Date(Date.now() + 86_400_000).toISOString(),
+  }, builderHeaders)
+  const renewedTemporaryRoute = await rpc("approve_custom_workflow", {
+    p_exception_id: renewalRequest.id,
+    p_approve: true,
+    p_review_comment: "Approve the independent renewal of the temporary route.",
+  }, approverHeaders)
+  assert.equal(renewedTemporaryRoute.renewed, true)
 
   const voteScenarios = [
     { result: "approved", votes: ["approve", "approve"], outcome: "approved", workflow: "completed" },
