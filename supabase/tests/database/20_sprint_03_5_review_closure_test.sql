@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(16);
+select plan(25);
 
 select ok(qarar_governance.conditions_match('{"priority":"urgent"}','{"priority":"urgent"}'),
  'matching condition object is executed');
@@ -51,6 +51,47 @@ select ok(position('governance_source=''custom''' in pg_get_functiondef(
 select ok(position('governance_source into source' in pg_get_functiondef(
  'qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure))>0,
  'workflow actions preserve the existing governance source');
+
+select ok(
+ position('voting' in pg_get_constraintdef(
+  (select oid from pg_constraint
+   where conrelid='qarar_governance.workflow_template_steps'::regclass
+    and conname='workflow_template_steps_step_type_check')
+ ))>0,
+ 'workflow templates accept an explicit voting step type');
+select ok(
+ position('COALESCE(CURRENT_SETTING(' in upper(pg_get_functiondef(
+  'qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure)))>0,
+ 'manual voting guard treats a missing transition setting as denied');
+select has_column(
+ 'qarar_voting','voting_rounds','workflow_instance_step_id',
+ 'voting rounds persist the exact governed workflow step');
+select ok(
+ exists(select 1 from pg_constraint
+  where conrelid='qarar_voting.voting_rounds'::regclass
+   and conname='voting_rounds_workflow_step_tenant_fk'
+   and contype='f'),
+ 'voting round workflow binding is tenant-safe and referentially enforced');
+select ok(
+ has_schema_privilege('qarar_meetings_executor','qarar_governance','USAGE'),
+ 'meeting execution can use its reviewed governance-step read allowlist');
+select ok(
+ position('v_step.step_type<>''voting''' in pg_get_functiondef(
+  'qarar_voting.enforce_governed_voting_round()'::regprocedure))>0
+ and position('new.workflow_instance_step_id:=v_step.id' in pg_get_functiondef(
+  'qarar_voting.enforce_governed_voting_round()'::regprocedure))>0,
+ 'opening a governed vote validates and captures the active voting step');
+select ok(
+ position('is distinct from new.workflow_instance_step_id' in pg_get_functiondef(
+  'qarar_voting.advance_governed_workflow_from_vote()'::regprocedure))>0,
+ 'closing a stale voting round cannot advance a different current step');
+select has_trigger(
+ 'qarar_governance','governance_exceptions','governance_exceptions_validity_guard',
+ 'temporary route requests have a database validity guard');
+select ok(
+ position('new.valid_until is null or new.valid_until<=now()' in pg_get_functiondef(
+  'qarar_governance.enforce_exception_validity()'::regprocedure))>0,
+ 'missing and expired temporary routes are rejected before approval');
 
 select * from finish();
 rollback;

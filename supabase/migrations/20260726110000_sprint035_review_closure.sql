@@ -110,7 +110,8 @@ begin
  ctx:=jsonb_build_object('outcome',p_outcome_code,'assigned_unit_id',s.assigned_unit_id,'topic_id',p_topic_id);
  if not qarar_governance.conditions_match(ts.entry_conditions,ctx) then raise exception using errcode='55000',message='شروط دخول الخطوة غير متحققة';end if;
  if not qarar_governance.conditions_match(ts.exit_conditions,ctx) then raise exception using errcode='55000',message='شروط إكمال الخطوة غير متحققة';end if;
- if ts.step_type='voting' and current_setting('qarar.voting_transition',true)<>'on'
+ if ts.step_type='voting'
+  and coalesce(current_setting('qarar.voting_transition',true),'')<>'on'
  then raise exception using errcode='55000',message='الخطوة التصويتية تُحسم من نتيجة التصويت فقط';end if;
  select * into t from qarar_governance.workflow_template_transitions where workflow_template_version_id=i.workflow_template_version_id and from_step_id=s.template_step_id and outcome_code=p_outcome_code;
  if t.id is null and not(ts.is_terminal and p_outcome_code=any(ts.allowed_outcomes))

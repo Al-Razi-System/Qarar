@@ -81,6 +81,8 @@ jobs:
         run: npm run test:sprint01-http
       - name: Sprint 03 HTTP
         run: npm run test:sprint03-http
+      - name: Sprint 03.5 HTTP
+        run: npm run test:sprint035-http
       - name: Compose status and logs
         if: failure()
         run: |

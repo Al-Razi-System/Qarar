@@ -178,6 +178,10 @@ state and appends status history and audit atomically.
 The meeting must be `in_progress`, attendance must be locked, and quorum must be `met`. The server
 snapshots active members currently verified as `present` or `late`; later governed overrides do not
 alter that round's electorate.
+
+For a governed topic, the current workflow step must have `step_type=voting`, be active, and belong
+to the meeting council. The server snapshots that step on the voting round. Closing the round fails
+with a concurrency error if the topic has moved to another step since the round opened.
 Only one voting round may be open across the meeting at a time.
 
 Success includes `voting_round_id`, round number, status, and eligible voter count.

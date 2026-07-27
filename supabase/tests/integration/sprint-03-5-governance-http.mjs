@@ -90,38 +90,25 @@ async function cleanup() {
     assert.match(created.organizationId, /^[0-9a-f-]{36}$/)
     sql(`
       set session_replication_role=replica;
-      delete from qarar_governance.notification_outbox where organization_id='${created.organizationId}';
-      delete from qarar_governance.governance_alerts where organization_id='${created.organizationId}';
-      delete from qarar_governance.governance_compliance_events where organization_id='${created.organizationId}';
-      delete from qarar_governance.workflow_instance_steps where organization_id='${created.organizationId}';
-      delete from qarar_governance.workflow_instances where organization_id='${created.organizationId}';
-      delete from qarar_governance.topic_governance_mappings where organization_id='${created.organizationId}';
-      delete from qarar_governance.regulation_match_decisions where organization_id='${created.organizationId}';
-      delete from qarar_governance.governance_exceptions where organization_id='${created.organizationId}';
-      delete from qarar_topics.topic_status_history where organization_id='${created.organizationId}';
-      delete from qarar_topics.topics where organization_id='${created.organizationId}';
-      delete from qarar_topics.topic_number_counters where organization_id='${created.organizationId}';
-      delete from qarar_governance.policy_item_scope_overrides where organization_id='${created.organizationId}';
-      delete from qarar_governance.policy_item_roles where organization_id='${created.organizationId}';
-      delete from qarar_governance.policy_scope_assignments where organization_id='${created.organizationId}';
-      delete from qarar_governance.policy_items where organization_id='${created.organizationId}';
-      delete from qarar_governance.policy_versions where organization_id='${created.organizationId}';
-      delete from qarar_governance.policies where organization_id='${created.organizationId}';
-      delete from qarar_governance.workflow_template_transitions where organization_id='${created.organizationId}';
-      delete from qarar_governance.workflow_template_steps where organization_id='${created.organizationId}';
-      delete from qarar_governance.workflow_template_versions where organization_id='${created.organizationId}';
-      delete from qarar_governance.workflow_templates where organization_id='${created.organizationId}';
-      delete from qarar_iam.memberships where organization_id='${created.organizationId}';
-      delete from qarar_iam.role_permissions where organization_id='${created.organizationId}';
-      delete from qarar_iam.permissions where organization_id='${created.organizationId}';
-      delete from qarar_iam.roles where organization_id='${created.organizationId}';
-      delete from qarar_topics.topic_categories where organization_id='${created.organizationId}';
-      delete from qarar_core.governance_units where organization_id='${created.organizationId}';
-      delete from qarar_governance.governance_unit_classes where organization_id='${created.organizationId}';
-      delete from qarar_core.governance_unit_types where organization_id='${created.organizationId}';
-      delete from qarar_iam.users where organization_id='${created.organizationId}';
-      delete from qarar_audit.audit_logs where organization_id='${created.organizationId}';
-      delete from qarar_core.organizations where id='${created.organizationId}';
+      do $cleanup$
+      declare owned_table record;
+      begin
+        for owned_table in
+          select n.nspname as schema_name,c.relname as table_name
+          from pg_class c
+          join pg_namespace n on n.oid=c.relnamespace
+          join pg_attribute a on a.attrelid=c.oid
+          where c.relkind in ('r','p') and a.attname='organization_id'
+            and n.nspname like 'qarar\\_%' escape '\\'
+        loop
+          execute format('delete from %I.%I where organization_id=$1',
+            owned_table.schema_name,owned_table.table_name)
+          using '${created.organizationId}'::uuid;
+        end loop;
+        delete from qarar_core.organizations where id='${created.organizationId}';
+      end
+      $cleanup$;
+      set session_replication_role=origin;
     `)
   }
   for (const id of created.authUsers) {
@@ -146,6 +133,12 @@ try {
   const category = (await rest("topic_categories", "POST", {
     organization_id: organization.id, code: `CAT-${suffix}`, name_ar: "Governed Topic",
   })).body[0]
+  const votingCategory = (await rest("topic_categories", "POST", {
+    organization_id: organization.id, code: `VOTE-${suffix}`, name_ar: "Voting Topic",
+  })).body[0]
+  const customRouteCategory = (await rest("topic_categories", "POST", {
+    organization_id: organization.id, code: `CUSTOM-${suffix}`, name_ar: "Custom Route Topic",
+  })).body[0]
   const role = (await rest("roles", "POST", {
     organization_id: organization.id, code: `GOV-${suffix}`,
     name_ar: "Governance Manager", role_scope: "governance_unit",
@@ -156,13 +149,17 @@ try {
     "governance.policies.approve", "governance.workflows.manage",
     "governance.exceptions.request", "governance.exceptions.approve",
     "governance.compliance.read", "governance.alerts.manage",
+    "meetings.manage", "agenda.manage", "attendance.read", "attendance.manage",
+    "attendance.check_in", "attendance.verify", "attendance.lock",
+    "quorum.read", "quorum.manage",
+    "voting.read", "voting.manage", "voting.cast",
   ]
   const permissions = (await rest("permissions", "POST", permissionCodes.map((code) => ({
     organization_id: organization.id,
     code,
-    module: code.split(".")[0] === "topics" ? "topics" : "governance",
+    module: code.split(".")[0],
     action: code.split(".").at(-1),
-    context_scope: code.startsWith("topics.") ? "governance_unit" : "organization",
+    context_scope: code.startsWith("governance.") ? "organization" : "governance_unit",
     name_ar: code,
   })))).body
   await rest("role_permissions", "POST", permissions.map((permission) => ({
@@ -287,14 +284,288 @@ try {
   }, approverHeaders)
   assert.equal(replay.idempotent_replay, true)
 
+  const votingWorkflow = await rpc("admin_create_workflow_template", {
+    p_code: `vote-route-${suffix}`, p_name_ar: "مسار تصويت المجلس",
+  }, builderHeaders)
+  const votingStep = await rpc("admin_add_workflow_step", {
+    p_workflow_template_version_id: votingWorkflow.draft_version_id,
+    p_step_code: "council_vote",
+    p_name_ar: "تصويت المجلس",
+    p_sequence_no: 1,
+    p_step_type: "voting",
+    p_responsibility: "final_approve",
+    p_governance_class_id: classId,
+    p_required_permission_code: "topics.review",
+    p_is_initial: true,
+    p_is_terminal: true,
+    p_allowed_outcomes: ["approved", "rejected", "tie", "no_vote"],
+  }, builderHeaders)
+  assert.ok(votingStep.id)
+  await rpc("admin_activate_workflow_template_version", {
+    p_workflow_template_version_id: votingWorkflow.draft_version_id,
+  }, builderHeaders)
+
+  const votingPolicy = await rpc("admin_create_policy", {
+    p_code: `vote-policy-${suffix}`, p_name_ar: "لائحة التصويت الحوكمية",
+  }, builderHeaders)
+  const votingVersion = await rpc("admin_create_policy_version", {
+    p_policy_id: votingPolicy.id, p_version_label: "1.0",
+  }, builderHeaders)
+  await rpc("admin_add_policy_item", {
+    p_policy_version_id: votingVersion.id,
+    p_item_code: "1.1",
+    p_title_ar: "حسم الموضوع بالتصويت",
+    p_sort_order: 1,
+    p_governance_mode: "regulation_required",
+    p_topic_category_id: votingCategory.id,
+    p_workflow_template_version_id: votingWorkflow.draft_version_id,
+  }, builderHeaders)
+  await rpc("admin_set_policy_scope", {
+    p_policy_version_id: votingVersion.id,
+    p_scope_type: "governance_class",
+    p_target_id: classId,
+    p_priority: 20,
+  }, builderHeaders)
+  await rpc("admin_submit_policy_for_review", {
+    p_policy_version_id: votingVersion.id,
+  }, builderHeaders)
+  await rpc("admin_approve_policy_version", {
+    p_policy_version_id: votingVersion.id,
+  }, approverHeaders)
+  await rpc("admin_activate_policy_version", {
+    p_policy_version_id: votingVersion.id,
+    p_effective_from: new Date().toISOString().slice(0, 10),
+  }, approverHeaders)
+
+  const customRoutePolicy = await rpc("admin_create_policy", {
+    p_code: `custom-route-${suffix}`, p_name_ar: "Custom route policy",
+  }, builderHeaders)
+  const customRouteVersion = await rpc("admin_create_policy_version", {
+    p_policy_id: customRoutePolicy.id, p_version_label: "1.0",
+  }, builderHeaders)
+  await rpc("admin_add_policy_item", {
+    p_policy_version_id: customRouteVersion.id,
+    p_item_code: "1.1",
+    p_title_ar: "Custom route request",
+    p_sort_order: 1,
+    p_governance_mode: "custom_route_allowed",
+    p_topic_category_id: customRouteCategory.id,
+  }, builderHeaders)
+  await rpc("admin_set_policy_scope", {
+    p_policy_version_id: customRouteVersion.id,
+    p_scope_type: "governance_class",
+    p_target_id: classId,
+    p_priority: 20,
+  }, builderHeaders)
+  await rpc("admin_submit_policy_for_review", {
+    p_policy_version_id: customRouteVersion.id,
+  }, builderHeaders)
+  await rpc("admin_approve_policy_version", {
+    p_policy_version_id: customRouteVersion.id,
+  }, approverHeaders)
+  await rpc("admin_activate_policy_version", {
+    p_policy_version_id: customRouteVersion.id,
+    p_effective_from: new Date().toISOString().slice(0, 10),
+  }, approverHeaders)
+  const customRouteTopic = await rpc("create_topic_with_workflow", {
+    p_title_ar: "Custom route expiry test",
+    p_description: "Exercise the expiry guard for a temporary governed route.",
+    p_category_id: customRouteCategory.id,
+    p_current_unit_id: unit.id,
+    p_client_request_id: crypto.randomUUID(),
+  }, builderHeaders)
+  assert.equal(customRouteTopic.routing_status, "routing_exception_pending")
+  const missingExpiry = await rest("rpc/request_custom_workflow", "POST", {
+    p_topic_id: customRouteTopic.topic_id,
+    p_workflow_template_version_id: votingWorkflow.draft_version_id,
+    p_reason: "Temporary route must include an expiry date.",
+    p_valid_until: null,
+  }, builderHeaders)
+  assert.ok(missingExpiry.response.status >= 400, "temporary route without expiry was accepted")
+  const expiringRequest = await rpc("request_custom_workflow", {
+    p_topic_id: customRouteTopic.topic_id,
+    p_workflow_template_version_id: votingWorkflow.draft_version_id,
+    p_reason: "Temporary route expires before approval for this test.",
+    p_valid_until: new Date(Date.now() + 2500).toISOString(),
+  }, builderHeaders)
+  await new Promise((resolve) => setTimeout(resolve, 3000))
+  const expiredApproval = await rest("rpc/approve_custom_workflow", "POST", {
+    p_exception_id: expiringRequest.id,
+    p_approve: true,
+    p_review_comment: "Attempt approval after temporary route expiry.",
+  }, approverHeaders)
+  assert.ok(expiredApproval.response.status >= 400, "expired temporary route was approved")
+
+  const voteScenarios = [
+    { result: "approved", votes: ["approve", "approve"], outcome: "approved", workflow: "completed" },
+    { result: "rejected", votes: ["reject", "reject"], outcome: "rejected", workflow: "rejected" },
+    { result: "tied", votes: ["approve", "reject"], outcome: "tie", workflow: "completed" },
+    { result: "no_votes", votes: [], outcome: "no_vote", workflow: "completed" },
+  ]
+  for (const scenario of voteScenarios) {
+    scenario.topic = await rpc("create_topic_with_workflow", {
+      p_title_ar: `موضوع نتيجة ${scenario.result}`,
+      p_description: `موضوع متكامل لاختبار انتقال المسار تلقائيًا عند نتيجة ${scenario.result}.`,
+      p_category_id: votingCategory.id,
+      p_current_unit_id: unit.id,
+      p_client_request_id: crypto.randomUUID(),
+    }, builderHeaders)
+    assert.equal(scenario.topic.routing_status, "routing_ready")
+    const reviewableTopic = await rpc("get_topic_detail", {
+      p_topic_id: scenario.topic.topic_id,
+    }, approverHeaders)
+    const topicApproval = await rpc("review_topic", {
+      p_topic_id: scenario.topic.topic_id,
+      p_action: "approve",
+      p_reason: null,
+      p_expected_updated_at: reviewableTopic.updated_at,
+    }, approverHeaders)
+    assert.equal(topicApproval.status, "approved")
+    const initialRoute = await rpc("get_topic_workflow", {
+      p_topic_id: scenario.topic.topic_id,
+    }, builderHeaders)
+    scenario.workflowStepId = initialRoute.current_step_id
+    assert.ok(scenario.workflowStepId)
+  }
+
+  const meeting = (await rest("meetings", "POST", {
+    organization_id: organization.id,
+    meeting_no: `VOTE-${suffix}`,
+    governance_unit_id: unit.id,
+    title_ar: "اجتماع اختبار ربط التصويت بالمسار",
+    scheduled_date: "2026-08-15",
+    created_by_user_id: builder.id,
+    status: "draft",
+  })).body[0]
+  const agendaItems = []
+  for (const scenario of voteScenarios) {
+    agendaItems.push(await rpc("add_agenda_item", {
+      p_meeting_id: meeting.id,
+      p_topic_id: scenario.topic.topic_id,
+      p_is_exception: false,
+      p_exception_reason: null,
+    }, builderHeaders))
+  }
+  let meetingDetail = await rpc("get_meeting_detail", {
+    p_meeting_id: meeting.id,
+  }, builderHeaders)
+  await rpc("transition_meeting", {
+    p_meeting_id: meeting.id,
+    p_to_status: "scheduled",
+    p_reason: "Sprint 03.5 governed voting integration",
+    p_expected_updated_at: meetingDetail.updated_at,
+  }, builderHeaders)
+  meetingDetail = await rpc("get_meeting_detail", {
+    p_meeting_id: meeting.id,
+  }, builderHeaders)
+  await rpc("transition_meeting", {
+    p_meeting_id: meeting.id,
+    p_to_status: "ready_to_start",
+    p_reason: "Sprint 03.5 governed voting integration",
+    p_expected_updated_at: meetingDetail.updated_at,
+  }, builderHeaders)
+  meetingDetail = await rpc("get_meeting_detail", {
+    p_meeting_id: meeting.id,
+  }, builderHeaders)
+
+  const openedMeeting = await rpc("open_meeting_session", {
+    p_meeting_id: meeting.id,
+    p_expected_updated_at: meetingDetail.updated_at,
+  }, builderHeaders)
+  const checkin = await rpc("create_checkin_session", {
+    p_meeting_id: meeting.id, p_valid_for_minutes: 15,
+  }, builderHeaders)
+  await rpc("self_check_in", {
+    p_meeting_id: meeting.id,
+    p_token: checkin.token,
+    p_device_label: "Sprint 03.5 voting approver",
+  }, approverHeaders)
+  let session = await rpc("get_meeting_session_detail", {
+    p_meeting_id: meeting.id,
+  }, builderHeaders)
+  for (const attendance of session.attendance) {
+    const verifierHeaders = attendance.user_id === builder.id
+      ? approverHeaders
+      : builderHeaders
+    await rpc("verify_attendance", {
+      p_attendance_record_id: attendance.id,
+      p_status: "present",
+      p_note: "Sprint 03.5 governed voting verification",
+      p_expected_updated_at: attendance.updated_at,
+    }, verifierHeaders)
+  }
+  session = await rpc("get_meeting_session_detail", {
+    p_meeting_id: meeting.id,
+  }, builderHeaders)
+  assert.equal(session.quorum.quorum_status, "met")
+  await rpc("lock_attendance_roster", {
+    p_meeting_id: meeting.id,
+    p_expected_updated_at: session.meeting.updated_at,
+  }, builderHeaders)
+
+  for (let index = 0; index < voteScenarios.length; index += 1) {
+    const scenario = voteScenarios[index]
+    session = await rpc("get_meeting_session_detail", {
+      p_meeting_id: meeting.id,
+    }, builderHeaders)
+    const round = await rpc("open_voting_round", {
+      p_agenda_item_id: agendaItems[index].id,
+      p_expected_meeting_updated_at: session.meeting.updated_at,
+    }, builderHeaders)
+
+    const boundStep = sql(`
+      select workflow_instance_step_id
+      from qarar_voting.voting_rounds
+      where id='${round.voting_round_id}'
+    `)
+    assert.equal(boundStep, scenario.workflowStepId)
+
+    if (index === 0) {
+      const manual = await rest("rpc/act_topic_workflow_step", "POST", {
+        p_topic_id: scenario.topic.topic_id,
+        p_outcome_code: "approved",
+        p_comment: "Manual bypass must fail",
+        p_idempotency_key: crypto.randomUUID(),
+        p_expected_version: 0,
+      }, approverHeaders)
+      assert.ok(manual.response.status >= 400, "manual voting-step completion was not blocked")
+    }
+
+    if (scenario.votes[0]) {
+      await rpc("cast_vote", {
+        p_voting_round_id: round.voting_round_id,
+        p_vote_value: scenario.votes[0],
+        p_vote_note: `Builder ${scenario.votes[0]}`,
+      }, builderHeaders)
+    }
+    if (scenario.votes[1]) {
+      await rpc("cast_vote", {
+        p_voting_round_id: round.voting_round_id,
+        p_vote_value: scenario.votes[1],
+        p_vote_note: `Approver ${scenario.votes[1]}`,
+      }, approverHeaders)
+    }
+    const closed = await rpc("close_voting_round", {
+      p_voting_round_id: round.voting_round_id,
+      p_reason: `Close ${scenario.result} governed vote`,
+    }, builderHeaders)
+    assert.equal(closed.result, scenario.result)
+
+    const governedRoute = await rpc("get_topic_workflow", {
+      p_topic_id: scenario.topic.topic_id,
+    }, builderHeaders)
+    assert.equal(governedRoute.status, scenario.workflow)
+    assert.equal(governedRoute.steps[0].outcome_code, scenario.outcome)
+  }
+
   const search = await rpc("admin_search_policies", {
     p_query: `policy-${suffix}`, p_limit: 25, p_offset: 0,
   }, builderHeaders)
-  assert.equal(search.total, 1)
+  assert.equal(search.total, 2)
   const detail = await rpc("admin_get_policy_detail", { p_policy_id: policy.id }, builderHeaders)
   assert.equal(detail.versions.length, 1)
   assert.equal(detail.versions[0].items.length, 1)
-  console.log("Sprint 03.5 governance HTTP flow passed")
+  console.log("Sprint 03.5 governance and four-result voting workflow HTTP flow passed")
 } finally {
   await cleanup()
 }

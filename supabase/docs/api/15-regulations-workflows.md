@@ -43,6 +43,9 @@ workflow-instance snapshot. Later organization or template changes do not rewrit
 Responsibilities are `present`, `review`, `discuss`, `recommend`, `initial_approve`,
 `final_approve`, `execute`, and `follow_up`.
 
+Step types are `review`, `discussion`, `recommendation`, `approval`, `voting`, `execution`, and
+`follow_up`. Use `voting` only when the step must be completed from a frozen voting-round result.
+
 ## Administrative Contracts
 
 ### Policy and version
@@ -146,8 +149,11 @@ Routing states are `routing_pending`, `routing_resolved`, `routing_conflict`, `r
 - `get_topic_workflow`: workflow status, current step, and ordered step snapshots.
 - `act_topic_workflow_step`: requires a unique `p_idempotency_key` and current
   `p_expected_version`. Replays are safe and stale writes return SQLSTATE `40001`.
-- Voting steps cannot be completed manually. Closing the voting round maps the stored result to
-  the workflow outcome and advances the route atomically.
+- Voting steps cannot be completed manually. Opening a voting round captures the exact active
+  `workflow_instance_step_id`; closing it only advances that same step. A stale, unrelated, or
+  cancelled round cannot move the route.
+- Frozen results map as `approved -> approved`, `rejected -> rejected`, `tied -> tie`, and
+  `no_votes -> no_vote`.
 - Legacy complete/return/reject commands return migration guidance and must not be used by new
   clients.
 
@@ -157,16 +163,16 @@ checked on every command.
 ## Exceptions
 
 Use `request_workflow_exception` only for blocked or conflicting topics. The request contains an
-active validated `p_workflow_template_version_id`, a reason of at least ten characters, and an
-optional expiry.
+active validated `p_workflow_template_version_id`, a reason of at least ten characters, and a
+required future `p_valid_until`.
 
 `approve_workflow_exception` enforces four-eyes review: the requester cannot review their own
-request. Approval snapshots and starts the exceptional workflow. Rejection returns the topic to
-`routing_blocked`.
+request. Expired requests cannot be approved. Approval snapshots and starts the exceptional
+workflow. Rejection returns the topic to `routing_blocked`.
 
 For a policy-authorized custom or fallback route, use `request_custom_workflow`, followed by
-`approve_custom_workflow` from an independent reviewer. The topic and mapping preserve
-`governance_source=custom` throughout execution.
+`approve_custom_workflow` from an independent reviewer. `p_valid_until` is mandatory and must be
+in the future. The topic and mapping preserve `governance_source=custom` throughout execution.
 
 ## Council Classifications
 
