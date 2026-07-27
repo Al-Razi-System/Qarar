@@ -40,6 +40,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Restore Supabase image cache
+        id: supabase-image-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/supabase-compose-images.tar
+          key: supabase-images-${{ runner.os }}-${{ hashFiles('supabase/docker/docker-compose.yml') }}
+      - name: Load cached Supabase images
+        if: steps.supabase-image-cache.outputs.cache-hit == 'true'
+        run: docker image load --input /tmp/supabase-compose-images.tar
       - name: Configure and start Supabase
         run: |
           cp supabase/docker/.env.example supabase/docker/.env
@@ -55,6 +64,12 @@ jobs:
             sleep 10
           done
           $compose up -d --pull never
+      - name: Save Supabase images for later runs
+        if: success() && steps.supabase-image-cache.outputs.cache-hit != 'true'
+        run: |
+          compose="docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml"
+          docker image save $($compose config --images | sort -u) \
+            --output /tmp/supabase-compose-images.tar
       - name: Wait for API health
         run: |
           anon_key=$(sed -n 's/^ANON_KEY=//p' supabase/docker/.env)
