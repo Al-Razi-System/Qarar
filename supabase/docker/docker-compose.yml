@@ -187,7 +187,9 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGPORT: ${POSTGRES_PORT}
       PGUSER: supabase_admin
-    image: public.ecr.aws/docker/library/postgres:17-alpine
+    # Use the same published PostgreSQL distribution as the database service.
+    # This avoids a second registry dependency for the migration client's psql.
+    image: public.ecr.aws/supabase/postgres:17.6.1.143
     restart: "no"
     volumes:
       - bind:
