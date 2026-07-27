@@ -61,19 +61,31 @@ async function login(email) {
 
 async function cleanup() {
   if (created.organizationId) {
-    for (const table of [
-      "topic_status_history", "topics", "topic_number_counters",
-      "memberships", "role_permissions", "permissions", "roles", "topic_categories",
-      "governance_units", "governance_unit_types", "users",
-    ]) {
-      await rest(`${table}?organization_id=eq.${created.organizationId}`, "DELETE")
-    }
     assert.match(created.organizationId, /^[0-9a-f-]{36}$/)
     execFileSync("docker", [
       "exec", "qarar-supabase-db", "psql", "-X", "-v", "ON_ERROR_STOP=1",
       "-U", "supabase_admin", "-d", "postgres", "-c",
-      `delete from public.audit_logs where organization_id='${created.organizationId}'; delete from public.organizations where id='${created.organizationId}';`,
-    ], { stdio: "ignore" })
+      `set session_replication_role=replica;
+       do $cleanup$
+       declare owned_table record;
+       begin
+         for owned_table in
+           select n.nspname as schema_name,c.relname as table_name
+           from pg_class c
+           join pg_namespace n on n.oid=c.relnamespace
+           join pg_attribute a on a.attrelid=c.oid
+           where c.relkind in ('r','p') and a.attname='organization_id'
+             and n.nspname like 'qarar\\_%' escape '\\'
+         loop
+           execute format('delete from %I.%I where organization_id=$1',
+             owned_table.schema_name,owned_table.table_name)
+           using '${created.organizationId}'::uuid;
+         end loop;
+         delete from qarar_core.organizations where id='${created.organizationId}';
+       end
+       $cleanup$;
+       set session_replication_role=origin;`,
+    ], { stdio: "inherit" })
   }
   for (const id of created.authUsers) {
     await request(`/auth/v1/admin/users/${id}`, { method: "DELETE", headers: serviceHeaders })

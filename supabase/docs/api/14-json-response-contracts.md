@@ -236,3 +236,50 @@ AuditItem = {
 Use the table above to create immutable DTOs. Required identity/state fields must fail decoding when
 absent or of the wrong type. Nullable fields accept only `null` or the documented type. Additive
 unknown fields must be ignored to preserve forward compatibility within `api_v1`.
+# Sprint 3.5 Regulation and Workflow Responses
+
+All contracts below return one JSON object.
+
+| Contract | Stable response keys |
+|---|---|
+| `admin_create_policy` | `id`, `status` |
+| `admin_create_policy_version` | `id`, `version_no`, `legal_status`, `automation_status` |
+| `admin_add_policy_item` | `id`, `policy_version_id` |
+| `admin_set_policy_scope` | `id`, `scope_type` |
+| `admin_set_policy_item_scope_override` | `id`, `is_included` |
+| `admin_create_workflow_template` | `id`, `draft_version_id`, `version_no` |
+| `admin_add_workflow_step` | `id`, `sequence_no` |
+| `admin_add_workflow_transition` | `id`, `outcome_code` |
+| `admin_submit_policy_for_review` | `id`, `legal_status`, `automation_status` |
+| `admin_approve_policy_version` | `id`, `legal_status` |
+| `admin_activate_policy_version` | `id`, `legal_status`, `effective_from`, `effective_to` |
+| `admin_suspend_policy_version` | `id`, `legal_status` |
+| `resolve_topic_governance` | `decision_id`, `outcome`, `candidate_count`, selected IDs, `explanation` |
+| `create_topic_with_workflow` | topic keys plus `decision_id`, `outcome`, `routing_status`, workflow IDs |
+| `get_topic_governance` | `topic_id`, source/status, selected IDs, `decision`, `mapping_snapshot` |
+| `get_topic_workflow` | `instance_id`, `status`, `current_step_id`, `steps` |
+| `complete_topic_workflow_step` | `topic_id`, `workflow_instance_id`, `completed_step_id`, `outcome`, `next_step_id`, `workflow_status` |
+| `return_topic_workflow_step` | same workflow-action keys with `outcome=returned` |
+| `reject_topic_workflow_step` | same workflow-action keys with `outcome=rejected` |
+| `act_topic_workflow_step` | `topic_id`, `completed_step_id`, `next_step_id`, `workflow_status`, `version`; an idempotent replay returns the same fields from the original action plus `idempotent_replay=true` |
+| `request_custom_workflow` | `id`, `topic_id`, `status`, `governance_source`, `valid_until` |
+| `approve_custom_workflow` | exception approval keys plus `governance_source=custom` |
+| `admin_list_governance_unit_classes` | `items`, `limit`, `offset`; items include `council_count` |
+| `admin_create_governance_unit_class` | `id`, `code`, `is_active` |
+| `admin_update_governance_unit_class` | `id`, `updated_at`, `is_active` |
+| `admin_assign_governance_unit_class` | `governance_unit_id`, `governance_class_id`, `updated_at` |
+
+`request_custom_workflow` and `request_workflow_exception` require a future `p_valid_until`.
+Approval of a request whose validity window has elapsed fails without creating a workflow instance.
+| `request_workflow_exception` | `id`, `topic_id`, `status` |
+| `approve_workflow_exception` | `id`, `status`; approvals also include workflow and current-step IDs |
+| `admin_search_policies` | `items`, `total`, `limit`, `offset` |
+| `admin_get_policy_detail` | policy fields plus `versions`; each version contains `items` and `scopes` |
+| `admin_update_policy` | `id`, `status` |
+| `admin_update_policy_item` | `id`, `is_active` |
+| `admin_remove_policy_item` | `id`, `deleted` |
+| `admin_remove_policy_scope` | `id`, `deleted` |
+| `admin_create_workflow_version` | `id`, `version_no`, `status` |
+| `admin_update_workflow_step` | `id`, `sequence_no` |
+| `admin_remove_workflow_step` | `id`, `deleted` |
+| `admin_activate_workflow_template_version` | `id`, `status` |

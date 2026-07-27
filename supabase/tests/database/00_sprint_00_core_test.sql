@@ -57,7 +57,7 @@ select is_empty(
 select throws_ok(
   $$ insert into public.governance_units (organization_id, unit_type_id, code, name_ar) values ('33333333-3333-3333-3333-333333333333', '77777777-7777-7777-7777-777777777777', 'U-02', 'Unit 2') $$,
   '42501',
-  'permission denied for view governance_units',
+  'permission denied for table governance_units',
   'Regular user should NOT be able to create a governance unit'
 );
 
