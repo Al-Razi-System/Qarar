@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(28);
+select plan(33);
 
 select ok(qarar_governance.conditions_match('{"priority":"urgent"}','{"priority":"urgent"}'),
  'matching condition object is executed');
@@ -49,7 +49,7 @@ select ok(position('governance_source=''custom''' in pg_get_functiondef(
  'qarar_topics.create_topic_with_workflow(text,text,uuid,uuid,text,text,text,uuid)'::regprocedure))>0,
  'custom and fallback routing persists a custom source');
 select ok(position('governance_source into source' in pg_get_functiondef(
- 'qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure))>0,
+ 'qarar_governance.act_topic_workflow_step_core(uuid,text,text,uuid,integer)'::regprocedure))>0,
  'workflow actions preserve the existing governance source');
 
 select ok(
@@ -61,7 +61,7 @@ select ok(
  'workflow templates accept an explicit voting step type');
 select ok(
  position('COALESCE(CURRENT_SETTING(' in upper(pg_get_functiondef(
-  'qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure)))>0,
+  'qarar_governance.act_topic_workflow_step_core(uuid,text,text,uuid,integer)'::regprocedure)))>0,
  'manual voting guard treats a missing transition setting as denied');
 select has_column(
  'qarar_voting','voting_rounds','workflow_instance_step_id',
@@ -104,6 +104,29 @@ select ok(
  position('array[''approved'',''rejected'',''tie'',''no_vote'']' in pg_get_functiondef(
   'qarar_governance.validate_workflow_template_version(uuid)'::regprocedure))>0,
  'workflow validation requires every voting result to be handled');
+select ok(
+ position('wi.status=''active''' in pg_get_functiondef(
+  'qarar_governance.expire_governance_exceptions(timestamp with time zone)'::regprocedure))>0
+ and position('m.snapshot->>''exception_id''' in pg_get_functiondef(
+  'qarar_governance.expire_governance_exceptions(timestamp with time zone)'::regprocedure))>0,
+ 'expiration only changes an active workflow bound to the expired exception');
+select ok(
+ position('cancel_expired_workflow_voting_rounds' in pg_get_functiondef(
+  'qarar_governance.expire_governance_exceptions(timestamp with time zone)'::regprocedure))>0,
+ 'expiration cancels an open governed voting round before it cancels the step');
+select function_returns(
+ 'qarar_voting','cancel_expired_workflow_voting_rounds',array['uuid','timestamp with time zone'],'integer',
+ 'voting has a dedicated operation to cancel expired workflow rounds');
+select ok(
+ position('select s.* into replay' in pg_get_functiondef(
+  'qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure))
+ < position('from qarar_governance.topic_governance_mappings' in pg_get_functiondef(
+  'qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure)),
+ 'idempotent replay is resolved before the temporary-route expiry guard');
+select ok(
+ position('array_position' in pg_get_functiondef(
+  'qarar_governance.normalize_voting_step_outcomes()'::regprocedure))>0,
+ 'voting outcomes are normalized independently of request array order');
 
 select * from finish();
 rollback;
