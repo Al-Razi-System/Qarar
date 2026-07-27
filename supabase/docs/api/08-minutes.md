@@ -55,16 +55,36 @@ Requires `minutes.manage` and accepts only `draft` or `generated` minutes. A sta
 `p_expected_updated_at` returns SQLSTATE `40001`; reload the minute rather than overwriting another
 editor's work.
 
-## Temporary AI Draft Generator
-
-`POST /functions/v1/generate-minutes` is an existing compatibility Edge Function. It is not the
-frontend contract for the complete minutes workflow and is scheduled for migration in
-[GitHub issue #96](https://github.com/Al-Razi-System/Qarar/issues/96).
+### `POST /functions/v1/generate-minutes`
 
 ```json
-{ "meeting_id": "<uuid>" }
+{
+  "meeting_id": "uuid",
+  "client_request_id": "uuid"
+}
 ```
 
-Generated content is always an unapproved draft requiring human review. New frontend code must not
-depend on the compatibility database views used internally by this function. The replacement
-contract will be documented here when Sprint 4 is implemented.
+Requires `minutes.manage`. The function snapshots the permitted meeting context, generates an
+editable draft, and returns `{request_id,status,minute_id,revision_id,revision_no}` with
+`status="generated"`. It never submits, approves, publishes, or closes a meeting. The same
+Reuse `client_request_id` only to retry an interrupted network request. A terminal failed request is
+audited and a deliberate new generation attempt requires a new identifier.
+
+### `submit_minute_for_approval`
+
+Requires `minutes.manage`. Input is `{p_minute_id,p_expected_updated_at}`. The backend validates
+the current content, creates a new approval round from the council's configured approval rule,
+changes the minute to `ready_for_approval`, and changes the meeting to `waiting_for_approval`.
+
+### `decide_minute_approval`
+
+Input is `{p_approval_id,p_decision,p_note,p_expected_updated_at}` where `p_decision` is
+`approved` or `rejected`. Only the user assigned to that approval task may decide it. A rejection
+returns the minute and meeting to the draft/minutes-review path. The final required human approval
+copies the reviewed draft to `content_final`, marks the minute `approved`, and closes the meeting in
+the same transaction.
+
+## Controlled AI Draft Generator
+
+`generate-minutes` is now a controlled Edge Function. It does not use compatibility views and its
+service-only persistence contracts are not callable by Flutter or browser clients.

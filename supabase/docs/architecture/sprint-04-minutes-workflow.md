@@ -8,8 +8,8 @@ people.
 
 The workflow starts only for a meeting in `waiting_for_minutes`:
 
-1. A permitted rapporteur, chair, or governance administrator creates a manual draft, or a later
-   controlled generation command creates a generated draft.
+1. A permitted rapporteur, chair, or governance administrator creates a manual draft, or requests
+   a controlled generated draft.
 2. Every saved content value becomes an immutable revision. The latest revision is the only draft
    that can be submitted for approval.
 3. A later command submits the current revision and creates the required human approval tasks.
@@ -65,6 +65,21 @@ client must reload with `get_meeting_minutes`, present the conflict, and retry d
 
 ## Deferred Contracts
 
-`generate_minute_draft`, `submit_minute_for_approval`, `decide_minute_approval`, and
-`publish_approved_minute` are implemented in PB-050/PB-023/PB-026/PB-027/PB-028. Until then no
-operation may transition a minute to `ready_for_approval` or `approved`.
+## Controlled Generation
+
+`request_minute_generation` creates a tenant-scoped, ten-minute generation request after checking
+`minutes.manage`. It snapshots the meeting, attendance, agenda, voting rounds, and decisions before
+the Edge Function calls the provider. Repeating the same `p_client_request_id` returns the same
+request.
+
+Only the Edge Function's service-role contracts may complete or fail that request. Completion stores
+an `ai_generated` immutable revision and leaves the minute in `generated`; it cannot submit,
+approve, publish, or close anything. A failed request remains auditable and manual drafting remains
+available. If a user changes the draft after the request snapshot was made, completion fails rather
+than overwrite that newer human change.
+
+## Deferred Contracts
+
+`submit_minute_for_approval` and `decide_minute_approval` are implemented. A separate publish
+contract is intentionally unnecessary: the final assigned human approval is the only operation that
+publishes `content_final` and closes the meeting atomically.

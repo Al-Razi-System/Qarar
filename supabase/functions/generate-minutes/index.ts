@@ -1,160 +1,123 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { createClient } from "@supabase/supabase-js"
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 }
 
-serve(async (req) => {
-  // Handle CORS preflight request
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status,
+  headers: { ...corsHeaders, "Content-Type": "application/json" },
+})
+
+const api = (client: any) => client.schema("api_v1")
+
+const providerError = async (admin: any, requestId: string | undefined, code: string) => {
+  if (!requestId) return
+  await api(admin).rpc("service_fail_minute_generation", {
+    p_request_id: requestId,
+    p_error_code: code,
+  })
+}
+
+Deno.serve(async (request) => {
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders })
+  if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405)
+
+  const authorization = request.headers.get("authorization")
+  if (!authorization?.startsWith("Bearer ")) return json({ error: "missing_authorization" }, 401)
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? ""
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  if (!supabaseUrl || !anonKey || !serviceRoleKey) return json({ error: "function_not_configured" }, 503)
+
+  let requestId: string | undefined
+  const caller = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authorization } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
 
   try {
-    // Parse request body
-    const { meeting_id } = await req.json()
-    if (!meeting_id) {
-      return new Response(JSON.stringify({ error: 'meeting_id is required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    const payload = await request.json() as { meeting_id?: string; client_request_id?: string }
+    if (!payload.meeting_id) return json({ error: "meeting_id_required" }, 400)
 
-    // Initialize Supabase Client with the user's auth token
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    )
+    const { data: userData, error: userError } = await caller.auth.getUser()
+    if (userError || !userData.user) return json({ error: "invalid_token" }, 401)
 
-    // 1. Fetch Meeting Details
-    const { data: meeting, error: meetingError } = await supabaseClient
-      .from('meetings')
-      .select('*, governance_units(name_ar)')
-      .eq('id', meeting_id)
-      .single()
-
-    if (meetingError || !meeting) {
-      throw new Error('Meeting not found or you do not have permission to view it.')
-    }
-
-    // 2. Fetch Attendance
-    const { data: attendance } = await supabaseClient
-      .from('attendance_records')
-      .select('attendance_status, users(full_name_ar)')
-      .eq('meeting_id', meeting_id)
-
-    // 3. Fetch Agenda Items and related Decisions
-    const { data: agenda } = await supabaseClient
-      .from('agenda_items')
-      .select('title_ar, description, topics(title_ar), decisions(decision_text)')
-      .eq('meeting_id', meeting_id)
-      .order('order_index')
-
-    // 4. Construct Prompt
-    let prompt = `أنت خبير قانوني ومقرر جلسات. المطلوب كتابة مسودة "محضر اجتماع" رسمية باللغة العربية بناءً على البيانات التالية:\n\n`
-    prompt += `اسم الاجتماع: ${meeting.title_ar}\n`
-    prompt += `تاريخ الاجتماع: ${meeting.scheduled_date}\n`
-    prompt += `الجهة/المجلس: ${meeting.governance_units?.name_ar || 'غير محدد'}\n\n`
-    
-    prompt += `الحضور:\n`
-    attendance?.forEach(a => {
-      prompt += `- ${a.users?.full_name_ar} (الحالة: ${a.attendance_status})\n`
+    const { data: generationRequest, error: requestError } = await api(caller).rpc("request_minute_generation", {
+      p_meeting_id: payload.meeting_id,
+      p_client_request_id: payload.client_request_id ?? null,
     })
-    
-    prompt += `\nجدول الأعمال والقرارات المتخذة:\n`
-    agenda?.forEach((item, index) => {
-      prompt += `${index + 1}. ${item.title_ar}\n`
-      if (item.topics?.title_ar) prompt += `   الموضوع: ${item.topics.title_ar}\n`
-      if (item.decisions && item.decisions.length > 0) {
-        prompt += `   القرارات المتخذة:\n`
-        item.decisions.forEach((d: any) => {
-          prompt += `   - ${d.decision_text}\n`
-        })
-      } else {
-        prompt += `   القرارات المتخذة: لم تسجل قرارات.\n`
-      }
-    })
+    if (requestError || !generationRequest?.request_id) {
+      const message = requestError?.message ?? "generation_request_rejected"
+      const status = message.includes("permission denied") ? 403 : message.includes("not found") ? 404 : 422
+      return json({ error: "generation_request_rejected" }, status)
+    }
+    requestId = generationRequest.request_id
 
-    prompt += `\nيرجى كتابة محضر رسمي مرتب يحتوي على: المقدمة، استعراض الحضور، سرد تفاصيل جدول الأعمال والقرارات، وخاتمة الاجتماع. لا تضف أي قرارات أو أحداث لم تذكر في البيانات أعلاه.`
-
-    // 5. Call Gemini API
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY is not configured')
+    if (generationRequest.status === "succeeded") {
+      return json({ request_id: requestId, status: "succeeded", idempotent_replay: true })
+    }
+    if (generationRequest.status !== "queued") {
+      return json({ request_id: requestId, status: generationRequest.status, idempotent_replay: true }, 409)
     }
 
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const apiKey = Deno.env.get("GEMINI_API_KEY")
+    if (!apiKey) {
+      await providerError(admin, requestId, "provider_not_configured")
+      return json({ error: "ai_provider_unavailable", request_id: requestId }, 503)
+    }
+
+    const model = Deno.env.get("GEMINI_MINUTES_MODEL") ?? "gemini-2.5-flash"
+    const prompt = [
+      "Write a formal Arabic meeting-minutes draft from the following verified JSON context.",
+      "Use only facts in the context. Do not invent attendance, votes, decisions, or approvals.",
+      "This output is an editable draft only. It is not an approval, decision, or meeting closure.",
+      JSON.stringify(generationRequest.generation_context),
+    ].join("\n\n")
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
       },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }]
-      })
+    )
+    if (!response.ok) {
+      await providerError(admin, requestId, "provider_request_failed")
+      return json({ error: "ai_provider_unavailable", request_id: requestId }, 502)
+    }
+    const generated = await response.json()
+    const content = generated?.candidates?.[0]?.content?.parts?.[0]?.text
+    if (typeof content !== "string" || !content.trim()) {
+      await providerError(admin, requestId, "provider_empty_response")
+      return json({ error: "ai_provider_empty_response", request_id: requestId }, 502)
+    }
+
+    const { data: completed, error: completionError } = await api(admin).rpc("service_complete_minute_generation", {
+      p_request_id: requestId,
+      p_generated_content: content,
+      p_provider: "google_gemini",
+      p_model: model,
     })
-
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text()
-      console.error('Gemini API Error:', errText)
-      throw new Error('Failed to generate content from AI provider')
+    if (completionError || completed?.status !== "succeeded") {
+      await providerError(admin, requestId, completionError ? "draft_persistence_failed" : completed?.error_code ?? "draft_not_saved")
+      return json({ error: "draft_not_saved", request_id: requestId }, 409)
     }
-
-    const geminiData = await geminiRes.json()
-    const generatedText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text
-
-    if (!generatedText) {
-      throw new Error('Empty response from AI provider')
-    }
-
-    // 6. Update meeting_minutes table
-    const { data: existingMinute } = await supabaseClient
-      .from('meeting_minutes')
-      .select('id')
-      .eq('meeting_id', meeting_id)
-      .maybeSingle()
-
-    let dbError;
-    if (existingMinute) {
-      const res = await supabaseClient
-        .from('meeting_minutes')
-        .update({
-          content_draft: generatedText,
-          generated_by_ai: true,
-          status: 'generated'
-        })
-        .eq('id', existingMinute.id)
-      dbError = res.error
-    } else {
-      const { data: userData } = await supabaseClient.auth.getUser()
-      const res = await supabaseClient
-        .from('meeting_minutes')
-        .insert({
-          meeting_id: meeting_id,
-          organization_id: meeting.organization_id,
-          content_draft: generatedText,
-          generated_by_ai: true,
-          status: 'generated',
-          created_by_user_id: userData.user?.id
-        })
-      dbError = res.error
-    }
-
-    if (dbError) {
-      throw new Error('Failed to save generated minutes to database: ' + dbError.message)
-    }
-
-    return new Response(JSON.stringify({ success: true, message: 'Minutes generated successfully' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
-
-  } catch (error: any) {
-    console.error('Error in generate-minutes:', error.message)
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    })
+    return json({
+      request_id: requestId,
+      status: "generated",
+      minute_id: completed.minute_id,
+      revision_id: completed.revision_id,
+      revision_no: completed.revision_no,
+    }, 201)
+  } catch {
+    await providerError(admin, requestId, "unexpected_generation_failure")
+    return json({ error: "generation_failed", request_id: requestId ?? null }, 500)
   }
 })

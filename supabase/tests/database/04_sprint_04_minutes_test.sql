@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(10);
+select plan(14);
 
 insert into qarar_core.organizations(id,code,name_ar) values
  ('44000000-0000-0000-0000-000000000001','s04-minutes','Sprint 4 Minutes'),
@@ -52,6 +52,28 @@ select is(
 select is(
  api_v1.get_meeting_minutes('44000000-0000-0000-0000-000000000031')->>'meeting_status',
  'waiting_for_minutes','editing a draft does not advance or close the meeting'
+);
+select is(
+ api_v1.request_minute_generation('44000000-0000-0000-0000-000000000031','44000000-0000-0000-0000-000000000041')->>'status',
+ 'queued','a permitted caller creates a controlled generation request'
+);
+reset role;
+select is(
+ api_v1.service_complete_minute_generation(
+  (select id from qarar_minutes.minute_generation_requests where client_request_id='44000000-0000-0000-0000-000000000041'),
+  'Generated governed draft','test-provider','test-model'
+ )->>'status','succeeded','the service contract stores a generated draft only'
+);
+set local role authenticated;
+set local "request.jwt.claims"='{"sub":"44000000-0000-0000-0000-000000000011","role":"authenticated"}';
+select is(
+ api_v1.get_meeting_minutes('44000000-0000-0000-0000-000000000031')->'minute'->>'status',
+ 'generated','generated content remains an editable generated draft'
+);
+select ok(
+ not has_function_privilege('authenticated',
+  'api_v1.service_complete_minute_generation(uuid,text,text,text)','execute'),
+ 'clients cannot execute the service-only generation completion contract'
 );
 select throws_ok(
  $$select api_v1.update_minute_draft(
