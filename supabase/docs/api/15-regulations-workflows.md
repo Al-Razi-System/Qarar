@@ -12,6 +12,171 @@ Content-Profile: api_v1
 
 Direct writes to `qarar_governance` or `qarar_topics` are unsupported and denied.
 
+لشرح تشغيلي عربي متسلسل يمتد من إعداد اللائحة حتى المحضر، راجع
+[الدليل التشغيلي: من اللائحة إلى المحضر](../guides/01-governed-topic-meeting-voting-ar.md).
+
+## How to call the contracts
+
+Use the configured Supabase client and the versioned schema; do not call a physical table or an
+unversioned function. All argument names below are the exact `api_v1` contract names.
+
+```dart
+final result = await client.schema('api_v1').rpc(
+  'admin_create_policy',
+  params: {
+    'p_code': 'ACADEMIC-2026',
+    'p_name_ar': 'لائحة الشؤون الأكاديمية',
+    'p_name_en': null,
+    'p_policy_type': 'regulation',
+    'p_description': 'تنظيم دورة الموضوعات الأكاديمية.',
+    'p_owner_user_id': null,
+  },
+);
+```
+
+`15-regulations-workflows.md` defines behavior, sequencing, permissions, and error handling.
+`12-contract-reference.md` is generated from the deployed contract registry and is the complete
+source for every argument name and type. `14-json-response-contracts.md` defines the stable
+response keys consumed by the UI. Read all three together when implementing a screen.
+
+## Screen-to-contract map
+
+| Screen / user action | Contracts |
+|---|---|
+| Regulations list | `admin_search_policies` |
+| Regulation detail and version editor | `admin_get_policy_detail`, `admin_create_policy`, `admin_update_policy`, `admin_create_policy_version` |
+| Regulation-item editor | `admin_add_policy_item`, `admin_update_policy_item`, `admin_remove_policy_item` |
+| Scope and council exception editor | `admin_set_policy_scope`, `admin_remove_policy_scope`, `admin_set_policy_item_scope_override` |
+| Route-template list/editor | `admin_create_workflow_template`, `admin_create_workflow_version`, `admin_add_workflow_step`, `admin_update_workflow_step`, `admin_remove_workflow_step`, `admin_add_workflow_transition` |
+| Publish and lifecycle actions | `admin_submit_policy_for_review`, `admin_approve_policy_version`, `admin_activate_policy_version`, `admin_suspend_policy_version`, `admin_activate_workflow_template_version` |
+| Council-classification administration | `admin_list_governance_unit_classes`, `admin_create_governance_unit_class`, `admin_update_governance_unit_class`, `admin_assign_governance_unit_class` |
+| Topic routing preview and detail | `resolve_topic_governance`, `get_topic_governance`, `get_topic_workflow` |
+| Topic workflow action | `act_topic_workflow_step` |
+| Regulated exception | `request_workflow_exception`, `approve_workflow_exception` |
+| Authorized custom/fallback route | `request_custom_workflow`, `approve_custom_workflow` |
+
+## End-to-end examples
+
+### 1. Define and activate a route template
+
+Create the template, add its steps and transitions, then activate only after the graph is complete.
+Use IDs returned by each previous response.
+
+```json
+// admin_create_workflow_template
+{
+  "p_code": "ACADEMIC-APPROVAL",
+  "p_name_ar": "مسار اعتماد الموضوع الأكاديمي",
+  "p_name_en": null,
+  "p_description": "مراجعة ثم تصويت ثم اعتماد."
+}
+
+// admin_add_workflow_step
+{
+  "p_workflow_template_version_id": "uuid",
+  "p_step_code": "faculty_review",
+  "p_name_ar": "مراجعة مجلس الكلية",
+  "p_sequence_no": 10,
+  "p_step_type": "review",
+  "p_responsibility": "review",
+  "p_governance_unit_id": "uuid",
+  "p_governance_class_id": null,
+  "p_required_permission_code": "topics.workflow.act",
+  "p_is_initial": true,
+  "p_is_terminal": false,
+  "p_entry_conditions": {},
+  "p_exit_conditions": {},
+  "p_allowed_outcomes": ["approved", "returned", "rejected"]
+}
+
+// admin_add_workflow_transition
+{
+  "p_workflow_template_version_id": "uuid",
+  "p_from_step_id": "uuid",
+  "p_outcome_code": "approved",
+  "p_to_step_id": "uuid",
+  "p_transition_type": "forward",
+  "p_conditions": {}
+}
+```
+
+A `voting` step must have exactly the four outcomes `approved`, `rejected`, `tie`, and `no_vote`.
+Its transition cannot be advanced from the client; closing the linked voting round advances it.
+
+### 2. Draft, approve, and activate a regulation
+
+```json
+// admin_create_policy_version
+{
+  "p_policy_id": "uuid",
+  "p_version_label": "2026.1",
+  "p_change_summary": "الإصدار الأول للمسار الأكاديمي."
+}
+
+// admin_add_policy_item
+{
+  "p_policy_version_id": "uuid",
+  "p_item_code": "ACADEMIC-APPROVAL",
+  "p_title_ar": "اعتماد الموضوعات الأكاديمية",
+  "p_sort_order": 10,
+  "p_parent_item_id": null,
+  "p_item_type": "article",
+  "p_title_en": null,
+  "p_body_text": "ينفذ المسار المحدد للموضوعات الأكاديمية.",
+  "p_governance_mode": "regulation_required",
+  "p_topic_category_id": "uuid",
+  "p_match_criteria": {},
+  "p_workflow_template_version_id": "uuid"
+}
+
+// admin_set_policy_scope
+{
+  "p_policy_version_id": "uuid",
+  "p_scope_type": "governance_unit",
+  "p_target_id": "uuid",
+  "p_governance_level": null,
+  "p_include_descendants": true,
+  "p_priority": 0,
+  "p_valid_from": null,
+  "p_valid_to": null
+}
+```
+
+Then call `admin_submit_policy_for_review`, `admin_approve_policy_version`, and
+`admin_activate_policy_version` in that order. The approver must be different from the submitter.
+The client must not enable activation until the route-template version has been activated and the
+policy response reports `automation_status=ready`.
+
+### 3. Create and act on a governed topic
+
+```json
+// create_topic_with_workflow
+{
+  "p_title_ar": "اعتماد الخطة الأكاديمية",
+  "p_description": "طلب اعتماد الخطة الأكاديمية للقسم للعام القادم.",
+  "p_category_id": "uuid",
+  "p_current_unit_id": "uuid",
+  "p_priority": "medium",
+  "p_source_type": "new",
+  "p_title_en": null,
+  "p_client_request_id": "uuid"
+}
+
+// act_topic_workflow_step
+{
+  "p_topic_id": "uuid",
+  "p_outcome_code": "approved",
+  "p_comment": "تمت المراجعة.",
+  "p_idempotency_key": "uuid",
+  "p_expected_version": 3
+}
+```
+
+After creation, always load `get_topic_governance` and `get_topic_workflow`. Enable an action only
+when the response identifies the caller's council and permission as eligible. Preserve the same
+`p_idempotency_key` only while retrying the same interrupted action. On `40001`, reload the route
+and require the user to confirm the action again.
+
 ## Frontend Flow
 
 1. Create a workflow template with `admin_create_workflow_template`.
