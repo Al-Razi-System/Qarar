@@ -50,3 +50,6 @@ The generated contract reference records every exposed `api_v1` signature and au
 documentation parity test fails when it differs from the runtime registry.
 The physical module map and dependency rules are documented in
 [../architecture/README.md](../architecture/README.md).
+
+لإعداد اللوائح وقوالب المسارات وسيناريوهات الاختبار قبل التشغيل، راجع
+[دليل إعداد اللوائح والمسارات](../guides/02-regulation-setup-scenarios-ar.md).

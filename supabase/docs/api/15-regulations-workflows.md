@@ -12,6 +12,9 @@ Content-Profile: api_v1
 
 Direct writes to `qarar_governance` or `qarar_topics` are unsupported and denied.
 
+لإعداد اللائحة من الصفر، بما في ذلك الجاهزية والنطاقات والاستثناءات وسيناريوهات الاختبار،
+راجع [دليل إعداد اللوائح والمسارات](../guides/02-regulation-setup-scenarios-ar.md).
+
 ## Frontend Flow
 
 1. Create a workflow template with `admin_create_workflow_template`.
