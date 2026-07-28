@@ -112,6 +112,14 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `search_meetings` | `meetings` | `authenticated` | `p_query text, p_status text, p_unit_id uuid, p_from_date date, p_to_date date, p_limit integer, p_offset integer` | `jsonb` |
 | `transition_meeting` | `meetings` | `authenticated` | `p_meeting_id uuid, p_to_status text, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `update_meeting` | `meetings` | `authenticated` | `p_meeting_id uuid, p_title_ar text, p_scheduled_date date, p_start_time time without time zone, p_end_time time without time zone, p_location_type text, p_location_details text, p_title_en text, p_meeting_type_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `create_minute_draft` | `minutes` | `authenticated` | `p_meeting_id uuid, p_content text` | `jsonb` |
+| `decide_minute_approval` | `minutes` | `authenticated` | `p_approval_id uuid, p_decision text, p_note text, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `get_meeting_minutes` | `minutes` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
+| `request_minute_generation` | `minutes` | `authenticated` | `p_meeting_id uuid, p_client_request_id uuid` | `jsonb` |
+| `service_complete_minute_generation` | `minutes` | `service_role` | `p_request_id uuid, p_generated_content text, p_provider text, p_model text` | `jsonb` |
+| `service_fail_minute_generation` | `minutes` | `service_role` | `p_request_id uuid, p_error_code text` | `jsonb` |
+| `submit_minute_for_approval` | `minutes` | `authenticated` | `p_minute_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `update_minute_draft` | `minutes` | `authenticated` | `p_minute_id uuid, p_content text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `create_topic` | `topics` | `authenticated` | `p_title_ar text, p_description text, p_category_id uuid, p_current_unit_id uuid, p_priority text, p_source_type text, p_title_en text, p_client_request_id uuid` | `jsonb` |
 | `create_topic_with_workflow` | `topics` | `authenticated` | `p_title_ar text, p_description text, p_category_id uuid, p_current_unit_id uuid, p_priority text, p_source_type text, p_title_en text, p_client_request_id uuid` | `jsonb` |
 | `get_topic_detail` | `topics` | `authenticated` | `p_topic_id uuid` | `jsonb` |

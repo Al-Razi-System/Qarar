@@ -5,7 +5,7 @@
 | Function | Purpose | Auth |
 |---|---|---|
 | `iam-admin` | User creation, status/lock controls, session revocation, invitations, password recovery | Required; permission checked |
-| `generate-minutes` | Generate a meeting-minutes draft | Required through caller client |
+| `generate-minutes` | Create an editable, AI-generated meeting-minutes draft | Required; `minutes.manage` |
 
 Invoke from Flutter:
 

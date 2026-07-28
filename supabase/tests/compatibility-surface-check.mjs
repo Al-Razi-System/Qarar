@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = fileURLToPath(new URL("../functions/", import.meta.url))
-const allowed = new Set(["generate-minutes/index.ts"])
+const allowed = new Set()
 const dependencies = []
 
 async function walk(path, relative = "") {

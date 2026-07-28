@@ -118,6 +118,20 @@ TopicHistory = {
 | `respond_topic_referral` | `{referral_id,topic_id,status,current_unit_id}` |
 | `get_topic_route_history` | `TopicRouteEntry[]`, ordered chronologically as defined in [06-topic-referrals.md](./06-topic-referrals.md) |
 
+## Minutes
+
+| Contract | Stable response keys |
+|---|---|
+| `get_meeting_minutes` | `meeting_id`, `meeting_status`, `minute?`; `minute` contains the minute row excluding `content_final`, plus `revisions`, `status_history`, and `approvals` arrays |
+| `create_minute_draft` | `minute_id`, `meeting_id`, `status`, `revision_no`, `updated_at` |
+| `update_minute_draft` | `minute_id`, `status`, `revision_no`, `updated_at` |
+| `request_minute_generation` | `request_id`, `status`, `expires_at`, `generation_context`, `idempotent_replay` |
+| `submit_minute_for_approval` | `minute_id`, `status`, `approval_round_no`, `revision_no`, `meeting_status`, `updated_at` |
+| `decide_minute_approval` | `approval_id`, `decision`, `minute_status`, `meeting_status`, `updated_at` |
+
+`MinuteRevision` contains `id`, `minute_id`, `revision_no`, `content`, `source`,
+`created_by_user_id?`, `generation_metadata`, and `created_at`. Clients must treat it as immutable.
+
 ## Meetings and Agenda
 
 ```text

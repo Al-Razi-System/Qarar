@@ -19,7 +19,7 @@ PostgreSQL result types are frozen in [12-contract-reference.md](./12-contract-r
 | Meeting and agenda administration | Meeting `api_v1` contracts | [07-meetings.md](./07-meetings.md) | Implemented |
 | Attendance, quorum, and voting | Attendance/voting `api_v1` contracts | [07-session-attendance-voting.md](./07-session-attendance-voting.md) | Implemented |
 | Audit administration | Audit `admin_*` contracts | [11-audit-logs.md](./11-audit-logs.md) | Implemented |
-| Minutes workflow | None for frontend use | [08-minutes.md](./08-minutes.md) | Deferred to Sprint 4 |
+| Minutes workflow | Minutes `api_v1` contracts and `generate-minutes` | [08-minutes.md](./08-minutes.md) | Implemented |
 | Decisions and execution | None for frontend use | [09-decisions-execution.md](./09-decisions-execution.md) | Deferred to Sprint 5 |
 
 Do not build deferred screens against physical tables or compatibility views. Keep them behind a
