@@ -2,22 +2,8 @@
 
 ## Implementation Status
 
-Frontend minute-management contracts are **not implemented yet**. They belong to Sprint 4. No
-supported `api_v1` contract currently exists for reading, creating, editing, submitting, or approving
-minutes. Clients must not read or write `meeting_minutes` or `minute_approvals` directly through
-PostgREST.
-
-The target workflow requires versioned contracts for:
-
-- loading the current draft and its approval state;
-- creating and editing a draft with optimistic concurrency;
-- submitting a draft for approval;
-- recording an authorized approver decision;
-- publishing the immutable approved version;
-- exposing status history and audit references.
-
-These operations must enforce organization scope, governance-unit permissions, legal transitions,
-and audit logging inside the backend transaction before this document can be marked implemented.
+Frontend minute-management contracts are not part of this branch yet. Clients must not read or
+write minute tables directly through PostgREST. The minute workflow is delivered independently.
 
 ## Temporary AI Draft Generator
 

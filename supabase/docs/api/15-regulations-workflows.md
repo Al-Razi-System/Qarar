@@ -26,8 +26,8 @@ Direct writes to `qarar_governance` or `qarar_topics` are unsupported and denied
 6. Add inherited scopes using `admin_set_policy_scope` and explicit council exceptions using
    `admin_set_policy_item_scope_override`.
 7. Submit, independently approve, and activate using the lifecycle commands.
-8. Create topics using `create_topic_with_workflow`. The legacy `create_topic` contract now invokes
-   the same governed transaction.
+8. For a new governed topic, load `get_topic_regulation_options`, let the user choose one eligible
+   regulation, then use `create_topic_with_selected_regulation`.
 9. Render the selected regulation with `get_topic_governance` and the executable route with
    `get_topic_workflow`.
 10. Act on the current step using the complete, return, or reject commands.
@@ -99,9 +99,15 @@ Legal states: `draft`, `under_review`, `approved`, `effective`, `suspended`, `ex
 Automation states: `not_configured`, `mapping_in_progress`, `validation_pending`,
 `partially_ready`, `ready`, `blocked`.
 
-## Scope Resolution
+## Scope Resolution and User Selection
 
-`resolve_topic_governance` can preview routing before creation. Matching is deterministic:
+`resolve_topic_governance` remains a compatibility preview for automatic integrations. New frontend
+flows must use `get_topic_regulation_options` followed by
+`create_topic_with_selected_regulation`; multiple matching regulations are normal options, not a
+data conflict. The detailed Arabic implementation guide is
+[03-topic-regulation-selection-ar.md](../guides/03-topic-regulation-selection-ar.md).
+
+Automatic matching remains deterministic:
 
 ```text
 governance_unit > governance_class > governance_level >
@@ -118,6 +124,9 @@ Outcomes include `resolved`, `no_applicable_policy`, `multiple_policy_conflict`,
 `policy_not_implemented`, `policy_partially_ready`, `custom_route_required`, and `blocked`.
 
 ## Topic Creation
+
+For the frontend-selected path, see the Arabic guide above. `create_topic_with_workflow` below is
+the legacy automatic-routing command and must not be used by a new selection UI.
 
 Example:
 
