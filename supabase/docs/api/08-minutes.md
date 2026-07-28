@@ -2,12 +2,13 @@
 
 ## Implementation Status
 
-PB-022 is implemented: frontend clients can load, create, and edit governed minute drafts through
-`api_v1`. Submitting, human approval, publication, and controlled AI generation remain Sprint 4
-commands and are not available yet. Clients must not read or write `meeting_minutes`,
-`minute_approvals`, revisions, or history directly through PostgREST.
+Frontend clients can load, create, and edit governed minute drafts through `api_v1`; request a
+controlled generated draft; submit it for human approval; and record the assigned approvers'
+decisions. The final required human approval publishes the immutable final content and closes the
+meeting atomically. Clients must not read or write `meeting_minutes`, `minute_approvals`, revisions,
+or history directly through PostgREST.
 
-The target workflow requires versioned contracts for:
+The implemented workflow provides contracts for:
 
 - loading the current draft and its approval state;
 - creating and editing a draft with optimistic concurrency;
@@ -16,7 +17,7 @@ The target workflow requires versioned contracts for:
 - publishing the immutable approved version;
 - exposing status history and audit references.
 
-The implemented draft contracts and the remaining lifecycle rules are documented in
+The complete lifecycle rules are documented in
 [Sprint 4 Minutes Workflow](../architecture/sprint-04-minutes-workflow.md).
 
 ## Draft RPCs
@@ -66,8 +67,8 @@ editor's work.
 
 Requires `minutes.manage`. The function snapshots the permitted meeting context, generates an
 editable draft, and returns `{request_id,status,minute_id,revision_id,revision_no}` with
-`status="generated"`. It never submits, approves, publishes, or closes a meeting. The same
-Reuse `client_request_id` only to retry an interrupted network request. A terminal failed request is
+`status="generated"`. It never submits, approves, publishes, or closes a meeting. Reuse
+`client_request_id` only to retry an interrupted network request. A terminal failed request is
 audited and a deliberate new generation attempt requires a new identifier.
 
 ### `submit_minute_for_approval`

@@ -81,7 +81,7 @@ Use IDs returned by each previous response.
   "p_responsibility": "review",
   "p_governance_unit_id": "uuid",
   "p_governance_class_id": null,
-  "p_required_permission_code": "topics.workflow.act",
+  "p_required_permission_code": "topics.review",
   "p_is_initial": true,
   "p_is_terminal": false,
   "p_entry_conditions": {},
@@ -135,7 +135,7 @@ Its transition cannot be advanced from the client; closing the linked voting rou
   "p_scope_type": "governance_unit",
   "p_target_id": "uuid",
   "p_governance_level": null,
-  "p_include_descendants": true,
+  "p_include_descendants": false,
   "p_priority": 0,
   "p_valid_from": null,
   "p_valid_to": null

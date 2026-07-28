@@ -32,7 +32,7 @@ This is the entry point for frontend, integration, and backend developers. Qarar
 | Topic referrals and route history | [06-topic-referrals.md](./06-topic-referrals.md) | Implemented | Referral workflows |
 | Meetings, attendance, voting | [07-meetings.md](./07-meetings.md) | Implemented | Meeting workflows |
 | Session, attendance, quorum, voting | [07-session-attendance-voting.md](./07-session-attendance-voting.md) | Implemented | Live meeting workflows |
-| Minutes | [08-minutes.md](./08-minutes.md) | PB-022 implemented; approval lifecycle in progress | Minutes workflows |
+| Minutes | [08-minutes.md](./08-minutes.md) | Implemented | Minutes workflows |
 | Decisions and execution | [09-decisions-execution.md](./09-decisions-execution.md) | Deferred to Sprint 5 | Decision follow-up |
 | Edge Functions and storage | [10-edge-storage.md](./10-edge-storage.md) | Implemented, with noted compatibility surface | Integrations/uploads |
 | Audit logs | [11-audit-logs.md](./11-audit-logs.md) | Implemented | Auditors/security administration |
