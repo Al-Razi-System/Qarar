@@ -12,7 +12,7 @@ select is(
 
 select is(
   (select count(*)::integer from qarar_architecture.entity_registry),
- 70,
+ 67,
   'all application entities are registered');
 
 select is(
@@ -21,7 +21,7 @@ select is(
    join qarar_architecture.module_registry m using (module_code)
    join pg_class c on c.relname = e.entity_name and c.relkind in ('r', 'p')
    join pg_namespace n on n.oid = c.relnamespace and n.nspname = m.schema_name),
- 70,
+ 67,
   'all registered entities are physically owned by their module');
 
 select is(
