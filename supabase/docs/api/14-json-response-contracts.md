@@ -270,12 +270,6 @@ All contracts below return one JSON object.
 | `admin_assign_governance_unit_class` | `governance_unit_id`, `governance_class_id`, `updated_at` |
 | `get_topic_regulation_options` | `governance_unit_id`, `topic_category_id`, `effective_on`, `items`, `total`; each item contains `selection`, policy, version, item, scope, and routing state |
 | `create_topic_with_selected_regulation` | topic keys plus `decision_id`, selected policy/version/item/scope IDs, `outcome`, `routing_status`, and workflow IDs when ready |
-| `get_meeting_minutes` | meeting/minute state, versions, approvals, and history |
-| `create_minute_draft` | `minute_id`, `status`, `version`, `updated_at` |
-| `update_minute_draft` | `minute_id`, `version`, `updated_at` |
-| `request_minute_generation` | `request_id`, `status`, `idempotent_replay` |
-| `submit_minute_for_approval` | `minute_id`, `status`, approval identifiers |
-| `decide_minute_approval` | `approval_id`, `decision`, minute status, `updated_at` |
 
 `request_custom_workflow` and `request_workflow_exception` require a future `p_valid_until`.
 Approval of a request whose validity window has elapsed fails without creating a workflow instance.

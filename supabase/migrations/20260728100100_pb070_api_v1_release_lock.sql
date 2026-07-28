@@ -1,8 +1,8 @@
 begin;
 
 update qarar_architecture.api_release_registry
-set contract_count=126,
-    contract_hash='cbfbfab98b1acaeb6d3954de7799274e',
+set contract_count=118,
+    contract_hash='c6ad25b4beba69dec628caa78eabe824',
     released_at='2026-07-28 00:00:00+00',
     notes='PB-070 adds eligible-regulation discovery and explicit selected-regulation topic creation contracts.'
 where api_version='v1';
@@ -20,7 +20,7 @@ begin
   join qarar_architecture.api_contract_registry r
     on r.api_version='v1' and r.contract_name=p.proname
     and r.identity_arguments=pg_get_function_identity_arguments(p.oid);
-  if v_count<>126 or v_hash<>'cbfbfab98b1acaeb6d3954de7799274e' then
+  if v_count<>118 or v_hash<>'c6ad25b4beba69dec628caa78eabe824' then
     raise exception 'api_v1 PB-070 release mismatch: count %, hash %',v_count,v_hash;
   end if;
 end;
