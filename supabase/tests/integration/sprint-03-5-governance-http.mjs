@@ -233,7 +233,7 @@ try {
   const version = await rpc("admin_create_policy_version", {
     p_policy_id: policy.id, p_version_label: "1.0",
   }, builderHeaders)
-  await rpc("admin_add_policy_item", {
+  const policyItem = await rpc("admin_add_policy_item", {
     p_policy_version_id: version.id,
     p_item_code: "1.1",
     p_title_ar: "اعتماد مجلس القسم",
@@ -242,7 +242,7 @@ try {
     p_topic_category_id: category.id,
     p_workflow_template_version_id: workflow.draft_version_id,
   }, builderHeaders)
-  await rpc("admin_set_policy_scope", {
+  const policyScope = await rpc("admin_set_policy_scope", {
     p_policy_version_id: version.id,
     p_scope_type: "governance_class",
     p_target_id: classId,
@@ -262,17 +262,27 @@ try {
   }, approverHeaders)
   assert.equal(effective.legal_status, "effective")
 
-  const preview = await rpc("resolve_topic_governance", {
+  const options = await rpc("get_topic_regulation_options", {
     p_governance_unit_id: unit.id,
     p_topic_category_id: category.id,
+    p_priority: "medium",
+    p_source_type: "new",
     p_effective_on: new Date().toISOString().slice(0, 10),
   }, builderHeaders)
-  assert.equal(preview.outcome, "resolved")
-  const topic = await rpc("create_topic_with_workflow", {
+  assert.equal(options.total, 1)
+  assert.equal(options.items[0].selection.policy_id, policy.id)
+  assert.equal(options.items[0].selection.policy_item_id, policyItem.id)
+  assert.equal(options.items[0].selection.scope_assignment_id, policyScope.id)
+  assert.equal(options.items[0].can_start_workflow, true)
+  const topic = await rpc("create_topic_with_selected_regulation", {
     p_title_ar: "اعتماد خطة أكاديمية عبر HTTP",
     p_description: "موضوع متكامل يختبر محرك اللوائح والمسار عبر PostgREST.",
     p_category_id: category.id,
     p_current_unit_id: unit.id,
+    p_policy_id: policy.id,
+    p_policy_version_id: version.id,
+    p_policy_item_id: policyItem.id,
+    p_scope_assignment_id: policyScope.id,
     p_client_request_id: crypto.randomUUID(),
   }, builderHeaders)
   assert.equal(topic.routing_status, "routing_ready")
