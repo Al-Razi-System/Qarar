@@ -21,7 +21,9 @@ insert into qarar_iam.users(id,organization_id,email,full_name_ar,is_system_admi
 insert into qarar_iam.roles(id,organization_id,code,name_ar,role_scope)values
 ('59000000-0000-0000-0000-000000000021','59000000-0000-0000-0000-000000000001','member','عضو','governance_unit'),
 ('59000000-0000-0000-0000-000000000022','59000000-0000-0000-0000-000000000001','council_chair','رئيس','governance_unit'),
-('59000000-0000-0000-0000-000000000023','59000000-0000-0000-0000-000000000001','council_rapporteur','مقرر','governance_unit');
+('59000000-0000-0000-0000-000000000023','59000000-0000-0000-0000-000000000001','council_rapporteur','مقرر','governance_unit')
+on conflict(organization_id,code)do update set
+ id=excluded.id,name_ar=excluded.name_ar,role_scope=excluded.role_scope,is_active=true;
 insert into qarar_core.governance_unit_types(id,organization_id,code,name_ar,is_council_type)values
 ('59000000-0000-0000-0000-000000000031','59000000-0000-0000-0000-000000000001','council','Council',true);
 insert into qarar_governance.governance_unit_classes(id,organization_id,code,name_ar,governance_level)values
