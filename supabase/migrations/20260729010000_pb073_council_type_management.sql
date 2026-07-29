@@ -352,6 +352,13 @@ begin
 end;
 $$;
 
+update qarar_architecture.api_release_registry
+set contract_count = 122,
+    contract_hash = '4053da4cfef59fa4e1c943a3a654ec80',
+    released_at = '2026-07-29 00:00:00+00',
+    notes = 'Sprint 03.6 PB-073 adds tenant-safe council type management contracts.'
+where api_version = 'v1';
+
 comment on function qarar_core.admin_search_council_types(text,boolean,integer,integer)
   is 'Searches tenant council types with stable pagination and usage counts.';
 comment on function qarar_core.admin_deactivate_council_type(uuid,timestamptz)
