@@ -10,6 +10,22 @@ until $compose pull db; do
 done
 $compose up -d --pull never db
 
+# The Supabase image exposes a temporary PostgreSQL server while its
+# entrypoint migrations run, so pg_isready alone can report a false-ready
+# state. Wait until the entrypoint has either completed first-time
+# initialization or explicitly skipped it for an existing data directory.
+attempt=0
+until docker logs qarar-supabase-db 2>&1 |
+  grep -Eq 'PostgreSQL init process complete|Skipping initialization'; do
+  attempt=$((attempt + 1))
+  [ "$attempt" -lt 120 ] || {
+    echo "database entrypoint initialization did not complete" >&2
+    docker logs qarar-supabase-db --tail 100 >&2
+    exit 1
+  }
+  sleep 1
+done
+
 attempt=0
 until docker exec qarar-supabase-db pg_isready -U supabase_admin -d postgres >/dev/null 2>&1; do
   attempt=$((attempt + 1))
