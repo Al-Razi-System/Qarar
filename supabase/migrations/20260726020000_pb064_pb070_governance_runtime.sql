@@ -259,39 +259,19 @@ create table qarar_governance.governance_alerts (
 );
 
 alter table qarar_topics.topics
-  add column governance_source text,
-  add column policy_id uuid,
-  add column policy_version_id uuid,
-  add column policy_item_id uuid,
-  add column policy_scope_assignment_id uuid,
-  add column workflow_template_version_id uuid,
-  add column workflow_instance_id uuid,
-  add column current_workflow_step_id uuid,
-  add column routing_status text not null default 'routing_pending',
-  add column routing_decision_id uuid,
-  add constraint topics_governance_source_check
-    check (governance_source is null or governance_source in ('regulated','custom','exception')),
-  add constraint topics_routing_status_check
-    check (routing_status in (
-      'routing_pending','routing_resolved','routing_conflict','routing_blocked',
-      'routing_exception_pending','routing_ready'
-    )),
-  add constraint topics_policy_tenant_fk foreign key(policy_id,organization_id)
-    references qarar_governance.policies(id,organization_id) on delete restrict,
-  add constraint topics_policy_version_tenant_fk foreign key(policy_version_id,organization_id)
-    references qarar_governance.policy_versions(id,organization_id) on delete restrict,
-  add constraint topics_policy_item_tenant_fk foreign key(policy_item_id,organization_id)
-    references qarar_governance.policy_items(id,organization_id) on delete restrict,
-  add constraint topics_scope_tenant_fk foreign key(policy_scope_assignment_id,organization_id)
-    references qarar_governance.policy_scope_assignments(id,organization_id) on delete restrict,
-  add constraint topics_workflow_template_tenant_fk foreign key(workflow_template_version_id,organization_id)
-    references qarar_governance.workflow_template_versions(id,organization_id) on delete restrict,
-  add constraint topics_workflow_instance_tenant_fk foreign key(workflow_instance_id,organization_id)
-    references qarar_governance.workflow_instances(id,organization_id) deferrable initially deferred,
-  add constraint topics_current_workflow_step_tenant_fk foreign key(current_workflow_step_id,organization_id)
-    references qarar_governance.workflow_instance_steps(id,organization_id) deferrable initially deferred,
-  add constraint topics_routing_decision_tenant_fk foreign key(routing_decision_id,organization_id)
-    references qarar_governance.regulation_match_decisions(id,organization_id) on delete restrict;
+  add column if not exists governance_source text,
+  add column if not exists policy_id uuid,
+  add column if not exists policy_version_id uuid,
+  add column if not exists policy_item_id uuid,
+  add column if not exists policy_scope_assignment_id uuid,
+  add column if not exists workflow_template_version_id uuid,
+  add column if not exists workflow_instance_id uuid,
+  add column if not exists current_workflow_step_id uuid,
+  add column if not exists routing_status text not null default 'routing_pending',
+  add column if not exists routing_decision_id uuid;
+
+-- Historical installations retain legacy foreign keys until the compatibility
+-- migration copies their policy data into the governed engine.
 
 do $$
 declare current_entity_name text;
