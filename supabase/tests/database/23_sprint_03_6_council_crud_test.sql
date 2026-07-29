@@ -75,7 +75,7 @@ select throws_ok($$select api_v1.admin_create_council(
  '55000000-0000-0000-0000-000000000022',null,null,1,false,
  '55000000-0000-0000-0000-000000000042')$$,'23503',null,
  'cross-tenant council types are rejected');
-select ok(jsonb_array_length(api_v1.get_council_form_options()->'council_types')=1
+select ok(jsonb_array_length(api_v1.get_council_form_options()->'council_types')=2
  and jsonb_array_length(api_v1.get_council_form_options()->'governance_classes')=1,
  'form options contain only active tenant references');
 update qarar_core.governance_units set status='active',activated_at=now(),status_reason=null
