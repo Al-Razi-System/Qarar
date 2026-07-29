@@ -131,8 +131,8 @@ try {
       id,organization_id,code,name_ar,is_council_type,is_system)
     values('${typeId}','${organizationId}','council','مجلس',true,true);
     insert into qarar_governance.governance_unit_classes(
-      id,organization_id,code,name_ar,governance_level,decision_scope,criticality_level)
-    values('${classId}','${organizationId}','department','إداري','department','department','standard');
+      id,organization_id,code,name_ar,governance_level)
+    values('${classId}','${organizationId}','department','إداري','department');
     insert into qarar_iam.roles(organization_id,code,name_ar,role_scope,is_active)
     values('${organizationId}','council_member','عضو مجلس','governance_unit',true);
   `)

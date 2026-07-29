@@ -34,9 +34,9 @@ insert into qarar_core.governance_unit_types(id,organization_id,code,name_ar,is_
 values('60000000-0000-0000-0000-000000000021','60000000-0000-0000-0000-000000000001',
  'council','مجلس',true,true);
 insert into qarar_governance.governance_unit_classes(
- id,organization_id,code,name_ar,governance_level,decision_scope,criticality_level)
+ id,organization_id,code,name_ar,governance_level)
 values('60000000-0000-0000-0000-000000000022','60000000-0000-0000-0000-000000000001',
- 'department','إداري','department','department','standard');
+ 'department','إداري','department');
 insert into qarar_core.governance_units(
  id,organization_id,unit_type_id,governance_class_id,code,name_ar,status,minimum_active_members)
 values('60000000-0000-0000-0000-000000000031','60000000-0000-0000-0000-000000000001',
