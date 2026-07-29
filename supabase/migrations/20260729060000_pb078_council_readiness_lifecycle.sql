@@ -84,14 +84,23 @@ begin
 end $$;
 
 create or replace function qarar_core.admin_activate_council(p_council_id uuid,p_reason text,p_expected_updated_at timestamptz)returns jsonb
-language sql volatile security definer set search_path=pg_catalog as $$
- select qarar_core.change_council_status($1,'active',$2,$3)$$;
+language plpgsql volatile security definer set search_path=pg_catalog as $$
+begin
+ if qarar_iam.current_organization_id() is null then raise exception using errcode='42501',message='يلزم حساب نشط';end if;
+ return qarar_core.change_council_status(p_council_id,'active',p_reason,p_expected_updated_at);
+end $$;
 create or replace function qarar_core.admin_deactivate_council(p_council_id uuid,p_reason text,p_expected_updated_at timestamptz)returns jsonb
-language sql volatile security definer set search_path=pg_catalog as $$
- select qarar_core.change_council_status($1,'inactive',$2,$3)$$;
+language plpgsql volatile security definer set search_path=pg_catalog as $$
+begin
+ if qarar_iam.current_organization_id() is null then raise exception using errcode='42501',message='يلزم حساب نشط';end if;
+ return qarar_core.change_council_status(p_council_id,'inactive',p_reason,p_expected_updated_at);
+end $$;
 create or replace function qarar_core.admin_archive_council(p_council_id uuid,p_reason text,p_expected_updated_at timestamptz)returns jsonb
-language sql volatile security definer set search_path=pg_catalog as $$
- select qarar_core.change_council_status($1,'archived',$2,$3)$$;
+language plpgsql volatile security definer set search_path=pg_catalog as $$
+begin
+ if qarar_iam.current_organization_id() is null then raise exception using errcode='42501',message='يلزم حساب نشط';end if;
+ return qarar_core.change_council_status(p_council_id,'archived',p_reason,p_expected_updated_at);
+end $$;
 
 alter function qarar_core.admin_validate_council_administrative_readiness(uuid) owner to qarar_core_executor;
 alter function qarar_core.change_council_status(uuid,text,text,timestamptz) owner to qarar_core_executor;
