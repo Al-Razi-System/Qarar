@@ -81,7 +81,7 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `resolve_topic_governance` | `governance` | `authenticated` | `p_governance_unit_id uuid, p_topic_category_id uuid, p_effective_on date, p_topic_id uuid` | `jsonb` |
 | `return_topic_workflow_step` | `governance` | `authenticated` | `p_topic_id uuid, p_comment text` | `jsonb` |
 | `admin_add_council_member` | `iam` | `authenticated` | `p_council_id uuid, p_user_id uuid, p_role_id uuid, p_membership_title text, p_start_date date, p_end_date date` | `jsonb` |
-| `admin_assign_council_leadership` | `iam` | `authenticated` | `p_council_id uuid, p_role_code text, p_user_id uuid, p_effective_date date, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `admin_assign_council_leadership` | `iam` | `authenticated` | `p_council_id uuid, p_chair_user_id uuid, p_rapporteur_user_id uuid, p_effective_date date, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `admin_assign_role` | `iam` | `authenticated` | `p_user_id uuid, p_role_id uuid, p_governance_unit_id uuid, p_membership_title text, p_start_date date, p_end_date date` | `uuid` |
 | `admin_create_delegation` | `iam` | `authenticated` | `p_source_membership_id uuid, p_delegated_to_user_id uuid, p_starts_at timestamp with time zone, p_ends_at timestamp with time zone, p_reason text` | `uuid` |
 | `admin_create_invitation` | `iam` | `authenticated` | `p_email text, p_full_name_ar text, p_role_id uuid, p_governance_unit_id uuid, p_expires_at timestamp with time zone` | `uuid` |

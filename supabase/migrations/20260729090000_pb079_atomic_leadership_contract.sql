@@ -1,6 +1,6 @@
 begin;
 
-drop function api_v1.admin_assign_council_leadership(uuid,text,uuid,date,text,timestamptz);
+drop function if exists api_v1.admin_assign_council_leadership(uuid,text,uuid,date,text,timestamptz);
 delete from qarar_architecture.api_contract_registry
 where api_version='v1' and contract_name='admin_assign_council_leadership';
 

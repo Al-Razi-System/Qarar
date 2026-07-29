@@ -70,20 +70,6 @@ insert into qarar_architecture.function_registry(function_oid,function_name,iden
 select p.oid,p.proname,pg_get_function_identity_arguments(p.oid),'iam','qarar_iam',false from pg_proc p
 join pg_namespace n on n.oid=p.pronamespace where n.nspname='qarar_iam' and p.proname='admin_assign_council_leadership'
 on conflict(function_name,identity_arguments)do update set function_oid=excluded.function_oid,module_code='iam',owning_schema='qarar_iam';
-insert into qarar_architecture.api_contract_registry(api_version,contract_name,implementation_schema,implementation_name,identity_arguments,module_code,audience)values
-('v1','admin_assign_council_leadership','qarar_iam','admin_assign_council_leadership',
- 'p_council_id uuid, p_chair_user_id uuid, p_rapporteur_user_id uuid, p_effective_date date, p_reason text, p_expected_updated_at timestamp with time zone','iam','authenticated')
-on conflict do nothing;
-create or replace function api_v1.admin_assign_council_leadership(
- p_council_id uuid,p_role_code text,p_user_id uuid,p_effective_date date,p_reason text,p_expected_updated_at timestamptz
-)returns jsonb language sql volatile security definer set search_path=pg_catalog as $$
- select qarar_iam.admin_assign_council_leadership(p_council_id,p_role_code,p_user_id,p_effective_date,p_reason,p_expected_updated_at)
-$$;
-alter function api_v1.admin_assign_council_leadership(uuid,text,uuid,date,text,timestamptz) owner to qarar_api_executor;
-revoke all on function api_v1.admin_assign_council_leadership(uuid,text,uuid,date,text,timestamptz) from public,anon,service_role;
-grant execute on function api_v1.admin_assign_council_leadership(uuid,text,uuid,date,text,timestamptz) to authenticated;
-grant execute on function qarar_iam.admin_assign_council_leadership(uuid,text,uuid,date,text,timestamptz) to qarar_api_executor;
-
 update qarar_architecture.api_release_registry
 set contract_count=135,contract_hash='c53f96daeea611dfe8ef42d6b49b9d33',
  released_at='2026-07-29 00:00:00+00',
