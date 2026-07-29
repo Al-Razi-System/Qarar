@@ -4,6 +4,26 @@ drop function if exists api_v1.admin_assign_council_leadership(uuid,text,uuid,da
 delete from qarar_architecture.api_contract_registry
 where api_version='v1' and contract_name='admin_assign_council_leadership';
 
+create or replace function qarar_core.touch_council_leadership_version(
+ p_council_id uuid,p_expected_updated_at timestamptz
+)returns timestamptz language plpgsql security definer set search_path=pg_catalog as $$
+declare changed timestamptz;
+begin
+ update qarar_core.governance_units set updated_at=clock_timestamp()
+ where id=p_council_id and organization_id=qarar_iam.current_organization_id()
+  and updated_at=p_expected_updated_at returning updated_at into changed;
+ if changed is null then
+  raise exception using errcode='40001',message='تم تغيير قيادة المجلس؛ حدّث البيانات';
+ end if;
+ return changed;
+end $$;
+alter function qarar_core.touch_council_leadership_version(uuid,timestamptz)
+ owner to qarar_core_executor;
+revoke all on function qarar_core.touch_council_leadership_version(uuid,timestamptz)
+ from public,anon,authenticated,service_role;
+grant execute on function qarar_core.touch_council_leadership_version(uuid,timestamptz)
+ to qarar_iam_executor;
+
 create or replace function qarar_iam.admin_assign_council_leadership_pair(
  p_council_id uuid,p_chair_user_id uuid,p_rapporteur_user_id uuid,
  p_effective_date date,p_reason text,p_expected_updated_at timestamptz
@@ -18,10 +38,7 @@ begin
   p_council_id,'council_chair',p_chair_user_id,p_effective_date,p_reason,p_expected_updated_at);
  rapporteur_result:=qarar_iam.admin_assign_council_leadership(
   p_council_id,'council_rapporteur',p_rapporteur_user_id,p_effective_date,p_reason,p_expected_updated_at);
- update qarar_core.governance_units set updated_at=clock_timestamp()
- where id=p_council_id and organization_id=qarar_iam.current_organization_id()
-  and updated_at=p_expected_updated_at returning updated_at into changed;
- if changed is null then raise exception using errcode='40001',message='تم تغيير قيادة المجلس؛ حدّث البيانات';end if;
+ changed:=qarar_core.touch_council_leadership_version(p_council_id,p_expected_updated_at);
  return jsonb_build_object('governance_unit_id',p_council_id,'chair',chair_result,
   'rapporteur',rapporteur_result,'effective_date',p_effective_date,'updated_at',changed,'atomic',true);
 end $$;
@@ -44,6 +61,14 @@ grant execute on function api_v1.admin_assign_council_leadership(uuid,uuid,uuid,
  to authenticated;
 grant execute on function qarar_iam.admin_assign_council_leadership_pair(uuid,uuid,uuid,date,text,timestamptz)
  to qarar_api_executor;
+
+insert into qarar_architecture.function_registry(
+ function_oid,function_name,identity_arguments,module_code,owning_schema,is_rls_predicate)
+select p.oid,p.proname,pg_get_function_identity_arguments(p.oid),'core','qarar_core',false
+from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='qarar_core' and p.proname='touch_council_leadership_version'
+on conflict(function_name,identity_arguments)do update set
+ function_oid=excluded.function_oid,module_code=excluded.module_code,owning_schema=excluded.owning_schema;
 
 insert into qarar_architecture.function_registry(
  function_oid,function_name,identity_arguments,module_code,owning_schema,is_rls_predicate)
