@@ -60,7 +60,7 @@ insert into qarar_iam.memberships(organization_id,user_id,governance_unit_id,rol
 select is((api_v1.admin_validate_council_administrative_readiness(
  '59000000-0000-0000-0000-000000000041')->>'administratively_ready')::boolean,true,
  'complete administrative master data is ready');
-update qarar_iam.users set status='disabled'
+update qarar_iam.users set status='inactive'
 where id='59000000-0000-0000-0000-000000000012';
 select is((api_v1.admin_validate_council_administrative_readiness(
  '59000000-0000-0000-0000-000000000041')->>'administratively_ready')::boolean,false,
