@@ -236,6 +236,19 @@ AuditItem = {
 Use the table above to create immutable DTOs. Required identity/state fields must fail decoding when
 absent or of the wrong type. Nullable fields accept only `null` or the documented type. Additive
 unknown fields must be ignored to preserve forward compatibility within `api_v1`.
+
+## Council Type Management
+
+| Contract | Stable response |
+|---|---|
+| `admin_search_council_types` | `Page<{id,code,name_ar,name_en?,description?,is_active,is_system,created_at,updated_at,council_count}>` |
+| `admin_create_council_type` | `{id,code,is_active,updated_at}` |
+| `admin_update_council_type` | `{id,updated_at}` |
+| `admin_deactivate_council_type` | `{id,is_active:false,updated_at}` |
+
+These administrative contracts require the governance-management permission. They are tenant
+isolated, protect system types, and use `updated_at` as the optimistic-concurrency token for
+updates and deactivation.
 # Sprint 3.5 Regulation and Workflow Responses
 
 All contracts below return one JSON object.
