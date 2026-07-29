@@ -39,11 +39,10 @@ select is((select count(*)::integer from qarar_iam.memberships m join qarar_iam.
  where m.governance_unit_id='58000000-0000-0000-0000-000000000041'
  and r.code in('council_chair','council_rapporteur')and m.membership_status='active'),2,
  'atomic call creates both leadership records');
-select is((api_v1.admin_assign_council_leadership(
+select throws_ok($$select api_v1.admin_assign_council_leadership(
  '58000000-0000-0000-0000-000000000041','58000000-0000-0000-0000-000000000012',
  '58000000-0000-0000-0000-000000000013',current_date,'إعادة',
- (select updated_at from qarar_core.governance_units where id='58000000-0000-0000-0000-000000000041'))->>'atomic')::boolean,true,
- 'pair replay remains atomic');
+ '2000-01-01')$$,'40001',null,'stale leadership concurrency token is rejected');
 select throws_ok($$select api_v1.admin_assign_council_leadership(
  '58000000-0000-0000-0000-000000000041','58000000-0000-0000-0000-000000000012',
  '58000000-0000-0000-0000-000000000012',current_date,'ازدواج',

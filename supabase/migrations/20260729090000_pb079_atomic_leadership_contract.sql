@@ -8,7 +8,7 @@ create or replace function qarar_iam.admin_assign_council_leadership_pair(
  p_council_id uuid,p_chair_user_id uuid,p_rapporteur_user_id uuid,
  p_effective_date date,p_reason text,p_expected_updated_at timestamptz
 )returns jsonb language plpgsql security definer set search_path=pg_catalog as $$
-declare chair_result jsonb;rapporteur_result jsonb;
+declare chair_result jsonb;rapporteur_result jsonb;changed timestamptz;
 begin
  perform qarar_iam.assert_permission('governance.leadership.assign',p_council_id);
  if p_chair_user_id is null or p_rapporteur_user_id is null then
@@ -18,8 +18,12 @@ begin
   p_council_id,'council_chair',p_chair_user_id,p_effective_date,p_reason,p_expected_updated_at);
  rapporteur_result:=qarar_iam.admin_assign_council_leadership(
   p_council_id,'council_rapporteur',p_rapporteur_user_id,p_effective_date,p_reason,p_expected_updated_at);
+ update qarar_core.governance_units set updated_at=clock_timestamp()
+ where id=p_council_id and organization_id=qarar_iam.current_organization_id()
+  and updated_at=p_expected_updated_at returning updated_at into changed;
+ if changed is null then raise exception using errcode='40001',message='تم تغيير قيادة المجلس؛ حدّث البيانات';end if;
  return jsonb_build_object('governance_unit_id',p_council_id,'chair',chair_result,
-  'rapporteur',rapporteur_result,'effective_date',p_effective_date,'atomic',true);
+  'rapporteur',rapporteur_result,'effective_date',p_effective_date,'updated_at',changed,'atomic',true);
 end $$;
 alter function qarar_iam.admin_assign_council_leadership_pair(uuid,uuid,uuid,date,text,timestamptz)
  owner to qarar_iam_executor;

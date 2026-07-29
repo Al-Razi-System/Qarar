@@ -28,9 +28,7 @@ begin
   'parent_units',coalesce((select jsonb_agg(jsonb_build_object(
     'id',u.id,'code',u.code,'name_ar',u.name_ar,'name_en',u.name_en) order by u.code)
    from qarar_core.governance_units u
-   join qarar_core.governance_unit_types t
-    on t.id=u.unit_type_id and t.organization_id=u.organization_id
-   where u.organization_id=o and t.is_council_type and u.status<>'archived'),'[]'::jsonb),
+   where u.organization_id=o and u.status<>'archived'),'[]'::jsonb),
   'governance_classes',coalesce((select jsonb_agg(jsonb_build_object(
     'id',id,'code',code,'name_ar',name_ar,'name_en',name_en) order by code)
    from qarar_governance.governance_unit_classes

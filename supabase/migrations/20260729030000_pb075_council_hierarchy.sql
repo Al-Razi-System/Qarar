@@ -6,20 +6,21 @@ set search_path=pg_catalog,qarar_core as $$
 declare o uuid:=qarar_iam.current_organization_id();
 begin
  perform qarar_iam.assert_permission('governance.units.read',null);
- return coalesce((with recursive tree as(
-  select u.id,u.parent_unit_id,u.code,u.name_ar,u.name_en,u.status,u.level_no,
-   array[u.id] path_ids,array[u.name_ar] path_names
-  from qarar_core.governance_units u join qarar_core.governance_unit_types t
-   on t.id=u.unit_type_id and t.organization_id=u.organization_id and t.is_council_type
-  where u.organization_id=o and u.parent_unit_id is null
-  union all
-  select c.id,c.parent_unit_id,c.code,c.name_ar,c.name_en,c.status,c.level_no,
-   p.path_ids||c.id,p.path_names||c.name_ar
-  from qarar_core.governance_units c join tree p on p.id=c.parent_unit_id
-  join qarar_core.governance_unit_types t on t.id=c.unit_type_id
-   and t.organization_id=c.organization_id and t.is_council_type
-  where c.organization_id=o and not c.id=any(p.path_ids)
- )select jsonb_agg(to_jsonb(tree) order by path_names,id)from tree),'[]'::jsonb);
+  return coalesce((with recursive tree as(
+   select u.id,u.parent_unit_id,u.code,u.name_ar,u.name_en,u.status,u.level_no,t.is_council_type,
+    array[u.id] path_ids,array[u.name_ar] path_names
+   from qarar_core.governance_units u join qarar_core.governance_unit_types t
+    on t.id=u.unit_type_id and t.organization_id=u.organization_id
+   where u.organization_id=o and u.parent_unit_id is null
+   union all
+   select c.id,c.parent_unit_id,c.code,c.name_ar,c.name_en,c.status,c.level_no,t.is_council_type,
+    p.path_ids||c.id,p.path_names||c.name_ar
+   from qarar_core.governance_units c join tree p on p.id=c.parent_unit_id
+   join qarar_core.governance_unit_types t on t.id=c.unit_type_id
+    and t.organization_id=c.organization_id
+   where c.organization_id=o and not c.id=any(p.path_ids)
+  )select jsonb_agg(to_jsonb(tree)-'is_council_type' order by path_names,id)
+   from tree where is_council_type),'[]'::jsonb);
 end $$;
 
 create or replace function qarar_core.admin_move_council(
