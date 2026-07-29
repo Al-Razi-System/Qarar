@@ -16,8 +16,11 @@ select is((select contract_count from qarar_architecture.api_release_registry wh
  139,'final API release count is frozen');
 select is((select contract_hash from qarar_architecture.api_release_registry where api_version='v1'),
  'cdc327e880ca8daf96a62baacce9789c','final API release hash is frozen');
+insert into qarar_core.organizations(id,code,name_ar)values(
+ '5a000000-0000-0000-0000-000000000001','release-council','Release Council');
 select ok(exists(select 1 from qarar_iam.permissions where code='governance.councils.manage'
- and is_system_permission and is_active),'council management has a dedicated active permission');
+ and organization_id='5a000000-0000-0000-0000-000000000001'
+ and is_system_permission and is_active),'new organizations receive the dedicated council permission');
 select ok(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
  where n.nspname in('qarar_core','qarar_iam') and p.proname like '%council%'
  and pg_get_functiondef(p.oid) like '%governance.policies.manage%'),
