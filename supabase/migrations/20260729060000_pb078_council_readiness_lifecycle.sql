@@ -11,7 +11,7 @@ returns jsonb language plpgsql security definer set search_path=pg_catalog,qarar
 declare o uuid:=qarar_iam.current_organization_id();u qarar_core.governance_units;
  errors jsonb:='[]';members integer;chair uuid;rapporteur uuid;
 begin
- perform qarar_iam.assert_permission('governance.policies.manage',p_council_id);
+ perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
  select gu.* into u from qarar_core.governance_units gu join qarar_core.governance_unit_types t
   on t.id=gu.unit_type_id and t.organization_id=gu.organization_id
  where gu.id=p_council_id and gu.organization_id=o and t.is_council_type;
@@ -50,7 +50,7 @@ create or replace function qarar_core.change_council_status(
 declare o uuid:=qarar_iam.current_organization_id();a uuid:=nullif(current_setting('request.jwt.claim.sub',true),'')::uuid;
  old_status text;changed timestamptz;readiness jsonb;
 begin
- perform qarar_iam.assert_permission('governance.policies.manage',p_council_id);
+ perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
  if p_target_status not in('active','inactive','archived') or nullif(btrim(p_reason),'') is null
  then raise exception using errcode='22023',message='الحالة والسبب مطلوبان';end if;
  select status into old_status from qarar_core.governance_units where id=p_council_id

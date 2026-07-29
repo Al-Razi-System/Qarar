@@ -13,7 +13,7 @@ create or replace function qarar_iam.admin_list_council_members(
 )returns jsonb language plpgsql stable security definer set search_path=pg_catalog,qarar_iam as $$
 declare o uuid:=qarar_iam.current_organization_id();l integer:=least(greatest(coalesce(p_limit,50),1),100);f integer:=greatest(coalesce(p_offset,0),0);
 begin
- perform qarar_iam.assert_permission('governance.policies.manage',p_council_id);
+ perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
  if not exists(select 1 from qarar_core.governance_units u join qarar_core.governance_unit_types t
   on t.id=u.unit_type_id and t.organization_id=u.organization_id
   where u.id=p_council_id and u.organization_id=o and t.is_council_type)
@@ -38,7 +38,7 @@ create or replace function qarar_iam.admin_add_council_member(
 )returns jsonb language plpgsql security definer set search_path=pg_catalog,qarar_iam as $$
 declare o uuid:=qarar_iam.current_organization_id();v_id uuid;changed timestamptz;
 begin
- perform qarar_iam.assert_permission('governance.policies.manage',p_council_id);
+ perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
  if p_start_date is null or(p_end_date is not null and p_end_date<p_start_date)
  then raise exception using errcode='22023',message='فترة العضوية غير صالحة';end if;
  if not exists(select 1 from qarar_core.governance_units u join qarar_core.governance_unit_types t
@@ -69,7 +69,7 @@ declare o uuid:=qarar_iam.current_organization_id();unit_id uuid;changed timesta
 begin
  select governance_unit_id into unit_id from qarar_iam.memberships where id=p_membership_id and organization_id=o;
  if unit_id is null then raise exception using errcode='P0002',message='العضوية غير موجودة';end if;
- perform qarar_iam.assert_permission('governance.policies.manage',unit_id);
+ perform qarar_iam.assert_permission('governance.councils.manage',unit_id);
  if p_start_date is null or(p_end_date is not null and p_end_date<p_start_date)
  then raise exception using errcode='22023',message='فترة العضوية غير صالحة';end if;
  update qarar_iam.memberships set membership_title=nullif(btrim(p_membership_title),''),
@@ -92,7 +92,7 @@ begin
  select governance_unit_id,start_date into unit_id,started from qarar_iam.memberships
  where id=p_membership_id and organization_id=o;
  if unit_id is null then raise exception using errcode='P0002',message='العضوية غير موجودة';end if;
- perform qarar_iam.assert_permission('governance.policies.manage',unit_id);
+ perform qarar_iam.assert_permission('governance.councils.manage',unit_id);
  if p_end_date is null or p_end_date<started or nullif(btrim(p_reason),'') is null
  then raise exception using errcode='22023',message='تاريخ وسبب الإنهاء مطلوبان وصالحان';end if;
  update qarar_iam.memberships set membership_status='ended',end_date=p_end_date

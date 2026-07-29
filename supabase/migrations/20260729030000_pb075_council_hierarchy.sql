@@ -5,7 +5,7 @@ returns jsonb language plpgsql stable security definer
 set search_path=pg_catalog,qarar_core as $$
 declare o uuid:=qarar_iam.current_organization_id();
 begin
- perform qarar_iam.assert_permission('governance.policies.manage',null);
+ perform qarar_iam.assert_permission('governance.councils.manage',null);
  return coalesce((with recursive tree as(
   select u.id,u.parent_unit_id,u.code,u.name_ar,u.name_en,u.status,u.level_no,
    array[u.id] path_ids,array[u.name_ar] path_names
@@ -29,7 +29,7 @@ set search_path=pg_catalog,qarar_core as $$
 declare o uuid:=qarar_iam.current_organization_id();old_parent uuid;old_level integer;
  new_level integer:=1;delta integer;changed timestamptz;
 begin
- perform qarar_iam.assert_permission('governance.policies.manage',p_council_id);
+ perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
  if nullif(btrim(p_reason),'') is null then
   raise exception using errcode='22023',message='سبب النقل مطلوب';
  end if;

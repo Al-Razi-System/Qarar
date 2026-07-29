@@ -19,7 +19,7 @@ set search_path=pg_catalog,qarar_core
 as $$
 declare o uuid:=qarar_iam.current_organization_id();
 begin
- perform qarar_iam.assert_permission('governance.policies.manage',null);
+ perform qarar_iam.assert_permission('governance.councils.manage',null);
  return jsonb_build_object(
   'council_types',coalesce((select jsonb_agg(jsonb_build_object(
     'id',id,'code',code,'name_ar',name_ar,'name_en',name_en) order by code)
@@ -49,7 +49,7 @@ declare o uuid:=qarar_iam.current_organization_id();
  l integer:=least(greatest(coalesce(p_limit,50),1),100);
  f integer:=greatest(coalesce(p_offset,0),0);
 begin
- perform qarar_iam.assert_permission('governance.policies.manage',null);
+ perform qarar_iam.assert_permission('governance.councils.manage',null);
  return jsonb_build_object(
  'items',coalesce((select jsonb_agg(to_jsonb(x) order by x.name_ar,x.id) from(
   select u.id,u.code,u.name_ar,u.name_en,u.description,u.status,u.level_no,
@@ -85,7 +85,7 @@ returns jsonb language plpgsql stable security definer
 set search_path=pg_catalog,qarar_core as $$
 declare o uuid:=qarar_iam.current_organization_id();r jsonb;
 begin
- perform qarar_iam.assert_permission('governance.policies.manage',p_council_id);
+ perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
  select to_jsonb(u)||jsonb_build_object(
   'unit_type',jsonb_build_object('id',t.id,'code',t.code,'name_ar',t.name_ar,'name_en',t.name_en),
   'parent_unit',case when p.id is null then null else jsonb_build_object('id',p.id,'code',p.code,'name_ar',p.name_ar)end,
@@ -109,7 +109,7 @@ declare o uuid:=qarar_iam.current_organization_id();
  a uuid:=nullif(current_setting('request.jwt.claim.sub',true),'')::uuid;
  v_id uuid;changed timestamptz;lvl integer:=1;existing qarar_core.governance_units;
 begin
- perform qarar_iam.assert_permission('governance.policies.manage',null);
+ perform qarar_iam.assert_permission('governance.councils.manage',null);
  if nullif(btrim(p_code),'') is null or nullif(btrim(p_name_ar),'') is null or p_client_request_id is null
  then raise exception using errcode='22023',message='الرمز والاسم العربي ومفتاح التكرار مطلوبة';end if;
  if coalesce(p_minimum_active_members,0)<1 then raise exception using errcode='22023',message='الحد الأدنى للأعضاء يجب أن يكون واحدًا فأكثر';end if;
@@ -152,7 +152,7 @@ create or replace function qarar_core.admin_update_council(
 set search_path=pg_catalog,qarar_core as $$
 declare o uuid:=qarar_iam.current_organization_id();changed timestamptz;old_class uuid;
 begin
- perform qarar_iam.assert_permission('governance.policies.manage',p_council_id);
+ perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
  if nullif(btrim(p_name_ar),'') is null or coalesce(p_minimum_active_members,0)<1
  then raise exception using errcode='22023',message='بيانات المجلس غير صالحة';end if;
  if not exists(select 1 from qarar_core.governance_unit_types where id=p_unit_type_id and organization_id=o and is_council_type and is_active)
