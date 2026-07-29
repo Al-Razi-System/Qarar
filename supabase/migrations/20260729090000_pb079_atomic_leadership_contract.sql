@@ -10,6 +10,7 @@ create or replace function qarar_iam.admin_assign_council_leadership_pair(
 )returns jsonb language plpgsql security definer set search_path=pg_catalog as $$
 declare chair_result jsonb;rapporteur_result jsonb;
 begin
+ perform qarar_iam.assert_permission('governance.leadership.assign',p_council_id);
  if p_chair_user_id is null or p_rapporteur_user_id is null then
   raise exception using errcode='22023',message='الرئيس والمقرر مطلوبان';
  end if;
