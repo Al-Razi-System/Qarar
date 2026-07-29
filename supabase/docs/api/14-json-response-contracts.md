@@ -290,6 +290,16 @@ the parent-change audit event are committed atomically.
 Membership periods are inclusive dates and may not overlap for the same tenant, council, user, and
 role. A future or ended membership has `is_effective=false` and grants no current authority.
 Updates preserve `user_id` and `role_id`; ending a membership retains its historical row.
+
+## Council Leadership
+
+| Contract | Stable response |
+|---|---|
+| `admin_assign_council_leadership` | `{membership_id,role_code,user_id,effective_date,council_updated_at,idempotent_replay}` |
+
+Only `council_chair` and `council_rapporteur` are accepted. The target must have an effective
+non-leadership membership on the effective date. The previous leadership period is ended before
+the new one starts, and one person may hold both roles only when `allow_dual_leadership=true`.
 # Sprint 3.5 Regulation and Workflow Responses
 
 All contracts below return one JSON object.
