@@ -21,6 +21,14 @@ alter function qarar_core.touch_council_leadership_version(uuid,timestamptz)
  owner to qarar_core_executor;
 revoke all on function qarar_core.touch_council_leadership_version(uuid,timestamptz)
  from public,anon,authenticated,service_role;
+insert into qarar_architecture.module_function_execute_allowlist(
+ source_module,target_schema,function_name,identity_arguments,rationale
+)values(
+ 'iam','qarar_core','touch_council_leadership_version',
+ 'p_council_id uuid, p_expected_updated_at timestamp with time zone',
+ 'Advance the council concurrency token after an atomic leadership change'
+)on conflict(source_module,target_schema,function_name,identity_arguments)do update
+ set rationale=excluded.rationale;
 grant execute on function qarar_core.touch_council_leadership_version(uuid,timestamptz)
  to qarar_iam_executor;
 
