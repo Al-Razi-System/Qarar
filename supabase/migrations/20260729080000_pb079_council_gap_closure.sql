@@ -76,7 +76,7 @@ grant execute on function qarar_iam.has_permission(text,uuid) to authenticated,q
 -- صيغة الرمز قاعدة بيانات وليست تحقق واجهة فقط.
 alter table qarar_core.governance_units
  add constraint governance_units_code_format
- check(code~'^[a-z][a-z0-9_]*$');
+ check(code~'^[a-z][a-z0-9_]*$') not valid;
 
 -- منع أي قيادة متزامنة مكررة مهما كان المستخدم أو مسار الكتابة.
 create or replace function qarar_iam.enforce_single_council_leader()
