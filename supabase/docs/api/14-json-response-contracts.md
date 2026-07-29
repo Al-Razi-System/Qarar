@@ -300,6 +300,20 @@ Updates preserve `user_id` and `role_id`; ending a membership retains its histor
 Only `council_chair` and `council_rapporteur` are accepted. The target must have an effective
 non-leadership membership on the effective date. The previous leadership period is ended before
 the new one starts, and one person may hold both roles only when `allow_dual_leadership=true`.
+
+## Council Administrative Readiness and Lifecycle
+
+| Contract | Stable response |
+|---|---|
+| `admin_validate_council_administrative_readiness` | `{council_id,ready,errors,active_member_count,minimum_active_members,chair_user_id?,rapporteur_user_id?,checked_at}` |
+| `admin_activate_council` | `{id,previous_status,status:"active",updated_at}` |
+| `admin_deactivate_council` | `{id,previous_status,status:"inactive",updated_at}` |
+| `admin_archive_council` | `{id,previous_status,status:"archived",updated_at}` |
+
+Readiness errors use stable codes: `COUNCIL_TYPE_INACTIVE`, `GOVERNANCE_CLASS_REQUIRED`,
+`MINIMUM_ACTIVE_MEMBERS_NOT_MET`, `COUNCIL_CHAIR_REQUIRED`, `COUNCIL_RAPPORTEUR_REQUIRED`, and
+`DUAL_LEADERSHIP_NOT_ALLOWED`. Archival is final and requires all direct children to be moved or
+archived first.
 # Sprint 3.5 Regulation and Workflow Responses
 
 All contracts below return one JSON object.

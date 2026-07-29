@@ -52,7 +52,7 @@ select is(
   (select count(*)::integer
    from qarar_architecture.api_contract_registry
    where api_version = 'v1'),
- 135,
+ 139,
   'api_v1 contract count is explicit and reviewed');
 
 select is(
