@@ -28,7 +28,7 @@ insert into qarar_core.governance_unit_types(id,organization_id,code,name_ar,is_
 ('58000000-0000-0000-0000-000000000031','58000000-0000-0000-0000-000000000001','council','Council',true);
 insert into qarar_core.governance_units(id,organization_id,unit_type_id,code,name_ar,status)values
 ('58000000-0000-0000-0000-000000000041','58000000-0000-0000-0000-000000000001',
- '58000000-0000-0000-0000-000000000031','lead-council','Lead Council','inactive');
+ '58000000-0000-0000-0000-000000000031','lead_council','Lead Council','inactive');
 insert into qarar_iam.memberships(organization_id,user_id,governance_unit_id,role_id,start_date)values
 ('58000000-0000-0000-0000-000000000001','58000000-0000-0000-0000-000000000012',
  '58000000-0000-0000-0000-000000000041','58000000-0000-0000-0000-000000000021',current_date),

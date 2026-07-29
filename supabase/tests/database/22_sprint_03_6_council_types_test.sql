@@ -133,7 +133,7 @@ insert into qarar_core.governance_units(
 ) values(
   '54000000-0000-0000-0000-000000000001',
   '54000000-0000-0000-0000-000000000022',
-  'used-unit','Used Unit'
+  'used_unit','Used Unit'
 );
 select throws_ok(
   $$select api_v1.admin_deactivate_council_type(

@@ -29,7 +29,7 @@ insert into qarar_governance.governance_unit_classes(id,organization_id,code,nam
 insert into qarar_core.governance_units(id,organization_id,unit_type_id,code,name_ar,status,
  governance_class_id,minimum_active_members)values
 ('59000000-0000-0000-0000-000000000041','59000000-0000-0000-0000-000000000001',
- '59000000-0000-0000-0000-000000000031','ready-council','Ready Council','inactive',
+ '59000000-0000-0000-0000-000000000031','ready_council','Ready Council','inactive',
  '59000000-0000-0000-0000-000000000032',2);
 select set_config('request.jwt.claim.sub','59000000-0000-0000-0000-000000000011',true);
 select set_config('request.jwt.claim.role','authenticated',true);

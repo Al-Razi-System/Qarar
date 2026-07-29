@@ -23,7 +23,7 @@ insert into qarar_core.governance_unit_types(id,organization_id,code,name_ar,is_
 ('57000000-0000-0000-0000-000000000031','57000000-0000-0000-0000-000000000001','council','Council',true);
 insert into qarar_core.governance_units(id,organization_id,unit_type_id,code,name_ar,status)values
 ('57000000-0000-0000-0000-000000000041','57000000-0000-0000-0000-000000000001',
- '57000000-0000-0000-0000-000000000031','council-a','Council A','inactive');
+ '57000000-0000-0000-0000-000000000031','council_a','Council A','inactive');
 select set_config('request.jwt.claim.sub','57000000-0000-0000-0000-000000000011',true);
 select set_config('request.jwt.claim.role','authenticated',true);
 
