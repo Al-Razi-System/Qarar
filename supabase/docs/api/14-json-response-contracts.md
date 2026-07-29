@@ -266,6 +266,17 @@ type and classification references, minimum member threshold, dual-leadership fl
 Creation requires `p_client_request_id`; replay returns the original council without another audit
 event. `get_available_councils` is a reusable reference lookup only and grants no permission over
 the consuming entity or process.
+
+## Council Hierarchy
+
+| Contract | Stable response |
+|---|---|
+| `admin_get_councils_tree` | Flat, path-ordered array of `{id,parent_unit_id,code,name_ar,name_en?,status,level_no,path_ids,path_names}` |
+| `admin_move_council` | `{id,parent_unit_id,level_no,updated_at}` |
+
+`admin_move_council` requires a reason and the current `updated_at`. It rejects self-parent,
+cross-tenant parents, archived nodes, and every descendant cycle. The moved subtree levels and
+the parent-change audit event are committed atomically.
 # Sprint 3.5 Regulation and Workflow Responses
 
 All contracts below return one JSON object.

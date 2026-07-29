@@ -31,6 +31,8 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `admin_create_council_type` | `core` | `authenticated` | `p_code text, p_name_ar text, p_name_en text, p_description text` | `jsonb` |
 | `admin_deactivate_council_type` | `core` | `authenticated` | `p_council_type_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `admin_get_council_detail` | `core` | `authenticated` | `p_council_id uuid` | `jsonb` |
+| `admin_get_councils_tree` | `core` | `authenticated` | `-` | `jsonb` |
+| `admin_move_council` | `core` | `authenticated` | `p_council_id uuid, p_new_parent_unit_id uuid, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `admin_search_council_types` | `core` | `authenticated` | `p_query text, p_is_active boolean, p_limit integer, p_offset integer` | `jsonb` |
 | `admin_search_councils` | `core` | `authenticated` | `p_query text, p_status text, p_unit_type_id uuid, p_governance_class_id uuid, p_parent_unit_id uuid, p_limit integer, p_offset integer` | `jsonb` |
 | `admin_update_council` | `core` | `authenticated` | `p_council_id uuid, p_name_ar text, p_name_en text, p_description text, p_unit_type_id uuid, p_governance_class_id uuid, p_minimum_active_members integer, p_allow_dual_leadership boolean, p_expected_updated_at timestamp with time zone` | `jsonb` |
