@@ -249,6 +249,23 @@ unknown fields must be ignored to preserve forward compatibility within `api_v1`
 These administrative contracts require the governance-management permission. They are tenant
 isolated, protect system types, and use `updated_at` as the optimistic-concurrency token for
 updates and deactivation.
+
+## Council Master Data
+
+| Contract | Stable response |
+|---|---|
+| `get_council_form_options` | `{council_types:Option[],parent_units:UnitOption[],governance_classes:Option[],leadership_roles:string[]}` |
+| `admin_search_councils` | `Page<CouncilSummary>` |
+| `admin_get_council_detail` | Council row plus `unit_type`, `parent_unit?`, and `governance_class?` references |
+| `admin_create_council` | `{id,code,status:"inactive",updated_at,idempotent_replay}` |
+| `admin_update_council` | `{id,updated_at}` |
+| `get_available_councils` | `{items:UnitOption[],limit,offset}` containing active tenant councils only |
+
+`CouncilSummary` includes identity, localized names, description, administrative status, hierarchy,
+type and classification references, minimum member threshold, dual-leadership flag, and timestamps.
+Creation requires `p_client_request_id`; replay returns the original council without another audit
+event. `get_available_councils` is a reusable reference lookup only and grants no permission over
+the consuming entity or process.
 # Sprint 3.5 Regulation and Workflow Responses
 
 All contracts below return one JSON object.

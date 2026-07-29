@@ -27,10 +27,16 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `admin_get_audit_log` | `audit` | `authenticated` | `p_audit_log_id uuid` | `jsonb` |
 | `admin_search_audit_logs` | `audit` | `authenticated` | `p_query text, p_action text, p_entity_type text, p_actor_user_id uuid, p_result text, p_from timestamp with time zone, p_to timestamp with time zone, p_limit integer, p_offset integer` | `jsonb` |
 | `admin_assign_governance_unit_class` | `core` | `authenticated` | `p_governance_unit_id uuid, p_class_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `admin_create_council` | `core` | `authenticated` | `p_code text, p_name_ar text, p_name_en text, p_description text, p_unit_type_id uuid, p_parent_unit_id uuid, p_governance_class_id uuid, p_minimum_active_members integer, p_allow_dual_leadership boolean, p_client_request_id uuid` | `jsonb` |
 | `admin_create_council_type` | `core` | `authenticated` | `p_code text, p_name_ar text, p_name_en text, p_description text` | `jsonb` |
 | `admin_deactivate_council_type` | `core` | `authenticated` | `p_council_type_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `admin_get_council_detail` | `core` | `authenticated` | `p_council_id uuid` | `jsonb` |
 | `admin_search_council_types` | `core` | `authenticated` | `p_query text, p_is_active boolean, p_limit integer, p_offset integer` | `jsonb` |
+| `admin_search_councils` | `core` | `authenticated` | `p_query text, p_status text, p_unit_type_id uuid, p_governance_class_id uuid, p_parent_unit_id uuid, p_limit integer, p_offset integer` | `jsonb` |
+| `admin_update_council` | `core` | `authenticated` | `p_council_id uuid, p_name_ar text, p_name_en text, p_description text, p_unit_type_id uuid, p_governance_class_id uuid, p_minimum_active_members integer, p_allow_dual_leadership boolean, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `admin_update_council_type` | `core` | `authenticated` | `p_council_type_id uuid, p_name_ar text, p_name_en text, p_description text, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `get_available_councils` | `core` | `authenticated` | `p_query text, p_unit_type_id uuid, p_governance_class_id uuid, p_parent_unit_id uuid, p_limit integer, p_offset integer` | `jsonb` |
+| `get_council_form_options` | `core` | `authenticated` | `-` | `jsonb` |
 | `act_topic_workflow_step` | `governance` | `authenticated` | `p_topic_id uuid, p_outcome_code text, p_comment text, p_idempotency_key uuid, p_expected_version integer` | `jsonb` |
 | `admin_activate_policy_version` | `governance` | `authenticated` | `p_policy_version_id uuid, p_effective_from date, p_effective_to date` | `jsonb` |
 | `admin_activate_workflow_template_version` | `governance` | `authenticated` | `p_workflow_template_version_id uuid` | `jsonb` |
