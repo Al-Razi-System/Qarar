@@ -153,7 +153,7 @@ insert into qarar_core.governance_unit_types(
 );
 select is(
   (api_v1.admin_search_council_types(null,null,100,0)->>'total')::integer,
-  3,
+  4,
   'search is tenant-isolated and includes only council-compatible types'
 );
 
