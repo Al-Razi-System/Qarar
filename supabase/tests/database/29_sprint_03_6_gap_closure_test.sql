@@ -46,7 +46,7 @@ values('60000000-0000-0000-0000-000000000031','60000000-0000-0000-0000-000000000
 select throws_ok($$insert into qarar_core.governance_units(
  organization_id,unit_type_id,code,name_ar)values(
  '60000000-0000-0000-0000-000000000001','60000000-0000-0000-0000-000000000021',
- 'Invalid-Code','رمز غير صالح')$$,'23514',null,
+ 'Invalid-Code','رمز غير صالح')$$,'22023',null,
  'database rejects council codes outside the approved format');
 
 insert into qarar_iam.roles(id,organization_id,code,name_ar,role_scope,is_active)

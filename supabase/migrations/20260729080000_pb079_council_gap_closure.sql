@@ -73,10 +73,21 @@ alter function qarar_iam.has_permission(text,uuid) owner to qarar_iam_executor;
 revoke all on function qarar_iam.has_permission(text,uuid) from public,anon,service_role;
 grant execute on function qarar_iam.has_permission(text,uuid) to authenticated,qarar_api_executor;
 
--- صيغة الرمز قاعدة بيانات وليست تحقق واجهة فقط.
-alter table qarar_core.governance_units
- add constraint governance_units_code_format
- check(code~'^[a-z][a-z0-9_]*$') not valid;
+-- صيغة رمز المجلس قاعدة بيانات، دون فرضها على أنواع الوحدات الحوكمية الأخرى.
+create or replace function qarar_core.enforce_council_code_format()
+returns trigger language plpgsql security definer set search_path=pg_catalog,qarar_core as $$
+begin
+ if exists(select 1 from qarar_core.governance_unit_types t
+  where t.id=new.unit_type_id and t.organization_id=new.organization_id and t.is_council_type)
+  and(new.code is null or new.code!~'^[a-z][a-z0-9_]*$')
+ then raise exception using errcode='22023',message='صيغة رمز المجلس غير صالحة';end if;
+ return new;
+end $$;
+alter function qarar_core.enforce_council_code_format() owner to qarar_core_executor;
+revoke all on function qarar_core.enforce_council_code_format() from public,anon,authenticated,service_role;
+create trigger governance_units_enforce_council_code_format
+before insert or update of code,unit_type_id on qarar_core.governance_units
+for each row execute function qarar_core.enforce_council_code_format();
 
 -- منع أي قيادة متزامنة مكررة مهما كان المستخدم أو مسار الكتابة.
 create or replace function qarar_iam.enforce_single_council_leader()
@@ -185,6 +196,7 @@ where(n.nspname,p.proname)in(
  ('qarar_iam','enforce_single_council_leader'),
  ('qarar_iam','provision_council_management'),
  ('qarar_iam','provision_council_permissions_to_governance_admin'),
+ ('qarar_core','enforce_council_code_format'),
  ('qarar_core','reject_status_history_mutation'))
 on conflict(function_name,identity_arguments)do update set
  function_oid=excluded.function_oid,module_code=excluded.module_code,owning_schema=excluded.owning_schema;
