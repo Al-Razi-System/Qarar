@@ -11,7 +11,7 @@ values (
 )
 on conflict (code) do nothing;
 
-insert into public.governance_unit_types (
+insert into qarar_core.governance_unit_types (
   organization_id, code, name_ar, name_en, description, is_council_type, is_system
 )
 values
