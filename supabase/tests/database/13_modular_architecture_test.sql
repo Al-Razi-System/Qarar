@@ -12,7 +12,7 @@ select is(
 
 select is(
   (select count(*)::integer from qarar_architecture.entity_registry),
- 67,
+ 71,
   'all application entities are registered');
 
 select is(
@@ -21,7 +21,7 @@ select is(
    join qarar_architecture.module_registry m using (module_code)
    join pg_class c on c.relname = e.entity_name and c.relkind in ('r', 'p')
    join pg_namespace n on n.oid = c.relnamespace and n.nspname = m.schema_name),
- 67,
+ 71,
   'all registered entities are physically owned by their module');
 
 select is(
@@ -52,7 +52,7 @@ select is(
   (select count(*)::integer
    from qarar_architecture.api_contract_registry
    where api_version = 'v1'),
- 118,
+ 126,
   'api_v1 contract count is explicit and reviewed');
 
 select is(
