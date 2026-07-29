@@ -18,13 +18,18 @@ select is((select contract_hash from qarar_architecture.api_release_registry whe
  'cdc327e880ca8daf96a62baacce9789c','final API release hash is frozen');
 insert into qarar_core.organizations(id,code,name_ar)values(
  '5a000000-0000-0000-0000-000000000001','release-council','Release Council');
-select ok(exists(select 1 from qarar_iam.permissions where code='governance.councils.manage'
- and organization_id='5a000000-0000-0000-0000-000000000001'
- and is_system_permission and is_active),'new organizations receive the dedicated council permission');
+select is((select count(*)::integer from qarar_iam.permissions
+ where organization_id='5a000000-0000-0000-0000-000000000001'
+  and code in('governance.units.read','governance.units.manage','governance.units.activate',
+   'governance.units.archive','governance.unit_types.manage','governance.memberships.read',
+   'governance.memberships.manage','governance.leadership.assign')
+  and is_system_permission and is_active),8,
+ 'new organizations receive the detailed council permission vocabulary');
 select ok(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
  where n.nspname in('qarar_core','qarar_iam') and p.proname like '%council%'
- and pg_get_functiondef(p.oid) like '%governance.policies.manage%'),
- 'council operations do not depend on the regulation-management permission');
+ and(pg_get_functiondef(p.oid) like '%governance.policies.manage%'
+  or pg_get_functiondef(p.oid) like '%governance.councils.manage%')),
+ 'council operations use neither regulation nor deprecated broad council permission');
 select ok(not exists(select 1 from qarar_architecture.api_contract_registry r
  join pg_proc p on p.proname=r.contract_name join pg_namespace n on n.oid=p.pronamespace and n.nspname='api_v1'
  where r.contract_name like '%council%' and r.audience<>'authenticated'),

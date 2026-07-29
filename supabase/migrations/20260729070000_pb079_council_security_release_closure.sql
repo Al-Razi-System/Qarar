@@ -18,8 +18,7 @@ begin
   ('governance.exceptions.request','request','governance_unit','طلب استثناء لائحي','Request regulation exception','Request a governed temporary or exceptional route'),
   ('governance.exceptions.approve','approve','organization','اعتماد الاستثناءات اللائحية','Approve regulation exceptions','Independently approve or reject governed exceptions'),
   ('governance.compliance.read','read','organization','عرض الامتثال اللائحي','Read regulation compliance','View regulation traceability and coverage reporting'),
-  ('governance.alerts.manage','manage','organization','إدارة تنبيهات الحوكمة','Manage governance alerts','Review and resolve governance coverage and routing alerts'),
-  ('governance.councils.manage','manage','organization','إدارة المجالس','Manage councils','Create and maintain council master data, hierarchy, memberships, leadership, and administrative lifecycle')
+  ('governance.alerts.manage','manage','organization','إدارة تنبيهات الحوكمة','Manage governance alerts','Review and resolve governance coverage and routing alerts')
  )as p(code,action,context_scope,name_ar,name_en,description)
  on conflict(organization_id,code)do nothing;
  return new;

@@ -198,7 +198,7 @@ select is(
   (select count(distinct code)::integer
    from qarar_iam.permissions
    where module='governance'),
-  9,
+  16,
   'migration seeds the complete governance permission vocabulary'
 );
 reset role;

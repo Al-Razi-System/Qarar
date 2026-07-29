@@ -259,7 +259,7 @@ updates and deactivation.
 | `admin_get_council_detail` | Council row plus `unit_type`, `parent_unit?`, and `governance_class?` references |
 | `admin_create_council` | `{id,code,status:"inactive",updated_at,idempotent_replay}` |
 | `admin_update_council` | `{id,updated_at}` |
-| `get_available_councils` | `{items:UnitOption[],limit,offset}` containing active tenant councils only |
+| `get_available_councils` | `{items:UnitOption[],total,limit,offset}` containing active tenant councils only |
 
 `CouncilSummary` includes identity, localized names, description, administrative status, hierarchy,
 type and classification references, minimum member threshold, dual-leadership flag, and timestamps.

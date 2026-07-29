@@ -7,7 +7,7 @@ create or replace function qarar_iam.admin_assign_council_leadership(
 declare o uuid:=qarar_iam.current_organization_id();r uuid;other_code text;
  dual_allowed boolean;old_membership qarar_iam.memberships;new_id uuid;changed timestamptz;
 begin
- perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
+ perform qarar_iam.assert_permission('governance.leadership.assign',p_council_id);
  perform pg_advisory_xact_lock(hashtextextended(o::text||':'||p_council_id::text,0));
  if p_role_code not in('council_chair','council_rapporteur') or p_effective_date is null
   or nullif(btrim(p_reason),'') is null
@@ -21,7 +21,8 @@ begin
   then raise exception using errcode='40001',message='تم تعديل المجلس؛ حدّث البيانات';end if;
   raise exception using errcode='P0002',message='المجلس غير موجود أو مؤرشف';
  end if;
- select id into r from qarar_iam.roles where organization_id=o and code=p_role_code and is_active;
+ select id into r from qarar_iam.roles where organization_id=o and code=p_role_code
+  and is_active and role_scope='governance_unit';
  if r is null then raise exception using errcode='23503',message='دور القيادة غير مهيأ داخل المؤسسة';end if;
  if not exists(select 1 from qarar_iam.memberships m join qarar_iam.roles mr
    on mr.id=m.role_id and mr.organization_id=m.organization_id

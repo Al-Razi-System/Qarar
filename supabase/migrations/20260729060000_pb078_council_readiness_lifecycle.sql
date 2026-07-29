@@ -10,8 +10,9 @@ create or replace function qarar_core.admin_validate_council_administrative_read
 returns jsonb language plpgsql security definer set search_path=pg_catalog,qarar_core as $$
 declare o uuid:=qarar_iam.current_organization_id();u qarar_core.governance_units;
  errors jsonb:='[]';members integer;chair uuid;rapporteur uuid;
+ chair_count integer;rapporteur_count integer;
 begin
- perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
+ perform qarar_iam.assert_permission('governance.units.read',p_council_id);
  select gu.* into u from qarar_core.governance_units gu join qarar_core.governance_unit_types t
   on t.id=gu.unit_type_id and t.organization_id=gu.organization_id
  where gu.id=p_council_id and gu.organization_id=o and t.is_council_type;
@@ -21,6 +22,20 @@ begin
  if u.governance_class_id is null or not exists(select 1 from qarar_governance.governance_unit_classes
   where id=u.governance_class_id and organization_id=o and is_active)
  then errors:=errors||jsonb_build_array(jsonb_build_object('code','GOVERNANCE_CLASS_REQUIRED','field','governance_class_id'));end if;
+ if u.parent_unit_id is not null and not exists(
+  select 1 from qarar_core.governance_units p join qarar_core.governance_unit_types pt
+   on pt.id=p.unit_type_id and pt.organization_id=p.organization_id and pt.is_council_type
+  where p.id=u.parent_unit_id and p.organization_id=o and p.status<>'archived')
+ then errors:=errors||jsonb_build_array(jsonb_build_object('code','COUNCIL_PARENT_INVALID','field','parent_unit_id'));end if;
+ if exists(with recursive ancestors as(
+  select p.id,p.parent_unit_id,array[p.id] path,false cycle
+  from qarar_core.governance_units p where p.id=u.parent_unit_id and p.organization_id=o
+  union all
+  select p.id,p.parent_unit_id,a.path||p.id,p.id=any(a.path)
+  from qarar_core.governance_units p join ancestors a on p.id=a.parent_unit_id
+  where p.organization_id=o and not a.cycle
+ )select 1 from ancestors where id=p_council_id or cycle)
+ then errors:=errors||jsonb_build_array(jsonb_build_object('code','COUNCIL_HIERARCHY_CYCLE','field','parent_unit_id'));end if;
  select count(distinct m.user_id)::integer into members from qarar_iam.memberships m join qarar_iam.roles r
   on r.id=m.role_id and r.organization_id=m.organization_id
  where m.organization_id=o and m.governance_unit_id=p_council_id and m.membership_status='active'
@@ -29,19 +44,27 @@ begin
  if members<u.minimum_active_members then errors:=errors||jsonb_build_array(jsonb_build_object(
   'code','MINIMUM_ACTIVE_MEMBERS_NOT_MET','required',u.minimum_active_members,'actual',members));end if;
  select (array_agg(m.user_id)filter(where r.code='council_chair'))[1],
-  (array_agg(m.user_id)filter(where r.code='council_rapporteur'))[1] into chair,rapporteur
+  (array_agg(m.user_id)filter(where r.code='council_rapporteur'))[1],
+  count(*)filter(where r.code='council_chair')::integer,
+  count(*)filter(where r.code='council_rapporteur')::integer
+  into chair,rapporteur,chair_count,rapporteur_count
  from qarar_iam.memberships m join qarar_iam.roles r on r.id=m.role_id and r.organization_id=m.organization_id
  where m.organization_id=o and m.governance_unit_id=p_council_id and m.membership_status='active'
   and m.start_date<=current_date and(m.end_date is null or m.end_date>=current_date);
  if chair is null then errors:=errors||jsonb_build_array(jsonb_build_object('code','COUNCIL_CHAIR_REQUIRED','field','council_chair'));end if;
  if rapporteur is null then errors:=errors||jsonb_build_array(jsonb_build_object('code','COUNCIL_RAPPORTEUR_REQUIRED','field','council_rapporteur'));end if;
+ if chair_count>1 then errors:=errors||jsonb_build_array(jsonb_build_object(
+  'code','MULTIPLE_ACTIVE_COUNCIL_CHAIRS','field','council_chair','actual',chair_count));end if;
+ if rapporteur_count>1 then errors:=errors||jsonb_build_array(jsonb_build_object(
+  'code','MULTIPLE_ACTIVE_COUNCIL_RAPPORTEURS','field','council_rapporteur','actual',rapporteur_count));end if;
  if not u.allow_dual_leadership and chair is not null and chair=rapporteur
  then errors:=errors||jsonb_build_array(jsonb_build_object('code','DUAL_LEADERSHIP_NOT_ALLOWED','field','allow_dual_leadership'));end if;
  perform qarar_audit.append_audit_log(o,'council.administrative_readiness.checked',
   'governance_unit',p_council_id,jsonb_build_object('ready',jsonb_array_length(errors)=0,'errors',errors));
  return jsonb_build_object('council_id',p_council_id,'ready',jsonb_array_length(errors)=0,
   'errors',errors,'active_member_count',members,'minimum_active_members',u.minimum_active_members,
-  'chair_user_id',chair,'rapporteur_user_id',rapporteur,'checked_at',now());
+  'chair_user_id',chair,'rapporteur_user_id',rapporteur,
+  'active_chair_count',chair_count,'active_rapporteur_count',rapporteur_count,'checked_at',now());
 end $$;
 
 create or replace function qarar_core.change_council_status(
@@ -50,7 +73,9 @@ create or replace function qarar_core.change_council_status(
 declare o uuid:=qarar_iam.current_organization_id();a uuid:=nullif(current_setting('request.jwt.claim.sub',true),'')::uuid;
  old_status text;changed timestamptz;readiness jsonb;
 begin
- perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
+ perform qarar_iam.assert_permission(
+  case p_target_status when 'archived' then 'governance.units.archive'
+   else 'governance.units.activate' end,p_council_id);
  if p_target_status not in('active','inactive','archived') or nullif(btrim(p_reason),'') is null
  then raise exception using errcode='22023',message='الحالة والسبب مطلوبان';end if;
  select status into old_status from qarar_core.governance_units where id=p_council_id

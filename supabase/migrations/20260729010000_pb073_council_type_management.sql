@@ -14,7 +14,7 @@ declare
   v_limit integer := least(greatest(coalesce(p_limit, 50), 1), 100);
   v_offset integer := greatest(coalesce(p_offset, 0), 0);
 begin
-  perform qarar_iam.assert_permission('governance.councils.manage', null);
+  perform qarar_iam.assert_permission('governance.unit_types.manage', null);
 
   return jsonb_build_object(
     'items', coalesce((
@@ -75,7 +75,7 @@ declare
   v_id uuid;
   v_updated_at timestamptz;
 begin
-  perform qarar_iam.assert_permission('governance.councils.manage', null);
+  perform qarar_iam.assert_permission('governance.unit_types.manage', null);
   if nullif(btrim(p_code), '') is null or nullif(btrim(p_name_ar), '') is null then
     raise exception using errcode = '22023',
       message = 'رمز نوع المجلس واسمه العربي مطلوبان';
@@ -121,7 +121,7 @@ declare
   v_org uuid := qarar_iam.current_organization_id();
   v_updated_at timestamptz;
 begin
-  perform qarar_iam.assert_permission('governance.councils.manage', null);
+  perform qarar_iam.assert_permission('governance.unit_types.manage', null);
   if nullif(btrim(p_name_ar), '') is null then
     raise exception using errcode = '22023', message = 'الاسم العربي مطلوب';
   end if;
@@ -172,7 +172,7 @@ declare
   v_org uuid := qarar_iam.current_organization_id();
   v_updated_at timestamptz;
 begin
-  perform qarar_iam.assert_permission('governance.councils.manage', null);
+  perform qarar_iam.assert_permission('governance.unit_types.manage', null);
   if exists (
     select 1 from qarar_core.governance_unit_types
     where id = p_council_type_id and organization_id = v_org and is_system

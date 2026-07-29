@@ -19,7 +19,7 @@ set search_path=pg_catalog,qarar_core
 as $$
 declare o uuid:=qarar_iam.current_organization_id();
 begin
- perform qarar_iam.assert_permission('governance.councils.manage',null);
+ perform qarar_iam.assert_permission('governance.units.read',null);
  return jsonb_build_object(
   'council_types',coalesce((select jsonb_agg(jsonb_build_object(
     'id',id,'code',code,'name_ar',name_ar,'name_en',name_en) order by code)
@@ -49,7 +49,7 @@ declare o uuid:=qarar_iam.current_organization_id();
  l integer:=least(greatest(coalesce(p_limit,50),1),100);
  f integer:=greatest(coalesce(p_offset,0),0);
 begin
- perform qarar_iam.assert_permission('governance.councils.manage',null);
+ perform qarar_iam.assert_permission('governance.units.read',null);
  return jsonb_build_object(
  'items',coalesce((select jsonb_agg(to_jsonb(x) order by x.name_ar,x.id) from(
   select u.id,u.code,u.name_ar,u.name_en,u.description,u.status,u.level_no,
@@ -85,7 +85,7 @@ returns jsonb language plpgsql stable security definer
 set search_path=pg_catalog,qarar_core as $$
 declare o uuid:=qarar_iam.current_organization_id();r jsonb;
 begin
- perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
+ perform qarar_iam.assert_permission('governance.units.read',p_council_id);
  select to_jsonb(u)||jsonb_build_object(
   'unit_type',jsonb_build_object('id',t.id,'code',t.code,'name_ar',t.name_ar,'name_en',t.name_en),
   'parent_unit',case when p.id is null then null else jsonb_build_object('id',p.id,'code',p.code,'name_ar',p.name_ar)end,
@@ -109,8 +109,9 @@ declare o uuid:=qarar_iam.current_organization_id();
  a uuid:=nullif(current_setting('request.jwt.claim.sub',true),'')::uuid;
  v_id uuid;changed timestamptz;lvl integer:=1;existing qarar_core.governance_units;
 begin
- perform qarar_iam.assert_permission('governance.councils.manage',null);
- if nullif(btrim(p_code),'') is null or nullif(btrim(p_name_ar),'') is null or p_client_request_id is null
+ perform qarar_iam.assert_permission('governance.units.manage',null);
+ if p_code is null or btrim(p_code) !~ '^[a-z][a-z0-9_]*$'
+  or nullif(btrim(p_name_ar),'') is null or p_client_request_id is null
  then raise exception using errcode='22023',message='الرمز والاسم العربي ومفتاح التكرار مطلوبة';end if;
  if coalesce(p_minimum_active_members,0)<1 then raise exception using errcode='22023',message='الحد الأدنى للأعضاء يجب أن يكون واحدًا فأكثر';end if;
  perform pg_advisory_xact_lock(hashtextextended(o::text||':'||a::text||':'||p_client_request_id::text,0));
@@ -152,7 +153,7 @@ create or replace function qarar_core.admin_update_council(
 set search_path=pg_catalog,qarar_core as $$
 declare o uuid:=qarar_iam.current_organization_id();changed timestamptz;old_class uuid;
 begin
- perform qarar_iam.assert_permission('governance.councils.manage',p_council_id);
+ perform qarar_iam.assert_permission('governance.units.manage',p_council_id);
  if nullif(btrim(p_name_ar),'') is null or coalesce(p_minimum_active_members,0)<1
  then raise exception using errcode='22023',message='بيانات المجلس غير صالحة';end if;
  if not exists(select 1 from qarar_core.governance_unit_types where id=p_unit_type_id and organization_id=o and is_council_type and is_active)
@@ -200,7 +201,16 @@ begin
    and(p_governance_class_id is null or u.governance_class_id=p_governance_class_id)
    and(p_parent_unit_id is null or u.parent_unit_id=p_parent_unit_id)
    and(nullif(btrim(p_query),'') is null or u.code ilike '%'||btrim(p_query)||'%' or u.name_ar ilike '%'||btrim(p_query)||'%')
-  order by u.name_ar,u.id limit l offset f)x),'[]'::jsonb),'limit',l,'offset',f);
+  order by u.name_ar,u.id limit l offset f)x),'[]'::jsonb),
+  'total',(select count(*)::integer
+   from qarar_core.governance_units u join qarar_core.governance_unit_types t
+    on t.id=u.unit_type_id and t.organization_id=u.organization_id and t.is_council_type
+   where u.organization_id=o and u.status='active'
+    and(p_unit_type_id is null or u.unit_type_id=p_unit_type_id)
+    and(p_governance_class_id is null or u.governance_class_id=p_governance_class_id)
+    and(p_parent_unit_id is null or u.parent_unit_id=p_parent_unit_id)
+    and(nullif(btrim(p_query),'') is null or u.code ilike '%'||btrim(p_query)||'%' or u.name_ar ilike '%'||btrim(p_query)||'%')),
+  'limit',l,'offset',f);
 end $$;
 
 alter function qarar_core.get_council_form_options() owner to qarar_core_executor;
