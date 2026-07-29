@@ -2,9 +2,10 @@ begin;
 
 insert into qarar_architecture.module_table_read_allowlist(source_module,target_schema,table_name,rationale)values
 ('core','qarar_iam','memberships','Evaluate council administrative membership completeness'),
-('core','qarar_iam','roles','Resolve council leadership roles for administrative completeness')
+('core','qarar_iam','roles','Resolve council leadership roles for administrative completeness'),
+('core','qarar_iam','users','Ignore disabled users during administrative completeness')
 on conflict do nothing;
-grant select on qarar_iam.memberships,qarar_iam.roles to qarar_core_executor;
+grant select on qarar_iam.memberships,qarar_iam.roles,qarar_iam.users to qarar_core_executor;
 
 create or replace function qarar_core.admin_validate_council_administrative_readiness(p_council_id uuid)
 returns jsonb language plpgsql security definer set search_path=pg_catalog,qarar_core as $$
@@ -18,15 +19,14 @@ begin
  where gu.id=p_council_id and gu.organization_id=o and t.is_council_type;
  if u.id is null then raise exception using errcode='P0002',message='المجلس غير موجود';end if;
  if not exists(select 1 from qarar_core.governance_unit_types where id=u.unit_type_id and organization_id=o and is_active)
- then errors:=errors||jsonb_build_array(jsonb_build_object('code','COUNCIL_TYPE_INACTIVE','field','unit_type_id'));end if;
+  then errors:=errors||jsonb_build_array(jsonb_build_object('code','unit_type_inactive','field','unit_type_id','message','نوع المجلس غير فعال'));end if;
  if u.governance_class_id is null or not exists(select 1 from qarar_governance.governance_unit_classes
   where id=u.governance_class_id and organization_id=o and is_active)
- then errors:=errors||jsonb_build_array(jsonb_build_object('code','GOVERNANCE_CLASS_REQUIRED','field','governance_class_id'));end if;
+  then errors:=errors||jsonb_build_array(jsonb_build_object('code','governance_class_required','field','governance_class_id','message','التصنيف الحوكمي مطلوب وفعال'));end if;
  if u.parent_unit_id is not null and not exists(
-  select 1 from qarar_core.governance_units p join qarar_core.governance_unit_types pt
-   on pt.id=p.unit_type_id and pt.organization_id=p.organization_id and pt.is_council_type
+   select 1 from qarar_core.governance_units p
   where p.id=u.parent_unit_id and p.organization_id=o and p.status<>'archived')
- then errors:=errors||jsonb_build_array(jsonb_build_object('code','COUNCIL_PARENT_INVALID','field','parent_unit_id'));end if;
+  then errors:=errors||jsonb_build_array(jsonb_build_object('code','invalid_parent','field','parent_unit_id','message','الأب غير صالح'));end if;
  if exists(with recursive ancestors as(
   select p.id,p.parent_unit_id,array[p.id] path,false cycle
   from qarar_core.governance_units p where p.id=u.parent_unit_id and p.organization_id=o
@@ -35,36 +35,40 @@ begin
   from qarar_core.governance_units p join ancestors a on p.id=a.parent_unit_id
   where p.organization_id=o and not a.cycle
  )select 1 from ancestors where id=p_council_id or cycle)
- then errors:=errors||jsonb_build_array(jsonb_build_object('code','COUNCIL_HIERARCHY_CYCLE','field','parent_unit_id'));end if;
+  then errors:=errors||jsonb_build_array(jsonb_build_object('code','hierarchy_cycle','field','parent_unit_id','message','توجد دورة في الهيكل'));end if;
  select count(distinct m.user_id)::integer into members from qarar_iam.memberships m join qarar_iam.roles r
   on r.id=m.role_id and r.organization_id=m.organization_id
+  join qarar_iam.users mu on mu.id=m.user_id and mu.organization_id=m.organization_id
  where m.organization_id=o and m.governance_unit_id=p_council_id and m.membership_status='active'
   and m.start_date<=current_date and(m.end_date is null or m.end_date>=current_date)
-  and r.code not in('council_chair','council_rapporteur');
+   and r.is_active and mu.status='active' and r.code not in('council_chair','council_rapporteur');
  if members<u.minimum_active_members then errors:=errors||jsonb_build_array(jsonb_build_object(
-  'code','MINIMUM_ACTIVE_MEMBERS_NOT_MET','required',u.minimum_active_members,'actual',members));end if;
+   'code','minimum_active_members_not_met','field','minimum_active_members','message','عدد الأعضاء أقل من الحد الأدنى',
+   'required',u.minimum_active_members,'actual',members));end if;
  select (array_agg(m.user_id)filter(where r.code='council_chair'))[1],
   (array_agg(m.user_id)filter(where r.code='council_rapporteur'))[1],
   count(*)filter(where r.code='council_chair')::integer,
   count(*)filter(where r.code='council_rapporteur')::integer
   into chair,rapporteur,chair_count,rapporteur_count
- from qarar_iam.memberships m join qarar_iam.roles r on r.id=m.role_id and r.organization_id=m.organization_id
+  from qarar_iam.memberships m join qarar_iam.roles r on r.id=m.role_id and r.organization_id=m.organization_id
+  join qarar_iam.users lu on lu.id=m.user_id and lu.organization_id=m.organization_id
  where m.organization_id=o and m.governance_unit_id=p_council_id and m.membership_status='active'
-  and m.start_date<=current_date and(m.end_date is null or m.end_date>=current_date);
- if chair is null then errors:=errors||jsonb_build_array(jsonb_build_object('code','COUNCIL_CHAIR_REQUIRED','field','council_chair'));end if;
- if rapporteur is null then errors:=errors||jsonb_build_array(jsonb_build_object('code','COUNCIL_RAPPORTEUR_REQUIRED','field','council_rapporteur'));end if;
+   and m.start_date<=current_date and(m.end_date is null or m.end_date>=current_date)
+   and r.is_active and lu.status='active';
+ if chair is null then errors:=errors||jsonb_build_array(jsonb_build_object('code','chair_required','field','leadership','message','يجب تعيين رئيس فعال'));end if;
+ if rapporteur is null then errors:=errors||jsonb_build_array(jsonb_build_object('code','rapporteur_required','field','leadership','message','يجب تعيين مقرر فعال'));end if;
  if chair_count>1 then errors:=errors||jsonb_build_array(jsonb_build_object(
-  'code','MULTIPLE_ACTIVE_COUNCIL_CHAIRS','field','council_chair','actual',chair_count));end if;
+   'code','multiple_active_chairs','field','leadership','message','يوجد أكثر من رئيس فعال','actual',chair_count));end if;
  if rapporteur_count>1 then errors:=errors||jsonb_build_array(jsonb_build_object(
-  'code','MULTIPLE_ACTIVE_COUNCIL_RAPPORTEURS','field','council_rapporteur','actual',rapporteur_count));end if;
+   'code','multiple_active_rapporteurs','field','leadership','message','يوجد أكثر من مقرر فعال','actual',rapporteur_count));end if;
  if not u.allow_dual_leadership and chair is not null and chair=rapporteur
- then errors:=errors||jsonb_build_array(jsonb_build_object('code','DUAL_LEADERSHIP_NOT_ALLOWED','field','allow_dual_leadership'));end if;
+  then errors:=errors||jsonb_build_array(jsonb_build_object('code','dual_leadership_not_allowed','field','leadership','message','لا يسمح بازدواج القيادة'));end if;
  perform qarar_audit.append_audit_log(o,'council.administrative_readiness.checked',
-  'governance_unit',p_council_id,jsonb_build_object('ready',jsonb_array_length(errors)=0,'errors',errors));
- return jsonb_build_object('council_id',p_council_id,'ready',jsonb_array_length(errors)=0,
-  'errors',errors,'active_member_count',members,'minimum_active_members',u.minimum_active_members,
-  'chair_user_id',chair,'rapporteur_user_id',rapporteur,
-  'active_chair_count',chair_count,'active_rapporteur_count',rapporteur_count,'checked_at',now());
+   'governance_unit',p_council_id,jsonb_build_object('administratively_ready',jsonb_array_length(errors)=0,'errors',errors));
+ return jsonb_build_object('governance_unit_id',p_council_id,
+  'administratively_ready',jsonb_array_length(errors)=0,'errors',errors,'warnings','[]'::jsonb,
+  'active_member_count',members,'minimum_active_members',u.minimum_active_members,
+  'chair_user_id',chair,'rapporteur_user_id',rapporteur,'checked_at',now());
 end $$;
 
 create or replace function qarar_core.change_council_status(
@@ -86,9 +90,10 @@ begin
   raise exception using errcode='P0002',message='المجلس غير موجود';
  end if;
  if old_status='archived' then raise exception using errcode='55000',message='أرشفة المجلس نهائية';end if;
+ if old_status=p_target_status then raise exception using errcode='22023',message='المجلس في الحالة المطلوبة بالفعل';end if;
  if p_target_status='active' then
   readiness:=qarar_core.admin_validate_council_administrative_readiness(p_council_id);
-  if not(readiness->>'ready')::boolean then raise exception using errcode='23514',
+   if not(readiness->>'administratively_ready')::boolean then raise exception using errcode='23514',
    message='المجلس غير مكتمل إداريًا',detail=readiness::text;end if;
  end if;
  if p_target_status='archived' and exists(select 1 from qarar_core.governance_units

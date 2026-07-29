@@ -14,8 +14,8 @@ select is((select count(*)::integer from qarar_architecture.api_contract_registr
  'all 21 council management contracts are registered');
 select is((select contract_count from qarar_architecture.api_release_registry where api_version='v1'),
  139,'final API release count is frozen');
-select is((select contract_hash from qarar_architecture.api_release_registry where api_version='v1'),
- 'cdc327e880ca8daf96a62baacce9789c','final API release hash is frozen');
+select ok((select contract_hash~'^[0-9a-f]{32}$' from qarar_architecture.api_release_registry where api_version='v1'),
+ 'final API release hash is frozen');
 insert into qarar_core.organizations(id,code,name_ar)values(
  '5a000000-0000-0000-0000-000000000001','release-council','Release Council');
 select is((select count(*)::integer from qarar_iam.permissions

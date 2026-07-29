@@ -33,6 +33,14 @@ on conflict(organization_id,code)do update set
  name_ar=excluded.name_ar,name_en=excluded.name_en,description=excluded.description,
  role_scope='governance_unit',is_active=true;
 
+insert into qarar_core.governance_unit_types(
+ organization_id,code,name_ar,name_en,description,is_council_type,is_system,is_active)
+select o.id,'general_council','مجلس عام','General council',
+ 'Default council type provisioned for council management',true,true,true
+from qarar_core.organizations o
+on conflict(organization_id,code)do update set
+ is_council_type=true,is_system=true,is_active=true;
+
 -- مدير الحوكمة يحصل على مفردات الصلاحيات المفصلة فقط.
 insert into qarar_iam.role_permissions(organization_id,role_id,permission_id,is_active)
 select r.organization_id,r.id,p.id,true
@@ -161,6 +169,21 @@ create trigger provision_council_management
 after insert on qarar_core.organizations
 for each row execute function qarar_iam.provision_council_management();
 
+create or replace function qarar_core.provision_default_council_type()
+returns trigger language plpgsql security definer set search_path=pg_catalog,qarar_core as $$
+begin
+ insert into qarar_core.governance_unit_types(
+  organization_id,code,name_ar,name_en,description,is_council_type,is_system,is_active)
+ values(new.id,'general_council','مجلس عام','General council',
+  'Default council type provisioned for council management',true,true,true)
+ on conflict(organization_id,code)do nothing;
+ return new;
+end $$;
+alter function qarar_core.provision_default_council_type() owner to qarar_core_executor;
+revoke all on function qarar_core.provision_default_council_type() from public,anon,authenticated,service_role;
+create trigger provision_default_council_type after insert on qarar_core.organizations
+for each row execute function qarar_core.provision_default_council_type();
+
 create or replace function qarar_iam.provision_council_permissions_to_governance_admin()
 returns trigger language plpgsql security definer set search_path=pg_catalog,qarar_iam as $$
 begin
@@ -197,6 +220,7 @@ where(n.nspname,p.proname)in(
  ('qarar_iam','provision_council_management'),
  ('qarar_iam','provision_council_permissions_to_governance_admin'),
  ('qarar_core','enforce_council_code_format'),
+ ('qarar_core','provision_default_council_type'),
  ('qarar_core','reject_status_history_mutation'))
 on conflict(function_name,identity_arguments)do update set
  function_oid=excluded.function_oid,module_code=excluded.module_code,owning_schema=excluded.owning_schema;

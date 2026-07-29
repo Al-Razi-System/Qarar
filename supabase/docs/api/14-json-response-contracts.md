@@ -295,7 +295,7 @@ Updates preserve `user_id` and `role_id`; ending a membership retains its histor
 
 | Contract | Stable response |
 |---|---|
-| `admin_assign_council_leadership` | `{membership_id,role_code,user_id,effective_date,council_updated_at,idempotent_replay}` |
+| `admin_assign_council_leadership` | `{governance_unit_id,chair,rapporteur,effective_date,atomic:true}` |
 
 Only `council_chair` and `council_rapporteur` are accepted. The target must have an effective
 non-leadership membership on the effective date. The previous leadership period is ended before
@@ -305,13 +305,13 @@ the new one starts, and one person may hold both roles only when `allow_dual_lea
 
 | Contract | Stable response |
 |---|---|
-| `admin_validate_council_administrative_readiness` | `{council_id,ready,errors,active_member_count,minimum_active_members,chair_user_id?,rapporteur_user_id?,checked_at}` |
+| `admin_validate_council_administrative_readiness` | `{governance_unit_id,administratively_ready,errors,warnings,active_member_count,minimum_active_members,chair_user_id?,rapporteur_user_id?,checked_at}` |
 | `admin_activate_council` | `{id,previous_status,status:"active",updated_at}` |
 | `admin_deactivate_council` | `{id,previous_status,status:"inactive",updated_at}` |
 | `admin_archive_council` | `{id,previous_status,status:"archived",updated_at}` |
 
-Readiness errors use stable codes: `COUNCIL_TYPE_INACTIVE`, `GOVERNANCE_CLASS_REQUIRED`,
-`MINIMUM_ACTIVE_MEMBERS_NOT_MET`, `COUNCIL_CHAIR_REQUIRED`, `COUNCIL_RAPPORTEUR_REQUIRED`, and
+Readiness errors use stable codes: `unit_type_inactive`, `governance_class_required`,
+`minimum_active_members_not_met`, `chair_required`, `rapporteur_required`, and
 `DUAL_LEADERSHIP_NOT_ALLOWED`. Archival is final and requires all direct children to be moved or
 archived first.
 # Sprint 3.5 Regulation and Workflow Responses

@@ -107,7 +107,7 @@ where organization_id='60000000-0000-0000-0000-000000000001' and code='council_c
 alter table qarar_iam.memberships enable trigger memberships_enforce_single_council_leader;
 select ok(api_v1.admin_validate_council_administrative_readiness(
  '60000000-0000-0000-0000-000000000031')->'errors'@>
- '[{"code":"MULTIPLE_ACTIVE_COUNCIL_CHAIRS"}]'::jsonb,
+ '[{"code":"multiple_active_chairs"}]'::jsonb,
  'readiness detects legacy duplicate active chairs');
 
 select ok(api_v1.get_available_councils(null,null,null,null,10,0)?'total',

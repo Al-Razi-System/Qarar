@@ -43,8 +43,7 @@ begin
  if old_level is null then raise exception using errcode='P0002',message='المجلس غير موجود أو مؤرشف';end if;
  if p_new_parent_unit_id is not null then
   select level_no+1 into new_level from qarar_core.governance_units u
-  join qarar_core.governance_unit_types t on t.id=u.unit_type_id and t.organization_id=u.organization_id
-  where u.id=p_new_parent_unit_id and u.organization_id=o and u.status<>'archived' and t.is_council_type
+  where u.id=p_new_parent_unit_id and u.organization_id=o and u.status<>'archived'
   for update of u;
   if new_level is null then raise exception using errcode='23503',message='المجلس الأب غير موجود أو مؤرشف';end if;
   if exists(with recursive descendants as(

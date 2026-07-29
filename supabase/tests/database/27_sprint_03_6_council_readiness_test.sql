@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(16);
+select plan(19);
 select is((select count(*)::integer from qarar_architecture.api_contract_registry where contract_name in(
  'admin_validate_council_administrative_readiness','admin_activate_council',
  'admin_deactivate_council','admin_archive_council')),4,'all lifecycle contracts are registered');
@@ -37,11 +37,11 @@ select set_config('request.jwt.claim.sub','59000000-0000-0000-0000-000000000011'
 select set_config('request.jwt.claim.role','authenticated',true);
 
 select is((api_v1.admin_validate_council_administrative_readiness(
- '59000000-0000-0000-0000-000000000041')->>'ready')::boolean,false,
+ '59000000-0000-0000-0000-000000000041')->>'administratively_ready')::boolean,false,
  'incomplete council is reported as not ready');
 select ok((api_v1.admin_validate_council_administrative_readiness(
  '59000000-0000-0000-0000-000000000041')->'errors')@>
- '[{"code":"MINIMUM_ACTIVE_MEMBERS_NOT_MET"},{"code":"COUNCIL_CHAIR_REQUIRED"},{"code":"COUNCIL_RAPPORTEUR_REQUIRED"}]',
+ '[{"code":"minimum_active_members_not_met"},{"code":"chair_required"},{"code":"rapporteur_required"}]',
  'readiness returns stable codes for every missing requirement');
 select throws_ok($$select api_v1.admin_activate_council(
  '59000000-0000-0000-0000-000000000041','تفعيل',
@@ -58,14 +58,32 @@ insert into qarar_iam.memberships(organization_id,user_id,governance_unit_id,rol
 ('59000000-0000-0000-0000-000000000001','59000000-0000-0000-0000-000000000013',
  '59000000-0000-0000-0000-000000000041','59000000-0000-0000-0000-000000000023',current_date);
 select is((api_v1.admin_validate_council_administrative_readiness(
- '59000000-0000-0000-0000-000000000041')->>'ready')::boolean,true,
+ '59000000-0000-0000-0000-000000000041')->>'administratively_ready')::boolean,true,
  'complete administrative master data is ready');
+update qarar_iam.users set status='disabled'
+where id='59000000-0000-0000-0000-000000000012';
+select is((api_v1.admin_validate_council_administrative_readiness(
+ '59000000-0000-0000-0000-000000000041')->>'administratively_ready')::boolean,false,
+ 'disabled users are ignored by readiness');
+update qarar_iam.users set status='active'
+where id='59000000-0000-0000-0000-000000000012';
+update qarar_iam.roles set is_active=false
+where organization_id='59000000-0000-0000-0000-000000000001' and code='council_rapporteur';
+select is((api_v1.admin_validate_council_administrative_readiness(
+ '59000000-0000-0000-0000-000000000041')->>'administratively_ready')::boolean,false,
+ 'disabled roles are ignored by readiness');
+update qarar_iam.roles set is_active=true
+where organization_id='59000000-0000-0000-0000-000000000001' and code='council_rapporteur';
 select lives_ok($$select api_v1.admin_activate_council(
  '59000000-0000-0000-0000-000000000041','اكتمل التشكيل',
  (select updated_at from qarar_core.governance_units where id='59000000-0000-0000-0000-000000000041'))$$,
  'ready council activates');
 select is((select status from qarar_core.governance_units where id='59000000-0000-0000-0000-000000000041'),
  'active','activation persists the active state');
+select throws_ok($$select api_v1.admin_activate_council(
+ '59000000-0000-0000-0000-000000000041','تكرار التفعيل',
+ (select updated_at from qarar_core.governance_units where id='59000000-0000-0000-0000-000000000041'))$$,
+ '22023',null,'repeating the current state is rejected without history');
 select lives_ok($$select api_v1.admin_deactivate_council(
  '59000000-0000-0000-0000-000000000041','تعليق إداري',
  (select updated_at from qarar_core.governance_units where id='59000000-0000-0000-0000-000000000041'))$$,

@@ -136,6 +136,9 @@ try {
     insert into qarar_iam.roles(organization_id,code,name_ar,role_scope,is_active)
     values('${organizationId}','council_member','عضو مجلس','governance_unit',true);
   `)
+  assert.equal(sql(`select count(*) from qarar_core.governance_unit_types
+    where organization_id='${organizationId}' and code='general_council'
+      and is_council_type and is_system and is_active`), "1")
 
   const headers = await login(admin.email)
   const council = await rpc("admin_create_council", {
@@ -182,30 +185,27 @@ try {
   let detail = await rpc("admin_get_council_detail", { p_council_id: council.id }, headers)
   await rpc("admin_assign_council_leadership", {
     p_council_id: council.id,
-    p_role_code: "council_chair",
-    p_user_id: chair.id,
+    p_chair_user_id: chair.id,
+    p_rapporteur_user_id: rapporteur.id,
     p_effective_date: new Date().toISOString().slice(0, 10),
-    p_reason: "تكليف الرئيس",
-    p_expected_updated_at: detail.updated_at,
-  }, headers)
-  await rpc("admin_assign_council_leadership", {
-    p_council_id: council.id,
-    p_role_code: "council_rapporteur",
-    p_user_id: rapporteur.id,
-    p_effective_date: new Date().toISOString().slice(0, 10),
-    p_reason: "تكليف المقرر",
+    p_reason: "تكليف الرئيس والمقرر",
     p_expected_updated_at: detail.updated_at,
   }, headers)
 
   const readiness = await rpc("admin_validate_council_administrative_readiness",
     { p_council_id: council.id }, headers)
-  assert.equal(readiness.ready, true)
+  assert.equal(readiness.administratively_ready, true)
   const activated = await rpc("admin_activate_council", {
     p_council_id: council.id,
     p_reason: "اكتمال البيانات الإدارية",
     p_expected_updated_at: detail.updated_at,
   }, headers)
   assert.equal(activated.status, "active")
+  await rpc("admin_activate_council", {
+    p_council_id: council.id,
+    p_reason: "تكرار غير صالح",
+    p_expected_updated_at: activated.updated_at,
+  }, headers, 400)
 
   const available = await rpc("get_available_councils", {
     p_query: null,
@@ -219,6 +219,19 @@ try {
   assert.ok(available.total >= 1)
   assert.equal(available.limit, 10)
   assert.equal(available.offset, 0)
+
+  const deactivated = await rpc("admin_deactivate_council", {
+    p_council_id: council.id,
+    p_reason: "تعطيل إداري",
+    p_expected_updated_at: activated.updated_at,
+  }, headers)
+  assert.equal(deactivated.status, "inactive")
+  const archived = await rpc("admin_archive_council", {
+    p_council_id: council.id,
+    p_reason: "إنهاء المجلس",
+    p_expected_updated_at: deactivated.updated_at,
+  }, headers)
+  assert.equal(archived.status, "archived")
 
   console.log("Sprint 03.6 council HTTP contracts passed")
 } finally {
