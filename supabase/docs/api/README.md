@@ -37,6 +37,7 @@ This is the entry point for frontend, integration, and backend developers. Qarar
 | Edge Functions and storage | [10-edge-storage.md](./10-edge-storage.md) | Implemented, with noted compatibility surface | Integrations/uploads |
 | Audit logs | [11-audit-logs.md](./11-audit-logs.md) | Implemented | Auditors/security administration |
 | Regulations and governed workflows | [15-regulations-workflows.md](./15-regulations-workflows.md) | Implemented | Governance administration and topic routing |
+| Regulation selection at topic creation | [03-topic-regulation-selection-ar.md](../guides/03-topic-regulation-selection-ar.md) | Implemented | Arabic frontend flow for eligible regulations and explicit selection |
 | Exact RPC contract reference | [12-contract-reference.md](./12-contract-reference.md) | Generated from runtime registry | All API developers |
 | Flutter integration and screen map | [13-frontend-integration-guide.md](./13-frontend-integration-guide.md) | Implemented-scope handoff | Flutter developers |
 | JSON response contracts | [14-json-response-contracts.md](./14-json-response-contracts.md) | Implemented-scope response DTOs | Flutter developers |
@@ -49,3 +50,6 @@ The generated contract reference records every exposed `api_v1` signature and au
 documentation parity test fails when it differs from the runtime registry.
 The physical module map and dependency rules are documented in
 [../architecture/README.md](../architecture/README.md).
+
+لإعداد اللوائح وقوالب المسارات وسيناريوهات الاختبار قبل التشغيل، راجع
+[دليل إعداد اللوائح والمسارات](../guides/02-regulation-setup-scenarios-ar.md).
