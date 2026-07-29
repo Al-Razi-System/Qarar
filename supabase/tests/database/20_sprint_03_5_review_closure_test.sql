@@ -28,7 +28,7 @@ select throws_ok(
  '42501',null,'legacy unsafe workflow command is closed');
 
 select is((select contract_count from qarar_architecture.api_release_registry where api_version='v1'),
- 130,'api_v1 release count includes council hierarchy contracts through PB-075');
+ 134,'api_v1 release count includes council membership contracts through PB-076');
 select is((select count(*)::integer from qarar_architecture.api_contract_registry
  where api_version='v1' and contract_name in(
  'admin_list_governance_unit_classes','admin_create_governance_unit_class',

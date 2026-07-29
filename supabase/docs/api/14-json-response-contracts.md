@@ -277,6 +277,19 @@ the consuming entity or process.
 `admin_move_council` requires a reason and the current `updated_at`. It rejects self-parent,
 cross-tenant parents, archived nodes, and every descendant cycle. The moved subtree levels and
 the parent-change audit event are committed atomically.
+
+## Council Memberships
+
+| Contract | Stable response |
+|---|---|
+| `admin_list_council_members` | `Page<MembershipDetail + {role_code,role_name_ar,is_effective}>` |
+| `admin_add_council_member` | `{id,membership_status:"active",updated_at}` |
+| `admin_update_council_membership` | `{id,updated_at}` |
+| `admin_end_council_membership` | `{id,membership_status:"ended",end_date,updated_at}` |
+
+Membership periods are inclusive dates and may not overlap for the same tenant, council, user, and
+role. A future or ended membership has `is_effective=false` and grants no current authority.
+Updates preserve `user_id` and `role_id`; ending a membership retains its historical row.
 # Sprint 3.5 Regulation and Workflow Responses
 
 All contracts below return one JSON object.
