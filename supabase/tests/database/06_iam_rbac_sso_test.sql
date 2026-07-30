@@ -57,7 +57,9 @@ values
 insert into public.role_permissions (organization_id, role_id, permission_id)
 select '10101010-1010-1010-1010-101010101010', '13131313-1313-1313-1313-131313131313', id
 from public.permissions
-where organization_id = '10101010-1010-1010-1010-101010101010';
+where organization_id = '10101010-1010-1010-1010-101010101010'
+on conflict (organization_id, role_id, permission_id)
+do update set is_active = true;
 
 set local role authenticated;
 set local "request.jwt.claims" to '{"sub": "aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa", "email": "admin@iam.test"}';

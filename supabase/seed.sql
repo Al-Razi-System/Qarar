@@ -11,12 +11,15 @@ values (
 )
 on conflict (code) do nothing;
 
-insert into public.governance_unit_types (organization_id, code, name_ar, name_en, description)
+insert into qarar_core.governance_unit_types (
+  organization_id, code, name_ar, name_en, description, is_council_type, is_system
+)
 values
-  ('00000000-0000-0000-0000-000000000001', 'council', 'مجلس', 'Council', 'وحدة حوكمية تصدر قرارات رسمية'),
-  ('00000000-0000-0000-0000-000000000001', 'committee', 'لجنة', 'Committee', 'وحدة حوكمية فرعية أو متخصصة'),
-  ('00000000-0000-0000-0000-000000000001', 'department', 'إدارة', 'Department', 'وحدة تنظيمية أو تنفيذية')
-on conflict (organization_id, code) do nothing;
+  ('00000000-0000-0000-0000-000000000001', 'council', 'مجلس', 'Council', 'وحدة حوكمية تصدر قرارات رسمية', true, true),
+  ('00000000-0000-0000-0000-000000000001', 'committee', 'لجنة', 'Committee', 'وحدة حوكمية فرعية أو متخصصة', true, true),
+  ('00000000-0000-0000-0000-000000000001', 'department', 'إدارة', 'Department', 'وحدة تنظيمية أو تنفيذية', false, true)
+on conflict (organization_id, code) do update set
+ is_council_type=excluded.is_council_type,is_system=excluded.is_system;
 
 insert into public.roles (organization_id, code, name_ar, name_en, role_scope)
 values
@@ -35,4 +38,3 @@ values
   ('00000000-0000-0000-0000-000000000001', 'quality', 'جودة وامتثال', 'Quality and Compliance'),
   ('00000000-0000-0000-0000-000000000001', 'strategic', 'استراتيجي', 'Strategic')
 on conflict (organization_id, code) do nothing;
-

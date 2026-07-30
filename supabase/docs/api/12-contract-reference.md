@@ -26,7 +26,23 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `admin_export_audit_logs` | `audit` | `authenticated` | `p_action text, p_entity_type text, p_actor_user_id uuid, p_result text, p_from timestamp with time zone, p_to timestamp with time zone` | `jsonb` |
 | `admin_get_audit_log` | `audit` | `authenticated` | `p_audit_log_id uuid` | `jsonb` |
 | `admin_search_audit_logs` | `audit` | `authenticated` | `p_query text, p_action text, p_entity_type text, p_actor_user_id uuid, p_result text, p_from timestamp with time zone, p_to timestamp with time zone, p_limit integer, p_offset integer` | `jsonb` |
+| `admin_activate_council` | `core` | `authenticated` | `p_council_id uuid, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `admin_archive_council` | `core` | `authenticated` | `p_council_id uuid, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `admin_assign_governance_unit_class` | `core` | `authenticated` | `p_governance_unit_id uuid, p_class_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `admin_create_council` | `core` | `authenticated` | `p_code text, p_name_ar text, p_name_en text, p_description text, p_unit_type_id uuid, p_parent_unit_id uuid, p_governance_class_id uuid, p_minimum_active_members integer, p_allow_dual_leadership boolean, p_client_request_id uuid` | `jsonb` |
+| `admin_create_council_type` | `core` | `authenticated` | `p_code text, p_name_ar text, p_name_en text, p_description text` | `jsonb` |
+| `admin_deactivate_council` | `core` | `authenticated` | `p_council_id uuid, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `admin_deactivate_council_type` | `core` | `authenticated` | `p_council_type_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `admin_get_council_detail` | `core` | `authenticated` | `p_council_id uuid` | `jsonb` |
+| `admin_get_councils_tree` | `core` | `authenticated` | `-` | `jsonb` |
+| `admin_move_council` | `core` | `authenticated` | `p_council_id uuid, p_new_parent_unit_id uuid, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `admin_search_council_types` | `core` | `authenticated` | `p_query text, p_is_active boolean, p_limit integer, p_offset integer` | `jsonb` |
+| `admin_search_councils` | `core` | `authenticated` | `p_query text, p_status text, p_unit_type_id uuid, p_governance_class_id uuid, p_parent_unit_id uuid, p_limit integer, p_offset integer` | `jsonb` |
+| `admin_update_council` | `core` | `authenticated` | `p_council_id uuid, p_name_ar text, p_name_en text, p_description text, p_unit_type_id uuid, p_governance_class_id uuid, p_minimum_active_members integer, p_allow_dual_leadership boolean, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `admin_update_council_type` | `core` | `authenticated` | `p_council_type_id uuid, p_name_ar text, p_name_en text, p_description text, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `admin_validate_council_administrative_readiness` | `core` | `authenticated` | `p_council_id uuid` | `jsonb` |
+| `get_available_councils` | `core` | `authenticated` | `p_query text, p_unit_type_id uuid, p_governance_class_id uuid, p_parent_unit_id uuid, p_limit integer, p_offset integer` | `jsonb` |
+| `get_council_form_options` | `core` | `authenticated` | `-` | `jsonb` |
 | `act_topic_workflow_step` | `governance` | `authenticated` | `p_topic_id uuid, p_outcome_code text, p_comment text, p_idempotency_key uuid, p_expected_version integer` | `jsonb` |
 | `admin_activate_policy_version` | `governance` | `authenticated` | `p_policy_version_id uuid, p_effective_from date, p_effective_to date` | `jsonb` |
 | `admin_activate_workflow_template_version` | `governance` | `authenticated` | `p_workflow_template_version_id uuid` | `jsonb` |
@@ -64,14 +80,18 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `request_workflow_exception` | `governance` | `authenticated` | `p_topic_id uuid, p_workflow_template_version_id uuid, p_reason text, p_valid_until timestamp with time zone` | `jsonb` |
 | `resolve_topic_governance` | `governance` | `authenticated` | `p_governance_unit_id uuid, p_topic_category_id uuid, p_effective_on date, p_topic_id uuid` | `jsonb` |
 | `return_topic_workflow_step` | `governance` | `authenticated` | `p_topic_id uuid, p_comment text` | `jsonb` |
+| `admin_add_council_member` | `iam` | `authenticated` | `p_council_id uuid, p_user_id uuid, p_role_id uuid, p_membership_title text, p_start_date date, p_end_date date` | `jsonb` |
+| `admin_assign_council_leadership` | `iam` | `authenticated` | `p_council_id uuid, p_chair_user_id uuid, p_rapporteur_user_id uuid, p_effective_date date, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `admin_assign_role` | `iam` | `authenticated` | `p_user_id uuid, p_role_id uuid, p_governance_unit_id uuid, p_membership_title text, p_start_date date, p_end_date date` | `uuid` |
 | `admin_create_delegation` | `iam` | `authenticated` | `p_source_membership_id uuid, p_delegated_to_user_id uuid, p_starts_at timestamp with time zone, p_ends_at timestamp with time zone, p_reason text` | `uuid` |
 | `admin_create_invitation` | `iam` | `authenticated` | `p_email text, p_full_name_ar text, p_role_id uuid, p_governance_unit_id uuid, p_expires_at timestamp with time zone` | `uuid` |
 | `admin_create_user_profile` | `iam` | `authenticated` | `p_auth_user_id uuid, p_email text, p_full_name_ar text, p_employee_no text, p_mobile text, p_job_title text` | `uuid` |
 | `admin_deactivate_role` | `iam` | `authenticated` | `p_role_id uuid, p_reason text` | `void` |
+| `admin_end_council_membership` | `iam` | `authenticated` | `p_membership_id uuid, p_end_date date, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `admin_export_permission_matrix` | `iam` | `authenticated` | `-` | `jsonb` |
 | `admin_get_role_detail` | `iam` | `authenticated` | `p_role_id uuid` | `jsonb` |
 | `admin_get_user_detail` | `iam` | `authenticated` | `p_user_id uuid` | `jsonb` |
+| `admin_list_council_members` | `iam` | `authenticated` | `p_council_id uuid, p_include_ended boolean, p_limit integer, p_offset integer` | `jsonb` |
 | `admin_list_permissions` | `iam` | `authenticated` | `p_module text, p_active_only boolean` | `jsonb` |
 | `admin_list_roles` | `iam` | `authenticated` | `p_query text, p_scope text, p_active_only boolean` | `jsonb` |
 | `admin_request_permission_matrix_import` | `iam` | `authenticated` | `p_matrix jsonb, p_justification text` | `uuid` |
@@ -81,6 +101,7 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `admin_revoke_invitation` | `iam` | `authenticated` | `p_invitation_id uuid, p_reason text` | `void` |
 | `admin_revoke_membership` | `iam` | `authenticated` | `p_membership_id uuid, p_reason text` | `void` |
 | `admin_search_users` | `iam` | `authenticated` | `p_query text, p_status text, p_role_id uuid, p_governance_unit_id uuid, p_limit integer, p_offset integer` | `jsonb` |
+| `admin_update_council_membership` | `iam` | `authenticated` | `p_membership_id uuid, p_membership_title text, p_start_date date, p_end_date date, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `admin_update_user_profile` | `iam` | `authenticated` | `p_user_id uuid, p_full_name_ar text, p_full_name_en text, p_employee_no text, p_mobile text, p_job_title text` | `uuid` |
 | `admin_upsert_permission` | `iam` | `authenticated` | `p_code text, p_module text, p_action text, p_context_scope text, p_name_ar text, p_name_en text, p_description text, p_is_active boolean` | `uuid` |
 | `admin_upsert_role` | `iam` | `authenticated` | `p_role_id uuid, p_code text, p_name_ar text, p_name_en text, p_description text, p_role_scope text, p_is_active boolean` | `uuid` |

@@ -11,6 +11,7 @@
     "test:sprint01-http": "node supabase/tests/integration/sprint-01-topics-http.mjs",
     "test:sprint03-http": "node supabase/tests/integration/sprint-03-session-voting-http.mjs",
     "test:sprint035-http": "node supabase/tests/integration/sprint-03-5-governance-http.mjs",
+    "test:sprint036-http": "node supabase/tests/integration/sprint-03-6-councils-http.mjs",
     "test:compatibility": "node supabase/tests/compatibility-surface-check.mjs",
     "docs:api-contracts": "node supabase/tests/api-documentation-contract-check.mjs --write",
     "test:api-docs": "node supabase/tests/api-documentation-contract-check.mjs",
