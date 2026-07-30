@@ -183,7 +183,7 @@ try {
   }
 
   let detail = await rpc("admin_get_council_detail", { p_council_id: council.id }, headers)
-  await rpc("admin_assign_council_leadership", {
+  const leadership = await rpc("admin_assign_council_leadership", {
     p_council_id: council.id,
     p_chair_user_id: chair.id,
     p_rapporteur_user_id: rapporteur.id,
@@ -198,7 +198,7 @@ try {
   const activated = await rpc("admin_activate_council", {
     p_council_id: council.id,
     p_reason: "اكتمال البيانات الإدارية",
-    p_expected_updated_at: detail.updated_at,
+    p_expected_updated_at: leadership.updated_at,
   }, headers)
   assert.equal(activated.status, "active")
   await rpc("admin_activate_council", {
