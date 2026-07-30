@@ -236,6 +236,84 @@ AuditItem = {
 Use the table above to create immutable DTOs. Required identity/state fields must fail decoding when
 absent or of the wrong type. Nullable fields accept only `null` or the documented type. Additive
 unknown fields must be ignored to preserve forward compatibility within `api_v1`.
+
+## Council Type Management
+
+| Contract | Stable response |
+|---|---|
+| `admin_search_council_types` | `Page<{id,code,name_ar,name_en?,description?,is_active,is_system,created_at,updated_at,council_count}>` |
+| `admin_create_council_type` | `{id,code,is_active,updated_at}` |
+| `admin_update_council_type` | `{id,updated_at}` |
+| `admin_deactivate_council_type` | `{id,is_active:false,updated_at}` |
+
+These administrative contracts require the governance-management permission. They are tenant
+isolated, protect system types, and use `updated_at` as the optimistic-concurrency token for
+updates and deactivation.
+
+## Council Master Data
+
+| Contract | Stable response |
+|---|---|
+| `get_council_form_options` | `{council_types:Option[],parent_units:UnitOption[],governance_classes:Option[],leadership_roles:string[]}` |
+| `admin_search_councils` | `Page<CouncilSummary>` |
+| `admin_get_council_detail` | Council row plus `unit_type`, `parent_unit?`, and `governance_class?` references |
+| `admin_create_council` | `{id,code,status:"inactive",updated_at,idempotent_replay}` |
+| `admin_update_council` | `{id,updated_at}` |
+| `get_available_councils` | `{items:UnitOption[],total,limit,offset}` containing active tenant councils only |
+
+`CouncilSummary` includes identity, localized names, description, administrative status, hierarchy,
+type and classification references, minimum member threshold, dual-leadership flag, and timestamps.
+Creation requires `p_client_request_id`; replay returns the original council without another audit
+event. `get_available_councils` is a reusable reference lookup only and grants no permission over
+the consuming entity or process.
+
+## Council Hierarchy
+
+| Contract | Stable response |
+|---|---|
+| `admin_get_councils_tree` | Flat, path-ordered array of `{id,parent_unit_id,code,name_ar,name_en?,status,level_no,path_ids,path_names}` |
+| `admin_move_council` | `{id,parent_unit_id,level_no,updated_at}` |
+
+`admin_move_council` requires a reason and the current `updated_at`. It rejects self-parent,
+cross-tenant parents, archived nodes, and every descendant cycle. The moved subtree levels and
+the parent-change audit event are committed atomically.
+
+## Council Memberships
+
+| Contract | Stable response |
+|---|---|
+| `admin_list_council_members` | `Page<MembershipDetail + {role_code,role_name_ar,is_effective}>` |
+| `admin_add_council_member` | `{id,membership_status:"active",updated_at}` |
+| `admin_update_council_membership` | `{id,updated_at}` |
+| `admin_end_council_membership` | `{id,membership_status:"ended",end_date,updated_at}` |
+
+Membership periods are inclusive dates and may not overlap for the same tenant, council, user, and
+role. A future or ended membership has `is_effective=false` and grants no current authority.
+Updates preserve `user_id` and `role_id`; ending a membership retains its historical row.
+
+## Council Leadership
+
+| Contract | Stable response |
+|---|---|
+| `admin_assign_council_leadership` | `{governance_unit_id,chair,rapporteur,effective_date,atomic:true}` |
+
+Only `council_chair` and `council_rapporteur` are accepted. The target must have an effective
+non-leadership membership on the effective date. The previous leadership period is ended before
+the new one starts, and one person may hold both roles only when `allow_dual_leadership=true`.
+
+## Council Administrative Readiness and Lifecycle
+
+| Contract | Stable response |
+|---|---|
+| `admin_validate_council_administrative_readiness` | `{governance_unit_id,administratively_ready,errors,warnings,active_member_count,minimum_active_members,chair_user_id?,rapporteur_user_id?,checked_at}` |
+| `admin_activate_council` | `{id,previous_status,status:"active",updated_at}` |
+| `admin_deactivate_council` | `{id,previous_status,status:"inactive",updated_at}` |
+| `admin_archive_council` | `{id,previous_status,status:"archived",updated_at}` |
+
+Readiness errors use stable codes: `unit_type_inactive`, `governance_class_required`,
+`minimum_active_members_not_met`, `chair_required`, `rapporteur_required`, and
+`DUAL_LEADERSHIP_NOT_ALLOWED`. Archival is final and requires all direct children to be moved or
+archived first.
 # Sprint 3.5 Regulation and Workflow Responses
 
 All contracts below return one JSON object.

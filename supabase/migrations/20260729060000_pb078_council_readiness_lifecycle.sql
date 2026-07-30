@@ -1,0 +1,190 @@
+begin;
+
+insert into qarar_architecture.module_table_read_allowlist(source_module,target_schema,table_name,rationale)values
+('core','qarar_iam','memberships','Evaluate council administrative membership completeness'),
+('core','qarar_iam','roles','Resolve council leadership roles for administrative completeness'),
+('core','qarar_iam','users','Ignore disabled users during administrative completeness')
+on conflict do nothing;
+grant select on qarar_iam.memberships,qarar_iam.roles,qarar_iam.users to qarar_core_executor;
+
+create or replace function qarar_core.admin_validate_council_administrative_readiness(p_council_id uuid)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,qarar_core as $$
+declare o uuid:=qarar_iam.current_organization_id();u qarar_core.governance_units;
+ errors jsonb:='[]';members integer;chair uuid;rapporteur uuid;
+ chair_count integer;rapporteur_count integer;
+begin
+ perform qarar_iam.assert_permission('governance.units.read',p_council_id);
+ select gu.* into u from qarar_core.governance_units gu join qarar_core.governance_unit_types t
+  on t.id=gu.unit_type_id and t.organization_id=gu.organization_id
+ where gu.id=p_council_id and gu.organization_id=o and t.is_council_type;
+ if u.id is null then raise exception using errcode='P0002',message='المجلس غير موجود';end if;
+ if not exists(select 1 from qarar_core.governance_unit_types where id=u.unit_type_id and organization_id=o and is_active)
+  then errors:=errors||jsonb_build_array(jsonb_build_object('code','unit_type_inactive','field','unit_type_id','message','نوع المجلس غير فعال'));end if;
+ if u.governance_class_id is null or not exists(select 1 from qarar_governance.governance_unit_classes
+  where id=u.governance_class_id and organization_id=o and is_active)
+  then errors:=errors||jsonb_build_array(jsonb_build_object('code','governance_class_required','field','governance_class_id','message','التصنيف الحوكمي مطلوب وفعال'));end if;
+ if u.parent_unit_id is not null and not exists(
+   select 1 from qarar_core.governance_units p
+  where p.id=u.parent_unit_id and p.organization_id=o and p.status<>'archived')
+  then errors:=errors||jsonb_build_array(jsonb_build_object('code','invalid_parent','field','parent_unit_id','message','الأب غير صالح'));end if;
+ if exists(with recursive ancestors as(
+  select p.id,p.parent_unit_id,array[p.id] path,false cycle
+  from qarar_core.governance_units p where p.id=u.parent_unit_id and p.organization_id=o
+  union all
+  select p.id,p.parent_unit_id,a.path||p.id,p.id=any(a.path)
+  from qarar_core.governance_units p join ancestors a on p.id=a.parent_unit_id
+  where p.organization_id=o and not a.cycle
+ )select 1 from ancestors where id=p_council_id or cycle)
+  then errors:=errors||jsonb_build_array(jsonb_build_object('code','hierarchy_cycle','field','parent_unit_id','message','توجد دورة في الهيكل'));end if;
+ select count(distinct m.user_id)::integer into members from qarar_iam.memberships m join qarar_iam.roles r
+  on r.id=m.role_id and r.organization_id=m.organization_id
+  join qarar_iam.users mu on mu.id=m.user_id and mu.organization_id=m.organization_id
+ where m.organization_id=o and m.governance_unit_id=p_council_id and m.membership_status='active'
+  and m.start_date<=current_date and(m.end_date is null or m.end_date>=current_date)
+   and r.is_active and mu.status='active' and r.code not in('council_chair','council_rapporteur');
+ if members<u.minimum_active_members then errors:=errors||jsonb_build_array(jsonb_build_object(
+   'code','minimum_active_members_not_met','field','minimum_active_members','message','عدد الأعضاء أقل من الحد الأدنى',
+   'required',u.minimum_active_members,'actual',members));end if;
+ select (array_agg(m.user_id)filter(where r.code='council_chair'))[1],
+  (array_agg(m.user_id)filter(where r.code='council_rapporteur'))[1],
+  count(*)filter(where r.code='council_chair')::integer,
+  count(*)filter(where r.code='council_rapporteur')::integer
+  into chair,rapporteur,chair_count,rapporteur_count
+  from qarar_iam.memberships m join qarar_iam.roles r on r.id=m.role_id and r.organization_id=m.organization_id
+  join qarar_iam.users lu on lu.id=m.user_id and lu.organization_id=m.organization_id
+ where m.organization_id=o and m.governance_unit_id=p_council_id and m.membership_status='active'
+   and m.start_date<=current_date and(m.end_date is null or m.end_date>=current_date)
+   and r.is_active and lu.status='active';
+ if chair is null then errors:=errors||jsonb_build_array(jsonb_build_object('code','chair_required','field','leadership','message','يجب تعيين رئيس فعال'));end if;
+ if rapporteur is null then errors:=errors||jsonb_build_array(jsonb_build_object('code','rapporteur_required','field','leadership','message','يجب تعيين مقرر فعال'));end if;
+ if chair_count>1 then errors:=errors||jsonb_build_array(jsonb_build_object(
+   'code','multiple_active_chairs','field','leadership','message','يوجد أكثر من رئيس فعال','actual',chair_count));end if;
+ if rapporteur_count>1 then errors:=errors||jsonb_build_array(jsonb_build_object(
+   'code','multiple_active_rapporteurs','field','leadership','message','يوجد أكثر من مقرر فعال','actual',rapporteur_count));end if;
+ if not u.allow_dual_leadership and chair is not null and chair=rapporteur
+  then errors:=errors||jsonb_build_array(jsonb_build_object('code','dual_leadership_not_allowed','field','leadership','message','لا يسمح بازدواج القيادة'));end if;
+ perform qarar_audit.append_audit_log(o,'council.administrative_readiness.checked',
+   'governance_unit',p_council_id,jsonb_build_object('administratively_ready',jsonb_array_length(errors)=0,'errors',errors));
+ return jsonb_build_object('governance_unit_id',p_council_id,
+  'administratively_ready',jsonb_array_length(errors)=0,'errors',errors,'warnings','[]'::jsonb,
+  'active_member_count',members,'minimum_active_members',u.minimum_active_members,
+  'chair_user_id',chair,'rapporteur_user_id',rapporteur,'checked_at',now());
+end $$;
+
+create or replace function qarar_core.change_council_status(
+ p_council_id uuid,p_target_status text,p_reason text,p_expected_updated_at timestamptz
+)returns jsonb language plpgsql security definer set search_path=pg_catalog,qarar_core as $$
+declare o uuid:=qarar_iam.current_organization_id();a uuid:=nullif(current_setting('request.jwt.claim.sub',true),'')::uuid;
+ old_status text;changed timestamptz;readiness jsonb;
+begin
+ perform qarar_iam.assert_permission(
+  case p_target_status when 'archived' then 'governance.units.archive'
+   else 'governance.units.activate' end,p_council_id);
+ if p_target_status not in('active','inactive','archived') or nullif(btrim(p_reason),'') is null
+ then raise exception using errcode='22023',message='الحالة والسبب مطلوبان';end if;
+ select status into old_status from qarar_core.governance_units where id=p_council_id
+  and organization_id=o and updated_at=p_expected_updated_at for update;
+ if old_status is null then
+  if exists(select 1 from qarar_core.governance_units where id=p_council_id and organization_id=o)
+  then raise exception using errcode='40001',message='تم تعديل المجلس؛ حدّث البيانات';end if;
+  raise exception using errcode='P0002',message='المجلس غير موجود';
+ end if;
+ if old_status='archived' then raise exception using errcode='55000',message='أرشفة المجلس نهائية';end if;
+ if old_status=p_target_status then raise exception using errcode='22023',message='المجلس في الحالة المطلوبة بالفعل';end if;
+ if p_target_status='active' then
+  readiness:=qarar_core.admin_validate_council_administrative_readiness(p_council_id);
+   if not(readiness->>'administratively_ready')::boolean then raise exception using errcode='23514',
+   message='المجلس غير مكتمل إداريًا',detail=readiness::text;end if;
+ end if;
+ if p_target_status='archived' and exists(select 1 from qarar_core.governance_units
+  where organization_id=o and parent_unit_id=p_council_id and status<>'archived')
+ then raise exception using errcode='23503',message='يجب نقل أو أرشفة المجالس التابعة أولًا';end if;
+ update qarar_core.governance_units set status=p_target_status,status_reason=btrim(p_reason),
+  status_changed_at=now(),status_changed_by_user_id=a,
+  activated_at=case when p_target_status='active' then coalesce(activated_at,now()) else activated_at end,
+  archived_at=case when p_target_status='archived' then now() else null end
+ where id=p_council_id and organization_id=o returning updated_at into changed;
+ insert into qarar_core.governance_unit_status_history(organization_id,governance_unit_id,
+  from_status,to_status,reason,changed_by_user_id)
+ values(o,p_council_id,old_status,p_target_status,btrim(p_reason),a);
+ perform qarar_audit.append_audit_log(o,'council.'||case p_target_status when 'active' then 'activated'
+  when 'inactive' then 'deactivated' else 'archived'end,'governance_unit',p_council_id,
+  jsonb_build_object('from_status',old_status,'to_status',p_target_status,'reason',btrim(p_reason)));
+ return jsonb_build_object('id',p_council_id,'previous_status',old_status,'status',p_target_status,'updated_at',changed);
+end $$;
+
+create or replace function qarar_core.admin_activate_council(p_council_id uuid,p_reason text,p_expected_updated_at timestamptz)returns jsonb
+language plpgsql volatile security definer set search_path=pg_catalog as $$
+begin
+ if qarar_iam.current_organization_id() is null then raise exception using errcode='42501',message='يلزم حساب نشط';end if;
+ return qarar_core.change_council_status(p_council_id,'active',p_reason,p_expected_updated_at);
+end $$;
+create or replace function qarar_core.admin_deactivate_council(p_council_id uuid,p_reason text,p_expected_updated_at timestamptz)returns jsonb
+language plpgsql volatile security definer set search_path=pg_catalog as $$
+begin
+ if qarar_iam.current_organization_id() is null then raise exception using errcode='42501',message='يلزم حساب نشط';end if;
+ return qarar_core.change_council_status(p_council_id,'inactive',p_reason,p_expected_updated_at);
+end $$;
+create or replace function qarar_core.admin_archive_council(p_council_id uuid,p_reason text,p_expected_updated_at timestamptz)returns jsonb
+language plpgsql volatile security definer set search_path=pg_catalog as $$
+begin
+ if qarar_iam.current_organization_id() is null then raise exception using errcode='42501',message='يلزم حساب نشط';end if;
+ return qarar_core.change_council_status(p_council_id,'archived',p_reason,p_expected_updated_at);
+end $$;
+
+alter function qarar_core.admin_validate_council_administrative_readiness(uuid) owner to qarar_core_executor;
+alter function qarar_core.change_council_status(uuid,text,text,timestamptz) owner to qarar_core_executor;
+alter function qarar_core.admin_activate_council(uuid,text,timestamptz) owner to qarar_core_executor;
+alter function qarar_core.admin_deactivate_council(uuid,text,timestamptz) owner to qarar_core_executor;
+alter function qarar_core.admin_archive_council(uuid,text,timestamptz) owner to qarar_core_executor;
+revoke all on function qarar_core.admin_validate_council_administrative_readiness(uuid) from public,anon,authenticated,service_role;
+revoke all on function qarar_core.change_council_status(uuid,text,text,timestamptz) from public,anon,authenticated,service_role;
+revoke all on function qarar_core.admin_activate_council(uuid,text,timestamptz) from public,anon,authenticated,service_role;
+revoke all on function qarar_core.admin_deactivate_council(uuid,text,timestamptz) from public,anon,authenticated,service_role;
+revoke all on function qarar_core.admin_archive_council(uuid,text,timestamptz) from public,anon,authenticated,service_role;
+grant execute on function qarar_core.admin_validate_council_administrative_readiness(uuid) to qarar_core_executor;
+
+insert into qarar_architecture.function_registry(function_oid,function_name,identity_arguments,module_code,owning_schema,is_rls_predicate)
+select p.oid,p.proname,pg_get_function_identity_arguments(p.oid),'core','qarar_core',false from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace where n.nspname='qarar_core' and p.proname in(
+ 'admin_validate_council_administrative_readiness','change_council_status',
+ 'admin_activate_council','admin_deactivate_council','admin_archive_council')
+on conflict(function_name,identity_arguments)do update set function_oid=excluded.function_oid,module_code='core',owning_schema='qarar_core';
+insert into qarar_architecture.api_contract_registry(api_version,contract_name,implementation_schema,implementation_name,identity_arguments,module_code,audience)values
+('v1','admin_validate_council_administrative_readiness','qarar_core','admin_validate_council_administrative_readiness','p_council_id uuid','core','authenticated'),
+('v1','admin_activate_council','qarar_core','admin_activate_council','p_council_id uuid, p_reason text, p_expected_updated_at timestamp with time zone','core','authenticated'),
+('v1','admin_deactivate_council','qarar_core','admin_deactivate_council','p_council_id uuid, p_reason text, p_expected_updated_at timestamp with time zone','core','authenticated'),
+('v1','admin_archive_council','qarar_core','admin_archive_council','p_council_id uuid, p_reason text, p_expected_updated_at timestamp with time zone','core','authenticated')
+on conflict do nothing;
+create or replace function api_v1.admin_validate_council_administrative_readiness(p_council_id uuid)returns jsonb
+language sql volatile security definer set search_path=pg_catalog as $$select qarar_core.admin_validate_council_administrative_readiness($1)$$;
+create or replace function api_v1.admin_activate_council(p_council_id uuid,p_reason text,p_expected_updated_at timestamptz)returns jsonb
+language sql volatile security definer set search_path=pg_catalog as $$select qarar_core.admin_activate_council($1,$2,$3)$$;
+create or replace function api_v1.admin_deactivate_council(p_council_id uuid,p_reason text,p_expected_updated_at timestamptz)returns jsonb
+language sql volatile security definer set search_path=pg_catalog as $$select qarar_core.admin_deactivate_council($1,$2,$3)$$;
+create or replace function api_v1.admin_archive_council(p_council_id uuid,p_reason text,p_expected_updated_at timestamptz)returns jsonb
+language sql volatile security definer set search_path=pg_catalog as $$select qarar_core.admin_archive_council($1,$2,$3)$$;
+alter function api_v1.admin_validate_council_administrative_readiness(uuid) owner to qarar_api_executor;
+alter function api_v1.admin_activate_council(uuid,text,timestamptz) owner to qarar_api_executor;
+alter function api_v1.admin_deactivate_council(uuid,text,timestamptz) owner to qarar_api_executor;
+alter function api_v1.admin_archive_council(uuid,text,timestamptz) owner to qarar_api_executor;
+revoke all on function api_v1.admin_validate_council_administrative_readiness(uuid) from public,anon,service_role;
+revoke all on function api_v1.admin_activate_council(uuid,text,timestamptz) from public,anon,service_role;
+revoke all on function api_v1.admin_deactivate_council(uuid,text,timestamptz) from public,anon,service_role;
+revoke all on function api_v1.admin_archive_council(uuid,text,timestamptz) from public,anon,service_role;
+grant execute on function api_v1.admin_validate_council_administrative_readiness(uuid) to authenticated;
+grant execute on function api_v1.admin_activate_council(uuid,text,timestamptz) to authenticated;
+grant execute on function api_v1.admin_deactivate_council(uuid,text,timestamptz) to authenticated;
+grant execute on function api_v1.admin_archive_council(uuid,text,timestamptz) to authenticated;
+grant execute on function qarar_core.admin_validate_council_administrative_readiness(uuid) to qarar_api_executor;
+grant execute on function qarar_core.admin_activate_council(uuid,text,timestamptz) to qarar_api_executor;
+grant execute on function qarar_core.admin_deactivate_council(uuid,text,timestamptz) to qarar_api_executor;
+grant execute on function qarar_core.admin_archive_council(uuid,text,timestamptz) to qarar_api_executor;
+
+update qarar_architecture.api_release_registry
+set contract_count=139,contract_hash='cdc327e880ca8daf96a62baacce9789c',
+ released_at='2026-07-29 00:00:00+00',
+ notes='Sprint 03.6 PB-078 adds administrative readiness and council lifecycle contracts.'
+where api_version='v1';
+
+commit;
