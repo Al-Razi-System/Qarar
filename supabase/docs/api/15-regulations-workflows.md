@@ -104,9 +104,7 @@ Automation states: `not_configured`, `mapping_in_progress`, `validation_pending`
 
 ## Scope Resolution and User Selection
 
-Frontend flows must use `get_topic_regulation_options` followed by
-`create_topic_with_selected_regulation`. Multiple matching regulations are normal user-selectable
-options, not a data conflict. The detailed Arabic implementation guide is
+`resolve_topic_governance` remains a compatibility preview for automatic integrations. Frontend flows must use `get_topic_regulation_options` followed by `create_topic_with_selected_regulation`. Multiple matching regulations are normal user-selectable options, not a data conflict. The detailed Arabic implementation guide is
 [03-topic-regulation-selection-ar.md](../guides/03-topic-regulation-selection-ar.md).
 
 Automatic matching remains deterministic:
@@ -136,7 +134,7 @@ sequence is:
 
 Do not create governed regulation topics with `create_topic`, automatic routing, or local client
 policy selection. The selected regulation must be returned by the server and revalidated during
-topic creation.
+topic creation. `create_topic_with_workflow` remains a legacy automatic-routing fallback.
 
 Example:
 

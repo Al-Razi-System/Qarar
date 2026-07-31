@@ -14,6 +14,7 @@
     "test:sprint035-http": "node supabase/tests/integration/sprint-03-5-governance-http.mjs",
     "seed:regulations-demo": "node supabase/tests/integration/sprint-03-5-governance-http.mjs --keep-fixtures",
     "seed:local-admin": "node supabase/scripts/ensure-local-admin.mjs",
+    "test:sprint036-http": "node supabase/tests/integration/sprint-03-6-councils-http.mjs",
     "test:compatibility": "node supabase/tests/compatibility-surface-check.mjs",
     "docs:api-contracts": "node supabase/tests/api-documentation-contract-check.mjs --write",
     "test:api-docs": "node supabase/tests/api-documentation-contract-check.mjs",

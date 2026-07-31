@@ -38,6 +38,8 @@ select ok(not exists(
     'complete_topic_workflow_step','return_topic_workflow_step','reject_topic_workflow_step'
    )
 ), 'legacy automatic regulation facades are removed from api_v1');
+select is((select contract_count from qarar_architecture.api_release_registry where api_version='v1'),
+ 139,'api_v1 release count includes council lifecycle through PB-078');
 select is((select count(*)::integer from qarar_architecture.api_contract_registry
   where api_version='v1' and contract_name in(
   'admin_list_governance_unit_classes','admin_create_governance_unit_class',
