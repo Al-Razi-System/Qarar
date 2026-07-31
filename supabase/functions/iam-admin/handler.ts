@@ -56,18 +56,30 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
       await requirePermission(caller, "iam.users.manage")
       await requireRateLimit(dependencies.admin, actorUserId, "iam.create_user")
       const email = payload.email?.trim().toLowerCase()
+      const temporaryPassword = payload.temporary_password
       if (!email || !payload.full_name_ar?.trim()) return json({ error: "email_and_full_name_ar_required" }, 400)
-      if ((payload.role_id && !payload.governance_unit_id) || (!payload.role_id && payload.governance_unit_id)) {
-        return json({ error: "role_and_governance_unit_must_be_provided_together" }, 400)
+      const strongPassword = typeof temporaryPassword === "string"
+        && temporaryPassword.length >= 12
+        && /[a-z]/.test(temporaryPassword)
+        && /[A-Z]/.test(temporaryPassword)
+        && /[0-9]/.test(temporaryPassword)
+        && /[^A-Za-z0-9]/.test(temporaryPassword)
+      if (!strongPassword) {
+        return json({ error: "temporary_password_does_not_meet_complexity_requirements" }, 400)
+      }
+      if (!payload.role_id && payload.governance_unit_id) {
+        return json({ error: "role_is_required_when_governance_unit_is_provided" }, 400)
       }
 
-      const { data: invited, error: inviteError } = await dependencies.admin.auth.admin.inviteUserByEmail(email, {
-        redirectTo: payload.redirect_to,
-        data: { full_name_ar: payload.full_name_ar.trim() },
+      const { data: created, error: createError } = await dependencies.admin.auth.admin.createUser({
+        email,
+        password: temporaryPassword,
+        email_confirm: true,
+        user_metadata: { full_name_ar: payload.full_name_ar.trim() },
       })
-      if (inviteError || !invited?.user) return json({ error: "auth_user_creation_failed", detail: inviteError?.message }, 409)
+      if (createError || !created?.user) return json({ error: "auth_user_creation_failed", detail: createError?.message }, 409)
 
-      const userId = invited.user.id
+      const userId = created.user.id
       const { data: finalized, error: finalizeError } = await api(dependencies.admin).rpc("service_finalize_invited_user", {
         p_actor_user_id: actorUserId,
         p_auth_user_id: userId,
@@ -84,7 +96,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
         await dependencies.admin.auth.admin.deleteUser(userId, false)
         throw new Error(`application provisioning failed: ${finalizeError.message}`)
       }
-      return json({ ...finalized, invitation_sent: true }, 201)
+      return json({ ...finalized, account_created: true }, 201)
     }
 
     if (["update_user_status", "lock_user", "unlock_user"].includes(payload.action)) {

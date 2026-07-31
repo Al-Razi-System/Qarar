@@ -22,6 +22,10 @@ Do not use hardware serial numbers as `device_id`; generate an app installation 
 
 `list_my_sessions()` returns devices ordered by last activity. To revoke:
 
+An IAM administrator can inspect a managed user's sessions through
+`admin_list_user_sessions(p_user_id)`, which requires `iam.users.manage` and
+never returns sessions from another organization.
+
 `POST /functions/v1/iam-admin`
 
 ```json

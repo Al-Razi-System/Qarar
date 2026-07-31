@@ -34,7 +34,7 @@ when requesting the next page and stop when `offset + items.length >= total`.
 Returns profile, memberships, roles, preferences, and linked SSO identities for the edit screen.
 Returns HTTP `404` semantics through an RPC error when the user is absent or belongs to another tenant.
 
-## Create and Invite User
+## Create User
 
 `POST /functions/v1/iam-admin` requires `iam.users.manage`.
 
@@ -43,13 +43,13 @@ Returns HTTP `404` semantics through an RPC error when the user is absent or bel
   "action": "create_user",
   "email": "member@example.edu.sa",
   "full_name_ar": "عضو جديد",
+  "temporary_password": "Qarar-Strong!2026",
   "employee_no": "EMP-1024",
   "mobile": "0500000000",
   "job_title": "عضو مجلس",
   "role_id": "<uuid>",
   "governance_unit_id": "<uuid>",
-  "membership_title": "عضو",
-  "redirect_to": "https://app.example.edu.sa/auth/callback"
+  "membership_title": "عضو"
 }
 ```
 
@@ -59,18 +59,19 @@ Success (`201`):
 {
   "user_id": "<uuid>",
   "membership_id": "<uuid-or-null>",
-  "invitation_sent": true
+  "account_created": true
 }
 ```
 
-The function validates the caller, limits creation to 10 attempts per 10 minutes, sends the Auth
-invitation, creates the application profile, and assigns the optional initial role. If profile or
+The function validates the caller, enforces a strong temporary password, limits creation to 10
+attempts per 10 minutes, creates a confirmed Auth identity and application profile, and assigns the
+optional initial role. No invitation email is sent. If profile or
 role creation fails, it deletes the newly created Auth user as compensation.
 
 The underlying `admin_create_user_profile(...)` RPC only finalizes an application profile for an
 already-created Auth user. It does not create an Auth identity or send email and is not the normal
 frontend entry point. User-management screens must use the `iam-admin` `create_user` action so the
-Auth, profile, membership, invitation, audit, and rollback steps remain one governed operation.
+Auth, profile, membership, and rollback steps remain one governed operation.
 
 ## Update Profile
 
@@ -128,7 +129,7 @@ All actions below use `POST /functions/v1/iam-admin` with the headers in [00-com
 
 | Action | Required fields | Success | Important errors |
 |---|---|---|---|
-| `create_user` | `email`, `full_name_ar`; optional role and unit pair | `201`, `{user_id, membership_id, invitation_sent}` | `400` validation/finalization, `409` Auth conflict, `429` rate limit |
+| `create_user` | `email`, `full_name_ar`, `temporary_password`; optional role and unit pair | `201`, `{user_id, membership_id, account_created}` | `400` validation/finalization, `409` Auth conflict, `429` rate limit |
 | `update_user_status` | `user_id`, `status`; optional `reason` | `200`, status result | `400` invalid status, `404` Auth user absent, `429` rate limit |
 | `lock_user` | `user_id`; optional `reason` | `200`, suspended result | `404` Auth user absent, `429` rate limit |
 | `unlock_user` | `user_id`; optional `reason` | `200`, active result | `404` Auth user absent, `429` rate limit |

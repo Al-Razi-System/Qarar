@@ -22,7 +22,7 @@ const build = (options: { finalizeError?: string } = {}) => {
   }
   const admin = {
     auth: { admin: {
-      inviteUserByEmail: async () => ({ data: { user: { id: "new-user" } }, error: null }),
+      createUser: async (args: any) => { calls.push({ name: "createUser", args }); return { data: { user: { id: "new-user" } }, error: null } },
       deleteUser: async (id: string) => { calls.push({ name: "deleteUser", args: id }); return { error: null } },
       getUserById: async () => ({ data: { user: { id: "target-id", banned_until: null } }, error: null }),
       updateUserById: async (id: string, args: any) => { calls.push({ name: "updateUserById", args: { id, ...args } }); return { error: null } },
@@ -50,17 +50,25 @@ test("rejects requests without bearer authentication", async () => {
   assert.equal(response.status, 401)
 })
 
-test("creates Auth user and finalizes profile plus role atomically", async () => {
+test("rejects creating a user with a weak temporary password", async () => {
   const { handler, calls } = build()
-  const response = await handler(request({ action: "create_user", email: "new@example.test", full_name_ar: "New", role_id: "role", governance_unit_id: "unit" }))
+  const response = await handler(request({ action: "create_user", email: "new@example.test", full_name_ar: "New", temporary_password: "weak-password" }))
+  assert.equal(response.status, 400)
+  assert.ok(!calls.some((call) => call.name === "createUser"))
+})
+
+test("creates a confirmed Auth user and finalizes the profile atomically", async () => {
+  const { handler, calls } = build()
+  const response = await handler(request({ action: "create_user", email: "new@example.test", full_name_ar: "New", temporary_password: "Qarar-Strong!2026", role_id: "role", governance_unit_id: "unit" }))
   assert.equal(response.status, 201)
   assert.equal((await response.json()).membership_id, "membership-id")
+  assert.ok(calls.some((call) => call.name === "createUser" && call.args.email_confirm === true))
   assert.ok(calls.some((call) => call.name === "service_finalize_invited_user"))
 })
 
 test("deletes Auth user when atomic application provisioning fails", async () => {
   const { handler, calls } = build({ finalizeError: "invalid role" })
-  const response = await handler(request({ action: "create_user", email: "new@example.test", full_name_ar: "New", role_id: "bad", governance_unit_id: "unit" }))
+  const response = await handler(request({ action: "create_user", email: "new@example.test", full_name_ar: "New", temporary_password: "Qarar-Strong!2026", role_id: "bad", governance_unit_id: "unit" }))
   assert.equal(response.status, 400)
   assert.ok(calls.some((call) => call.name === "deleteUser" && call.args === "new-user"))
 })

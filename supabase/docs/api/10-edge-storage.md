@@ -12,7 +12,12 @@ Invoke from Flutter:
 ```dart
 final response = await supabase.functions.invoke(
   'iam-admin',
-  body: {'action': 'create_user', 'email': email, 'full_name_ar': name},
+  body: {
+    'action': 'create_user',
+    'email': email,
+    'full_name_ar': name,
+    'temporary_password': temporaryPassword,
+  },
 );
 ```
 
