@@ -30,7 +30,8 @@ Direct writes to `qarar_governance` or `qarar_topics` are unsupported and denied
    regulation, then use `create_topic_with_selected_regulation`.
 9. Render the selected regulation with `get_topic_governance` and the executable route with
    `get_topic_workflow`.
-10. Act on the current step using the complete, return, or reject commands.
+10. Act on the current step with `act_topic_workflow_step`; voting steps advance only when the
+    captured voting round is closed.
 
 ## Council Assignment
 
@@ -73,6 +74,8 @@ Draft configuration is immutable after submission or historical use.
 
 ### Workflow template
 
+- `admin_list_workflow_templates`: returns templates with their versions, ordered steps, and
+  transitions for the administrative workflow designer.
 - `admin_create_workflow_template`: creates a template and its first draft version.
 - `admin_create_workflow_version`: creates a blank version or clones an existing version.
 - `admin_add_workflow_step`: defines council, responsibility, required permission, initial/terminal
@@ -101,10 +104,7 @@ Automation states: `not_configured`, `mapping_in_progress`, `validation_pending`
 
 ## Scope Resolution and User Selection
 
-`resolve_topic_governance` remains a compatibility preview for automatic integrations. New frontend
-flows must use `get_topic_regulation_options` followed by
-`create_topic_with_selected_regulation`; multiple matching regulations are normal options, not a
-data conflict. The detailed Arabic implementation guide is
+`resolve_topic_governance` remains a compatibility preview for automatic integrations. Frontend flows must use `get_topic_regulation_options` followed by `create_topic_with_selected_regulation`. Multiple matching regulations are normal user-selectable options, not a data conflict. The detailed Arabic implementation guide is
 [03-topic-regulation-selection-ar.md](../guides/03-topic-regulation-selection-ar.md).
 
 Automatic matching remains deterministic:
@@ -125,8 +125,16 @@ Outcomes include `resolved`, `no_applicable_policy`, `multiple_policy_conflict`,
 
 ## Topic Creation
 
-For the frontend-selected path, see the Arabic guide above. `create_topic_with_workflow` below is
-the legacy automatic-routing command and must not be used by a new selection UI.
+New selection UIs must not use the previous automatic topic-creation sequence. The supported UI
+sequence is:
+
+1. Call `get_topic_regulation_options`.
+2. Let the user choose exactly one eligible returned option, unless `total=1`.
+3. Pass the returned `selection` IDs to `create_topic_with_selected_regulation`.
+
+Do not create governed regulation topics with `create_topic`, automatic routing, or local client
+policy selection. The selected regulation must be returned by the server and revalidated during
+topic creation. `create_topic_with_workflow` remains a legacy automatic-routing fallback.
 
 Example:
 
@@ -143,9 +151,9 @@ Example:
 }
 ```
 
-`create_topic_with_workflow` atomically creates the topic, records the match decision, snapshots
-the policy and route, resolves the council for every step, opens the initial step, writes compliance
-history, and emits an outbox event.
+`create_topic_with_selected_regulation` atomically creates the topic, revalidates the selected
+regulation, records the selected decision, snapshots the policy and route, resolves the council for
+every step, opens the initial step when ready, writes compliance history, and emits an outbox event.
 
 If routing is unresolved, the topic remains visible but receives `routing_blocked` or
 `routing_conflict`. Policies allowing a custom or regulated fallback route receive
@@ -168,13 +176,16 @@ Routing states are `routing_pending`, `routing_resolved`, `routing_conflict`, `r
   cancelled round cannot move the route.
 - Frozen results map as `approved -> approved`, `rejected -> rejected`, `tied -> tie`, and
   `no_votes -> no_vote`.
-- Legacy complete/return/reject commands return migration guidance and must not be used by new
-  clients.
+- New clients must send every non-voting step action through `act_topic_workflow_step`.
 
 Only the current active step can be acted upon. Its resolved council and required permission are
 checked on every command.
 
 ## Exceptions
+
+Administrative review screens load the tenant-scoped queue with
+`admin_list_governance_exceptions`. The response is paginated and includes the topic title and
+selected workflow name without exposing internal governance tables.
 
 Use `request_workflow_exception` only for blocked or conflicting topics. The request contains an
 active validated `p_workflow_template_version_id`, a reason of at least ten characters, and a

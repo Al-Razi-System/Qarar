@@ -332,13 +332,8 @@ All contracts below return one JSON object.
 | `admin_approve_policy_version` | `id`, `legal_status` |
 | `admin_activate_policy_version` | `id`, `legal_status`, `effective_from`, `effective_to` |
 | `admin_suspend_policy_version` | `id`, `legal_status` |
-| `resolve_topic_governance` | `decision_id`, `outcome`, `candidate_count`, selected IDs, `explanation` |
-| `create_topic_with_workflow` | topic keys plus `decision_id`, `outcome`, `routing_status`, workflow IDs |
 | `get_topic_governance` | `topic_id`, source/status, selected IDs, `decision`, `mapping_snapshot` |
 | `get_topic_workflow` | `instance_id`, `status`, `current_step_id`, `steps` |
-| `complete_topic_workflow_step` | `topic_id`, `workflow_instance_id`, `completed_step_id`, `outcome`, `next_step_id`, `workflow_status` |
-| `return_topic_workflow_step` | same workflow-action keys with `outcome=returned` |
-| `reject_topic_workflow_step` | same workflow-action keys with `outcome=rejected` |
 | `act_topic_workflow_step` | `topic_id`, `completed_step_id`, `next_step_id`, `workflow_status`, `version`; an idempotent replay returns the same fields from the original action plus `idempotent_replay=true` |
 | `request_custom_workflow` | `id`, `topic_id`, `status`, `governance_source`, `valid_until` |
 | `approve_custom_workflow` | exception approval keys plus `governance_source=custom` |
@@ -346,11 +341,19 @@ All contracts below return one JSON object.
 | `admin_create_governance_unit_class` | `id`, `code`, `is_active` |
 | `admin_update_governance_unit_class` | `id`, `updated_at`, `is_active` |
 | `admin_assign_governance_unit_class` | `governance_unit_id`, `governance_class_id`, `updated_at` |
+| `admin_list_governance_unit_types` | array of `{id`, `code`, `name_ar`, `name_en`, `description`, `is_active}` |
+| `admin_list_governance_units` | `items`, `total`, `limit`, `offset`; items include unit, parent, type, class, level, status, and `updated_at` |
+| `admin_create_governance_unit` | `id`, `code`, `status` |
+| `admin_update_governance_unit` | `id`, `updated_at`, `status` |
+| `admin_list_topic_categories` | `items`, `total`, `limit`, `offset` |
+| `admin_create_topic_category` | `id`, `code`, `is_active` |
+| `admin_update_topic_category` | `id`, `updated_at`, `is_active` |
 | `get_topic_regulation_options` | `governance_unit_id`, `topic_category_id`, `effective_on`, `items`, `total`; each item contains `selection`, policy, version, item, scope, and routing state |
 | `create_topic_with_selected_regulation` | topic keys plus `decision_id`, selected policy/version/item/scope IDs, `outcome`, `routing_status`, and workflow IDs when ready |
 
 `request_custom_workflow` and `request_workflow_exception` require a future `p_valid_until`.
 Approval of a request whose validity window has elapsed fails without creating a workflow instance.
+
 | `request_workflow_exception` | `id`, `topic_id`, `status` |
 | `approve_workflow_exception` | `id`, `status`; approvals also include workflow and current-step IDs |
 | `admin_search_policies` | `items`, `total`, `limit`, `offset` |
@@ -363,3 +366,5 @@ Approval of a request whose validity window has elapsed fails without creating a
 | `admin_update_workflow_step` | `id`, `sequence_no` |
 | `admin_remove_workflow_step` | `id`, `deleted` |
 | `admin_activate_workflow_template_version` | `id`, `status` |
+| `admin_list_workflow_templates` | array of templates; each template contains `versions`, and each version contains ordered `steps` and `transitions` |
+| `admin_list_governance_exceptions` | `items`, `total`, `limit`, `offset`; items include topic title, workflow name, type, status, reason, and validity window |
