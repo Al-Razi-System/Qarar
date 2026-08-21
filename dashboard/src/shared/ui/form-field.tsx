@@ -25,6 +25,7 @@ export function FormField({
       >
         {icon && <span className="text-[#8190a4]">{icon}</span>}
         <input
+          suppressHydrationWarning
           className="min-w-0 flex-1 bg-transparent text-sm text-[#0a1330] outline-none placeholder:text-[#9aa8b9]"
           {...props}
         />

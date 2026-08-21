@@ -27,7 +27,6 @@ const initialForm = {
   employee_no: "",
   mobile: "",
   job_title: "",
-  temporary_password: "",
   role_id: "",
   governance_unit_id: "",
   membership_title: "",
@@ -65,19 +64,13 @@ export function CreateUserForm({
   function goNext() {
     if (
       step === 0 &&
-      (!form.full_name_ar ||
-        !form.email ||
-        !form.temporary_password)
+      (!form.full_name_ar || !form.email)
     ) {
-      setError("أكمل الاسم العربي والبريد وكلمة المرور المؤقتة.");
+      setError("أكمل الاسم العربي والبريد المؤسسي.");
       return;
     }
     if (step === 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       setError("أدخل بريدًا إلكترونيًا صحيحًا.");
-      return;
-    }
-    if (step === 0 && (form.temporary_password.length < 12 || !/[a-z]/.test(form.temporary_password) || !/[A-Z]/.test(form.temporary_password) || !/\d/.test(form.temporary_password) || !/[^A-Za-z0-9]/.test(form.temporary_password))) {
-      setError("كلمة المرور المؤقتة يجب أن تكون 12 حرفًا على الأقل وتحتوي أحرفًا كبيرة وصغيرة ورقمًا ورمزًا.");
       return;
     }
     if (
@@ -106,7 +99,6 @@ export function CreateUserForm({
           email: form.email,
           full_name_ar: form.full_name_ar,
           full_name_en: form.full_name_en || null,
-          temporary_password: form.temporary_password,
           employee_no: form.employee_no || null,
           mobile: form.mobile || null,
           job_title: form.job_title || null,
@@ -165,7 +157,7 @@ export function CreateUserForm({
               <FormField label="الرقم الوظيفي" value={form.employee_no} onChange={(e) => update("employee_no", e.target.value)} />
               <FormField label="رقم الجوال" value={form.mobile} onChange={(e) => update("mobile", e.target.value)} />
               <FormField label="المسمى الوظيفي" value={form.job_title} onChange={(e) => update("job_title", e.target.value)} />
-              <FormField className="sm:col-span-2" label="كلمة المرور المؤقتة" type="password" value={form.temporary_password} onChange={(e) => update("temporary_password", e.target.value)} icon={<LockKeyhole size={17} />} hint="12 محرفًا على الأقل، وتتضمن حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا." required />
+              <div className="sm:col-span-2 flex gap-3 rounded-xl border border-[#cfe4f8] bg-[#f1f8ff] p-4 text-xs leading-6 text-[#315b80]"><Mail size={18} className="mt-0.5 shrink-0 text-[#0066cc]"/>سيُرسل للمستخدم رابط تفعيل موقّع وأحادي الاستخدام لتعيين كلمة مروره بنفسه. لا ينشئ المدير كلمة مرور مؤقتة.</div>
             </div>
           </div>
         )}
@@ -240,7 +232,7 @@ export function CreateUserForm({
           <LockKeyhole size={24} className="text-[#ff8a19]" />
           <h3 className="mt-4 text-sm font-black">إنشاء آمن ومحكوم</h3>
           <p className="mt-2 text-[11px] leading-6 text-white/65">
-            تنشئ العملية هوية الدخول وملف قرار والعضوية كوحدة واحدة، مع التراجع التلقائي عند فشل أي مرحلة.
+            تنشئ العملية هوية غير مفعلة وملف قرار، ثم ترسل رابطًا موقّعًا محدود الصلاحية. لا يصبح الحساب نشطًا قبل إكمال التفعيل.
           </p>
         </div>
       </aside>

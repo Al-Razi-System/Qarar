@@ -1,18 +1,25 @@
 import { NextResponse } from "next/server";
-import { qararEdge } from "@/shared/api/qarar-server";
+import { qararEdge, requireQararSession } from "@/shared/api/qarar-server";
+import { safeAdminError } from "@/shared/security/admin-error";
+import { readJsonObject } from "@/shared/security/json-body";
+import { rejectUntrustedMutation } from "@/shared/security/request-guards";
 
 export async function POST(request: Request) {
+  const originError = rejectUntrustedMutation(request);
+  if (originError) return originError;
+
   try {
-    const body = await request.json();
+    await requireQararSession();
+    const parsedBody = await readJsonObject(request);
+    if (!parsedBody.ok) return parsedBody.response;
+
     const result = await qararEdge("iam-admin", {
       action: "create_user",
-      ...body,
+      ...parsedBody.value,
     });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "تعذر إنشاء الحساب.";
-    const status = message === "UNAUTHENTICATED" ? 401 : 400;
-    return NextResponse.json({ message }, { status });
+    const safeError = safeAdminError(error, "تعذر إنشاء الحساب.");
+    return NextResponse.json({ message: safeError.message }, { status: safeError.status });
   }
 }

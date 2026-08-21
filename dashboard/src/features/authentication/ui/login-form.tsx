@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { FormField } from "@/shared/ui/form-field";
 
@@ -28,6 +29,12 @@ export function LoginForm() {
 
       if (!response.ok) {
         setError(result.message ?? "تعذر تسجيل الدخول.");
+        return;
+      }
+
+      if (result.mfa_required === true) {
+        router.push("/mfa");
+        router.refresh();
         return;
       }
 
@@ -82,9 +89,9 @@ export function LoginForm() {
           />
           تذكرني على هذا الجهاز
         </label>
-        <a href="#" className="font-bold text-[#0066cc] hover:underline">
+        <Link href="/forgot-password" className="font-bold text-[#0066cc] hover:underline">
           نسيت كلمة المرور؟
-        </a>
+        </Link>
       </div>
       {error && (
         <p
@@ -100,20 +107,6 @@ export function LoginForm() {
         className="h-12 w-full rounded-xl bg-gradient-to-l from-[#0066cc] to-[#1e88e5] text-sm font-bold text-white shadow-[0_10px_25px_rgba(0,102,204,.2)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(0,102,204,.28)] disabled:cursor-wait disabled:opacity-70"
       >
         {isSubmitting ? "جارٍ التحقق..." : "تسجيل الدخول"}
-      </button>
-      <div className="flex items-center gap-3 py-1 text-[11px] text-[#91a0b3]">
-        <span className="h-px flex-1 bg-[#e4ebf3]" />
-        أو عبر حساب المؤسسة
-        <span className="h-px flex-1 bg-[#e4ebf3]" />
-      </div>
-      <button
-        type="button"
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#dce5ef] bg-white text-sm font-bold text-[#22324b] transition hover:border-[#aacceb] hover:bg-[#f7fbff]"
-      >
-        <span className="grid h-6 w-6 place-items-center rounded-md bg-[#0a1330] text-[10px] font-black text-white">
-          SSO
-        </span>
-        الدخول الموحد
       </button>
     </form>
   );

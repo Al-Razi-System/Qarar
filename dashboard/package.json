@@ -2,14 +2,19 @@
   "name": "dashboard",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "nanoid": "3.3.18"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint src .storybook vitest.config.ts playwright.config.ts next.config.ts",
+    "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",
+    "test:ci": "npm run lint && npm run typecheck && npm run test:run && npm run build",
     "seed:local-admin": "npm --prefix .. run seed:local-admin",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
@@ -20,10 +25,11 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.27.0",
-    "next": "16.2.12",
+    "next": "16.3.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.83.0",
+    "redis": "6.2.1",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
@@ -42,7 +48,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.4",
     "eslint": "^9",
-    "eslint-config-next": "16.2.12",
+    "eslint-config-next": "16.3.0",
     "jsdom": "^30.0.1",
     "storybook": "^10.5.5",
     "tailwindcss": "^4",

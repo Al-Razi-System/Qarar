@@ -137,29 +137,21 @@ describe("RegulationsWorkspace", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
     const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
-    expect(body.contract).toBe("admin_create_policy");
+    expect(body.contract).toBe("admin_create_policy_idempotent");
     expect(body.params).toMatchObject({
-      p_code: "NEW_REGULATION",
+      p_code: "new_regulation",
       p_name_ar: "لائحة اختبار",
       p_policy_type: "regulation",
     });
+    expect(body.params.p_client_request_id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it("يعرض رسالة الخطأ العربية والتفاصيل التقنية", async () => {
-    const user = userEvent.setup();
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({
-        error: {
-          message: "لا تسمح حالة السجل الحالية بتنفيذ هذه العملية.",
-          technicalMessage: "Policy version is not a draft",
-        },
-      }), { status: 409 }),
-    );
-
+  it("ينقل المستخدم مباشرة إلى الصفحة المستقلة للائحة", () => {
     render(<RegulationsWorkspace initialPolicies={policies} />);
-    await user.click(screen.getByText("اللائحة الأكاديمية"));
-    expect(await screen.findByText("لا تسمح حالة السجل الحالية بتنفيذ هذه العملية.")).toBeInTheDocument();
-    expect(screen.getByText("تفاصيل تقنية")).toBeInTheDocument();
+    const policyLink = screen.getByRole("link", { name: /اللائحة الأكاديمية/ });
+
+    expect(policyLink).toHaveAttribute("href", "/admin/regulations/policy-1");
+    expect(screen.queryByText("اختر لائحة لعرض مساحة العمل")).not.toBeInTheDocument();
   });
 
   it("يوحّد قيم نتائج المسار مع قيم الباكند", () => {
@@ -195,9 +187,23 @@ describe("RegulationsWorkspace", () => {
       "admin_update_governance_unit",
       "admin_create_governance_unit_class",
       "admin_update_governance_unit_class",
+      "admin_import_policy_bundle",
     ].forEach((contract) => {
       expect(source).toContain(`"${contract}"`);
     });
+  });
+
+  it("يستورد حزمة اللائحة ذريًا مع idempotency وتسجيل تدقيقي", () => {
+    const source = readFileSync(
+      join(process.cwd(), "../supabase/migrations/20260801040000_atomic_policy_bundle_import.sql"),
+      "utf8",
+    );
+
+    expect(source).toContain("admin_import_policy_bundle");
+    expect(source).toContain("p_client_request_id uuid");
+    expect(source).toContain("pg_advisory_xact_lock");
+    expect(source).toContain("governance.policy_bundle.import");
+    expect(source).toContain("commit;");
   });
 
   it("يدعم مصمم شروط المطابقة غير التقني والاستثناء والمعاينة", () => {
@@ -219,34 +225,15 @@ describe("RegulationsWorkspace", () => {
     expect(source).toContain("master");
   });
 
-  it("يفتح مصمم شروط المطابقة فعليًا ويعرض ملخصًا عربيًا بدل JSON", async () => {
-    const user = userEvent.setup();
-    mockRegulationRpc();
-
+  it("يعرض اللوائح كصفوف جدول مرتبطة بصفحات مستقلة ولا يجلب التفاصيل داخل الفهرس", () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     render(<RegulationsWorkspace initialPolicies={policies} />);
-    await user.click(screen.getByText("اللائحة الأكاديمية"));
-    await screen.findByText("تسلسل إكمال اللائحة");
-    await user.click(screen.getByRole("button", { name: "إضافة بند" }));
 
-    expect(await screen.findByRole("dialog", { name: "إضافة بند لائحي" })).toBeInTheDocument();
-    expect(screen.getByText("ينطبق هذا البند عندما:")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "كل الشروط" })).toBeInTheDocument();
-    expect(screen.getAllByText("نوع الطلب").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("المستوى الأكاديمي").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("مصدر الموضوع").length).toBeGreaterThan(0);
-    expect(screen.getByText("ملخص الشروط التي سيطبقها النظام")).toBeInTheDocument();
-    expect(screen.getByText("نوع الطلب يساوي: إنشاء برنامج أكاديمي")).toBeInTheDocument();
-    expect(screen.getByText("المستوى الأكاديمي أحد: دبلوم، بكالوريوس، ماجستير")).toBeInTheDocument();
-    expect(screen.getByText("مصدر الموضوع يساوي: موضوع جديد")).toBeInTheDocument();
-    expect(screen.getByText("نعم، هذا الموضوع يطابق شروط البند.")).toBeInTheDocument();
-    expect(screen.queryByText("JSON الذي سيرسله النظام")).not.toBeInTheDocument();
-    expect(screen.queryByText(/"request_type"/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/"academic_level"/)).not.toBeInTheDocument();
-
-    await user.click(screen.getAllByRole("button", { name: "نوع الشرط" })[0]);
-    expect(screen.getByText("استثناء: لا يساوي")).toBeInTheDocument();
-    expect(screen.getByText("نوع الطلب ليس: إنشاء برنامج أكاديمي")).toBeInTheDocument();
-    expect(screen.queryByText(/"not"/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /اللائحة الأكاديمية/ })).toHaveAttribute(
+      "href",
+      "/admin/regulations/policy-1",
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("يعرض مصمم المسارات كتسلسل واضح من البيانات إلى التفعيل", async () => {
@@ -311,5 +298,20 @@ describe("RegulationsWorkspace", () => {
     expect(source).toContain("المسار جاهز ومكتمل");
     expect(source).toContain("هذا الإصدار مقفل للتحرير");
     expect(source).toContain("النسخة النافذة لا تُعدّل مباشرة");
+  });
+
+  it("يدعم بيانات الملكية والمرفقات ويستخدم محرك المطابقة الفعلي", () => {
+    const workspace = readFileSync(join(process.cwd(), "src/features/regulations/ui/policy-management-workspace.tsx"), "utf8");
+    const designer = readFileSync(join(process.cwd(), "src/features/regulations/ui/regulations-workspace.tsx"), "utf8");
+    const migration = readFileSync(join(process.cwd(), "../supabase/migrations/20260802010000_policy_metadata_attachments_matcher.sql"), "utf8");
+
+    expect(workspace).toContain("p_owner_governance_unit_id");
+    expect(workspace).toContain("admin_add_policy_attachment");
+    expect(workspace).toContain("تضمين الجهات التابعة");
+    expect(designer).toContain('{ value: "change_level", label: "مستوى التغيير" }');
+    expect(designer).toContain('"preview_policy_conditions"');
+    expect(designer).not.toContain("function criteriaMatch(");
+    expect(migration).toContain("qarar_governance.conditions_match");
+    expect(migration).toContain("check(num_nonnulls(policy_id,policy_version_id,policy_item_id)=1)");
   });
 });

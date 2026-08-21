@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { TopicRegulationCreator } from "@/features/topics/ui/topic-regulation-creator";
+import { ApprovalRequestsWorkspace } from "@/features/approvals/ui/approval-requests-workspace";
 
-export const metadata: Metadata = { title: "إنشاء موضوع محكوم بلائحة" };
+export const metadata: Metadata = { title: "طلبات الاعتماد" };
 
 export default function RequestsPage() {
-  return <TopicRegulationCreator />;
+  return <ApprovalRequestsWorkspace />;
 }
