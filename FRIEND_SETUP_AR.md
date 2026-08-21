@@ -1,5 +1,8 @@
 # تشغيل منصة قرار على جهاز جديد
 
+للدليل التفصيلي، بما فيه الترحيلات وpgTAP والترقية والنسخ والاستعادة، راجع
+[`RUN_LOCAL_AND_MIGRATIONS_AR.md`](RUN_LOCAL_AND_MIGRATIONS_AR.md).
+
 ## المتطلبات
 
 - Git

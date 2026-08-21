@@ -21,6 +21,7 @@ playwright-report/
 .env
 .env.*
 !.env.example
+!deploy/production/.env.production.example
 
 # Approved initial-admin requests are operational records and may contain PII.
 # Keep the committed example only; create the real request outside the checkout.
