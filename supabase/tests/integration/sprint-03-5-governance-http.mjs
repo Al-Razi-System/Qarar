@@ -242,9 +242,17 @@ try {
   }, builderHeaders)
   assert.equal(activatedWorkflow.status, "active")
 
-  const policy = await rpc("admin_create_policy", {
+  const policyRequestId = crypto.randomUUID()
+  const policy = await rpc("admin_create_policy_idempotent", {
     p_code: `policy-${suffix}`, p_name_ar: "لائحة اعتماد الخطط",
+    p_client_request_id: policyRequestId,
   }, builderHeaders)
+  const policyReplay = await rpc("admin_create_policy_idempotent", {
+    p_code: `policy-${suffix}`, p_name_ar: "Ù„Ø§Ø¦Ø­Ø© Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ø®Ø·Ø·",
+    p_client_request_id: policyRequestId,
+  }, builderHeaders)
+  assert.equal(policyReplay.id, policy.id)
+  assert.equal(policyReplay.idempotent_replay, true)
   const version = await rpc("admin_create_policy_version", {
     p_policy_id: policy.id, p_version_label: "1.0",
   }, builderHeaders)

@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(22);
+select plan(23);
 
 grant all privileges on all tables in schema public to authenticated;
 grant usage on schema public to authenticated;
@@ -207,11 +207,31 @@ select is(
   'authorized admin can register a governed Supabase SSO provider mapping'
 );
 
+select throws_ok(
+  $$ select api_v1.admin_upsert_sso_domain(
+    (select id from public.sso_identity_providers where provider_name = 'IAM Test SAML'),
+    'iam.test',
+    true
+  ) $$,
+  '42501',
+  'SSO domain verification must be completed by the trusted verification service',
+  'an IAM client cannot self-attest SSO domain verification'
+);
+
 select api_v1.admin_upsert_sso_domain(
   (select id from public.sso_identity_providers where provider_name = 'IAM Test SAML'),
   'iam.test',
-  true
+  false
 );
+
+-- A trusted verifier is outside the client contract.  The fixture establishes
+-- a verified domain directly so the remaining SSO-login workflow is tested.
+reset role;
+update public.sso_domains
+set verified_at = now(),
+    status = 'active'
+where domain = 'iam.test';
+set local role authenticated;
 
 set local "request.jwt.claims" to '{"sub": "cccccccc-1111-1111-1111-cccccccccccc", "email": "sso.user@iam.test", "sso_provider_id": "15151515-1515-1515-1515-151515151515"}';
 

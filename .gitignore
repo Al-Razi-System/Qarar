@@ -7,6 +7,21 @@ supabase/.env.*
 
 # General local files
 node_modules/
+.production-reports/
+backups/
+*.dump
+*.dump.sha256
+.codex-runlogs/
+test-results/
+tmp/
+/admin/
+.next/
+playwright-report/
+*.log
 .env
 .env.*
 !.env.example
+
+# Approved initial-admin requests are operational records and may contain PII.
+# Keep the committed example only; create the real request outside the checkout.
+deploy/production/initial-admin-bootstrap.json

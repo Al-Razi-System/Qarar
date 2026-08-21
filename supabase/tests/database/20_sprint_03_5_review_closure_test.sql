@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(34);
+select plan(35);
 
 select ok(qarar_governance.conditions_match('{"priority":"urgent"}','{"priority":"urgent"}'),
  'matching condition object is executed');
@@ -39,7 +39,7 @@ select ok(not exists(
    )
 ), 'legacy automatic regulation facades are removed from api_v1');
 select is((select contract_count from qarar_architecture.api_release_registry where api_version='v1'),
- 139,'api_v1 release count includes council lifecycle through PB-078');
+ 200,'api_v1 release count includes activation and governed offboarding contracts');
 select is((select count(*)::integer from qarar_architecture.api_contract_registry
   where api_version='v1' and contract_name in(
   'admin_list_governance_unit_classes','admin_create_governance_unit_class',
@@ -131,9 +131,9 @@ select function_returns(
  'voting has a dedicated operation to cancel expired workflow rounds');
 select ok(
  position('select s.* into replay' in pg_get_functiondef(
-  'qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure))
+  'qarar_governance.act_topic_workflow_step_guarded_core(uuid,text,text,uuid,integer)'::regprocedure))
  < position('from qarar_governance.topic_governance_mappings' in pg_get_functiondef(
-  'qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure)),
+  'qarar_governance.act_topic_workflow_step_guarded_core(uuid,text,text,uuid,integer)'::regprocedure)),
  'idempotent replay is resolved before the temporary-route expiry guard');
 select ok(
  position('array_position' in pg_get_functiondef(

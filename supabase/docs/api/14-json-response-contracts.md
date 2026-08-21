@@ -5,6 +5,21 @@ This catalog fixes the frontend-visible shape of every authenticated `api_v1` fu
 [12-contract-reference.md](./12-contract-reference.md). A trailing `?` means nullable. Arrays are
 always returned as `[]`, not `null`, unless explicitly marked nullable.
 
+`admin_list_iam_approval_requests` returns `{ "iam_changes": [...], "offboarding": [...] }`; queue
+items include request ID, status, justification, requester, timestamps, and applicable
+target/successor/correlation fields.
+
+`admin_review_user_offboarding` returns `request_id`, `status`, and `correlation_id`. An applied result
+also returns integer counters: `memberships_ended`, `delegations_revoked`, `tasks_reassigned`,
+`auth_sessions_revoked`, and `app_sessions_revoked`.
+
+```text
+get_policy_form_options -> { governance_levels: { value, label }[], users: { id, name_ar, code }[] }
+admin_add_policy_attachment -> { id: uuid }
+admin_remove_policy_attachment -> { id: uuid, deleted: bool }
+preview_policy_conditions -> { matched: bool, engine: string, context: object }
+```
+
 ## Shared Shapes
 
 ```text
@@ -117,6 +132,15 @@ TopicHistory = {
 | `refer_topic` | `{referral_id,topic_id,status,from_unit_id,to_unit_id}` |
 | `respond_topic_referral` | `{referral_id,topic_id,status,current_unit_id}` |
 | `get_topic_route_history` | `TopicRouteEntry[]`, ordered chronologically as defined in [06-topic-referrals.md](./06-topic-referrals.md) |
+| `create_topic_with_regulation_bundle` | The selected-regulation topic result plus `topic_id` and the persisted `regulation_references` array |
+| `get_topic_regulation_tree` | `{items:RegulationTree[],total}`; every item has `policy`, `version`, and ordered selectable `nodes` |
+| `list_topic_regulation_references` | `RegulationReference[]` with policy/version/item identity, type, primary flag, and display labels |
+| `get_topic_requirements_status` | `{items:RequirementStatus[],total,missing_mandatory,ready_for_review}` |
+| `fulfill_topic_requirement` | `{id,requirement_code,status:"fulfilled"}` |
+| `list_topic_attachments` | `TopicAttachment[]` with `{id,file_name,file_url,mime_type,file_size_bytes,description?,created_at}` |
+| `add_topic_attachment` | The six-argument overload returns `{id}`; the requirement-linked overload returns `{id,requirement_code?}` |
+| `remove_topic_attachment` | `{id,deleted:true}` |
+| `get_topic_meeting_history` | `TopicMeetingHistory[]`, each with agenda state, nested meeting, voting rounds, and decisions |
 
 ## Meetings and Agenda
 
@@ -131,7 +155,7 @@ MeetingSummary = {
 }
 
 AgendaItem = {
-  id, agenda_order, agenda_status,
+  id, agenda_order, agenda_status, discussion_notes?,
   is_exception, exception_reason?,
   voting_status, voting_result,
   updated_at,
@@ -151,6 +175,22 @@ AgendaItem = {
 | `add_agenda_item` | `{id,meeting_id,topic_id,agenda_order,is_exception}` |
 | `reorder_agenda_items` | Updated `AgendaItem[]` |
 | `remove_agenda_item` | `{removed:true,agenda_item_id}` |
+| `admin_list_meeting_types` | `{items:MeetingType[]}`; each item includes `{id,code,name_ar,name_en?,description?,is_active,meeting_count,created_at,updated_at}` |
+| `admin_create_meeting_type` | `{id,code,is_active:true,updated_at}` |
+| `admin_update_meeting_type` | `{id,updated_at}` |
+| `update_agenda_discussion` | `{id,status}` |
+| `complete_meeting_session` | `{id,status:"waiting_for_minutes"}` |
+| `send_meeting_invitations` | `{meeting_id,queued,status:"queued"}` |
+| `get_meeting_readiness` | `{ready,checks}`; checks have `code`, `label`, `complete`, and optional `count` |
+
+## Meeting Minutes
+
+| Contract | Response |
+|---|---|
+| `get_meeting_minutes` | Meeting-minutes row plus `approvals[]`; each approval contains identity, status, notes, resolution, and concurrency fields |
+| `save_meeting_minutes_draft` | `{id,status,updated_at}` |
+| `submit_meeting_minutes` | `{id,status:"ready_for_approval",approvers}` |
+| `respond_meeting_minutes_approval` | `{approval_id,decision}` |
 
 ## Attendance and Quorum
 
@@ -211,6 +251,9 @@ VotingRound = {
 | `close_voting_round` | `{voting_round_id,status,result,eligible_voter_count,approve_count,reject_count,abstain_count}` |
 | `cancel_voting_round` | `{voting_round_id,status,result}` |
 | `get_voting_round_detail` | `VotingRound + {has_voted,my_vote?,eligible_members:EligibleMember[]?,votes:VoteDetail[]?}` |
+| `create_decision_from_voting_round` | `{id,decision_no,decision_status,already_exists}` |
+| `list_meeting_decisions` | `DecisionSummary[]` with `{id,decision_no,agenda_item_id,decision_text,decision_status,requires_approval}` |
+| `list_meeting_voting_rounds` | `VotingRoundSummary[]` with agenda identity, status/result, and vote counts |
 
 `eligible_members` and `votes` are `null` for ordinary members and arrays for callers with
 `voting.manage`, as described in [07-session-attendance-voting.md](./07-session-attendance-voting.md).
@@ -321,6 +364,22 @@ All contracts below return one JSON object.
 | Contract | Stable response keys |
 |---|---|
 | `admin_create_policy` | `id`, `status` |
+| `admin_create_policy_idempotent` | `id`, `status`, `idempotent_replay` |
+| `admin_remove_empty_policy_version` | `id`, `removed:true` |
+| `admin_import_policy_bundle` | `policy_id`, `version_id`, `items_count`, `scopes_count`, `workflows_count`, `idempotent_replay` |
+| `get_policy_form_options` | `governance_levels`, `users` |
+| `admin_add_policy_attachment` | `id` |
+| `admin_remove_policy_attachment` | `id`, `deleted` |
+| `preview_policy_conditions` | `matched`, `engine`, `context` |
+| `admin_get_policy_legislative_model` | version fields plus nested `items`; each item includes `rules` and `references`, and each rule includes `conditions`, `requirements`, `authorities`, `actions`, and `workflow_bindings` |
+| `admin_update_policy_version_legal_metadata` | `id`, `updated` |
+| `admin_update_policy_item_legal_text` | `id`, `updated` |
+| `admin_save_policy_rule` | `id`, `saved` |
+| `admin_remove_policy_rule` | `id`, `removed` |
+| `admin_save_policy_reference` | `id`, `saved` |
+| `admin_remove_policy_reference` | `id`, `removed` |
+| `admin_validate_policy_version_readiness` | `ready`, `score`, `errors`, `warnings`, `items_total`, `items_ready` |
+| `admin_compare_policy_versions` | `added`, `removed`, `modified` |
 | `admin_create_policy_version` | `id`, `version_no`, `legal_status`, `automation_status` |
 | `admin_add_policy_item` | `id`, `policy_version_id` |
 | `admin_set_policy_scope` | `id`, `scope_type` |
@@ -349,17 +408,23 @@ All contracts below return one JSON object.
 | `admin_create_topic_category` | `id`, `code`, `is_active` |
 | `admin_update_topic_category` | `id`, `updated_at`, `is_active` |
 | `get_topic_regulation_options` | `governance_unit_id`, `topic_category_id`, `effective_on`, `items`, `total`; each item contains `selection`, policy, version, item, scope, and routing state |
+| `get_topic_exception_workflow_options` | `can_request` and a user-safe `items` list; each item exposes only `id`, `label`, and optional `description` for an approved temporary workflow route |
+| `get_topic_regulation_preview` | `article` (official text and interpretation), `rule_summary`, `scope`, `workflow`, `requirements`, `attachments`, `approval_effect`, `voting_effect`; only for an eligible user-visible selection |
+| `get_topic_regulation_route_preview` | `status`, `workflow_name`, `message`, and ordered `steps`; each step exposes only its title, responsible entity/role, transition requirement, and optional expected duration |
 | `create_topic_with_selected_regulation` | topic keys plus `decision_id`, selected policy/version/item/scope IDs, `outcome`, `routing_status`, and workflow IDs when ready |
 
 `request_custom_workflow` and `request_workflow_exception` require a future `p_valid_until`.
 Approval of a request whose validity window has elapsed fails without creating a workflow instance.
 
 | `request_workflow_exception` | `id`, `topic_id`, `status` |
+| `create_topic_exception_request` | `id`, `topic_id`, `status` |
+| `get_topic_governance_summary` | `topic_id`, `governance_source`, `routing_status`, `policy_id`, `policy_version_id` |
 | `approve_workflow_exception` | `id`, `status`; approvals also include workflow and current-step IDs |
 | `admin_search_policies` | `items`, `total`, `limit`, `offset` |
 | `admin_get_policy_detail` | policy fields plus `versions`; each version contains `items` and `scopes` |
 | `admin_update_policy` | `id`, `status` |
 | `admin_update_policy_item` | `id`, `is_active` |
+| `admin_move_policy_item` | `id`, `parent_item_id`, `sort_order` |
 | `admin_remove_policy_item` | `id`, `deleted` |
 | `admin_remove_policy_scope` | `id`, `deleted` |
 | `admin_create_workflow_version` | `id`, `version_no`, `status` |

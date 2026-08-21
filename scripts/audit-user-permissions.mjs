@@ -1,0 +1,12 @@
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+const container = process.env.DB_CONTAINER ?? "qarar-supabase-db";
+const sql = `copy (select u.email,u.status,u.is_system_admin,coalesce(string_agg(distinct r.code,',' order by r.code),'') roles,count(distinct m.id) active_memberships from qarar_iam.users u left join qarar_iam.memberships m on m.user_id=u.id and m.membership_status='active' and (m.end_date is null or m.end_date>=current_date) left join qarar_iam.roles r on r.id=m.role_id and r.is_active group by u.id,u.email,u.status,u.is_system_admin order by u.email) to stdout with csv header`;
+const csv = execFileSync("docker", ["exec",container,"psql","-U",process.env.DB_SUPER_USER ?? "supabase_admin","-d",process.env.POSTGRES_DB ?? "postgres","-v","ON_ERROR_STOP=1","-c",sql], { encoding:"utf8" });
+fs.mkdirSync(".production-reports", { recursive:true }); fs.writeFileSync(".production-reports/user-permissions.csv", csv);
+const summarySql = `select json_build_object('users',count(*),'systemAdmins',count(*) filter(where status='active' and is_system_admin),'inactiveAdmins',count(*) filter(where status<>'active' and is_system_admin),'testAccounts',count(*) filter(where email like '%@example.test')) from qarar_iam.users`;
+const rawSummary = execFileSync("docker", ["exec",container,"psql","-U",process.env.DB_SUPER_USER ?? "supabase_admin","-d",process.env.POSTGRES_DB ?? "postgres","-Atc",summarySql], { encoding:"utf8" }).trim();
+const summary = JSON.parse(rawSummary); const highRiskFindings = Number(summary.inactiveAdmins);
+const report = {generatedAt:new Date().toISOString(),...summary,highRiskFindings,reviewRequired:summary.systemAdmins<1 || summary.systemAdmins>3 || highRiskFindings>0 || summary.testAccounts>0};
+fs.writeFileSync(".production-reports/user-permissions-summary.json", JSON.stringify(report,null,2)); console.log(JSON.stringify(report,null,2));
+if (report.reviewRequired && process.env.PERMISSIONS_STRICT === "true") process.exit(1);

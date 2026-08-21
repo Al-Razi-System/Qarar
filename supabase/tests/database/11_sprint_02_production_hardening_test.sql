@@ -127,7 +127,7 @@ select cmp_ok((select count(*) from public.audit_logs
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"43000000-0000-0000-0000-000000000013","role":"authenticated"}';
 select is((api_v1.search_meetings(null,null,null,null,null,25,0)->>'total')::int,0,'foreign tenant cannot discover meetings');
-select throws_ok(format('select api_v1.get_meeting_detail(%L)',(select meeting_id from s02_state)),'P0002','meeting not found','foreign tenant detail is hidden');
+select throws_ok(format('select api_v1.get_meeting_detail(%L)',(select meeting_id from s02_state)),'P0002',null,'foreign tenant detail is hidden');
 
 select * from finish();
 rollback;

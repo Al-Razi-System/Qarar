@@ -20,11 +20,11 @@ Do not use hardware serial numbers as `device_id`; generate an app installation 
 
 ## List and Revoke Sessions
 
-`list_my_sessions()` returns devices ordered by last activity. To revoke:
-
-An IAM administrator can inspect a managed user's sessions through
-`admin_list_user_sessions(p_user_id)`, which requires `iam.users.manage` and
-never returns sessions from another organization.
+`list_my_sessions()` returns the caller's devices ordered by last activity.
+The dashboard deliberately uses this versioned self-service contract rather
+than a table query. There is not yet an `admin_list_user_sessions` API contract;
+do not present an administrator with a fabricated cross-user device list until
+that separately reviewed contract exists.
 
 `POST /functions/v1/iam-admin`
 
@@ -61,6 +61,13 @@ permissions and unit scope. Use `admin_revoke_delegation(id, reason)` to end it 
 An internal `pg_cron` job runs every minute and changes stored `active` delegations whose `ends_at` has
 passed to `expired`. Permission checks also enforce the time boundary independently of this maintenance job.
 
+The source membership must be active in the caller's organization and the target must be an active
+user in that organization. The source member must also have `iam.roles.assign` for the source unit;
+a system administrator may act instead. A delegation of organization/system authority is always
+system-administrator-only, cannot overlap an active delegation for the same source and target, and
+is recorded with the actual caller as the audit actor. Revoking elevated delegated authority is also
+system-administrator-only; ordinary revocation requires `iam.roles.revoke` in the source unit.
+
 ## Approval Queue
 
 `iam_change_requests` statuses are `pending`, `approved`, `rejected`, `cancelled`, `applied`, and
@@ -91,10 +98,14 @@ authenticated clients:
 | Contract | Purpose |
 |---|---|
 | `service_apply_user_status` | Apply the synchronized application status after the Auth ban/unban step |
+| `service_bootstrap_organization_admin` | One-time, approval-bound creation of the first system administrator for an empty active organization |
 | `service_finalize_invited_user` | Create the profile and optional membership after Auth invitation |
 | `service_record_iam_event` | Record an Edge-orchestrated IAM audit event |
 | `service_revoke_auth_sessions` | Mark application sessions revoked after Auth session deletion |
 | `service_consume_iam_rate_limit` | Enforce per-actor operation limits |
 
 Their exact signatures are listed in [12-contract-reference.md](./12-contract-reference.md). They are
-documented for backend maintainers only and are not frontend endpoints.
+documented for backend maintainers only and are not frontend endpoints. The bootstrap contract is not
+a general recovery or user-management operation; use the
+[initial-admin bootstrap runbook](../../../docs/INITIAL_ADMIN_BOOTSTRAP_RUNBOOK.md) for its two-party
+approval and execution controls.

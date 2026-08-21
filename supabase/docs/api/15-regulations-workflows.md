@@ -1,5 +1,10 @@
 # Regulations and Governed Workflows
 
+The policy engine also exposes a normalized legislative model for official text, executable rules,
+conditions, requirements, authorities, allowed actions, legal references, multi-workflow bindings,
+readiness validation, and version comparison. See the Arabic guide
+[محرك اللوائح التشريعي والتنفيذي](../guides/04-legislative-rules-engine-ar.md).
+
 This document is the frontend contract for Sprint 3.5. All calls use:
 
 ```text
@@ -11,6 +16,13 @@ Content-Profile: api_v1
 ```
 
 Direct writes to `qarar_governance` or `qarar_topics` are unsupported and denied.
+
+Policy metadata and attachment contracts:
+
+- `get_policy_form_options`: returns policy owners and authoritative governance-level values.
+- `admin_add_policy_attachment`: attaches one document to a policy, version, or item.
+- `admin_remove_policy_attachment`: removes an attachment under policy-management authorization.
+- `preview_policy_conditions`: evaluates previews through the production `conditions_match` engine.
 
 لإعداد اللائحة من الصفر، بما في ذلك الجاهزية والنطاقات والاستثناءات وسيناريوهات الاختبار،
 راجع [دليل إعداد اللوائح والمسارات](../guides/02-regulation-setup-scenarios-ar.md).
@@ -56,6 +68,10 @@ omits any of these outcomes cannot be activated.
 
 ### Policy and version
 
+- `admin_import_policy_bundle`: atomically imports a `qarar.policy_import.v3` bundle containing
+  the policy, its initial version, items, scopes, and optional workflow templates. It requires
+  `p_client_request_id`; any invalid reference or row rolls back the complete bundle, while a
+  replay with the same actor and key returns the original `policy_id` without duplication.
 - `admin_search_policies`: paginated search by code, Arabic/English name, and status.
 - `admin_get_policy_detail`: returns versions with ordered items and scopes for the edit screen.
 - `admin_update_policy`: updates metadata, owner, and active/inactive/archive state.
@@ -63,6 +79,8 @@ omits any of these outcomes cannot be activated.
 - `admin_create_policy_version`: creates the next numbered draft under `p_policy_id`.
 - `admin_add_policy_item`: adds an item to a draft. `p_parent_item_id` creates hierarchy.
 - `admin_update_policy_item`: updates one draft item and its workflow mapping.
+- `admin_move_policy_item`: changes the parent and display order of a draft item while preventing
+  cross-version parents and circular document hierarchies.
 - `admin_remove_policy_item`: permanently removes an unused draft item only.
 - `admin_set_policy_scope`: assigns organization, unit type, governance level, class, unit, or
   subtree scope.
@@ -71,6 +89,24 @@ omits any of these outcomes cannot be activated.
   and optional validity dates.
 
 Draft configuration is immutable after submission or historical use.
+
+### Legislative model and executable rules
+
+- `admin_get_policy_legislative_model`: returns one version with its official hierarchy, rules,
+  conditions, requirements, authorities, allowed actions, workflow bindings, and references.
+- `admin_update_policy_version_legal_metadata`: updates issuing/approval authorities, approval
+  decision and date, issue reason, superseded version, and source-document hash on a draft.
+- `admin_update_policy_item_legal_text`: keeps official text separate from interpretation and
+  records source pages, locator, legal status, amendment note, and executable-rule requirement.
+- `admin_save_policy_rule`: atomically creates or replaces a draft rule and all its dependent
+  conditions, requirements, authorities, actions, and workflow bindings.
+- `admin_remove_policy_rule`: removes an unused rule from a draft version.
+- `admin_save_policy_reference`: creates or updates an internal or external legal reference.
+- `admin_remove_policy_reference`: removes a legal reference from a draft version.
+- `admin_validate_policy_version_readiness`: returns blocking errors, warnings, item counts, and a
+  readiness score before independent review.
+- `admin_compare_policy_versions`: returns added, removed, and textually modified items between two
+  tenant-owned versions.
 
 ### Workflow template
 
@@ -187,9 +223,9 @@ Administrative review screens load the tenant-scoped queue with
 `admin_list_governance_exceptions`. The response is paginated and includes the topic title and
 selected workflow name without exposing internal governance tables.
 
-Use `request_workflow_exception` only for blocked or conflicting topics. The request contains an
+Use `request_workflow_exception` or `create_topic_exception_request` only for blocked or conflicting topics. The request contains an
 active validated `p_workflow_template_version_id`, a reason of at least ten characters, and a
-required future `p_valid_until`.
+required future `p_valid_until`. `get_topic_governance_summary` provides a high-level summary of the topic's current governance state.
 
 `approve_workflow_exception` enforces four-eyes review: the requester cannot review their own
 request. Expired requests cannot be approved. Approval snapshots and starts the exceptional

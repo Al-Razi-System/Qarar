@@ -65,6 +65,8 @@ jobs:
           exit 1
       - name: Database contracts and security boundaries
         run: sh supabase/tests/run-completed-db-tests.sh
+      - name: Reject migration source and database-ledger drift
+        run: npm run prod:migration-drift
       - name: API documentation contract parity
         run: npm run test:api-docs
       - name: Migration checksum and lock cleanup

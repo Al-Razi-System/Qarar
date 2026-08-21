@@ -4,7 +4,8 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = fileURLToPath(new URL("../functions/", import.meta.url))
-const allowed = new Set(["generate-minutes/index.ts"])
+// Edge Functions must use governed api_v1 contracts rather than compatibility tables/views.
+const allowed = new Set([])
 const dependencies = []
 
 async function walk(path, relative = "") {
