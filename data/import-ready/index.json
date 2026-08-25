@@ -1,0 +1,89 @@
+{
+  "schema_version": "qarar.policy_binary_bundle_index.v1",
+  "generated_at": "2026-08-23T23:12:08.541Z",
+  "classification_model": {
+    "type": "binary",
+    "values": [
+      "display_only",
+      "requires_workflow_and_meeting"
+    ],
+    "default": "display_only"
+  },
+  "ready_for_database_import": true,
+  "bundles": [
+    {
+      "code": "department_councils",
+      "title_ar": "مجالس الأقسام",
+      "file": "department_councils.binary-bundle.json",
+      "content_sha256": "2fdf33907ac276d3bad74c2fbbaa5dc45fac0dd53154ffa71e4c46e0c3cd7677",
+      "item_count": 14,
+      "display_only_count": 0,
+      "requires_workflow_and_meeting_count": 14,
+      "workflow_count": 6,
+      "route_count": 14,
+      "operational_rule_count": 0,
+      "excluded_procedure_items": 21
+    },
+    {
+      "code": "faculty_councils",
+      "title_ar": "مجالس الكليات",
+      "file": "faculty_councils.binary-bundle.json",
+      "content_sha256": "5129f404b70e8c8ab441de3cc8cf6f1f57c33be00f7ee115add15873080d5f94",
+      "item_count": 12,
+      "display_only_count": 0,
+      "requires_workflow_and_meeting_count": 12,
+      "workflow_count": 6,
+      "route_count": 12,
+      "operational_rule_count": 0,
+      "excluded_procedure_items": 20
+    },
+    {
+      "code": "university_council",
+      "title_ar": "مجلس الجامعة",
+      "file": "university_council.binary-bundle.json",
+      "content_sha256": "5ccb2bb823a125d03e00a4e415af7e32a77f3e28db6ebcbfac679e11ace7cb9f",
+      "item_count": 9,
+      "display_only_count": 0,
+      "requires_workflow_and_meeting_count": 9,
+      "workflow_count": 7,
+      "route_count": 9,
+      "operational_rule_count": 0,
+      "excluded_procedure_items": 22
+    },
+    {
+      "code": "graduate_studies_research_council",
+      "title_ar": "مجلس الدراسات العليا والبحث العلمي",
+      "file": "graduate_studies_research_council.binary-bundle.json",
+      "content_sha256": "3b9210781b676765d4ce40eb635168077b065de38d7c9c98aaa23e57ba2f3496",
+      "item_count": 10,
+      "display_only_count": 0,
+      "requires_workflow_and_meeting_count": 10,
+      "workflow_count": 5,
+      "route_count": 10,
+      "operational_rule_count": 0,
+      "excluded_procedure_items": 18
+    },
+    {
+      "code": "board_of_trustees",
+      "title_ar": "مجلس الأمناء",
+      "file": "board_of_trustees.binary-bundle.json",
+      "content_sha256": "df7ddb65659818d42bffbea3fb1f02424e0f388b22d4a702481e587fae24c276",
+      "item_count": 9,
+      "display_only_count": 0,
+      "requires_workflow_and_meeting_count": 9,
+      "workflow_count": 5,
+      "route_count": 9,
+      "operational_rule_count": 0,
+      "excluded_procedure_items": 0
+    }
+  ],
+  "totals": {
+    "item_count": 54,
+    "display_only_count": 0,
+    "requires_workflow_and_meeting_count": 54,
+    "workflow_count": 29,
+    "route_count": 54,
+    "operational_rule_count": 0,
+    "excluded_procedure_items": 81
+  }
+}

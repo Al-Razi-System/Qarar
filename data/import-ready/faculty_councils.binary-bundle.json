@@ -1,0 +1,1439 @@
+{
+  "schema_version": "qarar.policy_binary_bundle.v1",
+  "generated_at": "2026-08-23T23:12:08.515Z",
+  "classification_model": {
+    "type": "binary",
+    "values": [
+      "display_only",
+      "requires_workflow_and_meeting"
+    ],
+    "default": "display_only"
+  },
+  "source_document": {
+    "code": "faculty_councils",
+    "title_ar": "مجالس الكليات",
+    "pdf_file": "مجالس الكليات.pdf",
+    "pdf_sha256": "ae3335c50af5bc9e59e6abc4050415b8ff65f53b4e15bdc574b0de50cdc703eb",
+    "pdf_pages": 7,
+    "text_file": "مجالس_الكليات.txt",
+    "text_sha256": "a3717ccd954e3d60dec0e529f6407d799c86d89a21100cb0783e08846433e782",
+    "legacy_bundle_file": "لائحة_مجالس_الكليات_جاهزة_حاليا_ومتوافقة_مع_مجالات_مستقبلية.json"
+  },
+  "source_status": "review_required_not_importable",
+  "policy": {
+    "code": "faculty_councils_regulation",
+    "name_ar": "لائحة مجالس الكليات بجامعة الرازي",
+    "name_en": null,
+    "policy_type": "regulation",
+    "description": "بنود الأجندة التنفيذية المعتمدة لـمجالس الكليات.",
+    "status": "active"
+  },
+  "version": {
+    "version_no": 1,
+    "version_label": "بنود الأجندة التنفيذية",
+    "change_summary": "قائمة البنود التنفيذية التي تتطلب مساراً واجتماعاً فقط.",
+    "legal_status": "draft_pending_formal_approval"
+  },
+  "scopes": [
+    {
+      "scope_type": "governance_class",
+      "governance_class_code": "faculty_council",
+      "governance_level": null,
+      "include_descendants": false,
+      "priority": 100
+    }
+  ],
+  "items": [
+    {
+      "item_code": "FAC-01",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "استعراض ومتابعة قرارات المحضر السابق",
+      "title_en": null,
+      "body_text": "استعراض ومتابعة قرارات المحضر السابق",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 45",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_internal_decision",
+      "workflow_codes": [
+        "faculty_council_meeting_decision"
+      ],
+      "sort_order": 10,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "FAC-02",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "مناقشة محاضر الأقسام بشأن المتابعة الأكاديمية: المحاضرات النظرية والتدريب السريري والتدريب المعملي",
+      "title_en": null,
+      "body_text": "مناقشة محاضر الأقسام بشأن المتابعة الأكاديمية: المحاضرات النظرية والتدريب السريري والتدريب المعملي",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 26/البند 16",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_fixed_agenda",
+      "workflow_codes": [
+        "faculty_council_meeting_decision"
+      ],
+      "sort_order": 20,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "FAC-03",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "البحث العلمي: متابعة أبحاث التخرج وأبحاث الدراسات العليا وأبحاث أعضاء هيئة التدريس",
+      "title_en": null,
+      "body_text": "البحث العلمي: متابعة أبحاث التخرج وأبحاث الدراسات العليا وأبحاث أعضاء هيئة التدريس",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 26/البندان 5 و16",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_postgraduate_research",
+      "workflow_codes": [
+        "faculty_council_meeting_decision",
+        "faculty_councils_regulation.postgraduate_full"
+      ],
+      "sort_order": 30,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "FAC-04",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "خدمة المجتمع والمشاركة المجتمعية",
+      "title_en": null,
+      "body_text": "خدمة المجتمع والمشاركة المجتمعية",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 26/البندان 14 و16",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_community_service",
+      "workflow_codes": [
+        "faculty_council_meeting_decision"
+      ],
+      "sort_order": 40,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "FAC-05",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "الإرشاد الأكاديمي",
+      "title_en": null,
+      "body_text": "الإرشاد الأكاديمي",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 26/البند 16",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_student_affairs",
+      "workflow_codes": [
+        "faculty_council_meeting_decision"
+      ],
+      "sort_order": 50,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "FAC-06",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "الجودة والتطوير وخطط التحسين",
+      "title_en": null,
+      "body_text": "الجودة والتطوير وخطط التحسين",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 26/البند 16",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_quality_accreditation",
+      "workflow_codes": [
+        "faculty_council_meeting_decision"
+      ],
+      "sort_order": 60,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "FAC-07",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "شؤون أعضاء هيئة التدريس بالكلية: التعيين والترقية والإيفاد والاستقالات",
+      "title_en": null,
+      "body_text": "شؤون أعضاء هيئة التدريس بالكلية: التعيين والترقية والإيفاد والاستقالات",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 26/البند 3",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_staff_affairs",
+      "workflow_codes": [
+        "faculty_councils_regulation.faculty_university_trustees"
+      ],
+      "sort_order": 70,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "FAC-08",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "الخطط والمناهج الدراسية والكتب والمراجع المقررة",
+      "title_en": null,
+      "body_text": "الخطط والمناهج الدراسية والكتب والمراجع المقررة",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 26/البند 10",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_curricula_programs",
+      "workflow_codes": [
+        "faculty_councils_regulation.faculty_university",
+        "faculty_councils_regulation.university_trustees"
+      ],
+      "sort_order": 80,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "FAC-09",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "تنظيم ومتابعة الاختبارات وإقرار النتائج السنوية والفصلية",
+      "title_en": null,
+      "body_text": "تنظيم ومتابعة الاختبارات وإقرار النتائج السنوية والفصلية",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 26/البند 6",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_exams_results",
+      "workflow_codes": [
+        "faculty_councils_regulation.faculty_university"
+      ],
+      "sort_order": 90,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "FAC-10",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "شؤون الطلاب: القبول والتحويل والبت في المسائل الطلابية",
+      "title_en": null,
+      "body_text": "شؤون الطلاب: القبول والتحويل والبت في المسائل الطلابية",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 26/البنود 9 و11 و13",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_student_affairs",
+      "workflow_codes": [
+        "faculty_council_meeting_decision",
+        "faculty_councils_regulation.faculty_university"
+      ],
+      "sort_order": 100,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "FAC-11",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "مشروع الموازنة السنوية للكلية وخطط التدريب والابتعاث",
+      "title_en": null,
+      "body_text": "مشروع الموازنة السنوية للكلية وخطط التدريب والابتعاث",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 26/البندان 7 و12",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_budget_finance",
+      "workflow_codes": [
+        "faculty_councils_regulation.faculty_university_trustees"
+      ],
+      "sort_order": 110,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "FAC-12",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "ما يحيله مجلس الجامعة أو رئيس الجامعة أو العميد للدراسة وإبداء الرأي",
+      "title_en": null,
+      "body_text": "ما يحيله مجلس الجامعة أو رئيس الجامعة أو العميد للدراسة وإبداء الرأي",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجالس_الكليات.txt/مادة 26/البند 17",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "faculty_dean_action",
+      "workflow_codes": [
+        "faculty_councils_regulation.conditional_higher_referral"
+      ],
+      "sort_order": 120,
+      "match_criteria": {}
+    }
+  ],
+  "workflows": [
+    {
+      "code": "faculty_council_meeting_decision",
+      "name_ar": "اجتماع وقرار مجلس الكلية",
+      "description": "مسار معياري يضمن إدراج الموضوع في جدول الأعمال، والتحقق من النصاب، والتصويت، وتوثيق القرار في المحضر.",
+      "version_no": 1,
+      "allow_cycles": false,
+      "activate": true,
+      "steps": [
+        {
+          "code": "agenda_review",
+          "name_ar": "مراجعة وإدراج الموضوع في جدول الأعمال",
+          "sequence_no": 1,
+          "step_type": "review",
+          "responsibility": "present",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": true,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved"
+          ],
+          "entry_conditions": {
+            "notice_before_days": 2,
+            "member_submission_before_days": null
+          }
+        },
+        {
+          "code": "council_decision",
+          "name_ar": "مناقشة المجلس والتصويت",
+          "sequence_no": 2,
+          "step_type": "voting",
+          "responsibility": "final_approve",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {
+            "quorum": "ثلثا الأعضاء",
+            "approval_rule": "ثلثا أصوات الحاضرين",
+            "legal_review_required": false
+          }
+        },
+        {
+          "code": "minutes_confirmation",
+          "name_ar": "تثبيت القرار في المحضر",
+          "sequence_no": 3,
+          "step_type": "follow_up",
+          "responsibility": "follow_up",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": true,
+          "allowed_outcomes": [
+            "completed"
+          ]
+        }
+      ],
+      "transitions": [
+        {
+          "from": "agenda_review",
+          "to": "council_decision",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_decision",
+          "to": "minutes_confirmation",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_decision",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_decision",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_decision",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "minutes_confirmation",
+          "to": null,
+          "outcome": "completed",
+          "transition_type": "complete",
+          "conditions": {}
+        }
+      ]
+    },
+    {
+      "code": "faculty_councils_regulation.postgraduate_full",
+      "name_ar": "مسار مجلس القسم ← مجلس الكلية ← مجلس الدراسات العليا والبحث العلمي ← مجلس الجامعة عند اشتراط الاعتماد النهائي",
+      "description": "مسار أجندة معتمد: مجلس القسم ثم مجلس الكلية ثم مجلس الدراسات العليا والبحث العلمي ثم مجلس الجامعة عند اشتراط الاعتماد النهائي. الاعتماد الخارجي يسجل كمتطلب ولا ينفذ كاجتماع داخلي.",
+      "version_no": 1,
+      "allow_cycles": false,
+      "activate": true,
+      "steps": [
+        {
+          "code": "agenda_review",
+          "name_ar": "مراجعة الموضوع وإدراجه في جدول الأعمال",
+          "sequence_no": 1,
+          "step_type": "review",
+          "responsibility": "present",
+          "governance_class_code": "department_council",
+          "required_permission_code": null,
+          "is_initial": true,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved"
+          ],
+          "entry_conditions": {
+            "notice_before_days": 2,
+            "member_submission_before_days": null
+          }
+        },
+        {
+          "code": "council_1",
+          "name_ar": "مناقشة واعتماد: مجلس القسم",
+          "sequence_no": 2,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "department_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {
+            "quorum": "ثلثا الأعضاء",
+            "approval_rule": "ثلثا أصوات الحاضرين",
+            "legal_review_required": false
+          }
+        },
+        {
+          "code": "council_2",
+          "name_ar": "مناقشة واعتماد: مجلس الكلية",
+          "sequence_no": 3,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "council_3",
+          "name_ar": "مناقشة واعتماد: مجلس الدراسات العليا والبحث العلمي",
+          "sequence_no": 4,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "council_4",
+          "name_ar": "مناقشة واعتماد: مجلس الجامعة عند اشتراط الاعتماد النهائي",
+          "sequence_no": 5,
+          "step_type": "voting",
+          "responsibility": "final_approve",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "minutes_confirmation",
+          "name_ar": "تثبيت النتيجة في المحضر وإشعار المعنيين",
+          "sequence_no": 6,
+          "step_type": "follow_up",
+          "responsibility": "follow_up",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": true,
+          "allowed_outcomes": [
+            "completed"
+          ]
+        }
+      ],
+      "transitions": [
+        {
+          "from": "agenda_review",
+          "to": "council_1",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "council_2",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "council_3",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "council_4",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_4",
+          "to": "minutes_confirmation",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_4",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_4",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_4",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "minutes_confirmation",
+          "to": null,
+          "outcome": "completed",
+          "transition_type": "complete",
+          "conditions": {}
+        }
+      ]
+    },
+    {
+      "code": "faculty_councils_regulation.faculty_university_trustees",
+      "name_ar": "مسار مجلس الكلية ← مجلس الجامعة ← مجلس الأمناء",
+      "description": "مسار أجندة معتمد: مجلس الكلية ثم مجلس الجامعة ثم مجلس الأمناء. الاعتماد الخارجي يسجل كمتطلب ولا ينفذ كاجتماع داخلي.",
+      "version_no": 1,
+      "allow_cycles": false,
+      "activate": true,
+      "steps": [
+        {
+          "code": "agenda_review",
+          "name_ar": "مراجعة الموضوع وإدراجه في جدول الأعمال",
+          "sequence_no": 1,
+          "step_type": "review",
+          "responsibility": "present",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": true,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved"
+          ],
+          "entry_conditions": {
+            "notice_before_days": 2,
+            "member_submission_before_days": null
+          }
+        },
+        {
+          "code": "council_1",
+          "name_ar": "مناقشة واعتماد: مجلس الكلية",
+          "sequence_no": 2,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {
+            "quorum": "ثلثا الأعضاء",
+            "approval_rule": "ثلثا أصوات الحاضرين",
+            "legal_review_required": false
+          }
+        },
+        {
+          "code": "council_2",
+          "name_ar": "مناقشة واعتماد: مجلس الجامعة",
+          "sequence_no": 3,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "council_3",
+          "name_ar": "مناقشة واعتماد: مجلس الأمناء",
+          "sequence_no": 4,
+          "step_type": "voting",
+          "responsibility": "final_approve",
+          "governance_class_code": "board_of_trustees",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "minutes_confirmation",
+          "name_ar": "تثبيت النتيجة في المحضر وإشعار المعنيين",
+          "sequence_no": 5,
+          "step_type": "follow_up",
+          "responsibility": "follow_up",
+          "governance_class_code": "board_of_trustees",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": true,
+          "allowed_outcomes": [
+            "completed"
+          ]
+        }
+      ],
+      "transitions": [
+        {
+          "from": "agenda_review",
+          "to": "council_1",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "council_2",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "council_3",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "minutes_confirmation",
+          "to": null,
+          "outcome": "completed",
+          "transition_type": "complete",
+          "conditions": {}
+        }
+      ]
+    },
+    {
+      "code": "faculty_councils_regulation.faculty_university",
+      "name_ar": "مسار مجلس الكلية ← مجلس الجامعة",
+      "description": "مسار أجندة معتمد: مجلس الكلية ثم مجلس الجامعة. الاعتماد الخارجي يسجل كمتطلب ولا ينفذ كاجتماع داخلي.",
+      "version_no": 1,
+      "allow_cycles": false,
+      "activate": true,
+      "steps": [
+        {
+          "code": "agenda_review",
+          "name_ar": "مراجعة الموضوع وإدراجه في جدول الأعمال",
+          "sequence_no": 1,
+          "step_type": "review",
+          "responsibility": "present",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": true,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved"
+          ],
+          "entry_conditions": {
+            "notice_before_days": 2,
+            "member_submission_before_days": null
+          }
+        },
+        {
+          "code": "council_1",
+          "name_ar": "مناقشة واعتماد: مجلس الكلية",
+          "sequence_no": 2,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {
+            "quorum": "ثلثا الأعضاء",
+            "approval_rule": "ثلثا أصوات الحاضرين",
+            "legal_review_required": false
+          }
+        },
+        {
+          "code": "council_2",
+          "name_ar": "مناقشة واعتماد: مجلس الجامعة",
+          "sequence_no": 3,
+          "step_type": "voting",
+          "responsibility": "final_approve",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "minutes_confirmation",
+          "name_ar": "تثبيت النتيجة في المحضر وإشعار المعنيين",
+          "sequence_no": 4,
+          "step_type": "follow_up",
+          "responsibility": "follow_up",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": true,
+          "allowed_outcomes": [
+            "completed"
+          ]
+        }
+      ],
+      "transitions": [
+        {
+          "from": "agenda_review",
+          "to": "council_1",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "council_2",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "minutes_confirmation",
+          "to": null,
+          "outcome": "completed",
+          "transition_type": "complete",
+          "conditions": {}
+        }
+      ]
+    },
+    {
+      "code": "faculty_councils_regulation.university_trustees",
+      "name_ar": "مسار مجلس الجامعة ← مجلس الأمناء",
+      "description": "مسار أجندة معتمد: مجلس الجامعة ثم مجلس الأمناء. الاعتماد الخارجي يسجل كمتطلب ولا ينفذ كاجتماع داخلي.",
+      "version_no": 1,
+      "allow_cycles": false,
+      "activate": true,
+      "steps": [
+        {
+          "code": "agenda_review",
+          "name_ar": "مراجعة الموضوع وإدراجه في جدول الأعمال",
+          "sequence_no": 1,
+          "step_type": "review",
+          "responsibility": "present",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": true,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved"
+          ],
+          "entry_conditions": {
+            "notice_before_days": 2,
+            "member_submission_before_days": null
+          }
+        },
+        {
+          "code": "council_1",
+          "name_ar": "مناقشة واعتماد: مجلس الجامعة",
+          "sequence_no": 2,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {
+            "quorum": "ثلثا الأعضاء",
+            "approval_rule": "ثلثا أصوات الحاضرين",
+            "legal_review_required": false
+          }
+        },
+        {
+          "code": "council_2",
+          "name_ar": "مناقشة واعتماد: مجلس الأمناء",
+          "sequence_no": 3,
+          "step_type": "voting",
+          "responsibility": "final_approve",
+          "governance_class_code": "board_of_trustees",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "minutes_confirmation",
+          "name_ar": "تثبيت النتيجة في المحضر وإشعار المعنيين",
+          "sequence_no": 4,
+          "step_type": "follow_up",
+          "responsibility": "follow_up",
+          "governance_class_code": "board_of_trustees",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": true,
+          "allowed_outcomes": [
+            "completed"
+          ]
+        }
+      ],
+      "transitions": [
+        {
+          "from": "agenda_review",
+          "to": "council_1",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "council_2",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "minutes_confirmation",
+          "to": null,
+          "outcome": "completed",
+          "transition_type": "complete",
+          "conditions": {}
+        }
+      ]
+    },
+    {
+      "code": "faculty_councils_regulation.conditional_higher_referral",
+      "name_ar": "مسار المجلس المختص ابتداءً ← المجلس الأعلى فقط إذا خرج الموضوع عن صلاحية المجلس أو اشترط النص اعتمادًا أعلى",
+      "description": "مسار أجندة معتمد: المجلس المختص ابتداءً ثم المجلس الأعلى فقط إذا خرج الموضوع عن صلاحية المجلس أو اشترط النص اعتمادًا أعلى. الاعتماد الخارجي يسجل كمتطلب ولا ينفذ كاجتماع داخلي.",
+      "version_no": 1,
+      "allow_cycles": false,
+      "activate": true,
+      "steps": [
+        {
+          "code": "agenda_review",
+          "name_ar": "مراجعة الموضوع وإدراجه في جدول الأعمال",
+          "sequence_no": 1,
+          "step_type": "review",
+          "responsibility": "present",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": true,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved"
+          ],
+          "entry_conditions": {
+            "notice_before_days": 2,
+            "member_submission_before_days": null
+          }
+        },
+        {
+          "code": "council_1",
+          "name_ar": "مناقشة واعتماد: المجلس المختص ابتداءً",
+          "sequence_no": 2,
+          "step_type": "voting",
+          "responsibility": "final_approve",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {
+            "quorum": "ثلثا الأعضاء",
+            "approval_rule": "ثلثا أصوات الحاضرين",
+            "legal_review_required": false
+          }
+        },
+        {
+          "code": "minutes_confirmation",
+          "name_ar": "تثبيت النتيجة في المحضر وإشعار المعنيين",
+          "sequence_no": 3,
+          "step_type": "follow_up",
+          "responsibility": "follow_up",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": true,
+          "allowed_outcomes": [
+            "completed"
+          ]
+        }
+      ],
+      "transitions": [
+        {
+          "from": "agenda_review",
+          "to": "council_1",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "minutes_confirmation",
+          "to": null,
+          "outcome": "completed",
+          "transition_type": "complete",
+          "conditions": {}
+        }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "policy_item_code": "FAC-01",
+      "workflow_codes": [
+        "faculty_council_meeting_decision"
+      ],
+      "topic_category_codes": [
+        "faculty_internal_decision"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "FAC-02",
+      "workflow_codes": [
+        "faculty_council_meeting_decision"
+      ],
+      "topic_category_codes": [
+        "faculty_fixed_agenda"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "FAC-03",
+      "workflow_codes": [
+        "faculty_council_meeting_decision",
+        "faculty_councils_regulation.postgraduate_full"
+      ],
+      "topic_category_codes": [
+        "faculty_postgraduate_research",
+        "faculty_postgraduate_research"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "FAC-04",
+      "workflow_codes": [
+        "faculty_council_meeting_decision"
+      ],
+      "topic_category_codes": [
+        "faculty_community_service"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "FAC-05",
+      "workflow_codes": [
+        "faculty_council_meeting_decision"
+      ],
+      "topic_category_codes": [
+        "faculty_student_affairs"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "FAC-06",
+      "workflow_codes": [
+        "faculty_council_meeting_decision"
+      ],
+      "topic_category_codes": [
+        "faculty_quality_accreditation"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "FAC-07",
+      "workflow_codes": [
+        "faculty_councils_regulation.faculty_university_trustees"
+      ],
+      "topic_category_codes": [
+        "faculty_staff_affairs"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "FAC-08",
+      "workflow_codes": [
+        "faculty_councils_regulation.faculty_university",
+        "faculty_councils_regulation.university_trustees"
+      ],
+      "topic_category_codes": [
+        "faculty_curricula_programs",
+        "faculty_curricula_programs"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "FAC-09",
+      "workflow_codes": [
+        "faculty_councils_regulation.faculty_university"
+      ],
+      "topic_category_codes": [
+        "faculty_exams_results"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "FAC-10",
+      "workflow_codes": [
+        "faculty_council_meeting_decision",
+        "faculty_councils_regulation.faculty_university"
+      ],
+      "topic_category_codes": [
+        "faculty_student_affairs",
+        "faculty_student_affairs"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "FAC-11",
+      "workflow_codes": [
+        "faculty_councils_regulation.faculty_university_trustees"
+      ],
+      "topic_category_codes": [
+        "faculty_budget_finance"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "FAC-12",
+      "workflow_codes": [
+        "faculty_councils_regulation.conditional_higher_referral"
+      ],
+      "topic_category_codes": [
+        "faculty_dean_action"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    }
+  ],
+  "operational_rules": [],
+  "source_issues": [],
+  "validation_summary": {
+    "item_count": 12,
+    "display_only_count": 0,
+    "requires_workflow_and_meeting_count": 12,
+    "workflow_count": 6,
+    "route_count": 12,
+    "operational_rule_count": 0,
+    "excluded_procedure_items": 20
+  },
+  "content_sha256": "5129f404b70e8c8ab441de3cc8cf6f1f57c33be00f7ee115add15873080d5f94"
+}

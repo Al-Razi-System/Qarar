@@ -7,6 +7,23 @@ supabase/.env.*
 
 # General local files
 node_modules/
+.local-runtime/
+tmp/
+output/
+temp_*.md
+*.tmp
+*.log
+check_*.py
+find_duplicates.py
+create_sprint05_issues.py
+query.graphql
 .env
 .env.*
 !.env.example
+
+# Generated regulation deployment artifacts
+backups/
+data/staging-v4/
+data/بيانات الموظفين.txt
+__pycache__/
+*.py[cod]

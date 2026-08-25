@@ -109,6 +109,7 @@
 - [طلبات الميزات التفصيلية - Sprint 01](docs/40_Feature_Requests_Sprint_01_Qarar_Arabic.md)
 - [سجل طلبات الميزات](docs/41_Feature_Request_Register_Qarar_Arabic.md)
 - [Initial Issues - Sprint 03.5 Regulation Engine - Final](docs/42_Initial_Issues_Sprint_03_5_Regulation_Engine_Qarar_Arabic_Complete.md)
+- [خطة إغلاق فجوات Release 1](docs/43_Release_1_Gap_Closure_Implementation_Plan_Qarar_Arabic.md)
 
 ---
 
@@ -132,6 +133,7 @@
 - إذا أردت مرجعاً تنفيذياً سريعاً لإدارة الفروع والدمج و`Pull Requests`، راجع [دليل GitFlow المبسط](docs/gitflow-qarar.md).
 - إذا أردت ملفاً عملياً مختصراً لإعداد حالات وحقول وقيم GitHub Project، راجع [إعدادات GitHub Project التنفيذية](docs/github-project-config-qarar.md).
 - إذا أردت حزمة Issues تأسيسية جاهزة بصياغة تشغيلية موحدة، راجع [وثيقة Initial Issues for Release 0](docs/31_Initial_Issues_Release_0_Qarar_Arabic.md).
+- قبل كتابة أي استعلام أو Migration أو عقد API، راجع [مرجع مخطط قاعدة البيانات المولد آلياً](docs/technical/database/Qarar_Database_Schema_Reference_Arabic.md)، ويمكن تحديثه عبر `scripts/export-database-schema-reference.ps1`.
 
 ---
 
