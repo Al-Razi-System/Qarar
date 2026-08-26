@@ -9,6 +9,7 @@
 - Added meeting minutes PDF generation with Al-Razi University branding, Arabic font support, structured minutes content, decisions, attendance, and embedded approval signatures.
 - Added agenda discussion flow support for secretary summaries, voting steps, final decision drafting, and minutes approval workflow.
 - Added database migrations for agenda workflow voting context, voting notes, live vote totals, trusted transition guards, tie-break persistence, decision creation locking, minutes grants, and approved signature exposure.
+- Added a portable local-state snapshot under `supabase/snapshots` so another device can restore the latest tested meeting data, demo users, minutes, decisions, votes, and signatures.
 - Added generated database schema reference documentation for safer field naming during migrations and API work.
 
 ### Changed
@@ -18,6 +19,7 @@
 - Improved topic cards during live meetings with collapsible cards, clearer state badges, better active-item emphasis, and identity-aligned action colors.
 - Improved final minutes workspace behavior after save, approval, signature collection, and final PDF download.
 - Improved PDF layout alignment for attendees, agenda items, minutes text, decision sections, and full signature rendering.
+- Improved transferred agenda topic cards to show the source council, source meeting, decision number, decision text, and minutes approval status.
 - Updated root project scripts and documentation links for regulation bundle operations and database schema reference generation.
 
 ### Fixed
@@ -27,6 +29,8 @@
 - Fixed permission/grant issues that caused `403 Forbidden` and server errors in meeting workflow operations.
 - Fixed vote result status labels so closed voting no longer appears as still available.
 - Fixed final signatures display so all attending members' approvals are included in the PDF.
+- Fixed approved agenda topics remaining stuck as `listed` after final minutes approval, which prevented them from appearing in the next council's agenda.
+- Fixed the local HTTPS startup script to read `supabase/docker/.env` from the current repository before legacy fallback paths.
 
 ### Cleanup
 

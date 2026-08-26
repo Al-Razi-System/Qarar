@@ -24,6 +24,18 @@ function meetingErrorMessage(error: unknown, fallback: string) {
   return message;
 }
 
+function minutesStatusLabel(status?: string | null) {
+  if (status === "approved") return "محضر معتمد";
+  if (status === "ready_for_approval") return "محضر بانتظار المصادقة";
+  if (status === "draft") return "مسودة محضر";
+  return status ? `حالة المحضر: ${status}` : null;
+}
+
+function truncateText(value?: string | null, max = 150) {
+  if (!value) return "";
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+
 export function MeetingsWorkspace() {
   const router = useRouter();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -474,7 +486,29 @@ export function MeetingsWorkspace() {
                 <button type="button" onClick={() => void loadAgendaCandidates()} disabled={agendaLoading} className="rounded-lg bg-[#0066cc] px-4 text-xs font-bold text-white disabled:opacity-50">بحث</button>
               </div>
               <div className="mt-4 max-h-[45vh] space-y-2 overflow-y-auto">
-                {agendaLoading ? <div className="grid min-h-36 place-items-center"><LoaderCircle className="animate-spin text-[#0066cc]" size={24} /></div> : agendaCandidates.length ? agendaCandidates.map((topic) => <div key={topic.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#e5edf4] bg-[#fbfdff] p-4"><div className="min-w-0 flex-1"><h3 className="truncate text-xs font-black text-[#0a1330]">{topic.title_ar}</h3><p className="mt-1 text-[10px] text-[#718196]">{topic.topic_no ?? "موضوع مؤهل"}{topic.priority ? ` · ${topic.priority}` : ""}</p>{topic.current_step && <p className="mt-1 text-[10px] font-bold text-[#0066cc]">الخطوة الحالية: {topic.current_step}</p>}</div><button type="button" onClick={() => void addAgendaItem(topic.id)} disabled={detailLoading} className="rounded-xl bg-[#0066cc] px-4 py-2 text-[11px] font-bold text-white disabled:opacity-50">إضافة إلى الجدول</button></div>) : <div className="rounded-2xl border border-dashed border-[#caddec] bg-[#fbfdff] p-8 text-center"><Search className="mx-auto text-[#84a4c2]" size={28} /><h3 className="mt-3 text-sm font-black text-[#193451]">لا توجد موضوعات مؤهلة حاليًا</h3><div className="mx-auto mt-3 max-w-lg rounded-xl bg-[#f5f9fd] p-3 text-right text-[10px] leading-6 text-[#60748a]"><p>يظهر الموضوع هنا عندما:</p><p>1. يكون مساره جاهزًا وخطوته الحالية تسمح بعرضه في اجتماع.</p><p>2. تكون الخطوة موجهة إلى مجلس هذا الاجتماع.</p><p>3. يكون الاجتماع مسودة أو مجدولًا ولم يسبق إدراج الموضوع فيه.</p></div><Link href="/admin/topics" className="mt-3 inline-flex rounded-xl bg-[#0066cc] px-4 py-2 text-[11px] font-bold text-white">فتح الموضوعات والتحقق من المسار</Link></div>}
+                {agendaLoading ? <div className="grid min-h-36 place-items-center"><LoaderCircle className="animate-spin text-[#0066cc]" size={24} /></div> : agendaCandidates.length ? agendaCandidates.map((topic) => {
+                  const sourceLabel = [topic.source_unit_name_ar, topic.source_meeting_no].filter(Boolean).join(" · ");
+                  const sourceMinutesLabel = minutesStatusLabel(topic.source_minutes_status);
+                  return (
+                    <div key={topic.id} className="rounded-2xl border border-[#d7e7f5] bg-[#fbfdff] p-4 shadow-[0_10px_24px_rgba(14,52,89,.055)]">
+                      <div className="flex flex-wrap items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex flex-wrap gap-1.5">
+                            {topic.topic_no && <span className="rounded-full bg-[#eaf4ff] px-2.5 py-1 text-[9px] font-black text-[#0877d1]">{topic.topic_no}</span>}
+                            {topic.priority && <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[9px] font-black text-orange-700">{topic.priority}</span>}
+                            {sourceMinutesLabel && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-black text-emerald-700">{sourceMinutesLabel}</span>}
+                            {topic.source_decision_no && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black text-slate-700">{topic.source_decision_no}</span>}
+                          </div>
+                          <h3 className="text-sm font-black leading-6 text-[#0a1330]">{topic.title_ar}</h3>
+                          {topic.current_step && <p className="mt-1 text-[10px] font-bold text-[#0066cc]">الخطوة الحالية: {topic.current_step}</p>}
+                          {sourceLabel && <p className="mt-2 text-[10px] font-bold text-[#60748a]">مرحل من: {sourceLabel}</p>}
+                          {topic.source_decision_text && <p className="mt-2 rounded-xl border border-[#e3edf6] bg-white px-3 py-2 text-[10px] leading-5 text-[#40566f]">القرار السابق: {truncateText(topic.source_decision_text)}</p>}
+                        </div>
+                        <button type="button" onClick={() => void addAgendaItem(topic.id)} disabled={detailLoading} className="rounded-xl bg-[#0066cc] px-4 py-2 text-[11px] font-bold text-white shadow-[0_8px_18px_rgba(0,102,204,.16)] disabled:opacity-50">إضافة إلى الجدول</button>
+                      </div>
+                    </div>
+                  );
+                }) : <div className="rounded-2xl border border-dashed border-[#caddec] bg-[#fbfdff] p-8 text-center"><Search className="mx-auto text-[#84a4c2]" size={28} /><h3 className="mt-3 text-sm font-black text-[#193451]">لا توجد موضوعات مؤهلة حاليًا</h3><div className="mx-auto mt-3 max-w-lg rounded-xl bg-[#f5f9fd] p-3 text-right text-[10px] leading-6 text-[#60748a]"><p>يظهر الموضوع هنا عندما:</p><p>1. تكون الخطوة موجهة إلى مجلس هذا الاجتماع وحالة الموضوع قابلة للإدراج.</p><p>2. يكون محضر الاجتماع السابق معتمدًا إذا كان الموضوع مرحلًا من مجلس آخر.</p><p>3. لا يكون الموضوع عالقًا في حالة إدراج لاجتماع سابق أو مدرجًا في اجتماع آخر مفتوح.</p></div><Link href="/admin/topics" className="mt-3 inline-flex rounded-xl bg-[#0066cc] px-4 py-2 text-[11px] font-bold text-white">فتح الموضوعات والتحقق من المسار</Link></div>}
               </div>
             </div>
             <div className="flex justify-end border-t border-[#e7edf3] bg-[#fbfcfe] px-6 py-4"><button type="button" onClick={() => setAgendaModal(false)} className="rounded-xl border border-[#dbe5ef] px-4 py-2 text-xs font-bold text-[#52647a]">إغلاق</button></div>

@@ -22,6 +22,7 @@ if (-not $NetworkIp) {
 $certificate = node "$PSScriptRoot\generate-local-https-cert.mjs" $NetworkIp | ConvertFrom-Json
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $projectRoot)
 $envFileCandidates = @(
+    (Join-Path $repositoryRoot "supabase\docker\.env"),
     (Join-Path (Split-Path -Parent $repositoryRoot) "Qarar-core01\supabase\docker\.env"),
     (Join-Path (Split-Path -Parent $projectRoot) "production-ready-v1\supabase\docker\.env")
 )

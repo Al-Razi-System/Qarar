@@ -64,7 +64,23 @@ export type MeetingMinutes = {
   updated_at?: string; approved_at?: string | null; approvals?: MinuteApproval[]; viewer_can_edit?: boolean; final_content_hash?: string | null;
 };
 export type MeetingReadiness = { ready: boolean; checks: Array<{ code: string; label: string; complete: boolean; count?: number }> };
-export type AgendaCandidate = { id: string; title_ar: string; topic_no?: string; priority?: string; current_step?: string | null; responsibility?: string | null };
+export type AgendaCandidate = {
+  id: string;
+  title_ar: string;
+  topic_no?: string;
+  priority?: string;
+  status?: string;
+  current_step?: string | null;
+  responsibility?: string | null;
+  source_meeting_no?: string | null;
+  source_meeting_title_ar?: string | null;
+  source_unit_name_ar?: string | null;
+  source_decision_no?: string | null;
+  source_decision_text?: string | null;
+  source_decision_status?: string | null;
+  source_minutes_status?: string | null;
+  source_minutes_approved_at?: string | null;
+};
 export type MeetingReference = { id: string; name_ar: string; code?: string };
 export type MeetingFormOptions = { meeting_units?: MeetingReference[]; meeting_types?: MeetingReference[]; location_types?: string[] };
 
