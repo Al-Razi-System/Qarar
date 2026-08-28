@@ -68,7 +68,9 @@ jobs:
       - name: Validate and start the stack
         run: |
           npm run docker:config
-          docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml up -d --wait
+          sh scripts/pull-supabase-compose-images.sh
+          docker compose --env-file supabase/docker/.env \
+            -f supabase/docker/docker-compose.yml up -d --wait --pull never
       - name: Run database contract smoke tests
         run: sh supabase/tests/run-completed-db-tests.sh
       - name: Verify generated API contract reference against the running registry
@@ -100,7 +102,10 @@ jobs:
         run: cp supabase/docker/.env.example supabase/docker/.env
       - name: Start Supabase
         working-directory: ${{ github.workspace }}
-        run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml up -d --wait
+        run: |
+          sh scripts/pull-supabase-compose-images.sh
+          docker compose --env-file supabase/docker/.env \
+            -f supabase/docker/docker-compose.yml up -d --wait --pull never
       - name: Run regulations browser scenarios
         run: npm run test:e2e
       - name: Upload Playwright report

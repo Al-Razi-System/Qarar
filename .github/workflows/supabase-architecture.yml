@@ -44,16 +44,9 @@ jobs:
         run: |
           cp supabase/docker/.env.example supabase/docker/.env
           npm run docker:config
-          compose="docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml"
-          for service in $($compose config --services); do
-            for attempt in 1 2 3 4 5 6; do
-              $compose pull "$service" && break
-              [ "$attempt" -lt 6 ] || exit 1
-              sleep $((attempt * 20))
-            done
-            sleep 5
-          done
-          $compose up -d --pull never
+          sh scripts/pull-supabase-compose-images.sh
+          docker compose --env-file supabase/docker/.env \
+            -f supabase/docker/docker-compose.yml up -d --pull never
       - name: Wait for API health
         run: |
           anon_key=$(sed -n 's/^ANON_KEY=//p' supabase/docker/.env)
