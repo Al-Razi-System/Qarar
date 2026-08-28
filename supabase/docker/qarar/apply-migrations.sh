@@ -158,6 +158,20 @@ $$;
 alter function auth.role() owner to supabase_auth_admin;
 SQL
 
+# Storage API owns the storage schema and initializes it independently from
+# project migrations. On a fresh Compose volume it must create its official
+# tables before migrations seed the private Qarar evidence bucket or grant
+# governed access to storage.objects.
+storage_wait_attempt=0
+until [ "$(psql -Atqc "select to_regclass('storage.buckets') is not null")" = "t" ]; do
+  storage_wait_attempt=$((storage_wait_attempt + 1))
+  if [ "$storage_wait_attempt" -ge 120 ]; then
+    echo "Storage schema was not initialized before project migrations" >&2
+    exit 1
+  fi
+  sleep 1
+done
+
 # A migration image must be able to account for every entry already recorded
 # by the target database before it changes that database. Without this gate a
 # rebuilt image can silently continue from a ledger whose historical source
