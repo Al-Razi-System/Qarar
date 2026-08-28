@@ -86,11 +86,10 @@ Every remaining `public` view is registered in
 `qarar_architecture.compatibility_surface_registry` with its consumers, owner, replacement, and
 earliest removal date. Authenticated and anonymous roles have no DML privileges on these views.
 
-Current consumers are limited to integration-test fixture setup, the pre-Sprint-04
-`generate-minutes` Edge Function, and the legacy voting report. CI rejects any additional Edge
-Function `.from(...)` dependency. Sprint 04 must migrate `generate-minutes` to governed contracts;
-the general compatibility views are scheduled for removal no earlier than 2026-09-30 and the
-reporting view no earlier than 2026-10-31.
+Current consumers are limited to integration-test fixture setup and the legacy voting report.
+`generate-minutes` now reads and writes only through governed `api_v1` contracts. CI rejects every
+Edge Function `.from(...)` dependency. The general compatibility views are scheduled for removal no
+earlier than 2026-09-30 and the reporting view no earlier than 2026-10-31.
 
 ## Migration Runtime
 

@@ -33,7 +33,8 @@ insert into public.permissions(organization_id,code,module,action,context_scope,
  ('20202020-2020-2020-2020-202020202020','iam.permissions.read','iam','permissions.read','organization','Read permissions'),
  ('20202020-2020-2020-2020-202020202020','iam.permissions.manage','iam','permissions.manage','organization','Manage permissions'),
  ('20202020-2020-2020-2020-202020202020','iam.sso.manage','iam','sso.manage','organization','Manage SSO'),
- ('20202020-2020-2020-2020-202020202020','topics.review','topics','review','governance_unit','Review topics');
+ ('20202020-2020-2020-2020-202020202020','topics.review','topics','review','governance_unit','Review topics'),
+ ('20202020-2020-2020-2020-202020202020','topics.comment','topics','comment','governance_unit','Comment on topics');
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select p.organization_id,'23232323-2323-2323-2323-232323232323',p.id from public.permissions p where p.organization_id='20202020-2020-2020-2020-202020202020' and p.code like 'iam.%';
 insert into public.role_permissions(organization_id,role_id,permission_id)
@@ -62,16 +63,20 @@ insert into public.sso_identity_providers(id,organization_id,provider_type,provi
 values('27272727-2727-2727-2727-272727272727','20202020-2020-2020-2020-202020202020','saml','Ops SSO','26262626-2626-2626-2626-262626262626','jit','active');
 set local role authenticated;
 select ok(api_v1.admin_upsert_sso_group_mapping('27272727-2727-2727-2727-272727272727','Reviewers','24242424-2424-2424-2424-242424242424','22222222-2222-2222-2222-222222222222') is not null,'admin maps an SSO group to role and unit');
-select is(api_v1.sync_current_sso_groups(array['Reviewers']),1,'SSO group sync creates the mapped membership');
+set local role service_role;
+set local "request.jwt.claims" to '{"role":"service_role","sub":"e1000000-0000-0000-0000-000000000001","email":"admin1@ops.test","sso_provider_id":"26262626-2626-2626-2626-262626262626"}';
+select is(api_v1.sync_current_sso_groups(array['Reviewers']),1,'trusted SSO service sync creates the mapped membership');
+set local role authenticated;
+set local "request.jwt.claims" to '{"sub":"e1000000-0000-0000-0000-000000000001","email":"admin1@ops.test","sso_provider_id":"26262626-2626-2626-2626-262626262626"}';
 
 create temporary table ops_state(request_id uuid,matrix jsonb) on commit drop;
-insert into ops_state(request_id) select api_v1.admin_request_role_permissions_change('24242424-2424-2424-2424-242424242424',array['topics.review','iam.roles.read'],'Need reviewer visibility');
+insert into ops_state(request_id) select api_v1.admin_request_role_permissions_change('24242424-2424-2424-2424-242424242424',array['topics.review','topics.comment'],'Need reviewer visibility');
 select throws_ok(format('select api_v1.admin_review_iam_change(%L,%L,%L)',(select request_id from ops_state),'approved','self review'), '42501','requester cannot approve their own change','four-eyes rule blocks self approval');
 
 set local "request.jwt.claims" to '{"sub":"e1000000-0000-0000-0000-000000000002","email":"admin2@ops.test"}';
 select lives_ok(format('select api_v1.admin_review_iam_change(%L,%L,%L)',(select request_id from ops_state),'approved','approved'), 'a second admin can approve the change');
 select is((select status from public.iam_change_requests where id=(select request_id from ops_state)),'applied','approved role permission change is applied');
-select ok(exists(select 1 from public.role_permissions rp join public.permissions p on p.id=rp.permission_id where rp.role_id='24242424-2424-2424-2424-242424242424' and p.code='iam.roles.read' and rp.is_active),'approved permission is active on role');
+select ok(exists(select 1 from public.role_permissions rp join public.permissions p on p.id=rp.permission_id where rp.role_id='24242424-2424-2424-2424-242424242424' and p.code='topics.comment' and rp.is_active),'approved permission is active on role');
 
 update ops_state set matrix=api_v1.admin_export_permission_matrix();
 select is((select matrix->>'schema_version' from ops_state),'1','permission matrix export is versioned');

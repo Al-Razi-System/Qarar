@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(22);
+select plan(23);
 
 grant all privileges on all tables in schema public to authenticated;
 grant usage on schema public to authenticated;
@@ -52,14 +52,21 @@ values
   ('10101010-1010-1010-1010-101010101010', 'iam.permissions.read', 'iam', 'permissions.read', 'organization', 'Read permissions'),
   ('10101010-1010-1010-1010-101010101010', 'iam.permissions.manage', 'iam', 'permissions.manage', 'organization', 'Manage permissions'),
   ('10101010-1010-1010-1010-101010101010', 'iam.sso.read', 'iam', 'sso.read', 'organization', 'Read SSO'),
-  ('10101010-1010-1010-1010-101010101010', 'iam.sso.manage', 'iam', 'sso.manage', 'organization', 'Manage SSO');
+  ('10101010-1010-1010-1010-101010101010', 'iam.sso.manage', 'iam', 'sso.manage', 'organization', 'Manage SSO')
+on conflict (organization_id, code) do update set
+  module = excluded.module,
+  action = excluded.action,
+  context_scope = excluded.context_scope,
+  name_ar = excluded.name_ar,
+  is_active = true;
 
 insert into public.role_permissions (organization_id, role_id, permission_id)
 select '10101010-1010-1010-1010-101010101010', '13131313-1313-1313-1313-131313131313', id
 from public.permissions
 where organization_id = '10101010-1010-1010-1010-101010101010'
-on conflict (organization_id, role_id, permission_id)
-do update set is_active = true;
+on conflict (organization_id, role_id, permission_id) do update set
+  is_active = true,
+  updated_at = now();
 
 set local role authenticated;
 set local "request.jwt.claims" to '{"sub": "aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa", "email": "admin@iam.test"}';
@@ -114,12 +121,12 @@ select is(
 );
 
 select lives_ok(
-  $$ select api_v1.admin_upsert_permission('topics.review', 'topics', 'review', 'governance_unit', 'Review topics') $$,
+  $$ select api_v1.admin_upsert_permission('iam_test.custom_review', 'iam_test', 'custom_review', 'governance_unit', 'Review test records') $$,
   'admin can create a custom permission'
 );
 
 select ok(
-  api_v1.admin_list_permissions('topics', true) @> '[{"code":"topics.review"}]'::jsonb,
+  api_v1.admin_list_permissions('iam_test', true) @> '[{"code":"iam_test.custom_review"}]'::jsonb,
   'permission list supports module filtering'
 );
 
@@ -129,7 +136,7 @@ insert into iam_test_state(role_id)
 select api_v1.admin_upsert_role(null, 'topic_reviewer', 'Topic Reviewer', 'Topic Reviewer', 'Reviews topics', 'governance_unit', true);
 
 select throws_ok(
-  $$ select qarar_iam.admin_set_role_permissions((select role_id from iam_test_state), array['topics.review']) $$,
+  $$ select qarar_iam.admin_set_role_permissions((select role_id from iam_test_state), array['iam_test.custom_review']) $$,
   '42501',
   'permission denied for function admin_set_role_permissions',
   'direct role permission replacement is closed'
@@ -200,11 +207,31 @@ select is(
   'authorized admin can register a governed Supabase SSO provider mapping'
 );
 
+select throws_ok(
+  $$ select api_v1.admin_upsert_sso_domain(
+    (select id from public.sso_identity_providers where provider_name = 'IAM Test SAML'),
+    'iam.test',
+    true
+  ) $$,
+  '42501',
+  'SSO domain verification must be completed by the trusted verification service',
+  'an IAM client cannot self-attest SSO domain verification'
+);
+
 select api_v1.admin_upsert_sso_domain(
   (select id from public.sso_identity_providers where provider_name = 'IAM Test SAML'),
   'iam.test',
-  true
+  false
 );
+
+-- A trusted verifier is outside the client contract.  The fixture establishes
+-- a verified domain directly so the remaining SSO-login workflow is tested.
+reset role;
+update public.sso_domains
+set verified_at = now(),
+    status = 'active'
+where domain = 'iam.test';
+set local role authenticated;
 
 set local "request.jwt.claims" to '{"sub": "cccccccc-1111-1111-1111-cccccccccccc", "email": "sso.user@iam.test", "sso_provider_id": "15151515-1515-1515-1515-151515151515"}';
 

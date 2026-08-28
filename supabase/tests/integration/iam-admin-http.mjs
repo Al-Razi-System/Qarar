@@ -89,26 +89,58 @@ try {
     body: JSON.stringify({ email: adminEmail, password }),
   }, 200)
   const callerHeaders = { apikey: anonKey, Authorization: `Bearer ${login.body.access_token}`, "Content-Type": "application/json" }
+  const rpcHeaders = {
+    ...callerHeaders,
+    "Accept-Profile": "api_v1",
+    "Content-Profile": "api_v1",
+  }
+
+  const searchedUsers = await request("/rest/v1/rpc/admin_search_users", {
+    method: "POST",
+    headers: rpcHeaders,
+    body: JSON.stringify({
+      p_query: adminEmail,
+      p_status: "active",
+      p_role_id: null,
+      p_governance_unit_id: null,
+      p_limit: 25,
+      p_offset: 0,
+    }),
+  }, 200)
+  assert.equal(searchedUsers.body.total, 1)
+  assert.equal(searchedUsers.body.items[0].email, adminEmail)
+
+  const listedRoles = await request("/rest/v1/rpc/admin_list_roles", {
+    method: "POST",
+    headers: rpcHeaders,
+    body: JSON.stringify({
+      p_query: null,
+      p_scope: null,
+      p_active_only: true,
+    }),
+  }, 200)
+  assert.ok(Array.isArray(listedRoles.body))
+  assert.ok(listedRoles.body.some((item) => item.id === role.id))
+
+  const listedPermissions = await request("/rest/v1/rpc/admin_list_permissions", {
+    method: "POST",
+    headers: rpcHeaders,
+    body: JSON.stringify({ p_module: null, p_active_only: true }),
+  }, 200)
+  assert.ok(Array.isArray(listedPermissions.body))
 
   const success = await request("/functions/v1/iam-admin", {
     method: "POST", headers: callerHeaders,
-    body: JSON.stringify({ action: "create_user", email: userEmail, full_name_ar: "HTTP Created User", role_id: role.id, governance_unit_id: unit.id }),
+    body: JSON.stringify({ action: "create_user", email: userEmail, full_name_ar: "HTTP Created User", temporary_password: password, role_id: role.id, governance_unit_id: unit.id }),
   }, 201)
   created.authUsers.push(success.body.user_id)
-  assert.equal(success.body.invitation_sent, true)
+  assert.equal(success.body.account_created, true)
   const profile = (await rest(`users?id=eq.${success.body.user_id}&select=id,email,status`)).body
   assert.deepEqual(profile, [{ id: success.body.user_id, email: userEmail, status: "active" }])
   const membership = (await rest(`memberships?user_id=eq.${success.body.user_id}&select=role_id,governance_unit_id,membership_status`)).body
   assert.deepEqual(membership, [{ role_id: role.id, governance_unit_id: unit.id, membership_status: "active" }])
   assert.ok((await listAuthUsers()).some((user) => user.id === success.body.user_id && user.email === userEmail))
 
-  const messages = await fetch("http://localhost:8025/api/v1/messages").then((response) => response.json())
-  assert.ok(messages.messages.some((message) => JSON.stringify(message).includes(userEmail)), "invitation email was not captured by Mailpit")
-
-  await request(`/auth/v1/admin/users/${success.body.user_id}`, {
-    method: "PUT", headers: serviceHeaders,
-    body: JSON.stringify({ password, email_confirm: true }),
-  }, 200)
   const userLogin = await request("/auth/v1/token?grant_type=password", {
     method: "POST", headers: { apikey: anonKey, "Content-Type": "application/json" },
     body: JSON.stringify({ email: userEmail, password }),
@@ -156,13 +188,14 @@ try {
 
   const failed = await request("/functions/v1/iam-admin", {
     method: "POST", headers: callerHeaders,
-    body: JSON.stringify({ action: "create_user", email: rollbackEmail, full_name_ar: "Rollback User", role_id: "99999999-9999-9999-9999-999999999999", governance_unit_id: unit.id }),
+    body: JSON.stringify({ action: "create_user", email: rollbackEmail, full_name_ar: "Rollback User", temporary_password: password, role_id: "99999999-9999-9999-9999-999999999999", governance_unit_id: unit.id }),
   })
   assert.equal(failed.response.status, 400, JSON.stringify(failed.body))
   assert.equal((await rest(`users?email=eq.${encodeURIComponent(rollbackEmail)}&select=id`)).body.length, 0)
-  assert.equal((await listAuthUsers()).some((user) => user.email === rollbackEmail), false, "Auth rollback did not delete the invited user")
+  assert.equal((await listAuthUsers()).some((user) => user.email === rollbackEmail), false, "Auth rollback did not delete the created user")
 
-  console.log("ok - HTTP create flow created Auth user, invitation email, profile, and role membership")
+  console.log("ok - HTTP create flow created confirmed Auth user, profile, and role membership")
+  console.log("ok - HTTP user search, role list, and permission list contracts returned frontend DTOs")
   console.log("ok - HTTP session revocation invalidated the real Auth refresh-token chain")
   console.log("ok - HTTP lock/unlock synchronized Supabase Auth and the application profile")
   console.log("ok - HTTP failure rolled back both application data and the invited Auth user")

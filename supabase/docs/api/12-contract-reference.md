@@ -186,8 +186,6 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `save_meeting_minutes_draft` | `minutes` | `authenticated` | `p_meeting_id uuid, p_content text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `sign_meeting_minutes_approval` | `minutes` | `authenticated` | `p_approval_id uuid, p_signature_strokes jsonb, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `submit_meeting_minutes` | `minutes` | `authenticated` | `p_meeting_id uuid, p_content_final text, p_expected_updated_at timestamp with time zone` | `jsonb` |
-| `add_topic_attachment` | `topics` | `authenticated` | `p_topic_id uuid, p_file_name text, p_file_url text, p_mime_type text, p_file_size_bytes bigint, p_description text, p_requirement_code text` | `jsonb` |
-| `add_topic_attachment` | `topics` | `authenticated` | `p_topic_id uuid, p_file_name text, p_file_url text, p_mime_type text, p_file_size_bytes bigint, p_description text` | `jsonb` |
 | `add_topic_attachment` | `topics` | `authenticated` | `p_topic_id uuid, p_file_name text, p_file_url text, p_mime_type text, p_file_size_bytes bigint, p_description text` | `jsonb` |
 | `add_topic_attachment` | `topics` | `authenticated` | `p_topic_id uuid, p_file_name text, p_file_url text, p_mime_type text, p_file_size_bytes bigint, p_description text, p_requirement_code text` | `jsonb` |
 | `admin_create_topic_category` | `topics` | `authenticated` | `p_code text, p_name_ar text, p_name_en text, p_description text` | `jsonb` |

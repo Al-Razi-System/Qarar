@@ -1,6 +1,18 @@
 #!/bin/sh
 set -eu
 
+# Development fixtures are opt-in at the deployment boundary. The production
+# compose overlay sets this to false so the migration runner can keep mounting
+# the tracked seed file without ever executing it in production.
+apply_seed=${QARAR_APPLY_SEED:-true}
+case "$apply_seed" in
+  true|false) ;;
+  *)
+    echo "QARAR_APPLY_SEED must be either true or false" >&2
+    exit 1
+    ;;
+esac
+
 lock_output=$(mktemp)
 lock_pid=''
 lock_backend_pid=''
@@ -116,7 +128,47 @@ as $$
   )::jsonb;
 $$;
 alter function auth.jwt() owner to supabase_auth_admin;
+
+-- Supabase images differ in how auth.uid()/auth.role() read PostgREST claims:
+-- some use the legacy request.jwt.claim.* settings while newer gateways set a
+-- JSON request.jwt.claim(s). Accept both representations so authorization does
+-- not silently lose the caller identity after an image or gateway upgrade.
+create or replace function auth.uid()
+returns uuid
+language sql
+stable
+as $$
+  select coalesce(
+    nullif(current_setting('request.jwt.claim.sub', true), '')::uuid,
+    nullif(auth.jwt() ->> 'sub', '')::uuid
+  );
+$$;
+alter function auth.uid() owner to supabase_auth_admin;
+
+create or replace function auth.role()
+returns text
+language sql
+stable
+as $$
+  select coalesce(
+    nullif(current_setting('request.jwt.claim.role', true), ''),
+    nullif(auth.jwt() ->> 'role', '')
+  );
+$$;
+alter function auth.role() owner to supabase_auth_admin;
 SQL
+
+# A migration image must be able to account for every entry already recorded
+# by the target database before it changes that database. Without this gate a
+# rebuilt image can silently continue from a ledger whose historical source
+# files are missing, making restore and incident recovery non-reproducible.
+applied_versions=$(psql -Atqc "select version from qarar_internal.applied_migrations where version <> 'seed' order by version")
+for applied_version in $applied_versions; do
+  if [ ! -f "/migrations/$applied_version.sql" ]; then
+    echo "Applied migration is absent from this release image: $applied_version" >&2
+    exit 1
+  fi
+done
 
 for migration in $(find /migrations -maxdepth 1 -type f -name '*.sql' | sort); do
   version=$(basename "$migration" .sql)
@@ -143,18 +195,22 @@ for migration in $(find /migrations -maxdepth 1 -type f -name '*.sql' | sort); d
     -c "insert into qarar_internal.applied_migrations(version,checksum_sha256) values ('$version','$checksum')"
 done
 
-seed_checksum=$(sha256sum /seed/seed.sql | awk '{print $1}')
-seed_applied=$(psql -Atqc "select checksum_sha256 from qarar_internal.applied_migrations where version = 'seed'")
-seed_exists=$(psql -Atqc "select exists(select 1 from qarar_internal.applied_migrations where version = 'seed')")
-if [ "$seed_exists" != "t" ]; then
-  echo "Applying development seed"
-  psql -v ON_ERROR_STOP=1 --single-transaction \
-    -f /seed/seed.sql \
-    -c "insert into qarar_internal.applied_migrations(version,checksum_sha256) values ('seed','$seed_checksum')"
-elif [ -z "$seed_applied" ]; then
-  psql -v ON_ERROR_STOP=1 -c \
-    "update qarar_internal.applied_migrations set checksum_sha256 = '$seed_checksum' where version = 'seed' and checksum_sha256 is null"
-elif [ "$seed_applied" != "$seed_checksum" ]; then
-  echo "Checksum mismatch for applied development seed" >&2
-  exit 1
+if [ "$apply_seed" = "true" ]; then
+  seed_checksum=$(sha256sum /seed/seed.sql | awk '{print $1}')
+  seed_applied=$(psql -Atqc "select checksum_sha256 from qarar_internal.applied_migrations where version = 'seed'")
+  seed_exists=$(psql -Atqc "select exists(select 1 from qarar_internal.applied_migrations where version = 'seed')")
+  if [ "$seed_exists" != "t" ]; then
+    echo "Applying development seed"
+    psql -v ON_ERROR_STOP=1 --single-transaction \
+      -f /seed/seed.sql \
+      -c "insert into qarar_internal.applied_migrations(version,checksum_sha256) values ('seed','$seed_checksum')"
+  elif [ -z "$seed_applied" ]; then
+    psql -v ON_ERROR_STOP=1 -c \
+      "update qarar_internal.applied_migrations set checksum_sha256 = '$seed_checksum' where version = 'seed' and checksum_sha256 is null"
+  elif [ "$seed_applied" != "$seed_checksum" ]; then
+    echo "Checksum mismatch for applied development seed" >&2
+    exit 1
+  fi
+else
+  echo "Skipping development seed (QARAR_APPLY_SEED=false)"
 fi

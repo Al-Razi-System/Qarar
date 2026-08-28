@@ -33,10 +33,13 @@ jobs:
       - run: npm --prefix apps/dashboard run build
       - name: Verify production Compose resolves variables and never seeds demo data
         run: |
-          docker compose --env-file deploy/production/.env.production.example \
-            -f supabase/docker/docker-compose.yml \
-            -f deploy/production/docker-compose.production.yml \
-            config --format json >/tmp/qarar-production-compose.json 2>/tmp/qarar-production-compose.stderr
+          if ! docker compose --env-file deploy/production/.env.production.example \
+              -f supabase/docker/docker-compose.yml \
+              -f deploy/production/docker-compose.production.yml \
+              config --format json >/tmp/qarar-production-compose.json 2>/tmp/qarar-production-compose.stderr; then
+            cat /tmp/qarar-production-compose.stderr
+            exit 1
+          fi
           if grep -Eqi 'variable .* is not set|variable is not set' /tmp/qarar-production-compose.stderr; then
             cat /tmp/qarar-production-compose.stderr
             exit 1

@@ -1,153 +1,292 @@
-# Qarar Documentation
+# Qarar | قرار
 
 <div dir="rtl" style="text-align: right;">
 
-## نظرة عامة
+**منصة عربية مفتوحة المصدر لإدارة الحوكمة المؤسسية والمجالس والاجتماعات واللوائح والقرارات.**
 
-يمثل هذا المستودع الحزمة التأسيسية لوثائق منتج `Qarar`، وهو منصة مؤسسية لإدارة الحوكمة والقرارات والاجتماعات والتكليفات والمتابعة والامتثال ضمن نموذج `Enterprise Governance & Decision Management Platform`.
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
+![Status](https://img.shields.io/badge/status-active%20development-orange)
+![Arabic First](https://img.shields.io/badge/language-Arabic--first-informational)
 
-الوثائق هنا منظمة لتخدم ثلاث غايات رئيسية:
+> **حالة المشروع:** تطوير نشط. يحتوي فرع `dev` على نواة خلفية متقدمة واختبارات أمن وعزل مؤسسات، لكن المشروع لا يُعد إصدارًا إنتاجيًا عامًا قبل اكتمال مراجعة النشر والأمان وربط الواجهات.
 
-- توضيح الرؤية والنطاق والقيمة المؤسسية للمنتج.
-- تثبيت المتطلبات والنماذج التشغيلية والحوكمية.
-- تجهيز أساس منظم للانتقال لاحقاً إلى التصميم والتنفيذ التقني.
+## ما هو Qarar؟
 
----
+`Qarar` منصة `Enterprise Governance & Decision Management` تساعد الجامعات والجهات العامة والمؤسسات واللجان على إدارة دورة الحوكمة كاملة بصورة قابلة للتتبع:
 
-## كيف تقرأ هذه الوثائق؟
+```text
+الموضوع
+→ المراجعة والإحالة
+→ اللائحة والمسار الحاكم
+→ المجلس والاجتماع
+→ الحضور والنصاب
+→ التصويت
+→ المحضر والمصادقة البشرية
+→ القرار والتنفيذ والمتابعة
+```
 
-إذا كنت جديداً على المشروع، فابدأ بهذا الترتيب:
+المشروع عربي أولًا، متعدد المؤسسات، ويهدف إلى توفير بنية قابلة لإعادة الاستخدام بدل بناء أنظمة منفصلة وغير مترابطة لكل مجلس أو جهة.
 
-1. [القاموس المرجعي للمصطلحات](docs/00_Glossary_Qarar_Arabic.md)
+## الجهات المستهدفة
+
+- الجامعات والكليات والأقسام العلمية.
+- الوزارات والهيئات والمؤسسات العامة.
+- مجالس الإدارة واللجان الدائمة والمؤقتة.
+- المنظمات غير الربحية والمؤسسات الكبيرة.
+- فرق التطوير والباحثون في الحوكمة الرقمية العربية.
+
+## الحالة الحالية
+
+النواة المنفذة على `dev` تشمل:
+
+| المجال | الحالة |
+|---|---|
+| تعدد المؤسسات وعزل البيانات | منفذ مع اختبارات RLS وCross-Tenant |
+| IAM وRBAC وإدارة الصلاحيات | منفذ |
+| الموضوعات والمراجعة والإحالات | منفذ |
+| الاجتماعات وجدول الأعمال | منفذ |
+| إدارة المجالس والعضويات والقيادة | منفذ |
+| الحضور والنصاب والتصويت | منفذ |
+| اللوائح والإصدارات والنطاقات والمسارات | منفذ |
+| توليد مسودة المحضر بالذكاء الاصطناعي | منفذ ضمن مسار مضبوط |
+| مراجعة المحضر والمصادقة البشرية | منفذ |
+| القرارات والتنفيذ والمتابعة | نواة منفذة وتخضع للتطوير والتحسين |
+| لوحة الإدارة | قيد الدمج والتطوير النشط |
+| التقارير والامتثال والتنبيهات المتقدمة | ضمن خارطة الطريق |
+
+## القدرات الأساسية
+
+### الحوكمة والمجالس
+
+- تعريف أنواع المجالس واللجان.
+- إدارة شجرة المجالس ومنع العلاقات الدائرية.
+- إدارة الأعضاء وفترات العضوية.
+- تعيين الرئيس والمقرر وحفظ التاريخ.
+- دورة حالة واكتمال إداري قابلة للتدقيق.
+
+### الموضوعات والاجتماعات
+
+- إنشاء الموضوعات ومراجعتها وإعادتها ورفضها وتأجيلها.
+- إحالة الموضوعات بين الوحدات والمجالس.
+- إدارة الاجتماعات وجدول الأعمال.
+- منع الوصول المباشر غير المصرح به لجداول المجال.
+- دعم Idempotency وOptimistic Concurrency.
+
+### الحضور والنصاب والتصويت
+
+- قوائم عضوية ثابتة للاجتماع.
+- تسجيل حضور مضبوط والتحقق المستقل.
+- حفظ Snapshot للنصاب.
+- جولات تصويت ونتائج غير قابلة للتعديل الصامت.
+- حماية من التزامن والكتابة المباشرة وتجاوز المسار.
+
+### اللوائح ومحرك المسارات
+
+- إدارة اللوائح وإصداراتها وبنودها ونطاقاتها.
+- تطبيق اللوائح على مجالس أو فئات محددة.
+- اكتشاف التعارضات والأولوية والفجوات.
+- إنشاء مسار حوكمة ثابت لكل موضوع.
+- ربط نتيجة التصويت بالانتقال المسموح فقط.
+
+### المحاضر والذكاء الاصطناعي
+
+- إنشاء كيان محضر مستقل مرتبط بالاجتماع.
+- توليد **مسودة** أولية بالذكاء الاصطناعي.
+- منع اعتبار المخرج الآلي محضرًا رسميًا.
+- مراجعة وتحرير بشري.
+- مصادقة بشرية قبل الإغلاق.
+- حماية من الكتابة القديمة أو المتزامنة على المسودة.
+
+### الأمان والتدقيق
+
+- عزل مؤسسات متعدد الطبقات.
+- RLS وصلاحيات دقيقة.
+- عقود ثابتة عبر `api_v1`.
+- وظائف داخلية مقيدة وأدوار تنفيذ محدودة.
+- Audit Trail للعمليات الحساسة.
+- اختبارات هجرة وتوافق وتراجع وأمان.
+
+## المعمارية
+
+```mermaid
+flowchart LR
+    U[لوحة الإدارة والعملاء] --> G[Gateway / Kong]
+    G --> API[PostgREST - api_v1]
+    G --> E[Supabase Edge Functions]
+
+    API --> D[Domain Schemas]
+    E --> D
+    D --> P[(PostgreSQL)]
+
+    P --> RLS[RLS + RBAC + Audit]
+    P --> M[Migrations + Contract Registry]
+
+    E --> AI[مزود ذكاء اصطناعي]
+    T[Test Harness] --> G
+    T --> P
+```
+
+يعتمد المشروع على تقسيم منطقي للوحدات، وعقود API معلنة، وترحيلات ذرية، مع فصل المسارات العامة عن الوظائف الداخلية الحساسة.
+
+## التقنيات المستخدمة
+
+| الطبقة | التقنية |
+|---|---|
+| قاعدة البيانات | PostgreSQL |
+| المنصة الخلفية | Supabase Self-hosted |
+| API | PostgREST وعقود `api_v1` |
+| الأمن | RLS، RBAC، JWT، صلاحيات منفذ محدودة |
+| الوظائف | Supabase Edge Functions / TypeScript |
+| الاختبارات | SQL، Node.js، HTTP Integration Tests |
+| التشغيل المحلي | Docker Compose |
+| لوحة الإدارة | Next.js + TypeScript، قيد الدمج |
+| الذكاء الاصطناعي | تكامل مضبوط لتوليد مسودات فقط |
+
+## التشغيل محليًا
+
+### المتطلبات
+
+- Git
+- Node.js وnpm
+- Docker وDocker Compose
+- Bash أو Git Bash/WSL لبعض السكربتات
+- Supabase CLI عند استخدام أوامر `supabase:*`
+
+### 1. استنساخ المشروع
+
+```bash
+git clone https://github.com/Al-Razi-System/Qarar.git
+cd Qarar
+git checkout dev
+npm install
+```
+
+### 2. إعداد البيئة
+
+```bash
+cp supabase/docker/.env.example supabase/docker/.env
+```
+
+غيّر جميع الأسرار والقيم الافتراضية داخل `.env` قبل التشغيل. يمكن استخدام سكربتات توليد المفاتيح الموجودة في `supabase/docker/utils/` حسب تعليمات الملف البيئي.
+
+### 3. التحقق والتشغيل
+
+```bash
+npm run docker:config
+npm run docker:start
+npm run docker:status
+```
+
+لإيقاف الخدمات:
+
+```bash
+npm run docker:stop
+```
+
+## الاختبارات
+
+الأوامر المتاحة في المشروع تشمل:
+
+```bash
+npm run test:iam-edge
+npm run test:iam-http
+npm run test:sprint01-http
+npm run test:sprint03-http
+npm run test:sprint035-http
+npm run test:sprint036-http
+npm run test:compatibility
+npm run test:api-docs
+```
+
+تتطلب اختبارات HTTP تشغيل بيئة Docker وإعداد البيانات والأسرار المناسبة. راجع سكربتات `supabase/tests/` وملف Workflow في `.github/workflows/` لمعرفة البوابة الكاملة لكل نطاق.
+
+## لقطات الواجهة
+
+لوحة الإدارة قيد الدمج ضمن [PR #126](https://github.com/Al-Razi-System/Qarar/pull/126). لا توجد حاليًا لقطات واجهة ملتزمة على فرع `dev`، ولذلك لا يعرض هذا README صورًا تجريبية أو روابط مكسورة.
+
+بعد دمج الواجهة، توضع اللقطات المعتمدة في:
+
+```text
+docs/assets/screenshots/
+├── login.png
+├── dashboard.png
+├── councils.png
+├── regulations.png
+├── meetings.png
+└── voting.png
+```
+
+ثم تُعرض هنا مع رقم الإصدار أو Commit الذي تمثلّه.
+
+## خارطة الطريق
+
+### Release 1 — النواة المؤسسية
+
+- استكمال تكامل لوحة الإدارة.
+- تثبيت عقود المجالس واللوائح والاجتماعات والمحاضر.
+- إغلاق فجوات الواجهة مع `api_v1`.
+- مراجعة الأمان وعزل المؤسسات.
+- توثيق التشغيل والنشر والإصدارات.
+
+### Release 1.x — التشغيل والامتثال
+
+- تقارير التغطية والامتثال.
+- Outbox والتنبيهات والتصعيد.
+- تحسين القرارات والتنفيذ والمتابعة.
+- تحسين الأداء والمراقبة والنسخ الاحتياطي.
+- حزم بيانات ولوائح نموذجية قابلة للاستيراد.
+
+### Release 2 — التوسع
+
+- تكاملات مؤسسية وSSO موسعة.
+- تحليلات ولوحات مؤشرات متقدمة.
+- توطين إضافي وتوسيع دعم المؤسسات.
+- خيارات نشر وإدارة متعددة.
+
+خارطة الطريق التفصيلية موجودة في [وثيقة التنفيذ](docs/21_Implementation_Roadmap_Qarar_Arabic.md) ووثائق الإصدارات والسبرنتات داخل `docs/`.
+
+## التوثيق
+
+للبدء السريع:
+
+1. [القاموس المرجعي](docs/00_Glossary_Qarar_Arabic.md)
 2. [وثيقة الرؤية](docs/01_Vision_Document_Qarar_Arabic.md)
-3. [وثيقة متطلبات الأعمال](docs/02_Business_Requirements_Document_Qarar_Arabic.md)
-4. [وثيقة تحليل الأعمال](docs/03_Business_Analysis_Qarar_Arabic.md)
-5. [إطار الحوكمة](docs/05_Governance_Framework_Qarar_Arabic.md)
-6. [نموذج المجال](docs/06_Domain_Model_Qarar_Arabic.md)
-7. [المتطلبات الوظيفية](docs/09_Functional_Requirements_Qarar_Arabic.md)
-8. [المتطلبات غير الوظيفية](docs/10_Non_Functional_Requirements_Qarar_Arabic.md)
-9. [إطار التقارير والتحليلات](docs/11_Reporting_Framework_Qarar_Arabic.md)
-10. [إطار الذكاء الاصطناعي](docs/18_AI_Framework_Qarar_Arabic.md)
-11. [مواصفات API](docs/19_API_Specification_Qarar_Arabic.md)
-12. [خارطة التنفيذ](docs/21_Implementation_Roadmap_Qarar_Arabic.md)
-13. [وثيقة حالات الاستخدام](docs/22_Use_Cases_Qarar_Arabic.md)
-14. [وثيقة قصص المستخدم ومعايير القبول](docs/23_User_Stories_And_Acceptance_Criteria_Qarar_Arabic.md)
-15. [وثيقة Product Backlog](docs/24_Product_Backlog_Qarar_Arabic.md)
-16. [وثيقة Release Planning and Sprint Structure](docs/25_Release_Planning_And_Sprint_Structure_Qarar_Arabic.md)
-17. [وثيقة System Modules and Service Decomposition](docs/26_System_Modules_And_Service_Decomposition_Qarar_Arabic.md)
-18. [وثيقة Data Flow and Integration Scenarios](docs/27_Data_Flow_And_Integration_Scenarios_Qarar_Arabic.md)
-19. [وثيقة Deployment Environment and DevOps Model](docs/28_Deployment_Environment_And_DevOps_Model_Qarar_Arabic.md)
-20. [وثيقة Testing and Quality Assurance Strategy](docs/29_Testing_And_Quality_Assurance_Strategy_Qarar_Arabic.md)
-21. [وثيقة GitHub Project and Scrumban Operating Model](docs/30_GitHub_Project_And_Scrumban_Operating_Model_Qarar_Arabic.md)
+3. [إطار الحوكمة](docs/05_Governance_Framework_Qarar_Arabic.md)
+4. [نموذج البيانات](docs/07_Data_Model_Qarar_Arabic.md)
+5. [إطار سير العمل](docs/08_Workflow_Framework_Qarar_Arabic.md)
+6. [إطار الأمن](docs/15_Security_Framework_Qarar_Arabic.md)
+7. [إطار الصلاحيات](docs/16_Permission_Framework_Qarar_Arabic.md)
+8. [معمارية SaaS](docs/17_SaaS_Architecture_Qarar_Arabic.md)
+9. [إطار الذكاء الاصطناعي](docs/18_AI_Framework_Qarar_Arabic.md)
+10. [مواصفات API](docs/19_API_Specification_Qarar_Arabic.md)
+11. [خارطة التنفيذ](docs/21_Implementation_Roadmap_Qarar_Arabic.md)
+12. [استراتيجية الاختبار](docs/29_Testing_And_Quality_Assurance_Strategy_Qarar_Arabic.md)
+13. [دليل GitFlow](docs/gitflow-qarar.md)
 
----
+مرجع عقود API التنفيذية موجود في [`supabase/docs/api/`](supabase/docs/api/README.md).
 
-## خريطة الوثائق
+## المساهمة
 
-### 1. الوثائق المرجعية والتأسيسية
+نرحب بالمساهمات في الكود والتوثيق والاختبارات والأمن وتجربة الاستخدام العربية.
 
-- [00 - قاموس المصطلحات](docs/00_Glossary_Qarar_Arabic.md)
-- [01 - وثيقة الرؤية](docs/01_Vision_Document_Qarar_Arabic.md)
-- [02 - وثيقة متطلبات الأعمال](docs/02_Business_Requirements_Document_Qarar_Arabic.md)
-- [03 - وثيقة تحليل الأعمال](docs/03_Business_Analysis_Qarar_Arabic.md)
-- [04 - تحليل أصحاب المصلحة](docs/04_Stakeholder_Analysis_Qarar_Arabic.md)
+قبل البدء، اقرأ:
 
-### 2. وثائق الحوكمة والنمذجة
+- [دليل المساهمة](CONTRIBUTING.md)
+- [سياسة الأمان](SECURITY.md)
+- [مدونة السلوك](CODE_OF_CONDUCT.md)
 
-- [05 - إطار الحوكمة](docs/05_Governance_Framework_Qarar_Arabic.md)
-- [06 - نموذج المجال](docs/06_Domain_Model_Qarar_Arabic.md)
-- [07 - نموذج البيانات](docs/07_Data_Model_Qarar_Arabic.md)
-- [08 - إطار سير العمل](docs/08_Workflow_Framework_Qarar_Arabic.md)
+افتح Issue قبل التغييرات الكبيرة، واربط كل PR بمشكلة واضحة ومعايير قبول واختبارات مناسبة.
 
-### 3. وثائق المتطلبات التشغيلية
+## الترخيص
 
-- [09 - المتطلبات الوظيفية](docs/09_Functional_Requirements_Qarar_Arabic.md)
-- [10 - المتطلبات غير الوظيفية](docs/10_Non_Functional_Requirements_Qarar_Arabic.md)
-- [11 - إطار التقارير والتحليلات](docs/11_Reporting_Framework_Qarar_Arabic.md)
-- [12 - إطار الإشعارات والتصعيد](docs/12_Notification_Framework_Qarar_Arabic.md)
+هذا المشروع متاح وفق [Apache License 2.0](LICENSE).
 
-### 4. دورات الحياة التشغيلية
+> قبل اعتماد الترخيص نهائيًا، يجب على الجهة المالكة التأكد من امتلاكها حقوق إعادة ترخيص جميع المكونات المضمّنة وعدم وجود مكونات منسوخة بترخيص غير متوافق.
 
-- [13 - دورة حياة القرار](docs/13_Decision_Lifecycle_Qarar_Arabic.md)
-- [14 - دورة حياة الاجتماع](docs/14_Meeting_Lifecycle_Qarar_Arabic.md)
+## English Summary
 
-### 5. الأمن والصلاحيات والبنية
+Qarar is an Arabic-first, open-source enterprise governance and decision-management platform for universities, public institutions, boards, and committees. It provides multi-tenant governance workflows for councils, regulations, meetings, attendance, quorum, voting, minutes, decisions, RBAC, audit trails, and secure API contracts.
 
-- [15 - الإطار الأمني](docs/15_Security_Framework_Qarar_Arabic.md)
-- [16 - إطار الصلاحيات والتحكم بالوصول](docs/16_Permission_Framework_Qarar_Arabic.md)
-- [17 - معمارية SaaS متعددة المستأجرين](docs/17_SaaS_Architecture_Qarar_Arabic.md)
-
-### 6. الذكاء الاصطناعي والتكامل والواجهات
-
-- [18 - إطار الذكاء الاصطناعي](docs/18_AI_Framework_Qarar_Arabic.md)
-- [19 - مواصفات الواجهات البرمجية API](docs/19_API_Specification_Qarar_Arabic.md)
-- [20 - إرشادات UI/UX](docs/20_UI_UX_Guidelines_Qarar_Arabic.md)
-
-### 7. التخطيط والتنفيذ
-
-- [21 - خارطة التنفيذ](docs/21_Implementation_Roadmap_Qarar_Arabic.md)
-- [22 - وثيقة حالات الاستخدام](docs/22_Use_Cases_Qarar_Arabic.md)
-- [23 - وثيقة قصص المستخدم ومعايير القبول](docs/23_User_Stories_And_Acceptance_Criteria_Qarar_Arabic.md)
-- [24 - وثيقة Product Backlog](docs/24_Product_Backlog_Qarar_Arabic.md)
-- [25 - وثيقة Release Planning and Sprint Structure](docs/25_Release_Planning_And_Sprint_Structure_Qarar_Arabic.md)
-- [26 - وثيقة System Modules and Service Decomposition](docs/26_System_Modules_And_Service_Decomposition_Qarar_Arabic.md)
-- [27 - وثيقة Data Flow and Integration Scenarios](docs/27_Data_Flow_And_Integration_Scenarios_Qarar_Arabic.md)
-- [28 - وثيقة Deployment Environment and DevOps Model](docs/28_Deployment_Environment_And_DevOps_Model_Qarar_Arabic.md)
-- [29 - وثيقة Testing and Quality Assurance Strategy](docs/29_Testing_And_Quality_Assurance_Strategy_Qarar_Arabic.md)
-- [30 - وثيقة GitHub Project and Scrumban Operating Model](docs/30_GitHub_Project_And_Scrumban_Operating_Model_Qarar_Arabic.md)
-- [دليل GitFlow المبسط](docs/gitflow-qarar.md)
-- [إعدادات GitHub Project التنفيذية](docs/github-project-config-qarar.md)
-- [وثيقة Initial Issues for Release 0](docs/31_Initial_Issues_Release_0_Qarar_Arabic.md)
-- [وثيقة Initial Issues for Sprint 01](docs/32_Initial_Issues_Sprint_01_Qarar_Arabic.md)
-- [وثيقة Initial Issues for Sprint 02](docs/33_Initial_Issues_Sprint_02_Qarar_Arabic.md)
-- [وثيقة Initial Issues for Sprint 03](docs/34_Initial_Issues_Sprint_03_Qarar_Arabic.md)
-- [وثيقة Initial Issues for Sprint 04](docs/35_Initial_Issues_Sprint_04_Qarar_Arabic.md)
-- [وثيقة Initial Issues for Sprint 05](docs/36_Initial_Issues_Sprint_05_Qarar_Arabic.md)
-- [وثيقة Initial Issues for Sprint 06](docs/37_Initial_Issues_Sprint_06_Qarar_Arabic.md)
-- [وثيقة Initial Issues for Wave 07 Hardening](docs/38_Initial_Issues_Wave_07_Hardening_Qarar_Arabic.md)
-- [طلبات الميزات التفصيلية - Sprint 00](docs/39_Feature_Requests_Sprint_00_Qarar_Arabic.md)
-- [طلبات الميزات التفصيلية - Sprint 01](docs/40_Feature_Requests_Sprint_01_Qarar_Arabic.md)
-- [سجل طلبات الميزات](docs/41_Feature_Request_Register_Qarar_Arabic.md)
-- [Initial Issues - Sprint 03.5 Regulation Engine - Final](docs/42_Initial_Issues_Sprint_03_5_Regulation_Engine_Qarar_Arabic_Complete.md)
-- [خطة إغلاق فجوات Release 1](docs/43_Release_1_Gap_Closure_Implementation_Plan_Qarar_Arabic.md)
-
----
-
-## علاقات سريعة بين الوثائق
-
-- إذا أردت فهم المصطلحات المعتمدة، ابدأ من [القاموس](docs/00_Glossary_Qarar_Arabic.md).
-- إذا أردت فهم لماذا يوجد المنتج وما الذي يحله، ابدأ من [وثيقة الرؤية](docs/01_Vision_Document_Qarar_Arabic.md).
-- إذا أردت فهم ما الذي يجب أن يقدمه النظام عملياً، راجع [المتطلبات الوظيفية](docs/09_Functional_Requirements_Qarar_Arabic.md) و[المتطلبات غير الوظيفية](docs/10_Non_Functional_Requirements_Qarar_Arabic.md).
-- إذا أردت فهم منطق الحوكمة والحالات والانتقالات، راجع [إطار الحوكمة](docs/05_Governance_Framework_Qarar_Arabic.md) و[إطار سير العمل](docs/08_Workflow_Framework_Qarar_Arabic.md) و[دورة حياة القرار](docs/13_Decision_Lifecycle_Qarar_Arabic.md) و[دورة حياة الاجتماع](docs/14_Meeting_Lifecycle_Qarar_Arabic.md).
-- إذا أردت فهم التقارير والقيمة التحليلية، راجع [إطار التقارير](docs/11_Reporting_Framework_Qarar_Arabic.md).
-- إذا أردت فهم الاستخدام الحالي للذكاء الاصطناعي، راجع [إطار الذكاء الاصطناعي](docs/18_AI_Framework_Qarar_Arabic.md).
-- إذا أردت الانتقال نحو التنفيذ التقني، راجع [معمارية SaaS](docs/17_SaaS_Architecture_Qarar_Arabic.md) و[API Specification](docs/19_API_Specification_Qarar_Arabic.md) و[خارطة التنفيذ](docs/21_Implementation_Roadmap_Qarar_Arabic.md).
-- إذا أردت فهم تشغيل النظام كسيناريوهات فعلية من البداية إلى النهاية، راجع [وثيقة حالات الاستخدام](docs/22_Use_Cases_Qarar_Arabic.md).
-- إذا أردت تحويل القصص إلى خطة تنفيذ فعلية مرتبة حسب الأولوية والتبعيات والنطاق، راجع [وثيقة Product Backlog](docs/24_Product_Backlog_Qarar_Arabic.md).
-- إذا أردت توزيع الـ Backlog على إصدارات وموجات تسليم مع افتراضات تنفيذ واقعية، راجع [وثيقة Release Planning and Sprint Structure](docs/25_Release_Planning_And_Sprint_Structure_Qarar_Arabic.md).
-- إذا أردت فهم كيف ستترجم هذه الحزمة إلى وحدات نظام وحدود ملكية وخدمات قابلة للتوسع لاحقاً، راجع [وثيقة System Modules and Service Decomposition](docs/26_System_Modules_And_Service_Decomposition_Qarar_Arabic.md).
-- إذا أردت فهم كيف تتحرك البيانات والأحداث بين الوحدات والتكاملات في السيناريوهات التشغيلية الأساسية، راجع [وثيقة Data Flow and Integration Scenarios](docs/27_Data_Flow_And_Integration_Scenarios_Qarar_Arabic.md).
-- إذا أردت فهم نموذج البيئات والنشر والمراقبة والتشغيل و`DevOps` للمنصة، راجع [وثيقة Deployment Environment and DevOps Model](docs/28_Deployment_Environment_And_DevOps_Model_Qarar_Arabic.md).
-- إذا أردت فهم استراتيجية الاختبارات والجودة وقبول الإصدارات قبل الإطلاق، راجع [وثيقة Testing and Quality Assurance Strategy](docs/29_Testing_And_Quality_Assurance_Strategy_Qarar_Arabic.md).
-- إذا أردت فهم كيف سيدار التنفيذ اليومي فعلياً عبر `GitHub Projects` وبمنهجية `Scrumban`، راجع [وثيقة GitHub Project and Scrumban Operating Model](docs/30_GitHub_Project_And_Scrumban_Operating_Model_Qarar_Arabic.md).
-- إذا أردت مرجعاً تنفيذياً سريعاً لإدارة الفروع والدمج و`Pull Requests`، راجع [دليل GitFlow المبسط](docs/gitflow-qarar.md).
-- إذا أردت ملفاً عملياً مختصراً لإعداد حالات وحقول وقيم GitHub Project، راجع [إعدادات GitHub Project التنفيذية](docs/github-project-config-qarar.md).
-- إذا أردت حزمة Issues تأسيسية جاهزة بصياغة تشغيلية موحدة، راجع [وثيقة Initial Issues for Release 0](docs/31_Initial_Issues_Release_0_Qarar_Arabic.md).
-- قبل كتابة أي استعلام أو Migration أو عقد API، راجع [مرجع مخطط قاعدة البيانات المولد آلياً](docs/technical/database/Qarar_Database_Schema_Reference_Arabic.md)، ويمكن تحديثه عبر `scripts/export-database-schema-reference.ps1`.
-
----
-
-## ملفات المصدر الأساسية
-
-- [chat.md](chat.md)
-- [ملف Excel للمتطلبات الأولية](%D8%A7%D9%84%D9%85%D8%AA%D8%B7%D9%84%D8%A8%D8%A7%D8%AA_%D8%A7%D9%84%D9%88%D8%B8%D9%8A%D9%81%D9%8A%D8%A9_%D9%85%D9%86_%D9%86%D8%B8%D8%A7%D9%85_%D8%AD%D9%88%D9%83%D9%85%D8%A9_%D8%A7%D8%AC%D8%AA%D9%85%D8%A7%D8%B9%D8%A7%D8%AA_%D9%85%D8%AC%D8%A7%D9%84%D8%B3_%D8%A7%D9%84%D8%AC%D8%A7%D9%85%D8%B9%D8%A9.xlsx)
-
----
-
-## ملاحظات العمل
-
-- جميع الوثائق مكتوبة بالعربية وبتنسيق مناسب للقراءة من اليمين إلى اليسار.
-- القاموس المرجعي هو المصدر الاصطلاحي الأعلى ويجب اعتماده عند أي تعديل لاحق.
-- النموذج المعتمد حالياً لا يمنح الذكاء الاصطناعي صلاحية اعتماد المحاضر أو القرارات؛ بل يقتصر دوره الحالي على توليد مسودة أولية لمحضر الاجتماع ثم تمريرها إلى مراجعة واعتماد بشريين.
+The project is under active development. Contributions in security, testing, documentation, Arabic UX, governance modeling, and integrations are welcome.
 
 </div>

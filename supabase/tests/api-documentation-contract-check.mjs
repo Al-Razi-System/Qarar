@@ -19,15 +19,22 @@ select concat_ws(
 )
 from qarar_architecture.api_contract_registry r
 join pg_namespace n on n.nspname = 'api_v1'
-join pg_proc p on p.pronamespace = n.oid and p.proname = r.contract_name
-order by r.module_code, r.contract_name;
+join pg_proc p
+  on p.pronamespace = n.oid
+ and p.proname = r.contract_name
+ and r.identity_arguments = pg_get_function_identity_arguments(p.oid)
+where r.api_version = 'v1'
+-- Keep generated Markdown deterministic when one RPC name has multiple
+-- overloads (for example add_topic_attachment).  Ordering by name alone
+-- leaves PostgreSQL free to emit overload rows in either order.
+order by r.module_code, r.contract_name, pg_get_function_identity_arguments(p.oid);
 `;
 
-const output = execFileSync(
+const runDatabaseQuery = (sql) => execFileSync(
   "docker",
   [
     "exec",
-    "qarar-supabase-db",
+    process.env.DB_CONTAINER ?? "qarar-supabase-db",
     "psql",
     "-U",
     "postgres",
@@ -37,10 +44,47 @@ const output = execFileSync(
     "-v",
     "ON_ERROR_STOP=1",
     "-c",
-    query,
+    sql,
   ],
   { cwd: root, encoding: "utf8" },
 ).trim();
+
+const output = runDatabaseQuery(query);
+
+const registryWrapperIntegrityQuery = String.raw`
+with registry as (
+  select contract_name, identity_arguments
+  from qarar_architecture.api_contract_registry
+  where api_version = 'v1'
+), wrappers as (
+  select p.proname as contract_name,
+         pg_get_function_identity_arguments(p.oid) as identity_arguments
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'api_v1'
+)
+select concat_ws(E'\t', 'registry_without_wrapper', r.contract_name, r.identity_arguments)
+from registry r
+left join wrappers w
+  on w.contract_name = r.contract_name
+ and w.identity_arguments = r.identity_arguments
+where w.contract_name is null
+union all
+select concat_ws(E'\t', 'wrapper_without_registry', w.contract_name, w.identity_arguments)
+from wrappers w
+left join registry r
+  on r.contract_name = w.contract_name
+ and r.identity_arguments = w.identity_arguments
+where r.contract_name is null
+order by 1;
+`;
+
+const registryWrapperMismatches = runDatabaseQuery(registryWrapperIntegrityQuery);
+if (registryWrapperMismatches) {
+  throw new Error(
+    "api_v1 wrapper and contract-registry identities differ:\n" + registryWrapperMismatches,
+  );
+}
 
 const contracts = output.split(/\r?\n/).filter(Boolean).map((line) => {
   const [name, module, audience, argumentsList, result] = line.split("\t");
