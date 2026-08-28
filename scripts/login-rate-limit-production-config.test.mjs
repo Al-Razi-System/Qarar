@@ -69,5 +69,5 @@ test("compose keeps the Redis limiter private and Kong limits password grants by
   assert.match(kong, /name: auth-v1-token-rate-limited/);
   assert.match(kong, /http\.queries\.grant_type\) == "password"/);
   assert.match(kong, /limit_by: header[\s\S]*?header_name: X-Qarar-Client-IP/);
-  assert.match(kong, /policy: redis[\s\S]*?sync_rate: 0[\s\S]*?fault_tolerant: false/);
+  assert.match(kong, /policy: redis[\s\S]*?sync_rate: -1[\s\S]*?fault_tolerant: false/);
 });

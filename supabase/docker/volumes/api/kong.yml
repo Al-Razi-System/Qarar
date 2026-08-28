@@ -135,10 +135,10 @@ services:
       - name: rate-limiting
         config:
           # DB-less Kong cannot use the cluster policy. Redis is shared by all
-          # dashboard/Kong replicas; zero performs the Redis increment
-          # synchronously, so no replica keeps a divergent local counter.
+          # dashboard/Kong replicas; -1 disables periodic batching and keeps
+          # increments synchronous, so replicas do not diverge locally.
           policy: redis
-          sync_rate: 0
+          sync_rate: -1
           fault_tolerant: false
           hide_client_headers: true
           # The trusted reverse proxy writes this header for both the public
