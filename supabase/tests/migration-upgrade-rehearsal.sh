@@ -58,10 +58,14 @@ returns jsonb language sql stable as $$
 $$;
 SQL
 
-for migration in $(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
-  case "$(basename "$migration")" in
-    20260724040*|20260726*|20260728*|20260729*) continue ;;
-  esac
+modular_cutover='20260724040000_modular_schema_ownership.sql'
+
+# Build the legacy public-schema baseline first. Keep this boundary based on
+# the actual modular cutover migration instead of enumerating later date
+# prefixes: newly restored or added migrations must never run before the
+# schemas and ownership model they depend on exist.
+for migration in $(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort |
+  awk -F/ -v cutover="$modular_cutover" '$NF < cutover'); do
   docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
     -v ON_ERROR_STOP=1 --single-transaction < "$migration"
 done
@@ -88,22 +92,11 @@ values('91000000-0000-0000-0000-000000000031',
  '91000000-0000-0000-0000-000000000011','new');
 SQL
 
-for migration in $(find supabase/migrations -maxdepth 1 -type f -name '20260724040*.sql' | sort); do
-  docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
-    -v ON_ERROR_STOP=1 --single-transaction < "$migration"
-done
-
-for migration in $(find supabase/migrations -maxdepth 1 -type f -name '20260726*.sql' | sort); do
-  docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
-    -v ON_ERROR_STOP=1 --single-transaction < "$migration"
-done
-
-for migration in $(find supabase/migrations -maxdepth 1 -type f -name '20260728*.sql' | sort); do
-  docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
-    -v ON_ERROR_STOP=1 --single-transaction < "$migration"
-done
-
-for migration in $(find supabase/migrations -maxdepth 1 -type f -name '20260729*.sql' | sort); do
+# Apply the modular cutover and every later migration in one chronological
+# sequence, including future dates that this rehearsal did not know about
+# when it was first written.
+for migration in $(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort |
+  awk -F/ -v cutover="$modular_cutover" '$NF >= cutover'); do
   docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
     -v ON_ERROR_STOP=1 --single-transaction < "$migration"
 done
