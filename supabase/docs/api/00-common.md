@@ -21,6 +21,21 @@ Content-Profile: api_v1
 Never expose the service-role key to Flutter, browsers, logs, crash reports, or source control.
 Only trusted Edge Functions receive it through server environment variables.
 
+## Browser Origin Rule for `iam-admin`
+
+Browser calls to `iam-admin` are accepted only when their `Origin` exactly matches one of the
+deployment-owned, canonical origins in `ALLOWED_ORIGINS`. The function does not use `*`, returns
+`Vary: Origin`, and rejects a non-matching browser origin before token or IAM processing. Its CORS
+preflight is likewise answered only for an allowed origin.
+
+Production `ALLOWED_ORIGINS` entries must be exact HTTPS origins without a wildcard, path, trailing
+slash, query, fragment, or URL credentials; it must be non-empty. A production function with an
+absent or invalid list fails closed with `503 cors_configuration_invalid`.
+
+Flutter, native, and trusted server-to-server callers normally have no `Origin` header and are not
+CORS clients. They remain supported, but must send a valid Bearer token; an absent `Origin` is never
+an alternative to authentication.
+
 ## Calling REST and RPC
 
 ```bash

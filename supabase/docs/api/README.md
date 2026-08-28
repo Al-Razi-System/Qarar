@@ -28,6 +28,9 @@ This is the entry point for frontend, integration, and backend developers. Qarar
 | Roles and permissions | [03-roles-permissions.md](./03-roles-permissions.md) | Implemented | IAM administration |
 | SSO and identity federation | [04-sso.md](./04-sso.md) | Implemented | SSO administration/login |
 | Sessions, delegation, approvals | [05-security-operations.md](./05-security-operations.md) | Implemented | Security administration |
+| Arabic IAM/auth consolidated reference | [16-iam-auth-reference-ar.md](./16-iam-auth-reference-ar.md) | Implemented-scope analysis | Flutter, IAM, and security teams |
+| Backend handoff for the new UI designer | [17-frontend-designer-backend-handoff-ar.md](./17-frontend-designer-backend-handoff-ar.md) | Implemented-scope handoff | Product, UX/UI, and Flutter teams |
+| Users and permissions API only (Arabic) | [18-users-permissions-api-ar.md](./18-users-permissions-api-ar.md) | Implemented | User and IAM administration screens |
 | Topics | [06-topics.md](./06-topics.md) | Implemented | Topic workflows |
 | Topic referrals and route history | [06-topic-referrals.md](./06-topic-referrals.md) | Implemented | Referral workflows |
 | Meetings, attendance, voting | [07-meetings.md](./07-meetings.md) | Implemented | Meeting workflows |

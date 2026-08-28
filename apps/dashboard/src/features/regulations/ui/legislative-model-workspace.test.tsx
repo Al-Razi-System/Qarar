@@ -105,7 +105,7 @@ describe("LegislativeModelWorkspace", () => {
   });
 
   it("يتضمن ترحيل محرك القواعد جميع الكيانات والعقود الحرجة", () => {
-    const migration = readFileSync(join(process.cwd(), "../supabase/migrations/20260806010000_legislative_rules_engine.sql"), "utf8");
+    const migration = readFileSync(join(process.cwd(), "../../supabase/migrations/20260806010000_legislative_rules_engine.sql"), "utf8");
     for (const table of ["policy_rules", "rule_conditions", "rule_requirements", "rule_authorities", "rule_actions", "rule_workflow_bindings", "policy_references"]) {
       expect(migration).toContain(`qarar_governance.${table}`);
     }

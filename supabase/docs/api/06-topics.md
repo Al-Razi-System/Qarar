@@ -198,3 +198,9 @@ Do not reconstruct history from the current topic status.
 | Duplicate reference | Treat as server conflict and log; numbers are generated backend-side |
 
 Referral operations are documented separately in [06-topic-referrals.md](./06-topic-referrals.md).
+## Governance-unit categories
+
+Before creating a governed topic, the frontend calls `get_topic_categories_for_unit` with the selected
+governance unit and optional effective date. The response contains only active categories backed by an
+effective, automation-ready policy item in scope for that unit, plus each category's executable item
+count. The caller must hold `topics.create` for the selected unit.

@@ -1,0 +1,214 @@
+name: Production Readiness
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+  pull_request:
+    branches: [dev]
+    paths:
+      - "apps/dashboard/**"
+      - "deploy/production/**"
+      - "scripts/**"
+      - "supabase/**"
+      - ".github/workflows/production-readiness.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  security-and-production-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm --prefix apps/dashboard ci
+      - run: npm --prefix apps/dashboard audit --omit=dev --audit-level=high
+      - run: npm --prefix apps/dashboard run build
+      - name: Verify production Compose resolves variables and never seeds demo data
+        run: |
+          docker compose --env-file deploy/production/.env.production.example \
+            -f supabase/docker/docker-compose.yml \
+            -f deploy/production/docker-compose.production.yml \
+            config --format json >/tmp/qarar-production-compose.json 2>/tmp/qarar-production-compose.stderr
+          if grep -Eqi 'variable .* is not set|variable is not set' /tmp/qarar-production-compose.stderr; then
+            cat /tmp/qarar-production-compose.stderr
+            exit 1
+          fi
+          node <<'NODE'
+          const fs = require('node:fs');
+          const compose = JSON.parse(fs.readFileSync('/tmp/qarar-production-compose.json', 'utf8'));
+          if (compose.services?.['db-migrate']?.environment?.QARAR_APPLY_SEED !== 'false') {
+            throw new Error('Production Compose must force QARAR_APPLY_SEED=false.');
+          }
+          NODE
+      - name: Reject an unconfigured production template as proof the gate fails closed
+        run: '! node scripts/validate-production-env.mjs deploy/production/.env.production.example'
+      - name: Test production login-rate-limit configuration gate
+        run: node --test scripts/login-rate-limit-production-config.test.mjs
+      - name: Test production Auth redirect configuration gate
+        run: node --test scripts/auth-redirect-production-config.test.mjs
+      - name: Test production malware-scanning configuration gate
+        run: node --test scripts/upload-malware-scan-production-config.test.mjs
+
+  database-security-and-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Start isolated stack
+        run: |
+          cp supabase/docker/.env.example supabase/docker/.env
+          docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml up -d --wait
+      - run: sh supabase/tests/run-completed-db-tests.sh
+      - name: Verify generated API contract reference against the running registry
+        run: npm run test:api-docs
+      - name: Reject migration source and database-ledger drift
+        run: npm run prod:migration-drift
+      - name: Verify cron and notification-outbox operations
+        run: npm run prod:outbox-preflight
+        env:
+          OUTBOX_REQUIRE_CRON: "true"
+      - name: Backup and isolated restore drill
+        shell: pwsh
+        run: |
+          $key = [byte[]]::new(32)
+          try {
+            [System.Security.Cryptography.RandomNumberGenerator]::Fill($key)
+            $env:QARAR_BACKUP_ENCRYPTION_KEY = [Convert]::ToBase64String($key)
+            $env:NODE_ENV = "production"
+            ./scripts/backup-crypto.test.ps1
+            ./scripts/backup-database.ps1
+            ./scripts/verify-backup-restore.ps1
+            $env:QARAR_SUPABASE_URL = "http://127.0.0.1:54321"
+            $env:QARAR_SUPABASE_SERVICE_ROLE_KEY = (Select-String -Path supabase/docker/.env -Pattern '^SERVICE_ROLE_KEY=').Line.Split('=', 2)[1]
+            $env:QARAR_STORAGE_DRILL_CREATE_FIXTURE = "true"
+            node scripts/storage-backup-drill.mjs
+          } finally {
+            [System.Security.Cryptography.CryptographicOperations]::ZeroMemory($key)
+            Remove-Item Env:QARAR_BACKUP_ENCRYPTION_KEY -ErrorAction SilentlyContinue
+            Remove-Item Env:QARAR_SUPABASE_SERVICE_ROLE_KEY -ErrorAction SilentlyContinue
+          }
+      - name: Permission inventory
+        run: node scripts/audit-user-permissions.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-readiness-reports
+          path: .production-reports
+          if-no-files-found: ignore
+          retention-days: 14
+      - if: always()
+        run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml down -v
+
+  dashboard-runtime-security-and-load:
+    needs: security-and-production-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/dashboard/package-lock.json
+      - run: npm --prefix apps/dashboard ci
+      - run: npm --prefix apps/dashboard run build
+      - name: Start production dashboard
+        run: npm --prefix apps/dashboard start > dashboard-production.log 2>&1 &
+        env:
+          # Runtime security tests must exercise the fail-closed production
+          # configuration path rather than accidentally accepting absent
+          # APP_ORIGIN or METRICS_TOKEN values.
+          NODE_ENV: production
+          APP_ORIGIN: https://dashboard.test.invalid
+          METRICS_TOKEN: ci-dashboard-metrics-token-32-characters
+      - name: Wait for health
+        run: |
+          for attempt in $(seq 1 60); do
+            curl --fail --silent http://127.0.0.1:3000/api/health >/dev/null && exit 0
+            sleep 2
+          done
+          cat dashboard-production.log
+          exit 1
+      - run: npm run prod:security-audit
+        env:
+          NODE_ENV: production
+          DASHBOARD_URL: http://127.0.0.1:3000
+      - run: npm run prod:load-smoke
+        env:
+          LOAD_BASE_URL: http://127.0.0.1:3000
+          LOAD_CONCURRENCY: 25
+          LOAD_REQUESTS: 500
+          LOAD_MAX_P95_MS: 750
+          LOAD_MAX_ERROR_RATE: 0.01
+      - name: Build production container
+        run: docker build -t qarar-dashboard:${{ github.sha }} apps/dashboard
+      - name: Generate immutable dashboard SBOM
+        uses: anchore/sbom-action@v0.20.6
+        with:
+          image: qarar-dashboard:${{ github.sha }}
+          format: spdx-json
+          output-file: dashboard-${{ github.sha }}.spdx.json
+      - name: Scan production image
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: qarar-dashboard:${{ github.sha }}
+          format: sarif
+          output: trivy-dashboard.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+      - name: Verify monitoring and release configuration
+        run: npm run test:monitoring-production
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dashboard-release-evidence-${{ github.sha }}
+          path: |
+            dashboard-${{ github.sha }}.spdx.json
+            trivy-dashboard.sarif
+            dashboard-production.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+  publish-immutable-image:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [security-and-production-build, database-security-and-restore, dashboard-runtime-security-and-load]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/qarar-dashboard
+          tags: |
+            type=sha,format=long
+            type=ref,event=tag
+      - uses: docker/build-push-action@v6
+        with:
+          context: apps/dashboard
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: mode=max
+          sbom: true

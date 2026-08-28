@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-28
+
+- Restored 43 original migrations that were applied to the local Qarar database but omitted from the published release snapshot.
+- Restored 80 omitted production, security, operations, Edge Function, database-test, and CI files from the preserved local release worktree.
+- Restored the missing `api_v1` contracts for meeting-minutes draft generation, minutes signing, and governance-unit topic categories.
+- Preserved the original atomic policy-bundle import migrations, including the `v4` contract, with checksums matching the local migration ledger.
+- Regenerated the 206-contract API reference, restored the complete operational/response documentation, and corrected dashboard paths after the move to `apps/dashboard`.
+- Repaired the dashboard test harness; all 119 Vitest tests and the clean Next.js production build now pass.
+
 ## 2026-08-26 - Release 1 meeting flow stabilization
 
 ### Added

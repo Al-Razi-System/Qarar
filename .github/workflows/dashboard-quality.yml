@@ -1,0 +1,123 @@
+name: Dashboard Quality
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [dev]
+    paths:
+      - "apps/dashboard/**"
+      - "supabase/functions/**"
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - ".github/workflows/dashboard-quality.yml"
+  push:
+    branches: [dev]
+
+concurrency:
+  group: dashboard-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/dashboard
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/dashboard/package-lock.json
+      - run: npm ci
+      - run: npm run test:ci
+      - name: Verify documentation encoding
+        working-directory: ${{ github.workspace }}
+        run: npm run test:docs-encoding
+
+  api-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:compatibility
+      - run: npm run test:docs-encoding
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Fresh Docker configuration
+        run: cp supabase/docker/.env.example supabase/docker/.env
+      - name: Validate and start the stack
+        run: |
+          npm run docker:config
+          docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml up -d --wait
+      - name: Run database contract smoke tests
+        run: sh supabase/tests/run-completed-db-tests.sh
+      - name: Verify generated API contract reference against the running registry
+        run: npm run test:api-docs
+      - if: always()
+        run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml logs --tail 200
+      - if: always()
+        run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml down -v
+
+  regulations-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    needs: [quality, api-contracts, docker-smoke]
+    defaults:
+      run:
+        working-directory: apps/dashboard
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/dashboard/package-lock.json
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Prepare Supabase configuration
+        working-directory: ${{ github.workspace }}
+        run: cp supabase/docker/.env.example supabase/docker/.env
+      - name: Start Supabase
+        working-directory: ${{ github.workspace }}
+        run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml up -d --wait
+      - name: Run regulations browser scenarios
+        run: npm run test:e2e
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regulations-playwright-report
+          path: |
+            apps/dashboard/playwright-report
+            apps/dashboard/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Print service logs on failure
+        if: failure()
+        working-directory: ${{ github.workspace }}
+        run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml logs --tail 300
+      - name: Stop Supabase
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml down -v

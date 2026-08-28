@@ -86,7 +86,7 @@ describe("TopicRegulationCreator", () => {
 
     await user.type(screen.getByLabelText("عنوان الموضوع"), "أربعة");
     await user.type(screen.getByLabelText("وصف الموضوع"), "وصف قصير");
-    await user.selectOptions(screen.getByLabelText("الجهة أو المجلس"), "unit-1");
+    await user.selectOptions(screen.getByLabelText("جهة تقديم الموضوع"), "unit-1");
     await screen.findByRole("option", { name: "برامج أكاديمية (1)" });
     await user.selectOptions(screen.getByLabelText("فئة الموضوع"), "cat-1");
     expect(nextButton).toBeDisabled();
@@ -180,7 +180,7 @@ describe("TopicRegulationCreator", () => {
     await screen.findByText("جاهز للإنشاء");
     await user.type(screen.getByLabelText("عنوان الموضوع"), "إنشاء برنامج جديد");
     await user.type(screen.getByLabelText("وصف الموضوع"), "طلب دراسة واعتماد برنامج أكاديمي جديد وفق المسار النظامي.");
-    await user.selectOptions(screen.getByLabelText("الجهة أو المجلس"), "unit-1");
+    await user.selectOptions(screen.getByLabelText("جهة تقديم الموضوع"), "unit-1");
     await screen.findByRole("option", { name: "برامج أكاديمية (1)" });
     await user.selectOptions(screen.getByLabelText("فئة الموضوع"), "cat-1");
     await user.click(screen.getByRole("button", { name: /التالي: عرض اللائحة المنطبقة/ }));

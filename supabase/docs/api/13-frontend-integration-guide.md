@@ -9,10 +9,10 @@ PostgreSQL result types are frozen in [12-contract-reference.md](./12-contract-r
 | Frontend area | Backend entry points | Workflow document | Status |
 |---|---|---|---|
 | Login, recovery, password change | Supabase Auth | [00-common.md](./00-common.md), [01-account.md](./01-account.md) | Implemented |
-| My profile and preferences | `bootstrap_current_user_profile`, `get_my_account`, `update_my_profile`, `update_my_preferences` | [01-account.md](./01-account.md) | Implemented |
+| My profile and preferences | `get_my_account`, `update_my_profile`, `update_my_preferences` | [01-account.md](./01-account.md) | Implemented; initial provisioning is service-only |
 | User administration | `iam-admin`, `admin_search_users`, `admin_get_user_detail`, `admin_update_user_profile` | [02-users-admin.md](./02-users-admin.md) | Implemented |
 | Roles and permissions | IAM `admin_*` contracts | [03-roles-permissions.md](./03-roles-permissions.md) | Implemented |
-| SSO administration/login completion | SSO `admin_*`, `register_current_sso_login`, `sync_current_sso_groups` | [04-sso.md](./04-sso.md) | Implemented |
+| SSO administration/login completion | SSO `admin_*`, `register_current_sso_login` | [04-sso.md](./04-sso.md) | Temporarily unavailable: domains are disabled until trusted ownership re-verification; group sync is service-only |
 | Sessions, delegations, IAM approvals | Session/delegation/change-request contracts and `iam-admin` | [05-security-operations.md](./05-security-operations.md) | Implemented |
 | Topic submission and review | Topic `api_v1` contracts | [06-topics.md](./06-topics.md) | Implemented |
 | Topic referrals | Referral `api_v1` contracts | [06-topic-referrals.md](./06-topic-referrals.md) | Implemented |

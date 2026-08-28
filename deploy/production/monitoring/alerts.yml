@@ -1,0 +1,41 @@
+groups:
+  - name: qarar-production
+    rules:
+      - alert: QararEndpointDown
+        expr: probe_success{job="qarar-blackbox"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Qarar endpoint is unavailable"
+          description: "{{ $labels.instance }} has failed external probes for two minutes."
+      - alert: QararEndpointLatencyHigh
+        expr: probe_duration_seconds{job="qarar-blackbox"} > 1.5
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Qarar endpoint latency is high"
+          description: "{{ $labels.instance }} exceeds 1.5 seconds."
+      - alert: QararDatabaseExporterDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Database monitoring is unavailable"
+      - alert: QararMonitoringTargetDown
+        expr: up == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "A monitoring target is down"
+      - alert: QararLoginFailuresHigh
+        expr: increase(qarar_login_http_status_401[5m]) > 20
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "Login failures are elevated"
+      - alert: QararServerErrorsDetected
+        expr: sum(increase({__name__=~"qarar_.*http_status_5.."}[5m])) > 5
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Application 5xx errors detected"

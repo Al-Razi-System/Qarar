@@ -2,6 +2,20 @@
 
 User administration requires `iam.users.read`, `iam.users.manage`, or `iam.users.invite` as noted.
 
+## Governed Offboarding
+
+`admin_request_user_offboarding(p_target_user_id, p_successor_user_id, p_justification)` creates a
+pending request and never disables the target directly. A successor is mandatory whenever the
+target owns or follows an open action item.
+
+`admin_list_iam_approval_requests(p_status)` returns both IAM-change and offboarding review queues.
+The requester is included so clients can disable self-review controls, while the database remains
+the authoritative enforcement boundary.
+
+`admin_review_user_offboarding(p_request_id, p_decision, p_notes)` requires a different administrator.
+Approval atomically deactivates the account, deletes `auth.sessions`, revokes tracked sessions and
+delegations, ends memberships, transfers open tasks, and emits audit events sharing one correlation ID.
+
 ## Search Users
 
 `POST /rest/v1/rpc/admin_search_users` requires `iam.users.read`.
@@ -34,7 +48,7 @@ when requesting the next page and stop when `offset + items.length >= total`.
 Returns profile, memberships, roles, preferences, and linked SSO identities for the edit screen.
 Returns HTTP `404` semantics through an RPC error when the user is absent or belongs to another tenant.
 
-## Create and Invite User
+## Create User
 
 `POST /functions/v1/iam-admin` requires `iam.users.manage`.
 
@@ -43,13 +57,13 @@ Returns HTTP `404` semantics through an RPC error when the user is absent or bel
   "action": "create_user",
   "email": "member@example.edu.sa",
   "full_name_ar": "عضو جديد",
+  "temporary_password": "Qarar-Strong!2026",
   "employee_no": "EMP-1024",
   "mobile": "0500000000",
   "job_title": "عضو مجلس",
   "role_id": "<uuid>",
   "governance_unit_id": "<uuid>",
-  "membership_title": "عضو",
-  "redirect_to": "https://app.example.edu.sa/auth/callback"
+  "membership_title": "عضو"
 }
 ```
 
@@ -59,18 +73,19 @@ Success (`201`):
 {
   "user_id": "<uuid>",
   "membership_id": "<uuid-or-null>",
-  "invitation_sent": true
+  "account_created": true
 }
 ```
 
-The function validates the caller, limits creation to 10 attempts per 10 minutes, sends the Auth
-invitation, creates the application profile, and assigns the optional initial role. If profile or
+The function validates the caller, enforces a strong temporary password, limits creation to 10
+attempts per 10 minutes, creates a confirmed Auth identity and application profile, and assigns the
+optional initial role. No invitation email is sent. If profile or
 role creation fails, it deletes the newly created Auth user as compensation.
 
 The underlying `admin_create_user_profile(...)` RPC only finalizes an application profile for an
 already-created Auth user. It does not create an Auth identity or send email and is not the normal
 frontend entry point. User-management screens must use the `iam-admin` `create_user` action so the
-Auth, profile, membership, invitation, audit, and rollback steps remain one governed operation.
+Auth, profile, membership, and rollback steps remain one governed operation.
 
 ## Update Profile
 
@@ -113,6 +128,12 @@ revoked; never call it from Flutter.
 This action permits five attempts per 15 minutes. It generates a fresh invite link, sends it through
 configured SMTP, records `iam.invitation.resent`, and returns only a masked destination address.
 
+When supplied, `redirect_to` must be an absolute HTTP(S) URL whose actual origin exactly matches a
+canonical entry in the deployment-owned `ALLOWED_ORIGINS` list. The Edge Function checks this before
+calling GoTrue, rejects wildcard/prefix lookalikes and URLs containing credentials, and records only
+the validated canonical value. Do not pass a redirect constructed from untrusted input. Omitting the
+field uses the server's normal Auth redirect configuration.
+
 ## Force Password Reset
 
 ```json
@@ -122,19 +143,22 @@ configured SMTP, records `iam.invitation.resent`, and returns only a masked dest
 This generates and emails a recovery link and records `iam.password_reset.sent`. The administrator
 does not receive or set the user's password.
 
+The same server-side `redirect_to` allowlist rule applies to recovery links; `URI_ALLOW_LIST` in
+GoTrue is defense in depth, not the sole redirect control.
+
 ## Edge Action Contract
 
 All actions below use `POST /functions/v1/iam-admin` with the headers in [00-common.md](./00-common.md).
 
 | Action | Required fields | Success | Important errors |
 |---|---|---|---|
-| `create_user` | `email`, `full_name_ar`; optional role and unit pair | `201`, `{user_id, membership_id, invitation_sent}` | `400` validation/finalization, `409` Auth conflict, `429` rate limit |
+| `create_user` | `email`, `full_name_ar`, `temporary_password`; optional role and unit pair | `201`, `{user_id, membership_id, account_created}` | `400` validation/finalization, `409` Auth conflict, `429` rate limit |
 | `update_user_status` | `user_id`, `status`; optional `reason` | `200`, status result | `400` invalid status, `404` Auth user absent, `429` rate limit |
 | `lock_user` | `user_id`; optional `reason` | `200`, suspended result | `404` Auth user absent, `429` rate limit |
 | `unlock_user` | `user_id`; optional `reason` | `200`, active result | `404` Auth user absent, `429` rate limit |
 | `revoke_session` | `session_id`; optional `reason` | `200`, `{revoked, session_id, auth_sessions_revoked}` | `403` foreign/unauthorized session, `404` absent session |
-| `resend_invitation` | `user_id`; optional `redirect_to` | `200`, `{sent, user_id, destination}` | `404` managed user absent, `429` rate limit |
-| `send_password_reset` | `user_id`; optional `redirect_to` | `200`, `{sent, user_id, destination}` | `404` managed user absent, `429` rate limit |
+| `resend_invitation` | `user_id`; optional allowlisted `redirect_to` | `200`, `{sent, user_id, destination}` | `400` invalid redirect, `404` managed user absent, `429` rate limit |
+| `send_password_reset` | `user_id`; optional allowlisted `redirect_to` | `200`, `{sent, user_id, destination}` | `400` invalid redirect, `404` managed user absent, `429` rate limit |
 
 `role_id` and `governance_unit_id` for `create_user` must be supplied together. Treat the operation as
 complete only after HTTP `201`; the backend removes the new Auth user if profile or membership creation fails.
@@ -155,3 +179,8 @@ final result = Map<String, dynamic>.from(response.data as Map);
 For SSO or controlled provisioning, use `admin_create_invitation(...)` and
 `admin_revoke_invitation(...)`. These records govern application access and do not replace the
 Auth invitation email sent by `iam-admin`.
+
+A pending invitation cannot carry organization/system authority, including a role whose active
+permission matrix makes it elevated. Reissue it without a role or with a non-elevated role, wait for
+the invited identity to be active and verified, then let a system administrator make the elevated
+assignment through the normal role-assignment workflow.

@@ -1,0 +1,16 @@
+route:
+  receiver: qarar-operations
+  group_by: [alertname, instance]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: qarar-operations
+    webhook_configs:
+      - url: "__QARAR_ALERT_WEBHOOK_URL__"
+        send_resolved: true
+        http_config:
+          authorization:
+            type: Bearer
+            credentials: "__QARAR_ALERT_WEBHOOK_TOKEN__"
