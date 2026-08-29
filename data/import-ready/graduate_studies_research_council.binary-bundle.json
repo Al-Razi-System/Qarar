@@ -1,0 +1,1219 @@
+{
+  "schema_version": "qarar.policy_binary_bundle.v1",
+  "generated_at": "2026-08-23T23:12:08.536Z",
+  "classification_model": {
+    "type": "binary",
+    "values": [
+      "display_only",
+      "requires_workflow_and_meeting"
+    ],
+    "default": "display_only"
+  },
+  "source_document": {
+    "code": "graduate_studies_research_council",
+    "title_ar": "مجلس الدراسات العليا والبحث العلمي",
+    "pdf_file": "مجلس الدراسات العليا والبحث العلمي.pdf",
+    "pdf_sha256": "d7c751932a4345b576e6b6b5cd528a7a0a6eb4cb35d9804137c3ea6ef1add3b6",
+    "pdf_pages": 6,
+    "text_file": "مجلس_الدراسات_العليا_والبحث_العلمي.txt",
+    "text_sha256": "df3cea1a0448bbc16a7e58ca3143c241c750f4953f7ec9d3ff38116689a4e6b4",
+    "legacy_bundle_file": "لائحة_مجلس_الدراسات_العليا_والبحث_العلمي_جاهزة_حاليا_ومتوافقة_مع_مجالات_مستقبلية.json"
+  },
+  "source_status": "review_required_not_importable",
+  "policy": {
+    "code": "graduate_studies_research_council_regulation",
+    "name_ar": "لائحة مجلس الدراسات العليا والبحث العلمي",
+    "name_en": null,
+    "policy_type": "regulation",
+    "description": "بنود الأجندة التنفيذية المعتمدة لـمجلس الدراسات العليا والبحث العلمي.",
+    "status": "active"
+  },
+  "version": {
+    "version_no": 1,
+    "version_label": "بنود الأجندة التنفيذية",
+    "change_summary": "قائمة البنود التنفيذية التي تتطلب مساراً واجتماعاً فقط.",
+    "legal_status": "draft_pending_formal_approval"
+  },
+  "scopes": [
+    {
+      "scope_type": "governance_class",
+      "governance_class_code": "graduate_studies_council",
+      "governance_level": null,
+      "include_descendants": false,
+      "priority": 100
+    }
+  ],
+  "items": [
+    {
+      "item_code": "GRD-01",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "استعراض ومتابعة تنفيذ قرارات المحضر السابق",
+      "title_en": null,
+      "body_text": "استعراض ومتابعة تنفيذ قرارات المحضر السابق",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجلس_الدراسات_العليا_والبحث_العلمي.txt/إجراءات الاجتماعات",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "graduate_formal_decision",
+      "workflow_codes": [
+        "graduate_council_meeting_decision"
+      ],
+      "sort_order": 10,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "GRD-02",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "السياسات والخطط العامة للدراسات العليا والبحث العلمي ومتابعة تنفيذها",
+      "title_en": null,
+      "body_text": "السياسات والخطط العامة للدراسات العليا والبحث العلمي ومتابعة تنفيذها",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجلس_الدراسات_العليا_والبحث_العلمي.txt/مادة 19/أولًا",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "graduate_policy_planning",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.graduate_university",
+        "graduate_council_meeting_decision"
+      ],
+      "sort_order": 20,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "GRD-03",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "مقترحات استحداث برامج دراسات عليا جديدة وخططها الدراسية",
+      "title_en": null,
+      "body_text": "مقترحات استحداث برامج دراسات عليا جديدة وخططها الدراسية",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجلس_الدراسات_العليا_والبحث_العلمي.txt/المادتان 20 و21",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "graduate_program_creation",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.postgraduate_full"
+      ],
+      "sort_order": 30,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "GRD-04",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "تنظيم قبول طلاب الدراسات العليا وإعداد قوائم المنح الدراسية",
+      "title_en": null,
+      "body_text": "تنظيم قبول طلاب الدراسات العليا وإعداد قوائم المنح الدراسية",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجلس_الدراسات_العليا_والبحث_العلمي.txt/المواد 19-21",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "graduate_admission_numbers",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.postgraduate_full",
+        "graduate_studies_research_council_regulation.graduate_university_trustees"
+      ],
+      "sort_order": 40,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "GRD-05",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "اعتماد لجان الإشراف ومشاريع الرسائل ولجان المناقشة وتحديد مواعيدها",
+      "title_en": null,
+      "body_text": "اعتماد لجان الإشراف ومشاريع الرسائل ولجان المناقشة وتحديد مواعيدها",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجلس_الدراسات_العليا_والبحث_العلمي.txt/المواد 19-21",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "graduate_thesis_proposal",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.postgraduate_full"
+      ],
+      "sort_order": 50,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "GRD-06",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "شؤون الامتحان الشامل وامتحان الكفاءة المعرفية ولجانها",
+      "title_en": null,
+      "body_text": "شؤون الامتحان الشامل وامتحان الكفاءة المعرفية ولجانها",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجلس_الدراسات_العليا_والبحث_العلمي.txt/المادتان 20 و21",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "graduate_comprehensive_exam",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.postgraduate_full"
+      ],
+      "sort_order": 60,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "GRD-07",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "شؤون البحث العلمي: صندوق البحث العلمي والموازنة والمجلات العلمية والترجمة والنشر والتأليف",
+      "title_en": null,
+      "body_text": "شؤون البحث العلمي: صندوق البحث العلمي والموازنة والمجلات العلمية والترجمة والنشر والتأليف",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجلس_الدراسات_العليا_والبحث_العلمي.txt/مادة 19",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "research_budget",
+      "workflow_codes": [
+        "graduate_council_meeting_decision",
+        "graduate_studies_research_council_regulation.graduate_university_trustees"
+      ],
+      "sort_order": 70,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "GRD-08",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "إيفاد أعضاء هيئة التدريس وإجازات التفرغ العلمي والمؤتمرات والندوات",
+      "title_en": null,
+      "body_text": "إيفاد أعضاء هيئة التدريس وإجازات التفرغ العلمي والمؤتمرات والندوات",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجلس_الدراسات_العليا_والبحث_العلمي.txt/مادة 19",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "scientific_missions",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.graduate_university_trustees"
+      ],
+      "sort_order": 80,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "GRD-09",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "مناقشة تقارير الكليات والتقرير الفصلي والسنوي المرفوع لمجلس الجامعة",
+      "title_en": null,
+      "body_text": "مناقشة تقارير الكليات والتقرير الفصلي والسنوي المرفوع لمجلس الجامعة",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجلس_الدراسات_العليا_والبحث_العلمي.txt/مادة 19/أولًا 8 وثالثًا 3",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "graduate_statistics_reports",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.graduate_university"
+      ],
+      "sort_order": 90,
+      "match_criteria": {}
+    },
+    {
+      "item_code": "GRD-10",
+      "parent_item_code": null,
+      "item_type": "clause",
+      "title_ar": "ما يحيله مجلس الجامعة من موضوعات",
+      "title_en": null,
+      "body_text": "ما يحيله مجلس الجامعة من موضوعات",
+      "official_text": null,
+      "source_item_key": null,
+      "printed_article_number": null,
+      "printed_article_occurrence": null,
+      "source_page_from": null,
+      "source_page_to": null,
+      "source_locator": "مجلس_الدراسات_العليا_والبحث_العلمي.txt/مادة 19/ثالثًا 1",
+      "classification": "requires_workflow_and_meeting",
+      "requires_workflow_and_meeting": true,
+      "topic_category_code": "graduate_formal_decision",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.conditional_higher_referral"
+      ],
+      "sort_order": 100,
+      "match_criteria": {}
+    }
+  ],
+  "workflows": [
+    {
+      "code": "graduate_council_meeting_decision",
+      "name_ar": "اجتماع وقرار مجلس الدراسات العليا والبحث العلمي",
+      "description": "مسار معياري يضمن إدراج الموضوع في جدول الأعمال، والتحقق من النصاب، والتصويت، وتوثيق القرار في المحضر.",
+      "version_no": 1,
+      "allow_cycles": false,
+      "activate": true,
+      "steps": [
+        {
+          "code": "agenda_review",
+          "name_ar": "مراجعة وإدراج الموضوع في جدول الأعمال",
+          "sequence_no": 1,
+          "step_type": "review",
+          "responsibility": "present",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": true,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved"
+          ],
+          "entry_conditions": {
+            "notice_before_days": 2,
+            "member_submission_before_days": null
+          }
+        },
+        {
+          "code": "council_decision",
+          "name_ar": "مناقشة المجلس والتصويت",
+          "sequence_no": 2,
+          "step_type": "voting",
+          "responsibility": "final_approve",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {
+            "quorum": "ثلثا الأعضاء",
+            "approval_rule": "ثلثا أصوات الحاضرين",
+            "legal_review_required": false
+          }
+        },
+        {
+          "code": "minutes_confirmation",
+          "name_ar": "تثبيت القرار في المحضر",
+          "sequence_no": 3,
+          "step_type": "follow_up",
+          "responsibility": "follow_up",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": true,
+          "allowed_outcomes": [
+            "completed"
+          ]
+        }
+      ],
+      "transitions": [
+        {
+          "from": "agenda_review",
+          "to": "council_decision",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_decision",
+          "to": "minutes_confirmation",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_decision",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_decision",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_decision",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "minutes_confirmation",
+          "to": null,
+          "outcome": "completed",
+          "transition_type": "complete",
+          "conditions": {}
+        }
+      ]
+    },
+    {
+      "code": "graduate_studies_research_council_regulation.graduate_university",
+      "name_ar": "مسار مجلس الدراسات العليا والبحث العلمي ← مجلس الجامعة",
+      "description": "مسار أجندة معتمد: مجلس الدراسات العليا والبحث العلمي ثم مجلس الجامعة. الاعتماد الخارجي يسجل كمتطلب ولا ينفذ كاجتماع داخلي.",
+      "version_no": 1,
+      "allow_cycles": false,
+      "activate": true,
+      "steps": [
+        {
+          "code": "agenda_review",
+          "name_ar": "مراجعة الموضوع وإدراجه في جدول الأعمال",
+          "sequence_no": 1,
+          "step_type": "review",
+          "responsibility": "present",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": true,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved"
+          ],
+          "entry_conditions": {
+            "notice_before_days": 2,
+            "member_submission_before_days": null
+          }
+        },
+        {
+          "code": "council_1",
+          "name_ar": "مناقشة واعتماد: مجلس الدراسات العليا والبحث العلمي",
+          "sequence_no": 2,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {
+            "quorum": "ثلثا الأعضاء",
+            "approval_rule": "ثلثا أصوات الحاضرين",
+            "legal_review_required": false
+          }
+        },
+        {
+          "code": "council_2",
+          "name_ar": "مناقشة واعتماد: مجلس الجامعة",
+          "sequence_no": 3,
+          "step_type": "voting",
+          "responsibility": "final_approve",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "minutes_confirmation",
+          "name_ar": "تثبيت النتيجة في المحضر وإشعار المعنيين",
+          "sequence_no": 4,
+          "step_type": "follow_up",
+          "responsibility": "follow_up",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": true,
+          "allowed_outcomes": [
+            "completed"
+          ]
+        }
+      ],
+      "transitions": [
+        {
+          "from": "agenda_review",
+          "to": "council_1",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "council_2",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "minutes_confirmation",
+          "to": null,
+          "outcome": "completed",
+          "transition_type": "complete",
+          "conditions": {}
+        }
+      ]
+    },
+    {
+      "code": "graduate_studies_research_council_regulation.postgraduate_full",
+      "name_ar": "مسار مجلس القسم ← مجلس الكلية ← مجلس الدراسات العليا والبحث العلمي ← مجلس الجامعة عند اشتراط الاعتماد النهائي",
+      "description": "مسار أجندة معتمد: مجلس القسم ثم مجلس الكلية ثم مجلس الدراسات العليا والبحث العلمي ثم مجلس الجامعة عند اشتراط الاعتماد النهائي. الاعتماد الخارجي يسجل كمتطلب ولا ينفذ كاجتماع داخلي.",
+      "version_no": 1,
+      "allow_cycles": false,
+      "activate": true,
+      "steps": [
+        {
+          "code": "agenda_review",
+          "name_ar": "مراجعة الموضوع وإدراجه في جدول الأعمال",
+          "sequence_no": 1,
+          "step_type": "review",
+          "responsibility": "present",
+          "governance_class_code": "department_council",
+          "required_permission_code": null,
+          "is_initial": true,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved"
+          ],
+          "entry_conditions": {
+            "notice_before_days": 2,
+            "member_submission_before_days": null
+          }
+        },
+        {
+          "code": "council_1",
+          "name_ar": "مناقشة واعتماد: مجلس القسم",
+          "sequence_no": 2,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "department_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {
+            "quorum": "ثلثا الأعضاء",
+            "approval_rule": "ثلثا أصوات الحاضرين",
+            "legal_review_required": false
+          }
+        },
+        {
+          "code": "council_2",
+          "name_ar": "مناقشة واعتماد: مجلس الكلية",
+          "sequence_no": 3,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "faculty_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "council_3",
+          "name_ar": "مناقشة واعتماد: مجلس الدراسات العليا والبحث العلمي",
+          "sequence_no": 4,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "council_4",
+          "name_ar": "مناقشة واعتماد: مجلس الجامعة عند اشتراط الاعتماد النهائي",
+          "sequence_no": 5,
+          "step_type": "voting",
+          "responsibility": "final_approve",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "minutes_confirmation",
+          "name_ar": "تثبيت النتيجة في المحضر وإشعار المعنيين",
+          "sequence_no": 6,
+          "step_type": "follow_up",
+          "responsibility": "follow_up",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": true,
+          "allowed_outcomes": [
+            "completed"
+          ]
+        }
+      ],
+      "transitions": [
+        {
+          "from": "agenda_review",
+          "to": "council_1",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "council_2",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "council_3",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "council_4",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_4",
+          "to": "minutes_confirmation",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_4",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_4",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_4",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "minutes_confirmation",
+          "to": null,
+          "outcome": "completed",
+          "transition_type": "complete",
+          "conditions": {}
+        }
+      ]
+    },
+    {
+      "code": "graduate_studies_research_council_regulation.graduate_university_trustees",
+      "name_ar": "مسار مجلس الدراسات العليا والبحث العلمي ← مجلس الجامعة ← مجلس الأمناء",
+      "description": "مسار أجندة معتمد: مجلس الدراسات العليا والبحث العلمي ثم مجلس الجامعة ثم مجلس الأمناء. الاعتماد الخارجي يسجل كمتطلب ولا ينفذ كاجتماع داخلي.",
+      "version_no": 1,
+      "allow_cycles": false,
+      "activate": true,
+      "steps": [
+        {
+          "code": "agenda_review",
+          "name_ar": "مراجعة الموضوع وإدراجه في جدول الأعمال",
+          "sequence_no": 1,
+          "step_type": "review",
+          "responsibility": "present",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": true,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved"
+          ],
+          "entry_conditions": {
+            "notice_before_days": 2,
+            "member_submission_before_days": null
+          }
+        },
+        {
+          "code": "council_1",
+          "name_ar": "مناقشة واعتماد: مجلس الدراسات العليا والبحث العلمي",
+          "sequence_no": 2,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {
+            "quorum": "ثلثا الأعضاء",
+            "approval_rule": "ثلثا أصوات الحاضرين",
+            "legal_review_required": false
+          }
+        },
+        {
+          "code": "council_2",
+          "name_ar": "مناقشة واعتماد: مجلس الجامعة",
+          "sequence_no": 3,
+          "step_type": "voting",
+          "responsibility": "initial_approve",
+          "governance_class_code": "university_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "council_3",
+          "name_ar": "مناقشة واعتماد: مجلس الأمناء",
+          "sequence_no": 4,
+          "step_type": "voting",
+          "responsibility": "final_approve",
+          "governance_class_code": "board_of_trustees",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {}
+        },
+        {
+          "code": "minutes_confirmation",
+          "name_ar": "تثبيت النتيجة في المحضر وإشعار المعنيين",
+          "sequence_no": 5,
+          "step_type": "follow_up",
+          "responsibility": "follow_up",
+          "governance_class_code": "board_of_trustees",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": true,
+          "allowed_outcomes": [
+            "completed"
+          ]
+        }
+      ],
+      "transitions": [
+        {
+          "from": "agenda_review",
+          "to": "council_1",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "council_2",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "council_3",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_2",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_3",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "minutes_confirmation",
+          "to": null,
+          "outcome": "completed",
+          "transition_type": "complete",
+          "conditions": {}
+        }
+      ]
+    },
+    {
+      "code": "graduate_studies_research_council_regulation.conditional_higher_referral",
+      "name_ar": "مسار المجلس المختص ابتداءً ← المجلس الأعلى فقط إذا خرج الموضوع عن صلاحية المجلس أو اشترط النص اعتمادًا أعلى",
+      "description": "مسار أجندة معتمد: المجلس المختص ابتداءً ثم المجلس الأعلى فقط إذا خرج الموضوع عن صلاحية المجلس أو اشترط النص اعتمادًا أعلى. الاعتماد الخارجي يسجل كمتطلب ولا ينفذ كاجتماع داخلي.",
+      "version_no": 1,
+      "allow_cycles": false,
+      "activate": true,
+      "steps": [
+        {
+          "code": "agenda_review",
+          "name_ar": "مراجعة الموضوع وإدراجه في جدول الأعمال",
+          "sequence_no": 1,
+          "step_type": "review",
+          "responsibility": "present",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": true,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved"
+          ],
+          "entry_conditions": {
+            "notice_before_days": 2,
+            "member_submission_before_days": null
+          }
+        },
+        {
+          "code": "council_1",
+          "name_ar": "مناقشة واعتماد: المجلس المختص ابتداءً",
+          "sequence_no": 2,
+          "step_type": "voting",
+          "responsibility": "final_approve",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": false,
+          "allowed_outcomes": [
+            "approved",
+            "rejected",
+            "tie",
+            "no_vote"
+          ],
+          "exit_conditions": {
+            "quorum": "ثلثا الأعضاء",
+            "approval_rule": "ثلثا أصوات الحاضرين",
+            "legal_review_required": false
+          }
+        },
+        {
+          "code": "minutes_confirmation",
+          "name_ar": "تثبيت النتيجة في المحضر وإشعار المعنيين",
+          "sequence_no": 3,
+          "step_type": "follow_up",
+          "responsibility": "follow_up",
+          "governance_class_code": "graduate_studies_council",
+          "required_permission_code": null,
+          "is_initial": false,
+          "is_terminal": true,
+          "allowed_outcomes": [
+            "completed"
+          ]
+        }
+      ],
+      "transitions": [
+        {
+          "from": "agenda_review",
+          "to": "council_1",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "approved",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "rejected",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "tie",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "council_1",
+          "to": "minutes_confirmation",
+          "outcome": "no_vote",
+          "transition_type": "forward",
+          "conditions": {}
+        },
+        {
+          "from": "minutes_confirmation",
+          "to": null,
+          "outcome": "completed",
+          "transition_type": "complete",
+          "conditions": {}
+        }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "policy_item_code": "GRD-01",
+      "workflow_codes": [
+        "graduate_council_meeting_decision"
+      ],
+      "topic_category_codes": [
+        "graduate_formal_decision"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "GRD-02",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.graduate_university",
+        "graduate_council_meeting_decision"
+      ],
+      "topic_category_codes": [
+        "graduate_policy_planning",
+        "graduate_policy_planning"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "GRD-03",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.postgraduate_full"
+      ],
+      "topic_category_codes": [
+        "graduate_program_creation"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "GRD-04",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.postgraduate_full",
+        "graduate_studies_research_council_regulation.graduate_university_trustees"
+      ],
+      "topic_category_codes": [
+        "graduate_admission_numbers",
+        "graduate_admission_numbers"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "GRD-05",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.postgraduate_full"
+      ],
+      "topic_category_codes": [
+        "graduate_thesis_proposal"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "GRD-06",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.postgraduate_full"
+      ],
+      "topic_category_codes": [
+        "graduate_comprehensive_exam"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "GRD-07",
+      "workflow_codes": [
+        "graduate_council_meeting_decision",
+        "graduate_studies_research_council_regulation.graduate_university_trustees"
+      ],
+      "topic_category_codes": [
+        "research_budget",
+        "research_budget"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "GRD-08",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.graduate_university_trustees"
+      ],
+      "topic_category_codes": [
+        "scientific_missions"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "GRD-09",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.graduate_university"
+      ],
+      "topic_category_codes": [
+        "graduate_statistics_reports"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    },
+    {
+      "policy_item_code": "GRD-10",
+      "workflow_codes": [
+        "graduate_studies_research_council_regulation.conditional_higher_referral"
+      ],
+      "topic_category_codes": [
+        "graduate_formal_decision"
+      ],
+      "reason_ar": "بند مدرج صراحة في قائمة الأجندة التنفيذية الحصرية المعتمدة."
+    }
+  ],
+  "operational_rules": [],
+  "source_issues": [],
+  "validation_summary": {
+    "item_count": 10,
+    "display_only_count": 0,
+    "requires_workflow_and_meeting_count": 10,
+    "workflow_count": 5,
+    "route_count": 10,
+    "operational_rule_count": 0,
+    "excluded_procedure_items": 18
+  },
+  "content_sha256": "3b9210781b676765d4ce40eb635168077b065de38d7c9c98aaa23e57ba2f3496"
+}

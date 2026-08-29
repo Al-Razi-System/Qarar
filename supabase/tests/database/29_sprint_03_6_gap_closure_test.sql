@@ -60,14 +60,14 @@ values
 insert into qarar_iam.role_permissions(organization_id,role_id,permission_id)
 select '60000000-0000-0000-0000-000000000001','60000000-0000-0000-0000-000000000041',id
 from qarar_iam.permissions where organization_id='60000000-0000-0000-0000-000000000001'
- and code='governance.units.read';
+ and code='governance.memberships.read';
 insert into qarar_iam.memberships(organization_id,user_id,governance_unit_id,role_id,start_date)
 values('60000000-0000-0000-0000-000000000001','60000000-0000-0000-0000-000000000012',
  '60000000-0000-0000-0000-000000000031','60000000-0000-0000-0000-000000000041',current_date+10);
 
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"60000000-0000-0000-0000-000000000012"}';
-select ok(not api_v1.has_permission('governance.units.read','60000000-0000-0000-0000-000000000031'),
+select ok(not api_v1.has_permission('governance.memberships.read','60000000-0000-0000-0000-000000000031'),
  'future membership grants no permission');
 reset role;
 

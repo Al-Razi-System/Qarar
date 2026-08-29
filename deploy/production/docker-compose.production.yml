@@ -1,0 +1,289 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=30d"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ${QARAR_METRICS_TOKEN_FILE}:/run/secrets/metrics-token:ro
+      - qarar-prometheus-data:/prometheus
+    networks: [monitoring]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    restart: unless-stopped
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml"]
+    volumes:
+      - ${QARAR_ALERTMANAGER_CONFIG_PATH}:/etc/alertmanager/alertmanager.yml:ro
+    networks: [monitoring]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.27.0
+    restart: unless-stopped
+    networks: [default, monitoring]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.17.1
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+    networks: [default, monitoring]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  loki:
+    image: grafana/loki:3.5.3
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yml"]
+    volumes:
+      - ./monitoring/loki.yml:/etc/loki/loki.yml:ro
+      - qarar-loki-data:/loki
+    networks: [monitoring]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  promtail:
+    image: grafana/promtail:3.5.3
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/promtail.yml"]
+    volumes:
+      - ./monitoring/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - qarar-promtail-positions:/run/promtail
+    networks: [monitoring]
+    depends_on: [loki]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  auth:
+    environment:
+      GOTRUE_MFA_TOTP_ENROLL_ENABLED: "true"
+      GOTRUE_MFA_TOTP_VERIFY_ENABLED: "true"
+      GOTRUE_MFA_MAX_ENROLLED_FACTORS: "5"
+      GOTRUE_SAML_ENABLED: "false"
+
+  functions:
+    environment:
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      QARAR_ACTIVATION_TOKEN_SECRET: ${QARAR_ACTIVATION_TOKEN_SECRET}
+      NODE_ENV: production
+
+  # Keep the migration image and seed mount consistent with local development,
+  # but make demo/reference data impossible to apply through this overlay.
+  db-migrate:
+    environment:
+      QARAR_APPLY_SEED: "false"
+
+  # The dashboard is the only application connected to this service through
+  # the isolated upload-scanner network. There is no published scanner port
+  # and the route sends a bounded clamd INSTREAM payload before Storage writes.
+  clamav:
+    image: clamav/clamav:1.4.5_base-debian13-slim
+    restart: unless-stopped
+    init: true
+    read_only: true
+    environment:
+      CLAMAV_NO_CLAMD: "false"
+      CLAMAV_NO_FRESHCLAMD: "false"
+      CLAMAV_NO_MILTERD: "true"
+      CLAMD_CONF_TCPAddr: "0.0.0.0"
+      CLAMD_CONF_TCPSocket: "3310"
+      CLAMD_CONF_StreamMaxLength: ${QARAR_UPLOAD_SCAN_MAX_BYTES}
+      CLAMD_CONF_MaxFileSize: ${QARAR_UPLOAD_SCAN_MAX_BYTES}
+      CLAMD_CONF_MaxScanSize: ${QARAR_UPLOAD_SCAN_MAX_BYTES}
+      CLAMD_CONF_AlertExceedsMax: "yes"
+      CLAMD_CONF_MaxRecursion: "10"
+      CLAMD_CONF_MaxFiles: "1000"
+      CLAMD_CONF_ReadTimeout: "15"
+      CLAMD_CONF_CommandReadTimeout: "5"
+      CLAMD_CONF_SendBufTimeout: "200"
+      FRESHCLAM_CONF_Checks: "24"
+    networks:
+      - upload-scanner
+      # FreshClam needs controlled outbound access to signature mirrors. This
+      # network is intentionally separate from the application default network.
+      - clamav-updates
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+      - /run/clamav:size=8m,noexec,nosuid
+      - /var/run/clamav:size=8m,noexec,nosuid
+      - /var/log/clamav:size=16m,noexec,nosuid
+    volumes:
+      # The official image applies CLAMD_CONF_* at startup, so /etc/clamav is
+      # a dedicated writable volume while the rest of the root filesystem stays read-only.
+      - qarar-clamav-config:/etc/clamav
+      - qarar-clamav-data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "clamdcheck.sh"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 120s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # The official entrypoint changes ownership of its two Docker volumes then
+    # drops to the clamav user. Keep only the capabilities needed for that
+    # setup; the daemon's TCP port is unprivileged (3310).
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  dashboard:
+    build:
+      context: ../../apps/dashboard
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    environment:
+      NODE_ENV: production
+      QARAR_SUPABASE_URL: http://kong:8000
+      QARAR_SUPABASE_ANON_KEY: ${ANON_KEY}
+      QARAR_SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      QARAR_ACTIVATION_TOKEN_SECRET: ${QARAR_ACTIVATION_TOKEN_SECRET}
+      QARAR_SSO_ENABLED: "false"
+      APP_ORIGIN: ${APP_ORIGIN}
+      METRICS_TOKEN: ${METRICS_TOKEN}
+      QARAR_LOGIN_RATE_LIMIT_REDIS_HOST: ${QARAR_LOGIN_RATE_LIMIT_REDIS_HOST}
+      QARAR_LOGIN_RATE_LIMIT_REDIS_PORT: ${QARAR_LOGIN_RATE_LIMIT_REDIS_PORT}
+      QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD: ${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}
+      QARAR_LOGIN_RATE_LIMIT_HMAC_SECRET: ${QARAR_LOGIN_RATE_LIMIT_HMAC_SECRET}
+      QARAR_LOGIN_RATE_LIMIT_CLIENT_IP_HEADER: ${QARAR_LOGIN_RATE_LIMIT_CLIENT_IP_HEADER}
+      QARAR_LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS: ${QARAR_LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS}
+      QARAR_LOGIN_RATE_LIMIT_CLIENT_MAX_ATTEMPTS: ${QARAR_LOGIN_RATE_LIMIT_CLIENT_MAX_ATTEMPTS}
+      QARAR_LOGIN_RATE_LIMIT_GLOBAL_MAX_ATTEMPTS: ${QARAR_LOGIN_RATE_LIMIT_GLOBAL_MAX_ATTEMPTS}
+      QARAR_LOGIN_RATE_LIMIT_WINDOW_SECONDS: ${QARAR_LOGIN_RATE_LIMIT_WINDOW_SECONDS}
+      QARAR_LOGIN_RATE_LIMIT_GLOBAL_WINDOW_SECONDS: ${QARAR_LOGIN_RATE_LIMIT_GLOBAL_WINDOW_SECONDS}
+      QARAR_UPLOAD_SCAN_REQUIRED: ${QARAR_UPLOAD_SCAN_REQUIRED}
+      QARAR_UPLOAD_SCAN_ADAPTER: ${QARAR_UPLOAD_SCAN_ADAPTER}
+      QARAR_UPLOAD_SCAN_HOST: ${QARAR_UPLOAD_SCAN_HOST}
+      QARAR_UPLOAD_SCAN_PORT: ${QARAR_UPLOAD_SCAN_PORT}
+      QARAR_UPLOAD_SCAN_TIMEOUT_MS: ${QARAR_UPLOAD_SCAN_TIMEOUT_MS}
+      QARAR_UPLOAD_SCAN_MAX_BYTES: ${QARAR_UPLOAD_SCAN_MAX_BYTES}
+    depends_on:
+      kong:
+        condition: service_healthy
+      login-rate-limit-redis:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+    networks:
+      - default
+      - upload-scanner
+    ports: !override
+      - "127.0.0.1:${QARAR_DASHBOARD_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # This is a generic, authenticated delivery adapter. It talks only to the
+  # service-only api_v1 outbox contracts and never exposes a listening port.
+  notification-dispatcher:
+    build:
+      context: .
+      dockerfile: notification-dispatcher.Dockerfile
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    environment:
+      QARAR_OUTBOX_DISPATCHER_ENABLED: "true"
+      QARAR_OUTBOX_REQUIRED: "true"
+      QARAR_OUTBOX_WEBHOOK_URL: ${QARAR_OUTBOX_WEBHOOK_URL}
+      QARAR_OUTBOX_WEBHOOK_TOKEN: ${QARAR_OUTBOX_WEBHOOK_TOKEN}
+      QARAR_OUTBOX_DISPATCH_INTERVAL_MS: ${QARAR_OUTBOX_DISPATCH_INTERVAL_MS:-5000}
+      QARAR_OUTBOX_WEBHOOK_TIMEOUT_MS: ${QARAR_OUTBOX_WEBHOOK_TIMEOUT_MS:-10000}
+      QARAR_OUTBOX_BATCH_SIZE: ${QARAR_OUTBOX_BATCH_SIZE:-25}
+      QARAR_OUTBOX_LEASE_SECONDS: ${QARAR_OUTBOX_LEASE_SECONDS:-600}
+      QARAR_SUPABASE_URL: http://kong:8000
+      QARAR_SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      kong:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          node -e "const fs=require('node:fs');const h=JSON.parse(fs.readFileSync('/tmp/qarar-outbox-dispatcher-health.json','utf8'));if(!h.healthy||Date.now()-Date.parse(h.updatedAt)>90000)process.exit(1)"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  kong:
+    ports: !override
+      - "127.0.0.1:${QARAR_API_PORT:-54321}:8000"
+      - "127.0.0.1:${QARAR_API_HTTPS_PORT:-54326}:8443"
+
+  studio:
+    ports: !override
+      - "127.0.0.1:${QARAR_STUDIO_PORT:-54323}:3000"
+
+  db:
+    ports: !override []
+
+  supavisor:
+    ports: !override []
+
+  mail:
+    ports: !override []
+
+volumes:
+  qarar-clamav-config: null
+  qarar-clamav-data: null
+  qarar-prometheus-data: null
+  qarar-loki-data: null
+  qarar-promtail-positions: null
+
+networks:
+  monitoring:
+    internal: true
+  # Only dashboard and ClamAV join this network; it has no external route and
+  # prevents all other Compose services from speaking the clamd protocol.
+  upload-scanner:
+    internal: true
+  # Attach no workload other than ClamAV. Host/network controls must permit
+  # FreshClam only to approved signature mirrors or an internal mirror.
+  clamav-updates: {}

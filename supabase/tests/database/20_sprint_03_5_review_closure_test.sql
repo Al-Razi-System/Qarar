@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(33);
+select plan(35);
 
 select ok(qarar_governance.conditions_match('{"priority":"urgent"}','{"priority":"urgent"}'),
  'matching condition object is executed');
@@ -9,6 +9,9 @@ select ok(not qarar_governance.conditions_match('{"priority":"urgent"}','{"prior
 select ok(qarar_governance.conditions_match(
  '{"all":[{"priority":"urgent"},{"any":[{"source_type":"new"},{"source_type":"upper"}]}]}',
  '{"priority":"urgent","source_type":"new"}'),'nested all/any conditions are executed');
+select ok(qarar_governance.conditions_match(
+ '{"academic_level":["diploma","bachelor","master"]}',
+ '{"academic_level":"bachelor"}'),'array condition values are treated as one-of matches');
 
 select has_column('qarar_governance','workflow_instance_steps','action_idempotency_key',
  'workflow actions persist an idempotency key');
@@ -27,27 +30,36 @@ select throws_ok(
  $$select qarar_governance.complete_topic_workflow_step(gen_random_uuid(),'approved',null)$$,
  '42501',null,'legacy unsafe workflow command is closed');
 
+select ok(not exists(
+ select 1 from qarar_architecture.api_contract_registry
+ where api_version='v1'
+   and contract_name in(
+    'resolve_topic_governance','create_topic_with_workflow',
+    'complete_topic_workflow_step','return_topic_workflow_step','reject_topic_workflow_step'
+   )
+), 'legacy automatic regulation facades are removed from api_v1');
 select is((select contract_count from qarar_architecture.api_release_registry where api_version='v1'),
- 139,'api_v1 release count includes council lifecycle through PB-078');
+ 204,'api_v1 release count includes activation and governed offboarding contracts');
 select is((select count(*)::integer from qarar_architecture.api_contract_registry
- where api_version='v1' and contract_name in(
- 'admin_list_governance_unit_classes','admin_create_governance_unit_class',
- 'admin_update_governance_unit_class','admin_assign_governance_unit_class',
- 'request_custom_workflow','approve_custom_workflow','act_topic_workflow_step')),
- 7,'all review closure contracts are registered');
+  where api_version='v1' and contract_name in(
+  'admin_list_governance_unit_classes','admin_create_governance_unit_class',
+  'admin_update_governance_unit_class','admin_assign_governance_unit_class',
+  'request_custom_workflow','approve_custom_workflow','act_topic_workflow_step',
+  'get_topic_regulation_options','create_topic_with_selected_regulation')),
+ 9,'all selected-regulation workflow contracts are registered');
 
-select ok(position('7000000' in pg_get_functiondef(
- 'qarar_governance.resolve_topic_governance(uuid,uuid,date,uuid)'::regprocedure))>0,
- 'positive council override has explicit highest specificity tier');
-select ok(position('6000000' in pg_get_functiondef(
- 'qarar_governance.resolve_topic_governance(uuid,uuid,date,uuid)'::regprocedure))>0,
- 'council scope specificity dominates configured priority');
-select ok(position('conditions_match(pi.match_criteria' in pg_get_functiondef(
- 'qarar_governance.resolve_topic_governance(uuid,uuid,date,uuid)'::regprocedure))>0,
- 'policy item match criteria is executed by the matcher');
+select ok(position('eligible_topic_regulation_options' in pg_get_functiondef(
+ 'qarar_governance.get_topic_regulation_options(uuid,uuid,text,text,date)'::regprocedure))>0,
+ 'frontend regulation options use the eligible-regulation matcher');
+select ok(position('resolve_selected_topic_governance' in pg_get_functiondef(
+ 'qarar_topics.create_topic_with_selected_regulation(text,text,uuid,uuid,uuid,uuid,uuid,uuid,text,text,text,uuid)'::regprocedure))>0,
+ 'topic creation revalidates the selected regulation inside the transaction');
+select ok(position('idempotent_replay' in pg_get_functiondef(
+ 'qarar_topics.create_topic_with_selected_regulation(text,text,uuid,uuid,uuid,uuid,uuid,uuid,text,text,text,uuid)'::regprocedure))>0,
+ 'selected-regulation topic creation preserves idempotent replay semantics');
 select ok(position('governance_source=''custom''' in pg_get_functiondef(
- 'qarar_topics.create_topic_with_workflow(text,text,uuid,uuid,text,text,text,uuid)'::regprocedure))>0,
- 'custom and fallback routing persists a custom source');
+ 'qarar_topics.create_topic_with_selected_regulation(text,text,uuid,uuid,uuid,uuid,uuid,uuid,text,text,text,uuid)'::regprocedure))>0,
+ 'custom and fallback routing persists a custom source through the selected flow');
 select ok(position('governance_source into source' in pg_get_functiondef(
  'qarar_governance.act_topic_workflow_step_core(uuid,text,text,uuid,integer)'::regprocedure))>0,
  'workflow actions preserve the existing governance source');
@@ -119,9 +131,9 @@ select function_returns(
  'voting has a dedicated operation to cancel expired workflow rounds');
 select ok(
  position('select s.* into replay' in pg_get_functiondef(
-  'qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure))
+  'qarar_governance.act_topic_workflow_step_guarded_core(uuid,text,text,uuid,integer)'::regprocedure))
  < position('from qarar_governance.topic_governance_mappings' in pg_get_functiondef(
-  'qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure)),
+  'qarar_governance.act_topic_workflow_step_guarded_core(uuid,text,text,uuid,integer)'::regprocedure)),
  'idempotent replay is resolved before the temporary-route expiry guard');
 select ok(
  position('array_position' in pg_get_functiondef(

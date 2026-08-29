@@ -1,0 +1,548 @@
+"use client";
+
+import { useState } from "react";
+import {
+  AlertCircle,
+  CalendarClock,
+  Check,
+  ChevronDown,
+  FileSignature,
+  Scale,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
+import type { Policy, PolicyItem } from "../model/types";
+
+type Preset =
+  "conflict" | "quorum" | "vote" | "notice" | "absence" | "minutes" | "monthly";
+const presets: Array<{
+  id: Preset;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+}> = [
+  {
+    id: "conflict",
+    title: "تعارض المصالح",
+    description: "الإفصاح والانسحاب ومنع التصويت",
+    icon: <Scale size={17} />,
+  },
+  {
+    id: "quorum",
+    title: "النصاب",
+    description: "منع بدء الاجتماع قبل اكتمال الحضور",
+    icon: <Users size={17} />,
+  },
+  {
+    id: "vote",
+    title: "نسبة القرار",
+    description: "احتساب نسبة الأصوات المطلوبة",
+    icon: <ShieldCheck size={17} />,
+  },
+  {
+    id: "notice",
+    title: "مهلة الدعوة",
+    description: "التحقق من إرسال الدعوة قبل الاجتماع",
+    icon: <CalendarClock size={17} />,
+  },
+  {
+    id: "absence",
+    title: "الغياب المتكرر",
+    description: "تنبيه طلب استبدال العضو",
+    icon: <AlertCircle size={17} />,
+  },
+  {
+    id: "minutes",
+    title: "محضر الاجتماع",
+    description: "إلزام المحضر والتوقيعات والحفظ",
+    icon: <FileSignature size={17} />,
+  },
+  {
+    id: "monthly",
+    title: "الاجتماع الدوري",
+    description: "مرة واحدة على الأقل كل شهر",
+    icon: <CalendarClock size={17} />,
+  },
+];
+const input =
+  "h-10 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-[10px] outline-none focus:border-[#0066cc]";
+
+async function rpc(contract: string, params: Record<string, unknown>) {
+  const response = await fetch("/api/admin/regulations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contract, params }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok)
+    throw new Error(payload.error?.message ?? "تعذر حفظ القاعدة.");
+  return payload.data;
+}
+
+function ruleFor(
+  preset: Preset,
+  item: PolicyItem,
+  threshold: number,
+  days: number,
+  priority: number,
+) {
+  const safeItemCode = item.item_code
+    .toLowerCase()
+    .replace(/[^a-z0-9_.-]+/g, "-")
+    .replace(/^[^a-z]+/, "rule-");
+  const base = {
+    code: `${safeItemCode}.${preset}`,
+    name_ar: `${presets.find((x) => x.id === preset)?.title} - ${item.title_ar}`,
+    rule_type: "requirement",
+    status: "active",
+    priority,
+    applies_when: {},
+    effect_payload: {},
+    requires_workflow: false,
+    conditions: [] as Record<string, unknown>[],
+    requirements: [] as Record<string, unknown>[],
+    authorities: [],
+    actions: [] as Record<string, unknown>[],
+    workflow_bindings: [],
+  };
+  if (preset === "conflict")
+    return {
+      ...base,
+      rule_type: "prohibition",
+      conditions: [
+        {
+          code: "member.conflict",
+          field_path: "meeting.member_has_conflict",
+          operator: "eq",
+          expected_value: false,
+          failure_action: "block",
+          failure_message_ar:
+            "يجب الإفصاح عن تعارض المصالح والانسحاب من المناقشة والتصويت.",
+        },
+      ],
+      actions: [
+        {
+          code: "withdraw",
+          label_ar: "انسحاب من المناقشة والتصويت",
+          action_type: "return",
+          is_terminal: false,
+          requires_reason: true,
+          result_payload: { excluded_from_vote: true },
+        },
+      ],
+    };
+  if (preset === "quorum")
+    return {
+      ...base,
+      rule_type: "eligibility",
+      conditions: [
+        {
+          code: "meeting.quorum",
+          field_path: "meeting.attendance_ratio",
+          operator: "gte",
+          expected_value: threshold / 100,
+          failure_action: "block",
+          failure_message_ar: `لا يمكن بدء الاجتماع قبل اكتمال النصاب (${threshold}%).`,
+        },
+      ],
+      actions: [
+        {
+          code: "open_session",
+          label_ar: "بدء الاجتماع",
+          action_type: "execute",
+          is_terminal: false,
+          requires_reason: false,
+          result_payload: { quorum_verified: true },
+        },
+      ],
+    };
+  if (preset === "vote")
+    return {
+      ...base,
+      rule_type: "calculation",
+      conditions: [
+        {
+          code: "vote.threshold",
+          field_path: "vote.approval_ratio",
+          operator: "gte",
+          expected_value: threshold / 100,
+          failure_action: "reject",
+          failure_message_ar: `لم تتحقق نسبة الأصوات المطلوبة (${threshold}%).`,
+        },
+      ],
+      actions: [
+        {
+          code: "approved",
+          label_ar: "اعتماد القرار",
+          action_type: "approve",
+          is_terminal: true,
+          requires_reason: false,
+          result_payload: { decision: "approved" },
+        },
+      ],
+    };
+  if (preset === "notice")
+    return {
+      ...base,
+      rule_type: "deadline",
+      conditions: [
+        {
+          code: "meeting.notice",
+          field_path: "meeting.notice_days",
+          operator: "gte",
+          expected_value: days,
+          failure_action: "return_for_completion",
+          failure_message_ar: `يجب إرسال الدعوة قبل الاجتماع بـ ${days} يوم على الأقل.`,
+        },
+      ],
+    };
+  if (preset === "absence")
+    return {
+      ...base,
+      conditions: [
+        {
+          code: "member.absence",
+          field_path: "member.consecutive_unexcused_absences",
+          operator: "lt",
+          expected_value: 3,
+          failure_action: "warn",
+          failure_message_ar:
+            "بلغ العضو ثلاث حالات غياب متوالية دون عذر؛ يلزم طلب الاستبدال.",
+        },
+      ],
+      actions: [
+        {
+          code: "replace_member",
+          label_ar: "طلب استبدال العضو",
+          action_type: "refer",
+          is_terminal: false,
+          requires_reason: true,
+          result_payload: { membership_review_required: true },
+        },
+      ],
+    };
+  if (preset === "minutes")
+    return {
+      ...base,
+      requirements: [
+        {
+          code: "signed_minutes",
+          name_ar: "محضر اجتماع موقع من الرئيس والمقرر",
+          requirement_type: "document",
+          is_mandatory: true,
+          timing: "after_decision",
+          validation_spec: {
+            allowed_mime_types: ["application/pdf"],
+            required_signatures: ["chair", "rapporteur"],
+          },
+        },
+      ],
+    };
+  return {
+    ...base,
+    rule_type: "deadline",
+    conditions: [
+      {
+        code: "meeting.monthly",
+        field_path: "meeting.days_since_previous",
+        operator: "lte",
+        expected_value: 31,
+        failure_action: "warn",
+        failure_message_ar: "يجب عقد اجتماع دوري مرة واحدة على الأقل كل شهر.",
+      },
+    ],
+  };
+}
+
+function presetPreview(preset: Preset, threshold: number, days: number) {
+  if (preset === "conflict")
+    return "عند وجود تعارض مصالح، يطلب النظام الإفصاح ويمنع العضو من المناقشة والتصويت.";
+  if (preset === "quorum")
+    return `لن يسمح النظام ببدء الاجتماع حتى تبلغ نسبة الحضور ${threshold}%.`;
+  if (preset === "vote")
+    return `لن يعتمد القرار ما لم تبلغ نسبة الموافقة ${threshold}% من الأصوات المحتسبة.`;
+  if (preset === "notice")
+    return `سيتحقق النظام من إرسال الدعوة قبل موعد الاجتماع بـ ${days} يوم على الأقل.`;
+  if (preset === "absence")
+    return "عند بلوغ ثلاث حالات غياب متوالية دون عذر، ينبه النظام إلى طلب استبدال العضو.";
+  if (preset === "minutes")
+    return "بعد القرار، يطلب النظام محضر اجتماع بصيغة PDF موقعاً من الرئيس والمقرر.";
+  return "ينبه النظام إذا مر أكثر من 31 يوماً دون عقد اجتماع دوري للمجلس.";
+}
+
+export function CouncilRulePresets({ policy }: { policy: Policy }) {
+  const drafts =
+    policy.versions?.filter((version) => version.legal_status === "draft") ??
+    [];
+  const [versionId, setVersionId] = useState(drafts[0]?.id ?? "");
+  const version = drafts.find((entry) => entry.id === versionId);
+  const items =
+    version?.items.filter((item) =>
+      ["article", "clause", "procedure"].includes(item.item_type),
+    ) ?? [];
+  const [itemId, setItemId] = useState(items[0]?.id ?? "");
+  const [preset, setPreset] = useState<Preset>("quorum");
+  const [threshold, setThreshold] = useState(67);
+  const [days, setDays] = useState(2);
+  const [priority, setPriority] = useState(100);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
+  if (!drafts.length) return null;
+  const item = items.find((entry) => entry.id === itemId);
+  async function save() {
+    if (!item) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      await rpc("admin_update_policy_item_legal_text", {
+        p_policy_item_id: item.id,
+        p_official_text: item.official_text ?? item.body_text ?? null,
+        p_interpretation_text: item.interpretation_text ?? null,
+        p_source_page_from: item.source_page_from ?? null,
+        p_source_page_to: item.source_page_to ?? null,
+        p_source_locator: item.source_locator ?? null,
+        p_legal_status: item.legal_status ?? "active",
+        p_amendment_note: item.amendment_note ?? null,
+        p_requires_executable_rule: true,
+        p_supersedes_item_id: item.supersedes_item_id ?? null,
+      });
+      await rpc("admin_save_policy_rule", {
+        p_policy_item_id: item.id,
+        p_rule: ruleFor(preset, item, threshold, days, priority),
+      });
+      setNotice({
+        kind: "success",
+        text: "تم إنشاء القاعدة بكل شروطها ورسائلها ونتائجها. حدّث النموذج التشريعي لمراجعتها.",
+      });
+    } catch (error) {
+      setNotice({
+        kind: "error",
+        text: error instanceof Error ? error.message : "تعذر حفظ القاعدة.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="overflow-hidden rounded-2xl border border-[#d8e4ef] bg-white shadow-sm">
+      <header className="border-b border-[#e7edf4] bg-gradient-to-l from-[#082451] to-[#0066cc] p-5 text-white">
+        <p className="text-[9px] font-black text-orange-200">
+          قواعد مستخرجة من نصوص اللائحة
+        </p>
+        <h2 className="mt-1 text-lg font-black">
+          إعداد قواعد الاجتماعات والنصاب والتصويت
+        </h2>
+        <p className="mt-2 text-[10px] text-blue-100">
+          هذه الشاشة لا تنشئ اجتماعاً؛ بل تحول مادة قانونية إلى قيد يتحقق منه
+          النظام عند إدارة الاجتماع.
+        </p>
+      </header>
+      <div className="space-y-4 p-5">
+        {notice && (
+          <div
+            role="status"
+            className={`rounded-xl border p-3 text-[10px] font-bold ${notice.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}
+          >
+            {notice.kind === "success" ? (
+              <Check className="ml-2 inline" size={14} />
+            ) : (
+              <AlertCircle className="ml-2 inline" size={14} />
+            )}{" "}
+            {notice.text}
+          </div>
+        )}
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Step
+            number="1"
+            title="اختر المصدر"
+            text="الإصدار والمادة القانونية"
+            active={!item}
+          />
+          <Step
+            number="2"
+            title="اختر السلوك"
+            text="النصاب أو التصويت أو غيره"
+            active={Boolean(item)}
+          />
+          <Step
+            number="3"
+            title="راجع واحفظ"
+            text="تأكد من النتيجة قبل الإنشاء"
+            active={Boolean(item)}
+          />
+        </div>
+        <section className="rounded-2xl border border-[#dfe8f1] p-4">
+          <h3 className="text-[10px] font-black text-[#223c56]">
+            1. المادة القانونية التي تفرض القاعدة
+          </h3>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <label className="text-[9px] font-black text-[#344861]">
+              مسودة الإصدار
+              <select
+                title="اختر نسخة العمل التي ستضاف إليها القاعدة"
+                className={`${input} mt-1`}
+                value={versionId}
+                onChange={(e) => {
+                  setVersionId(e.target.value);
+                  setItemId("");
+                }}
+              >
+                {drafts.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.version_label || entry.version_no}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-[9px] font-black text-[#344861]">
+              المادة أو البند
+              <select
+                title="اختر النص القانوني المصدر للقاعدة"
+                className={`${input} mt-1`}
+                value={itemId}
+                onChange={(e) => setItemId(e.target.value)}
+              >
+                <option value="">اختر المادة</option>
+                {items.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.item_code} · {entry.title_ar}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {!item && (
+            <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-[9px] text-amber-800">
+              اختر مادة أولاً. لن ينشئ النظام قاعدة بلا مصدر قانوني واضح.
+            </p>
+          )}
+        </section>
+        <section className="rounded-2xl border border-[#dfe8f1] p-4">
+          <h3 className="text-[10px] font-black text-[#223c56]">
+            2. السلوك المطلوب من النظام
+          </h3>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {presets.map((entry) => (
+              <button
+                type="button"
+                title={`اختيار قاعدة ${entry.title}: ${entry.description}`}
+                aria-pressed={preset === entry.id}
+                key={entry.id}
+                onClick={() => setPreset(entry.id)}
+                className={`rounded-xl border p-3 text-right transition ${preset === entry.id ? "border-[#69adf0] bg-[#edf6ff] text-[#0066cc] shadow-sm" : "border-[#e1e9f1] text-[#40546b] hover:border-[#b9d7ee]"}`}
+              >
+                <span className="mb-2 grid h-8 w-8 place-items-center rounded-lg bg-white shadow-sm">
+                  {entry.icon}
+                </span>
+                <strong className="block text-[10px]">{entry.title}</strong>
+                <small className="mt-1 block text-[8px] leading-5 opacity-75">
+                  {entry.description}
+                </small>
+              </button>
+            ))}
+          </div>
+        </section>
+        <section className="rounded-2xl border border-[#dfe8f1] p-4">
+          <h3 className="text-[10px] font-black text-[#223c56]">
+            3. القيمة والنتيجة المتوقعة
+          </h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {(preset === "quorum" || preset === "vote") && (
+              <label className="text-[9px] font-bold">
+                النسبة المطلوبة %
+                <input
+                  title="النسبة التي يجب بلوغها"
+                  type="number"
+                  min="1"
+                  max="100"
+                  className={`${input} mt-1`}
+                  value={threshold}
+                  onChange={(e) => setThreshold(Number(e.target.value))}
+                />
+              </label>
+            )}
+            {preset === "notice" && (
+              <label className="text-[9px] font-bold">
+                مهلة الدعوة بالأيام
+                <input
+                  title="الحد الأدنى لعدد الأيام قبل الاجتماع"
+                  type="number"
+                  min="0"
+                  className={`${input} mt-1`}
+                  value={days}
+                  onChange={(e) => setDays(Number(e.target.value))}
+                />
+              </label>
+            )}
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[9px] leading-6 text-emerald-900 sm:col-span-2">
+              <strong>ما الذي سيفعله النظام؟</strong>
+              <p>{presetPreview(preset, threshold, days)}</p>
+            </div>
+          </div>
+          <details className="mt-3 rounded-xl border border-[#e3eaf1] bg-[#fafcfe] p-3">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-[9px] font-black text-[#536a80]">
+              إعداد متقدم: أولوية القاعدة <ChevronDown size={13} />
+            </summary>
+            <label className="mt-3 block max-w-xs text-[9px] font-bold">
+              الأولوية
+              <input
+                title="تستخدم لحسم ترتيب القواعد عند التداخل"
+                type="number"
+                min="0"
+                className={`${input} mt-1`}
+                value={priority}
+                onChange={(e) => setPriority(Number(e.target.value))}
+              />
+            </label>
+          </details>
+        </section>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#f7fafc] p-3">
+          <p className="text-[9px] text-[#60758a]">
+            بعد الحفظ ستظهر القاعدة تحت المادة في «ماذا تنفذ المادة؟» ويمكن
+            تعديل تفاصيلها المتقدمة هناك.
+          </p>
+          <button
+            type="button"
+            title="إنشاء القاعدة وربطها بالمادة المختارة"
+            disabled={busy || !item}
+            onClick={() => void save()}
+            className="h-10 rounded-xl bg-[#0066cc] px-5 text-[10px] font-black text-white disabled:opacity-50"
+          >
+            {busy ? "جارٍ إنشاء القاعدة..." : "إنشاء القاعدة وربطها بالمادة"}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Step({
+  number,
+  title,
+  text,
+  active,
+}: {
+  number: string;
+  title: string;
+  text: string;
+  active: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-start gap-2 rounded-xl border p-3 ${active ? "border-[#acd3f5] bg-[#f1f8ff]" : "border-[#e2e9f0] bg-white"}`}
+    >
+      <span
+        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[8px] font-black ${active ? "bg-[#0872df] text-white" : "bg-[#edf2f6] text-[#65798e]"}`}
+      >
+        {number}
+      </span>
+      <div>
+        <strong className="text-[9px] text-[#29445e]">{title}</strong>
+        <p className="mt-1 text-[8px] text-[#74869a]">{text}</p>
+      </div>
+    </div>
+  );
+}

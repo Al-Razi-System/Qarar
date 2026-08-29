@@ -1,12 +1,19 @@
 begin;
 create extension if not exists btree_gist;
 
-alter table qarar_iam.memberships
- add constraint memberships_no_overlapping_periods
- exclude using gist(
-  organization_id with =,user_id with =,governance_unit_id with =,role_id with =,
-  daterange(start_date,coalesce(end_date+1,'infinity'::date),'[)') with &&
- );
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'memberships_no_overlapping_periods'
+  ) then
+    alter table qarar_iam.memberships
+     add constraint memberships_no_overlapping_periods
+     exclude using gist(
+      organization_id with =,user_id with =,governance_unit_id with =,role_id with =,
+      daterange(start_date,coalesce(end_date+1,'infinity'::date),'[)') with &&
+     );
+  end if;
+end $$;
 
 create or replace function qarar_iam.admin_list_council_members(
  p_council_id uuid,p_include_ended boolean default false,p_limit integer default 50,p_offset integer default 0

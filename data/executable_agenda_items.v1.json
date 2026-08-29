@@ -1,0 +1,540 @@
+{
+  "schema_version": "qarar.executable_agendas.v1",
+  "classification_policy": {
+    "executable_items_are_exclusive": true,
+    "all_other_regulation_content": "display_only",
+    "note_ar": "لا ينشأ مسار أو موضوع اجتماع لأي مادة أو بند خارج قوالب الأجندة الواردة في هذا الملف."
+  },
+  "route_templates": {
+    "local_council_decision": [
+      "إعداد الموضوع ومرفقاته",
+      "مراجعة المقرر وإدراجه في جدول الأعمال",
+      "التحقق من النصاب وتعارض المصالح",
+      "المناقشة والتصويت",
+      "تثبيت القرار في المحضر واعتماده",
+      "إشعار المعنيين ومتابعة التنفيذ"
+    ],
+    "department_faculty": [
+      "مجلس القسم",
+      "مجلس الكلية"
+    ],
+    "department_faculty_university": [
+      "مجلس القسم",
+      "مجلس الكلية",
+      "مجلس الجامعة"
+    ],
+    "department_faculty_university_trustees": [
+      "مجلس القسم",
+      "مجلس الكلية",
+      "مجلس الجامعة",
+      "مجلس الأمناء"
+    ],
+    "postgraduate_full": [
+      "مجلس القسم",
+      "مجلس الكلية",
+      "مجلس الدراسات العليا والبحث العلمي",
+      "مجلس الجامعة عند اشتراط الاعتماد النهائي"
+    ],
+    "faculty_university": [
+      "مجلس الكلية",
+      "مجلس الجامعة"
+    ],
+    "faculty_university_trustees": [
+      "مجلس الكلية",
+      "مجلس الجامعة",
+      "مجلس الأمناء"
+    ],
+    "graduate_university": [
+      "مجلس الدراسات العليا والبحث العلمي",
+      "مجلس الجامعة"
+    ],
+    "graduate_university_trustees": [
+      "مجلس الدراسات العليا والبحث العلمي",
+      "مجلس الجامعة",
+      "مجلس الأمناء"
+    ],
+    "university_trustees": [
+      "مجلس الجامعة",
+      "مجلس الأمناء"
+    ],
+    "trustees_external_academic_approval": [
+      "مجلس الأمناء",
+      "الوزير أو المجلس الأعلى عند اشتراط المصادقة النظامية"
+    ],
+    "conditional_higher_referral": [
+      "المجلس المختص ابتداءً",
+      "المجلس الأعلى فقط إذا خرج الموضوع عن صلاحية المجلس أو اشترط النص اعتمادًا أعلى"
+    ]
+  },
+  "meeting_settings": {
+    "board_of_trustees": {
+      "minimum_frequency": "ثلاث مرات على الأقل في العام الدراسي",
+      "quorum": "ثلثا الأعضاء",
+      "approval_rule": "ثلثا أصوات الحاضرين",
+      "member_submission_before_days": 10,
+      "minutes_approval": "يعرض محضر الاجتماع السابق في بداية الاجتماع لإقراره",
+      "academic_objection_days": 30,
+      "academic_objection_authority": "الوزير",
+      "source_refs": ["مهام_مجلس_الامناء.txt/المواد 6-14"]
+    },
+    "university_council": {
+      "minimum_frequency": "شهريًا خلال العام الجامعي",
+      "scheduled_week": 4,
+      "notice_before_days": 2,
+      "quorum": "تطبق القاعدة الخاصة بمجلس الجامعة بعد حسم التعارض النصي بين المادتين 46 و49",
+      "approval_rule": "تطبق القاعدة الخاصة بمجلس الجامعة بعد حسم التعارض النصي بين المادتين 46 و49",
+      "legal_review_required": true,
+      "source_refs": ["مجلس_الجامعة.txt/المواد العامة 45-52"]
+    },
+    "faculty_council": {
+      "minimum_frequency": "شهريًا خلال العام الجامعي",
+      "scheduled_week": 2,
+      "notice_before_days": 2,
+      "quorum": "ثلثا الأعضاء",
+      "approval_rule": "ثلثا أصوات الحاضرين",
+      "higher_objection_days": 15,
+      "source_refs": ["مجالس_الكليات.txt/المواد العامة 42-52"]
+    },
+    "graduate_studies_council": {
+      "minimum_frequency": "شهريًا خلال العام الجامعي",
+      "scheduled_week": 3,
+      "notice_before_days": 2,
+      "quorum": "ثلثا الأعضاء",
+      "approval_rule": "ثلثا أصوات الحاضرين",
+      "higher_objection_days": 15,
+      "source_refs": ["مجلس_الدراسات_العليا_والبحث_العلمي.txt/الأحكام العامة"]
+    },
+    "department_council": {
+      "minimum_frequency": "شهريًا خلال العام الجامعي",
+      "scheduled_week": 1,
+      "notice_before_days": 2,
+      "quorum": "ثلثا الأعضاء",
+      "approval_rule": "ثلثا أصوات الحاضرين",
+      "dean_objection_days": null,
+      "legal_review_required": true,
+      "legal_issue_ar": "وردت مهلة اعتراض عميد الكلية خمسة أيام في صلاحيات العميد، وخمسة عشر يومًا في لائحة مجلس القسم؛ لا تفعل المهلة آليًا قبل اعتماد تفسير قانوني.",
+      "source_refs": ["مجالس_الاقسام.txt/المادتان 44 و46", "مجالس_الكليات.txt/صلاحيات العميد"]
+    }
+  },
+  "agendas": [
+    {
+      "council_type": "board_of_trustees",
+      "title_ar": "أجندة اجتماعات مجلس الأمناء",
+      "items": [
+        {
+          "code": "BOT-01",
+          "topic_category_code": "university_formal_decision",
+          "title_ar": "استعراض محضر الاجتماع السابق وإقراره",
+          "source_refs": ["مهام_مجلس_الامناء.txt/مادة 11"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "BOT-02",
+          "topic_category_code": "university_formal_decision",
+          "title_ar": "الموضوعات المستعجلة المدرجة حسب الأهمية",
+          "source_refs": ["مهام_مجلس_الامناء.txt/مادة 7"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "BOT-03",
+          "topic_category_code": "university_formal_decision",
+          "title_ar": "الموضوعات المقدمة من الأعضاء قبل موعد الاجتماع",
+          "source_refs": ["مهام_مجلس_الامناء.txt/مادة 8"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "BOT-04",
+          "topic_category_code": "university_budget_finance",
+          "title_ar": "رسم ومتابعة السياسة الاستثمارية وتدبير الموارد المالية",
+          "source_refs": ["مهام_مجلس_الامناء.txt/مادة 5/البندان 1 و3"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "BOT-05",
+          "topic_category_code": "university_budget_finance",
+          "title_ar": "مناقشة واعتماد الموازنة التقديرية والحساب الختامي وتقرير المحاسب القانوني",
+          "source_refs": ["مهام_مجلس_الامناء.txt/مادة 5/البندان 4 و10"],
+          "route_options": ["university_trustees", "local_council_decision"]
+        },
+        {
+          "code": "BOT-06",
+          "topic_category_code": "university_faculty_staff_affairs",
+          "title_ar": "تعيينات القيادات وأعضاء هيئة التدريس والإداريين وترقياتهم وإنهاء الخدمات",
+          "source_refs": ["مهام_مجلس_الامناء.txt/مادة 5/البندان 11 و12"],
+          "route_options": ["department_faculty_university_trustees", "local_council_decision"]
+        },
+        {
+          "code": "BOT-07",
+          "topic_category_code": "university_curricula_programs",
+          "title_ar": "إقرار المناهج والكتب والبرامج البحثية والمنح الدراسية ولائحة الرسوم الدراسية",
+          "source_refs": ["مهام_مجلس_الامناء.txt/مادة 5/البنود 6 و8 و9 و14"],
+          "route_options": ["university_trustees", "trustees_external_academic_approval"]
+        },
+        {
+          "code": "BOT-08",
+          "topic_category_code": "university_reports",
+          "title_ar": "اعتماد التقرير السنوي لنشاط الجامعة والصعوبات والمعوقات",
+          "source_refs": ["مهام_مجلس_الامناء.txt/مادة 5/البند 7"],
+          "route_options": ["university_trustees"]
+        },
+        {
+          "code": "BOT-09",
+          "topic_category_code": "university_president_action",
+          "title_ar": "ما يعرضه رئيس الجامعة من موضوعات",
+          "source_refs": ["مهام_مجلس_الامناء.txt/مادة 5/البند 15"],
+          "route_options": ["conditional_higher_referral"]
+        }
+      ]
+    },
+    {
+      "council_type": "university_council",
+      "title_ar": "أجندة اجتماعات مجلس الجامعة",
+      "items": [
+        {
+          "code": "UNI-01",
+          "topic_category_code": "university_internal_decision",
+          "title_ar": "استعراض ومتابعة تنفيذ قرارات المحضر السابق",
+          "source_refs": ["مجلس_الجامعة.txt/مادة 45"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "UNI-02",
+          "topic_category_code": "university_postgraduate_research",
+          "title_ar": "الخطط العامة للتعليم والبحوث والدراسات العليا والتقويم الجامعي",
+          "source_refs": ["مجلس_الجامعة.txt/مادة 14/البنود 13 و21"],
+          "route_options": ["graduate_university", "local_council_decision"]
+        },
+        {
+          "code": "UNI-03",
+          "topic_category_code": "university_faculty_staff_affairs",
+          "title_ar": "شؤون هيئة التدريس: التعيينات والترقيات والانتداب والإعارة والاستقالات والاحتياجات السنوية",
+          "source_refs": ["مجلس_الجامعة.txt/مادة 14/البنود 4 و12 و14 و20"],
+          "route_options": ["department_faculty_university_trustees"]
+        },
+        {
+          "code": "UNI-04",
+          "topic_category_code": "university_curricula_programs",
+          "title_ar": "شؤون البرامج والمناهج والخطط الدراسية ونظم ونتائج الامتحانات ونسب القبول",
+          "source_refs": ["مجلس_الجامعة.txt/مادة 14/البنود 6 و15 و19"],
+          "route_options": ["department_faculty_university", "university_trustees"]
+        },
+        {
+          "code": "UNI-05",
+          "topic_category_code": "university_budget_finance",
+          "title_ar": "مناقشة مشروع الموازنة السنوية والحسابات الختامية وخطط التوسع والمباني",
+          "source_refs": ["مجلس_الجامعة.txt/مادة 14/البنود 9 و23 و26 و29"],
+          "route_options": ["university_trustees"]
+        },
+        {
+          "code": "UNI-06",
+          "topic_category_code": "university_reports",
+          "title_ar": "التقارير السنوية والدورية المرفوعة من رئيس الجامعة والعمداء والإدارات",
+          "source_refs": ["مجلس_الجامعة.txt/مادة 14/البندان 10 و31"],
+          "route_options": ["university_trustees"]
+        },
+        {
+          "code": "UNI-07",
+          "topic_category_code": "university_student_affairs",
+          "title_ar": "قضايا شؤون الطلاب: عقوبات الفصل والأنشطة الطلابية والمشكلات الطلابية",
+          "source_refs": ["مجلس_الجامعة.txt/مادة 14/البنود 16 و18 و25"],
+          "route_options": ["faculty_university", "local_council_decision"]
+        },
+        {
+          "code": "UNI-08",
+          "topic_category_code": "university_agreements",
+          "title_ar": "اتفاقيات التعاون العلمي والبعثات الدراسية والتبرعات والهبات",
+          "source_refs": ["مجلس_الجامعة.txt/مادة 14/البنود 8 و24 و27 و28 و30"],
+          "route_options": ["university_trustees"]
+        },
+        {
+          "code": "UNI-09",
+          "topic_category_code": "university_president_action",
+          "title_ar": "ما يستجد من أعمال وما يعرضه رئيس الجامعة",
+          "source_refs": ["مجلس_الجامعة.txt/مادة 14/البنود 11 و33"],
+          "route_options": ["conditional_higher_referral"]
+        }
+      ]
+    },
+    {
+      "council_type": "faculty_council",
+      "title_ar": "أجندة اجتماعات مجالس الكليات",
+      "items": [
+        {
+          "code": "FAC-01",
+          "topic_category_code": "faculty_internal_decision",
+          "title_ar": "استعراض ومتابعة قرارات المحضر السابق",
+          "source_refs": ["مجالس_الكليات.txt/مادة 45"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "FAC-02",
+          "topic_category_code": "faculty_fixed_agenda",
+          "title_ar": "مناقشة محاضر الأقسام بشأن المتابعة الأكاديمية: المحاضرات النظرية والتدريب السريري والتدريب المعملي",
+          "source_refs": ["مجالس_الكليات.txt/مادة 26/البند 16"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "FAC-03",
+          "topic_category_code": "faculty_postgraduate_research",
+          "title_ar": "البحث العلمي: متابعة أبحاث التخرج وأبحاث الدراسات العليا وأبحاث أعضاء هيئة التدريس",
+          "source_refs": ["مجالس_الكليات.txt/مادة 26/البندان 5 و16"],
+          "route_options": ["local_council_decision", "postgraduate_full"]
+        },
+        {
+          "code": "FAC-04",
+          "topic_category_code": "faculty_community_service",
+          "title_ar": "خدمة المجتمع والمشاركة المجتمعية",
+          "source_refs": ["مجالس_الكليات.txt/مادة 26/البندان 14 و16"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "FAC-05",
+          "topic_category_code": "faculty_student_affairs",
+          "title_ar": "الإرشاد الأكاديمي",
+          "source_refs": ["مجالس_الكليات.txt/مادة 26/البند 16"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "FAC-06",
+          "topic_category_code": "faculty_quality_accreditation",
+          "title_ar": "الجودة والتطوير وخطط التحسين",
+          "source_refs": ["مجالس_الكليات.txt/مادة 26/البند 16"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "FAC-07",
+          "topic_category_code": "faculty_staff_affairs",
+          "title_ar": "شؤون أعضاء هيئة التدريس بالكلية: التعيين والترقية والإيفاد والاستقالات",
+          "source_refs": ["مجالس_الكليات.txt/مادة 26/البند 3"],
+          "route_options": ["faculty_university_trustees"]
+        },
+        {
+          "code": "FAC-08",
+          "topic_category_code": "faculty_curricula_programs",
+          "title_ar": "الخطط والمناهج الدراسية والكتب والمراجع المقررة",
+          "source_refs": ["مجالس_الكليات.txt/مادة 26/البند 10"],
+          "route_options": ["faculty_university", "university_trustees"]
+        },
+        {
+          "code": "FAC-09",
+          "topic_category_code": "faculty_exams_results",
+          "title_ar": "تنظيم ومتابعة الاختبارات وإقرار النتائج السنوية والفصلية",
+          "source_refs": ["مجالس_الكليات.txt/مادة 26/البند 6"],
+          "route_options": ["faculty_university"]
+        },
+        {
+          "code": "FAC-10",
+          "topic_category_code": "faculty_student_affairs",
+          "title_ar": "شؤون الطلاب: القبول والتحويل والبت في المسائل الطلابية",
+          "source_refs": ["مجالس_الكليات.txt/مادة 26/البنود 9 و11 و13"],
+          "route_options": ["local_council_decision", "faculty_university"]
+        },
+        {
+          "code": "FAC-11",
+          "topic_category_code": "faculty_budget_finance",
+          "title_ar": "مشروع الموازنة السنوية للكلية وخطط التدريب والابتعاث",
+          "source_refs": ["مجالس_الكليات.txt/مادة 26/البندان 7 و12"],
+          "route_options": ["faculty_university_trustees"]
+        },
+        {
+          "code": "FAC-12",
+          "topic_category_code": "faculty_dean_action",
+          "title_ar": "ما يحيله مجلس الجامعة أو رئيس الجامعة أو العميد للدراسة وإبداء الرأي",
+          "source_refs": ["مجالس_الكليات.txt/مادة 26/البند 17"],
+          "route_options": ["conditional_higher_referral"]
+        }
+      ]
+    },
+    {
+      "council_type": "graduate_studies_council",
+      "title_ar": "أجندة اجتماعات مجلس الدراسات العليا والبحث العلمي",
+      "items": [
+        {
+          "code": "GRD-01",
+          "topic_category_code": "graduate_formal_decision",
+          "title_ar": "استعراض ومتابعة تنفيذ قرارات المحضر السابق",
+          "source_refs": ["مجلس_الدراسات_العليا_والبحث_العلمي.txt/إجراءات الاجتماعات"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "GRD-02",
+          "topic_category_code": "graduate_policy_planning",
+          "title_ar": "السياسات والخطط العامة للدراسات العليا والبحث العلمي ومتابعة تنفيذها",
+          "source_refs": ["مجلس_الدراسات_العليا_والبحث_العلمي.txt/مادة 19/أولًا"],
+          "route_options": ["graduate_university", "local_council_decision"]
+        },
+        {
+          "code": "GRD-03",
+          "topic_category_code": "graduate_program_creation",
+          "title_ar": "مقترحات استحداث برامج دراسات عليا جديدة وخططها الدراسية",
+          "source_refs": ["مجلس_الدراسات_العليا_والبحث_العلمي.txt/المادتان 20 و21"],
+          "route_options": ["postgraduate_full"]
+        },
+        {
+          "code": "GRD-04",
+          "topic_category_code": "graduate_admission_numbers",
+          "title_ar": "تنظيم قبول طلاب الدراسات العليا وإعداد قوائم المنح الدراسية",
+          "source_refs": ["مجلس_الدراسات_العليا_والبحث_العلمي.txt/المواد 19-21"],
+          "route_options": ["postgraduate_full", "graduate_university_trustees"]
+        },
+        {
+          "code": "GRD-05",
+          "topic_category_code": "graduate_thesis_proposal",
+          "title_ar": "اعتماد لجان الإشراف ومشاريع الرسائل ولجان المناقشة وتحديد مواعيدها",
+          "source_refs": ["مجلس_الدراسات_العليا_والبحث_العلمي.txt/المواد 19-21"],
+          "route_options": ["postgraduate_full"]
+        },
+        {
+          "code": "GRD-06",
+          "topic_category_code": "graduate_comprehensive_exam",
+          "title_ar": "شؤون الامتحان الشامل وامتحان الكفاءة المعرفية ولجانها",
+          "source_refs": ["مجلس_الدراسات_العليا_والبحث_العلمي.txt/المادتان 20 و21"],
+          "route_options": ["postgraduate_full"]
+        },
+        {
+          "code": "GRD-07",
+          "topic_category_code": "research_budget",
+          "title_ar": "شؤون البحث العلمي: صندوق البحث العلمي والموازنة والمجلات العلمية والترجمة والنشر والتأليف",
+          "source_refs": ["مجلس_الدراسات_العليا_والبحث_العلمي.txt/مادة 19"],
+          "route_options": ["local_council_decision", "graduate_university_trustees"]
+        },
+        {
+          "code": "GRD-08",
+          "topic_category_code": "scientific_missions",
+          "title_ar": "إيفاد أعضاء هيئة التدريس وإجازات التفرغ العلمي والمؤتمرات والندوات",
+          "source_refs": ["مجلس_الدراسات_العليا_والبحث_العلمي.txt/مادة 19"],
+          "route_options": ["graduate_university_trustees"]
+        },
+        {
+          "code": "GRD-09",
+          "topic_category_code": "graduate_statistics_reports",
+          "title_ar": "مناقشة تقارير الكليات والتقرير الفصلي والسنوي المرفوع لمجلس الجامعة",
+          "source_refs": ["مجلس_الدراسات_العليا_والبحث_العلمي.txt/مادة 19/أولًا 8 وثالثًا 3"],
+          "route_options": ["graduate_university"]
+        },
+        {
+          "code": "GRD-10",
+          "topic_category_code": "graduate_formal_decision",
+          "title_ar": "ما يحيله مجلس الجامعة من موضوعات",
+          "source_refs": ["مجلس_الدراسات_العليا_والبحث_العلمي.txt/مادة 19/ثالثًا 1"],
+          "route_options": ["conditional_higher_referral"]
+        }
+      ]
+    },
+    {
+      "council_type": "department_council",
+      "title_ar": "أجندة اجتماعات مجالس الأقسام",
+      "items": [
+        {
+          "code": "DEP-01",
+          "topic_category_code": "department_internal_followup",
+          "title_ar": "استعراض ومتابعة مدى تنفيذ المحاضر السابقة وتوصياتها",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/الموضوع الشهري 1"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "DEP-02",
+          "topic_category_code": "department_internal_followup",
+          "title_ar": "مدى تنفيذ أعضاء هيئة التدريس لخططهم الشهرية والفصلية",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/الموضوع الشهري 2"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "DEP-03",
+          "topic_category_code": "academic_plan",
+          "title_ar": "تقارير المتابعة الأكاديمية: المقررات النظرية والعملية والتدريب المعملي والحقلي",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/الموضوع الشهري 3"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "DEP-04",
+          "topic_category_code": "department_student_affairs",
+          "title_ar": "الإرشاد الأكاديمي ومتابعة أوضاع الطلبة المتأخرين دراسيًا",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/الموضوع الشهري 4", "مجالس_الاقسام.txt/مادة 41/المهمة 33"],
+          "route_options": ["local_council_decision"]
+        },
+        {
+          "code": "DEP-05",
+          "topic_category_code": "department_community_service",
+          "title_ar": "خدمة المجتمع والمشاركات المجتمعية للقسم",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/الموضوعان الشهريان 5 و11"],
+          "route_options": ["local_council_decision", "department_faculty"]
+        },
+        {
+          "code": "DEP-06",
+          "topic_category_code": "department_student_affairs",
+          "title_ar": "الأنشطة الطلابية ومعالجة التعثرات والمشكلات أولًا بأول",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/الموضوعان الشهريان 6 و7"],
+          "route_options": ["local_council_decision", "department_faculty"]
+        },
+        {
+          "code": "DEP-07",
+          "topic_category_code": "department_quality_accreditation",
+          "title_ar": "تقييم أعضاء هيئة التدريس وفق نماذج الجودة",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/الموضوع الشهري 8"],
+          "route_options": ["local_council_decision", "department_faculty"]
+        },
+        {
+          "code": "DEP-08",
+          "topic_category_code": "department_training_scholarship",
+          "title_ar": "ترشيح أعضاء القسم للدورات والندوات والمؤتمرات",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/الموضوع الشهري 9"],
+          "route_options": ["department_faculty", "department_faculty_university"]
+        },
+        {
+          "code": "DEP-09",
+          "topic_category_code": "department_curriculum_programs",
+          "title_ar": "الخطط الدراسية وتوصيف وتحديث البرامج والمقررات وإقرار الكتب والمراجع",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/البنود 2 و3 و5 و7"],
+          "route_options": ["department_faculty_university", "department_faculty_university_trustees"]
+        },
+        {
+          "code": "DEP-10",
+          "topic_category_code": "department_exams_results",
+          "title_ar": "توزيع العبء التدريسي ونظم الامتحانات وتشكيل لجانها وإقرار النتائج",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/البند 4", "مجالس_الاقسام.txt/مادة 41/المهمة 23"],
+          "route_options": ["local_council_decision", "department_faculty_university"]
+        },
+        {
+          "code": "DEP-11",
+          "topic_category_code": "department_staff_affairs",
+          "title_ar": "شؤون أعضاء هيئة التدريس: التعيين والترقية والاحتياجات من الكادر الثابت والمتعاقد",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/البند 6", "مجالس_الاقسام.txt/مادة 43/الموضوع الشهري 12"],
+          "route_options": ["department_faculty_university_trustees"]
+        },
+        {
+          "code": "DEP-12",
+          "topic_category_code": "department_postgraduate_research",
+          "title_ar": "شؤون الدراسات العليا والبحث العلمي ومشاريع التخرج بالقسم",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 41/المهمتان 26 و36", "مجالس_الاقسام.txt/مادة 43/البند 8"],
+          "route_options": ["postgraduate_full"]
+        },
+        {
+          "code": "DEP-13",
+          "topic_category_code": "department_resources_facilities",
+          "title_ar": "خطة إنشاء وتأهيل القاعات والمعامل والتجهيزات",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/الموضوع الشهري 14"],
+          "route_options": ["department_faculty_university", "department_faculty_university_trustees"]
+        },
+        {
+          "code": "DEP-14",
+          "topic_category_code": "department_chair_action",
+          "title_ar": "ما يحيله رئيس القسم أو عميد الكلية من موضوعات",
+          "source_refs": ["مجالس_الاقسام.txt/مادة 43/الموضوعان الشهريان 10 و15"],
+          "route_options": ["conditional_higher_referral"]
+        }
+      ]
+    }
+  ],
+  "common_required_fields": [
+    "عنوان الموضوع",
+    "ملخص الموضوع",
+    "البند النظامي المرجعي",
+    "الجهة مقدمة الموضوع",
+    "القرار المطلوب",
+    "المرفقات المؤيدة",
+    "درجة السرية",
+    "الإفصاح عن تعارض المصالح",
+    "مسؤول التنفيذ والموعد المستهدف عند الاعتماد"
+  ]
+}

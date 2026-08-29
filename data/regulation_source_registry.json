@@ -1,0 +1,79 @@
+{
+  "schema_version": "qarar.regulation_source_registry.v1",
+  "classification_model": {
+    "type": "binary",
+    "values": [
+      "display_only",
+      "requires_workflow_and_meeting"
+    ],
+    "default": "display_only"
+  },
+  "documents": [
+    {
+      "code": "department_councils",
+      "title_ar": "مجالس الأقسام",
+      "pdf_file": "مجالس الاقسام.pdf",
+      "pdf_sha256": "a653bf4bda32b27ebef3e0d65d20f4bbcc784882a052c71456a522ff51acab52",
+      "pdf_pages": 6,
+      "text_file": "مجالس_الاقسام.txt",
+      "text_sha256": "5169f82d9c0d35295b7c9986051e3e147f4832a9905d3a7e040d3dd4a222b9b8",
+      "legacy_bundle_file": "لائحة_مجالس_الأقسام_جاهزة_حاليا_ومتوافقة_مع_مجالات_مستقبلية.json"
+    },
+    {
+      "code": "faculty_councils",
+      "title_ar": "مجالس الكليات",
+      "pdf_file": "مجالس الكليات.pdf",
+      "pdf_sha256": "ae3335c50af5bc9e59e6abc4050415b8ff65f53b4e15bdc574b0de50cdc703eb",
+      "pdf_pages": 7,
+      "text_file": "مجالس_الكليات.txt",
+      "text_sha256": "a3717ccd954e3d60dec0e529f6407d799c86d89a21100cb0783e08846433e782",
+      "legacy_bundle_file": "لائحة_مجالس_الكليات_جاهزة_حاليا_ومتوافقة_مع_مجالات_مستقبلية.json"
+    },
+    {
+      "code": "university_council",
+      "title_ar": "مجلس الجامعة",
+      "pdf_file": "مجلس الجامعة.pdf",
+      "pdf_sha256": "934562d5a15990189e27eab879509f42ad2ecae6de6b3f93536346ad12874db8",
+      "pdf_pages": 10,
+      "text_file": "مجلس_الجامعة.txt",
+      "text_sha256": "fb2e64b779fc4d28ac9c11ed58fb4f80b6462c825c672926fda2b344a5f6aa45",
+      "legacy_bundle_file": "لائحة_مجلس_الجامعة_جاهزة_حاليا_ومتوافقة_مع_مجالات_مستقبلية.json"
+    },
+    {
+      "code": "graduate_studies_research_council",
+      "title_ar": "مجلس الدراسات العليا والبحث العلمي",
+      "pdf_file": "مجلس الدراسات العليا والبحث العلمي.pdf",
+      "pdf_sha256": "d7c751932a4345b576e6b6b5cd528a7a0a6eb4cb35d9804137c3ea6ef1add3b6",
+      "pdf_pages": 6,
+      "text_file": "مجلس_الدراسات_العليا_والبحث_العلمي.txt",
+      "text_sha256": "df3cea1a0448bbc16a7e58ca3143c241c750f4953f7ec9d3ff38116689a4e6b4",
+      "legacy_bundle_file": "لائحة_مجلس_الدراسات_العليا_والبحث_العلمي_جاهزة_حاليا_ومتوافقة_مع_مجالات_مستقبلية.json"
+    },
+    {
+      "code": "board_of_trustees",
+      "title_ar": "مجلس الأمناء",
+      "pdf_file": "مهام مجلس الامناء_260823_011835.pdf",
+      "pdf_sha256": "f74913e7387a9f955d4dd12939d0e8e73741aa24dad46e26d58388ed00e71ffa",
+      "pdf_pages": 3,
+      "text_file": "مهام_مجلس_الامناء.txt",
+      "text_sha256": "73eae8e9cb769573d1274a5317ad25ff56c3180d9857545431609e7f8971115b",
+      "legacy_bundle_file": null,
+      "manual_page_ranges": {
+        "1": [1, 1],
+        "2": [1, 1],
+        "3": [1, 1],
+        "4": [1, 1],
+        "5": [1, 2],
+        "6": [2, 2],
+        "7": [2, 2],
+        "8": [2, 2],
+        "9": [2, 3],
+        "10": [3, 3],
+        "11": [3, 3],
+        "12": [3, 3],
+        "13": [3, 3],
+        "14": [3, 3]
+      }
+    }
+  ]
+}

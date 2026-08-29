@@ -2,26 +2,20 @@
 
 These operations are available to every authenticated active user and only affect the caller.
 
-## Bootstrap My Profile
+## Initial Profile Provisioning (Service-only)
 
-`POST /rest/v1/rpc/bootstrap_current_user_profile`
+`bootstrap_current_user_profile` is **not** an authenticated-client contract. Phase 0 removes the
+browser and Flutter access path because a caller-supplied organization code could otherwise turn the
+first application profile in an organization into a system administrator.
 
-Use this once after a permitted non-SSO Auth registration when no application profile exists:
-
-```json
-{
-  "p_organization_code": "QARAR",
-  "p_full_name_ar": "عمر محمد",
-  "p_full_name_en": "Omar Mohammed",
-  "p_employee_no": "EMP-1024",
-  "p_mobile": "0500000000",
-  "p_job_title": "أمين مجلس"
-}
-```
-
-The contract derives identity and email from the authenticated JWT, validates the organization, and
-creates only the caller's profile. Do not use it for SSO login, invitations, or administrative user
-creation; those flows are documented in [04-sso.md](./04-sso.md) and
+Do not call `POST /rest/v1/rpc/bootstrap_current_user_profile` from a client and never distribute a
+service-role key to one. The only supported replacement is the one-time, controlled backend
+`service_bootstrap_organization_admin` workflow. It requires an active organization with no
+application profiles, an existing confirmed Auth identity with a matching email, an external approval
+reference, and typed operator confirmation. Follow the
+[initial-admin bootstrap runbook](../../../docs/INITIAL_ADMIN_BOOTSTRAP_RUNBOOK.md); do not implement
+this through a dashboard route, client RPC, or direct table write. SSO, invitations, and normal
+administrative user creation remain documented in [04-sso.md](./04-sso.md) and
 [02-users-admin.md](./02-users-admin.md).
 
 ## Get My Account
@@ -85,3 +79,16 @@ await supabase.auth.updateUser(
 
 Use the recovery flow when the session is unavailable, and comply with secure-password-change
 reauthentication when Auth requests a nonce.
+
+The release-1 dashboard implements recovery at `/forgot-password` and receives the GoTrue
+recovery session at `/auth/recovery`. The browser removes recovery credentials from the URL
+fragment before rendering, the server accepts only a JWT whose signed `amr` contains
+`recovery`, changes the password through GoTrue, and immediately performs a global logout to
+revoke every refresh session. Access JWT lifetime remains bounded by `JWT_EXPIRY` because JWTs
+are stateless; protected dashboard requests additionally re-evaluate the current identity and
+MFA policy.
+
+System administrators, actors holding any `iam.*` permission, and roles whose code identifies
+a break-glass account must reach `aal2`. Password login for these actors receives only a
+five-minute HttpOnly MFA bootstrap session. `/mfa` enrolls or verifies a TOTP factor, and the
+application session is issued only after GoTrue returns an `aal2` token.

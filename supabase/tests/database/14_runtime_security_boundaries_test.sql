@@ -151,6 +151,18 @@ select is(
     source.rolname='qarar_voting_executor'
     and n.nspname='qarar_meetings' and c.relname='agenda_items'
    )
+   and not (
+    source.rolname='qarar_governance_executor'
+    and n.nspname='qarar_topics' and c.relname='topics'
+   )
+   and not (
+    source.rolname='qarar_meetings_executor'
+    and n.nspname='qarar_governance' and c.relname='notification_outbox'
+   )
+   and not (
+    source.rolname='qarar_topics_executor'
+    and n.nspname='qarar_governance' and c.relname='topic_regulation_references'
+   )
    and not (n.nspname='qarar_audit' and c.relname='audit_logs')),
 0,'module executors have no unregistered cross-module table writes');
 
@@ -259,7 +271,7 @@ select is(
    and pg_get_function_identity_arguments(p.oid)=c.identity_arguments
   join pg_namespace n on n.oid=p.pronamespace and n.nspname=c.implementation_schema
   where pg_get_functiondef(p.oid) !~
-   '(current_organization_id|organization_id|assert_permission|has_permission|is_system_admin|auth\.uid|users where id=p_actor_user_id)'
+   '(current_organization_id|organization_id|assert_permission|has_permission|is_system_admin|auth\.(uid|role)|users where id=p_actor_user_id)'
  ),
  0,'every API contract implementation contains an explicit tenant or actor guard');
 

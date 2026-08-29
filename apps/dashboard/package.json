@@ -1,0 +1,63 @@
+{
+  "name": "dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "overrides": {
+    "nanoid": "3.3.18"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "dev:https": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-https.ps1",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint src .storybook vitest.config.ts playwright.config.ts next.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test",
+    "test:ci": "npm run lint && npm run typecheck && npm run test:run && npm run build",
+    "seed:local-admin": "npm --prefix .. run seed:local-admin",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.5.7",
+    "@react-pdf/renderer": "^4.8.1",
+    "@tanstack/react-query": "^5.101.4",
+    "@zxing/browser": "^0.1.5",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.27.0",
+    "next": "16.3.0",
+    "qrcode.react": "^4.2.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-hook-form": "^7.83.0",
+    "redis": "6.2.1",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.0",
+    "@storybook/addon-a11y": "^10.5.5",
+    "@storybook/addon-docs": "^10.5.5",
+    "@storybook/nextjs-vite": "^10.5.5",
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.4",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "jsdom": "^30.0.1",
+    "node-forge": "^1.4.0",
+    "storybook": "^10.5.5",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}

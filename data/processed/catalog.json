@@ -1,0 +1,213 @@
+{
+  "schema_version": "qarar.legal_source_catalog.v1",
+  "generated_at": "2026-08-23T23:12:08.424Z",
+  "status": "review_required_not_importable",
+  "source_directory": "D:\\Razi\\IT-Deparment\\Qarar\\data",
+  "documents": [
+    {
+      "code": "department_councils",
+      "title_ar": "مجالس الأقسام",
+      "output_file": "department_councils.source.json",
+      "articles": 23,
+      "duplicate_printed_numbers": [
+        {
+          "number": 41,
+          "count": 2
+        },
+        {
+          "number": 42,
+          "count": 2
+        },
+        {
+          "number": 43,
+          "count": 2
+        },
+        {
+          "number": 44,
+          "count": 2
+        },
+        {
+          "number": 45,
+          "count": 2
+        },
+        {
+          "number": 46,
+          "count": 2
+        }
+      ],
+      "verified_articles": 0,
+      "workflow_and_meeting_articles": 0,
+      "import_allowed": false,
+      "issues": 1
+    },
+    {
+      "code": "faculty_councils",
+      "title_ar": "مجالس الكليات",
+      "output_file": "faculty_councils.source.json",
+      "articles": 24,
+      "duplicate_printed_numbers": [],
+      "verified_articles": 0,
+      "workflow_and_meeting_articles": 0,
+      "import_allowed": false,
+      "issues": 0
+    },
+    {
+      "code": "university_council",
+      "title_ar": "مجلس الجامعة",
+      "output_file": "university_council.source.json",
+      "articles": 28,
+      "duplicate_printed_numbers": [],
+      "verified_articles": 0,
+      "workflow_and_meeting_articles": 0,
+      "import_allowed": false,
+      "issues": 1
+    },
+    {
+      "code": "graduate_studies_research_council",
+      "title_ar": "مجلس الدراسات العليا والبحث العلمي",
+      "output_file": "graduate_studies_research_council.source.json",
+      "articles": 19,
+      "duplicate_printed_numbers": [],
+      "verified_articles": 0,
+      "workflow_and_meeting_articles": 0,
+      "import_allowed": false,
+      "issues": 1
+    },
+    {
+      "code": "board_of_trustees",
+      "title_ar": "مجلس الأمناء",
+      "output_file": "board_of_trustees.source.json",
+      "articles": 14,
+      "duplicate_printed_numbers": [],
+      "verified_articles": 0,
+      "workflow_and_meeting_articles": 0,
+      "import_allowed": false,
+      "issues": 2
+    }
+  ],
+  "totals": {
+    "documents": 5,
+    "articles": 108,
+    "issues": 5,
+    "duplicate_text_groups": 12
+  },
+  "duplicate_text_groups": [
+    {
+      "fingerprint": "04e5a44273fb06b4db4aa1e06925b0892938337cd78ec1820a7dc621a0a43ad8",
+      "items": [
+        "department_councils.article.41.occurrence.2",
+        "university_council.article.41.occurrence.1",
+        "graduate_studies_research_council.article.41.occurrence.1"
+      ]
+    },
+    {
+      "fingerprint": "723f8f049b6eb78ebf2541d5c63a85b26955869e0531f580980b605ed50cd604",
+      "items": [
+        "department_councils.article.42.occurrence.2",
+        "faculty_councils.article.42.occurrence.1",
+        "university_council.article.42.occurrence.1",
+        "graduate_studies_research_council.article.42.occurrence.1"
+      ]
+    },
+    {
+      "fingerprint": "7e9585113d67a4e5d06af337d55d5c4f327657cc344420c457700a7622f7a899",
+      "items": [
+        "department_councils.article.43.occurrence.2",
+        "faculty_councils.article.43.occurrence.1",
+        "university_council.article.43.occurrence.1",
+        "graduate_studies_research_council.article.43.occurrence.1"
+      ]
+    },
+    {
+      "fingerprint": "835bfdbadaedfeddf27ddf2bba99239ffaa9b2563cff4d981aa7287d964bea69",
+      "items": [
+        "department_councils.article.44.occurrence.2",
+        "faculty_councils.article.44.occurrence.1",
+        "university_council.article.44.occurrence.1",
+        "graduate_studies_research_council.article.44.occurrence.1"
+      ]
+    },
+    {
+      "fingerprint": "f2938f7997e385ceb4471bbf7d2f0289f8a0228c868e83637d100d9f9f9d59ca",
+      "items": [
+        "department_councils.article.46.occurrence.2",
+        "faculty_councils.article.46.occurrence.1",
+        "university_council.article.46.occurrence.1",
+        "graduate_studies_research_council.article.46.occurrence.1"
+      ]
+    },
+    {
+      "fingerprint": "107400ca1a8eaf99fb9f6146b231c88ccc1a1f4b9d95961c9e4f30af24ecbf69",
+      "items": [
+        "department_councils.article.47.occurrence.1",
+        "faculty_councils.article.47.occurrence.1",
+        "university_council.article.47.occurrence.1",
+        "graduate_studies_research_council.article.47.occurrence.1"
+      ]
+    },
+    {
+      "fingerprint": "d0089b0fcebc2e2fb50aa2cdc8b606938d70698092aab14d056078efc9320a88",
+      "items": [
+        "department_councils.article.48.occurrence.1",
+        "faculty_councils.article.48.occurrence.1",
+        "university_council.article.48.occurrence.1",
+        "graduate_studies_research_council.article.48.occurrence.1"
+      ]
+    },
+    {
+      "fingerprint": "af3e969fe4e653ece95301e53797a2c52447acbba133007400875d760248eb24",
+      "items": [
+        "department_councils.article.49.occurrence.1",
+        "faculty_councils.article.49.occurrence.1",
+        "university_council.article.49.occurrence.1",
+        "graduate_studies_research_council.article.49.occurrence.1"
+      ]
+    },
+    {
+      "fingerprint": "efcd0baebafbe3b51794dcfebda10808dfe8d258cd7167013141f70f6c801166",
+      "items": [
+        "department_councils.article.50.occurrence.1",
+        "faculty_councils.article.50.occurrence.1",
+        "university_council.article.50.occurrence.1",
+        "graduate_studies_research_council.article.50.occurrence.1"
+      ]
+    },
+    {
+      "fingerprint": "b37df58b0e9e765ee06118fa8f1c0c515a51115b020348765971315690825743",
+      "items": [
+        "department_councils.article.52.occurrence.1",
+        "graduate_studies_research_council.article.52.occurrence.1"
+      ]
+    },
+    {
+      "fingerprint": "a0c5f3af005afbf2cb11cf747f9517b01106437841b130b187d92a08e83d9528",
+      "items": [
+        "department_councils.article.53.occurrence.1",
+        "faculty_councils.article.53.occurrence.1",
+        "university_council.article.53.occurrence.1",
+        "graduate_studies_research_council.article.53.occurrence.1"
+      ]
+    },
+    {
+      "fingerprint": "3c9541d16825c2d6ce6b00a05c4bcdd42f9142d39e7e014192fa9d4a34993523",
+      "items": [
+        "faculty_councils.article.45.occurrence.1",
+        "university_council.article.45.occurrence.1",
+        "graduate_studies_research_council.article.45.occurrence.1"
+      ]
+    }
+  ],
+  "decision": {
+    "legal_text_storage": "مصادر مستقلة غير قابلة للتعديل مع مفتاح داخلي مركب.",
+    "printed_number_uniqueness": false,
+    "classification_model": {
+      "type": "binary",
+      "values": [
+        "display_only",
+        "requires_workflow_and_meeting"
+      ],
+      "default": "display_only"
+    },
+    "import_allowed": false
+  }
+}

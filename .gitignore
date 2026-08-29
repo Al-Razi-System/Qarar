@@ -7,6 +7,36 @@ supabase/.env.*
 
 # General local files
 node_modules/
+.local-runtime/
+.production-reports/
+.codex-runlogs/
+*.dump
+*.dump.sha256
+test-results/
+playwright-report/
+.next/
+/admin/
+tmp/
+output/
+temp_*.md
+*.tmp
+*.log
+check_*.py
+find_duplicates.py
+create_sprint05_issues.py
+query.graphql
 .env
 .env.*
 !.env.example
+!deploy/production/.env.production.example
+
+# Approved initial-admin requests are operational records and may contain PII.
+# Keep the committed example only; create the real request outside the checkout.
+deploy/production/initial-admin-bootstrap.json
+
+# Generated regulation deployment artifacts
+backups/
+data/staging-v4/
+data/بيانات الموظفين.txt
+__pycache__/
+*.py[cod]
