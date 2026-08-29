@@ -1,4 +1,5 @@
 begin;
+create extension if not exists pgtap;
 select plan(8);
 
 select has_trigger('qarar_meetings','meetings','enforce_ready_meeting_integrity',
