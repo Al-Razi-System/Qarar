@@ -1,6 +1,8 @@
 {
   "private": true,
   "scripts": {
+    "dev": "npm --prefix apps/dashboard run dev",
+    "dev:https": "npm --prefix apps/dashboard run dev:https",
     "docker:config": "docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml config",
     "docker:pull": "docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml pull",
     "docker:start": "docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml up -d",
