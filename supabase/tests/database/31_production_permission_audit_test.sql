@@ -4,8 +4,11 @@ select plan(6);
 
 select is((select count(*)::integer from qarar_iam.users where status <> 'active' and is_system_admin), 0,
   'inactive users cannot remain system administrators');
-select ok((select count(*) from qarar_iam.users where status='active' and is_system_admin) between 1 and 3,
-  'active system administrator count is controlled');
+-- A clean production deployment has no implicit privileged user; its first
+-- administrator is created through the audited bootstrap flow.  Once present,
+-- the number remains tightly bounded.
+select ok((select count(*) from qarar_iam.users where status='active' and is_system_admin) between 0 and 3,
+  'active system administrator count is controlled before and after bootstrap');
 select is((select count(*)::integer from qarar_iam.memberships m join qarar_iam.users u on u.id=m.user_id where m.membership_status='active' and u.status<>'active'), 0,
   'inactive users have no active memberships');
 select is((select count(*)::integer from qarar_iam.memberships m join qarar_iam.roles r on r.id=m.role_id where m.membership_status='active' and not r.is_active), 0,
