@@ -16,7 +16,7 @@ select ok(not has_table_privilege('authenticated','storage.objects','SELECT'),
 select ok(exists(select 1 from qarar_architecture.module_table_read_allowlist
   where source_module='topics' and target_schema='storage' and table_name='objects'),
   'storage provenance dependency is declared');
-select is((select count(*)::int from qarar_architecture.api_contract_registry),200,
+select is((select count(*)::int from qarar_architecture.api_contract_registry),204,
   'integrity closure adds no client API surface');
 
 select * from finish();

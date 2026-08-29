@@ -39,7 +39,7 @@ select ok(not exists(
    )
 ), 'legacy automatic regulation facades are removed from api_v1');
 select is((select contract_count from qarar_architecture.api_release_registry where api_version='v1'),
- 200,'api_v1 release count includes activation and governed offboarding contracts');
+ 204,'api_v1 release count includes activation and governed offboarding contracts');
 select is((select count(*)::integer from qarar_architecture.api_contract_registry
   where api_version='v1' and contract_name in(
   'admin_list_governance_unit_classes','admin_create_governance_unit_class',

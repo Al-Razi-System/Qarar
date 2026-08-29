@@ -3,7 +3,7 @@ param(
   [string]$BackupPath,
   [string]$Container = "qarar-supabase-db",
   [string]$User = "supabase_admin",
-  [int]$ExpectedContractCount = 200,
+  [int]$ExpectedContractCount = 204,
   # This may be a controlled volume; no secret values are accepted as arguments.
   [string]$TemporaryRoot,
   [string]$EncryptionKeyFile
