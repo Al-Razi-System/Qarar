@@ -29,7 +29,7 @@ services:
         - CMD-SHELL
         - curl -sSfL -o /dev/null http://localhost:4000/health
       timeout: 5s
-    image: public.ecr.aws/supabase/logflare:1.45.4
+    image: public.ecr.aws/supabase/logflare:1.47.2
     restart: unless-stopped
   auth:
     container_name: qarar-supabase-auth
@@ -456,7 +456,7 @@ services:
         - CMD-SHELL
         - 'curl -sSfL --head -o /dev/null -H "Authorization: Bearer ${ANON_KEY}" http://localhost:4000/api/tenants/realtime-dev/health'
       timeout: 5s
-    image: public.ecr.aws/supabase/realtime:v2.108.0
+    image: public.ecr.aws/supabase/realtime:v2.112.6
     restart: unless-stopped
   rest:
     command:
@@ -579,7 +579,7 @@ services:
         - CMD-SHELL
         - node -e "fetch('http://localhost:3000/api/platform/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})"
       timeout: 10s
-    image: public.ecr.aws/supabase/studio:2026.06.22-sha-2207d7f
+    image: supabase/studio:2026.07.07-sha-a6a04f2
     ports:
       - ${QARAR_STUDIO_PORT:-54323}:3000
     restart: unless-stopped
@@ -638,7 +638,7 @@ services:
         - /dev/null
         - http://127.0.0.1:4000/api/health
       timeout: 5s
-    image: supabase/supavisor:2.7.4
+    image: public.ecr.aws/supabase/supavisor:2.9.5
     ports:
       - ${QARAR_DB_PORT:-54322}:5432
       - ${QARAR_POOLER_PORT:-54329}:6543

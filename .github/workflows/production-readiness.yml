@@ -167,7 +167,7 @@ jobs:
           format: spdx-json
           output-file: dashboard-${{ github.sha }}.spdx.json
       - name: Scan production image
-        uses: aquasecurity/trivy-action@v0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: qarar-dashboard:${{ github.sha }}
           format: sarif
