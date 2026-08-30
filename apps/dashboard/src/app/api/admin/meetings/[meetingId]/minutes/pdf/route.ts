@@ -17,7 +17,7 @@ export async function GET(_request: Request, context: { params: Promise<{ meetin
       qararRpc<MeetingMinutes>("get_meeting_minutes", { p_meeting_id: meetingId }),
       readFile(path.join(process.cwd(), "public/brand/razi-university.jpg")),
     ]);
-    if (meeting.status !== "closed" || minutes.status !== "approved" || !minutes.content_final) {
+    if (!["closed", "archived"].includes(meeting.status) || minutes.status !== "approved" || !minutes.content_final) {
       return Response.json({ error: { message: "لا يمكن تصدير المحضر قبل اكتمال المصادقات وإغلاق الاجتماع." } }, { status: 409 });
     }
     if ((minutes.approvals ?? []).some((approval) => approval.approval_status !== "approved" || !approval.signature_strokes?.length)) {

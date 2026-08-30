@@ -100,7 +100,7 @@ export function MeetingClosureRoom({ meetingId }: { meetingId: string }) {
 }
 
 function ClosureProgress({ status }: { status: string }) {
-  const current = status === "closed" ? 3 : status === "waiting_for_approval" ? 2 : 1;
+  const current = ["closed", "archived"].includes(status) ? 3 : status === "waiting_for_approval" ? 2 : 1;
   const steps = [{ label: "إعداد المسودة", icon: PenLine }, { label: "مصادقات الحاضرين", icon: Send }, { label: "اعتماد وإغلاق", icon: CheckCircle2 }];
   return <div className="flex min-w-[280px] items-center gap-1 rounded-2xl border border-white/15 bg-white/10 p-2 backdrop-blur">{steps.map((step, index) => { const complete = index + 1 < current; const active = index + 1 === current; const Icon = step.icon; return <div key={step.label} className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-[9px] font-black ${active ? "bg-white text-[#0869bd]" : complete ? "text-emerald-200" : "text-blue-100"}`}><Icon size={13} />{step.label}</div>; })}</div>;
 }
