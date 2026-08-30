@@ -45,6 +45,10 @@ meeting. It returns one governed read model containing the final quorum snapshot
 and named records, ordered agenda topics with discussion notes, voting rounds and decisions, plus
 the approved minutes and approval/signature statuses.
 
+`create_meeting_series` creates 2-12 independently governed meeting occurrences in one weekly or
+monthly series. `list_meeting_series` returns each visible series with its ordered occurrences,
+dates, meeting numbers, and lifecycle statuses.
+
 ## Update Meeting
 
 Permission: `meetings.manage`. Allowed only in `draft` or `scheduled`.

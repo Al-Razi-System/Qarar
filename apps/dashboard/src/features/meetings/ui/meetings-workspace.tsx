@@ -17,6 +17,11 @@ import { CompletedMeetingSummary } from "./completed-meeting-summary";
 import { MeetingMinutesWorkspace } from "./meeting-minutes-workspace";
 
 type Notice = { kind: "success" | "error"; text: string };
+type MeetingSeries = {
+  id: string; title_ar: string; frequency: "weekly" | "monthly"; interval_count: number;
+  occurrence_count: number; starts_on: string;
+  occurrences: Array<{ meeting_id: string; occurrence_number: number; scheduled_date: string; meeting_no: string; status: string; title_ar: string }>;
+};
 function meetingErrorMessage(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : fallback;
   if (message.includes("agenda is locked in meeting status")) {
@@ -63,6 +68,7 @@ function agendaLockMessage(status: string) {
 export function MeetingsWorkspace() {
   const router = useRouter();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [series, setSeries] = useState<MeetingSeries[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -70,6 +76,7 @@ export function MeetingsWorkspace() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [createModal, setCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [recurring, setRecurring] = useState(false);
   const [meetingOptions, setMeetingOptions] = useState<MeetingFormOptions | null>(null);
   const [meetingOptionsLoading, setMeetingOptionsLoading] = useState(false);
   const [agendaCandidates, setAgendaCandidates] = useState<AgendaCandidate[]>([]);
@@ -79,7 +86,7 @@ export function MeetingsWorkspace() {
   const [agendaQuery, setAgendaQuery] = useState("");
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [activeGroup, setActiveGroup] = useState("all");
   const [minutes, setMinutes] = useState<MeetingMinutes | null>(null);
   const [minutesLoading, setMinutesLoading] = useState(false);
   const [minutesText, setMinutesText] = useState("");
@@ -89,15 +96,14 @@ export function MeetingsWorkspace() {
     setLoading(true); setNotice(null);
     try {
       const result = await rpc<{ items: Meeting[]; total: number }>("search_meetings", {
-        p_query: deferredQuery.trim() || null, p_status: statusFilter || null, p_unit_id: null,
+        p_query: deferredQuery.trim() || null, p_status: null, p_unit_id: null,
         p_from_date: null, p_to_date: null, p_limit: 50, p_offset: 0,
       });
       setMeetings(result.items ?? []);
       setTotal(result.total ?? 0);
+      try { setSeries(await rpc<MeetingSeries[]>("list_meeting_series")); } catch { setSeries([]); }
       const nextMeetings = result.items ?? [];
-      if (nextMeetings.length && (!selected || !nextMeetings.some((meeting) => meeting.id === selected.id))) {
-        void openDetail(nextMeetings[0].id);
-      } else if (!nextMeetings.length) {
+      if (!nextMeetings.length || (selected && !nextMeetings.some((meeting) => meeting.id === selected.id))) {
         setSelected(null);
       }
     } catch (err) {
@@ -349,22 +355,33 @@ export function MeetingsWorkspace() {
     setCreating(true); setNotice(null);
     const fd = new FormData(event.currentTarget);
     try {
-      const created = await rpc<{ id: string }>("create_meeting", {
+      const common = {
         p_governance_unit_id: String(fd.get("governance_unit_id") ?? ""),
         p_meeting_type_id: String(fd.get("meeting_type_id") ?? ""),
         p_title_ar: fd.get("title_ar"),
-        p_scheduled_date: fd.get("scheduled_date"),
         p_start_time: fd.get("start_time"),
         p_end_time: fd.get("end_time"),
         p_location_type: fd.get("location_type") || "onsite",
         p_location_details: fd.get("location_details") || null,
+      };
+      const created = recurring ? await rpc<{ id: string; occurrences: Array<{ id: string }> }>("create_meeting_series", {
+        ...common,
+        p_first_date: fd.get("scheduled_date"),
+        p_frequency: fd.get("frequency"),
+        p_interval_count: Number(fd.get("interval_count") || 1),
+        p_occurrence_count: Number(fd.get("occurrence_count") || 2),
+      }) : await rpc<{ id: string }>("create_meeting", {
+        ...common,
+        p_scheduled_date: fd.get("scheduled_date"),
         p_title_en: null,
         p_client_request_id: crypto.randomUUID(),
       });
       setCreateModal(false);
-      setNotice({ kind: "success", text: "تم إنشاء الاجتماع بنجاح." });
+      setRecurring(false);
+      setNotice({ kind: "success", text: recurring ? "تم إنشاء سلسلة الاجتماعات وجميع مواعيدها بنجاح." : "تم إنشاء الاجتماع بنجاح." });
       await loadMeetings();
-      await openDetail(created.id);
+      const firstMeetingId = "occurrences" in created ? created.occurrences[0]?.id : created.id;
+      if (firstMeetingId) await openDetail(firstMeetingId);
     } catch (err) {
       setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر الإنشاء." });
     } finally {
@@ -376,7 +393,7 @@ export function MeetingsWorkspace() {
   useEffect(() => {
     const timer = window.setTimeout(() => void loadMeetingsOnFilterChange(), 0);
     return () => window.clearTimeout(timer);
-  }, [deferredQuery, statusFilter]);
+  }, [deferredQuery]);
 
   const refreshWorkspaceOnReturn = useEffectEvent(() => {
     void loadMeetings();
@@ -407,10 +424,6 @@ export function MeetingsWorkspace() {
             <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8796a9]" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="ابحث بالعنوان أو رقم الاجتماع..." aria-label="البحث في الاجتماعات" className="h-10 w-64 rounded-xl border border-[#dfe7ef] bg-[#fafcfe] pr-9 pl-3 text-xs outline-none focus:border-[#9bc9f2]" />
           </div>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="تصفية الاجتماعات حسب الحالة" className="h-10 rounded-xl border border-[#dfe7ef] bg-[#fafcfe] px-3 text-xs font-bold text-[#40566f] outline-none focus:border-[#9bc9f2]">
-            <option value="">جميع الحالات</option>
-            {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
           <span className="text-[10px] font-bold text-[#7a8b9e]">إجمالي: <strong className="text-[#0a1330]">{total}</strong></span>
         </div>
         <button onClick={() => void openCreateModal()} className="flex items-center gap-2 rounded-xl bg-[#0066cc] px-4 py-2.5 text-xs font-bold text-white shadow-[0_4px_14px_rgba(0,102,204,.25)] hover:bg-[#0055b3]">
@@ -418,7 +431,19 @@ export function MeetingsWorkspace() {
         </button>
       </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(360px,.72fr)_minmax(560px,1.28fr)]">
+      <nav className="flex gap-2 overflow-x-auto rounded-2xl border border-[#dce7f0] bg-white p-2" aria-label="تصنيف الاجتماعات">
+        {[{ key: "all", label: "الكل", statuses: [] as readonly string[] }, ...meetingGroups].map((group) => {
+          const count = group.key === "all" ? meetings.length : meetings.filter((meeting) => group.statuses.includes(meeting.status)).length;
+          return <button key={group.key} type="button" onClick={() => { setActiveGroup(group.key); setSelected(null); }} className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-[10px] font-black transition ${activeGroup === group.key ? "bg-[#0877d6] text-white shadow-[0_7px_18px_rgba(8,119,214,.2)]" : "text-[#526a81] hover:bg-[#f1f7fd]"}`}>{group.label} <span className={`mr-1 rounded-full px-1.5 py-0.5 ${activeGroup === group.key ? "bg-white/20" : "bg-[#edf3f8]"}`}>{count}</span></button>;
+        })}
+      </nav>
+
+      {series.length > 0 && (activeGroup === "all" || activeGroup === "upcoming") && <section className="rounded-2xl border border-[#cfe1f1] bg-gradient-to-l from-[#f3f9ff] to-white p-4">
+        <div className="mb-3 flex items-center justify-between"><div><p className="text-[9px] font-black text-[#f17822]">الاجتماعات الدورية</p><h2 className="mt-1 text-sm font-black text-[#173652]">السلاسل ومواعيد الانعقاد</h2></div><span className="rounded-full bg-white px-3 py-1 text-[9px] font-black text-[#0877d6]">{series.length} سلسلة</span></div>
+        <div className="grid gap-3 lg:grid-cols-2">{series.map((item) => <details key={item.id} className="group rounded-2xl border border-[#dbe8f3] bg-white p-4"><summary className="cursor-pointer list-none"><div className="flex items-start justify-between gap-3"><div><h3 className="text-xs font-black text-[#173652]">{item.title_ar}</h3><p className="mt-1 text-[9px] text-[#718399]">{item.frequency === "weekly" ? "أسبوعي" : "شهري"} · كل {item.interval_count} · {item.occurrence_count} اجتماعات</p></div><span className="rounded-full bg-[#edf6ff] px-2 py-1 text-[9px] font-black text-[#0877d6]">عرض المواعيد</span></div></summary><div className="mt-3 space-y-2 border-t border-[#edf2f6] pt-3">{item.occurrences.map((occurrence) => <button key={occurrence.meeting_id} type="button" onClick={() => void openDetail(occurrence.meeting_id)} className="flex w-full items-center justify-between rounded-xl bg-[#f8fbfe] px-3 py-2 text-right hover:bg-[#edf6ff]"><span className="text-[10px] font-bold text-[#29455f]">الاجتماع {occurrence.occurrence_number} · {occurrence.scheduled_date}</span><span className={`rounded-full px-2 py-0.5 text-[8px] font-black ${statusTone[occurrence.status] ?? "bg-slate-100"}`}>{statusLabels[occurrence.status] ?? occurrence.status}</span></button>)}</div></details>)}</div>
+      </section>}
+
+      <div className="space-y-5">
         {/* Meetings List */}
         <div className="rounded-2xl border border-[#e2e9f1] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
           {loading ? (
@@ -431,14 +456,14 @@ export function MeetingsWorkspace() {
               </div>
             </div>
           ) : (
-            <div>
-              {groupedMeetings(meetings).map((group) => <section key={group.key} aria-labelledby={`meeting-group-${group.key}`}>
+            <div className="space-y-4 p-4">
+              {groupedMeetings(meetings).filter((group) => activeGroup === "all" || group.key === activeGroup).map((group) => <section key={group.key} aria-labelledby={`meeting-group-${group.key}`} className="overflow-hidden rounded-2xl border border-[#e4ebf2]">
                 <header className="flex items-center justify-between border-y border-[#e9f0f6] bg-[#f8fbfe] px-5 py-2.5 first:border-t-0">
                   <h3 id={`meeting-group-${group.key}`} className="text-[10px] font-black text-[#40566f]">{group.label}</h3>
                   <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black text-[#6f8297] ring-1 ring-[#dfe8f0]">{group.meetings.length}</span>
                 </header>
-                <div className="divide-y divide-[#eef2f6]">{group.meetings.map((m) => (
-                <button key={m.id} onClick={() => openDetail(m.id)} className={`flex w-full items-center gap-4 px-5 py-4 text-right transition hover:bg-[#fbfdff] ${selected?.id === m.id ? "bg-[#edf6ff]" : ""}`}>
+                <div className="grid gap-3 p-3 md:grid-cols-2 xl:grid-cols-3">{group.meetings.map((m) => (
+                <button key={m.id} onClick={() => openDetail(m.id)} className={`flex min-h-32 w-full items-start gap-4 rounded-2xl border px-5 py-4 text-right transition hover:-translate-y-0.5 hover:border-[#9bc9f2] hover:shadow-md ${selected?.id === m.id ? "border-[#0877d6] bg-[#edf6ff]" : "border-[#e6edf3] bg-white"}`}>
                   <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e7f2ff] text-[#0066cc]">
                     <Calendar size={18} />
                   </span>
@@ -460,13 +485,9 @@ export function MeetingsWorkspace() {
         </div>
 
         {/* Detail Panel */}
-        <div className="rounded-2xl border border-[#e2e9f1] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
+        {selected && <div className="scroll-mt-5 rounded-2xl border border-[#e2e9f1] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
           {detailLoading ? (
             <div className="grid min-h-[400px] place-items-center"><LoaderCircle className="animate-spin text-[#0066cc]" size={28} /></div>
-          ) : !selected ? (
-            <div className="grid min-h-[400px] place-items-center text-center p-8">
-              <div><Calendar className="mx-auto text-[#86a8c9]" size={30} /><h3 className="mt-3 text-sm font-black text-[#24364e]">اختر اجتماعاً</h3></div>
-            </div>
           ) : (
             <div className="divide-y divide-[#edf1f5]">
               <div className="p-5">
@@ -515,7 +536,7 @@ export function MeetingsWorkspace() {
               </div>
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {agendaModal && selected && (
@@ -576,6 +597,8 @@ export function MeetingsWorkspace() {
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">المجلس أو الجهة *</span><select required name="governance_unit_id" disabled={meetingOptionsLoading || !(meetingOptions?.meeting_units?.length)} className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs outline-none focus:border-[#0066cc] disabled:cursor-not-allowed disabled:bg-[#f4f7fa]"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الجهات…" : meetingOptions?.meeting_units?.length ? "اختر المجلس أو الجهة" : "لا توجد جهة متاحة ضمن صلاحياتك"}</option>{meetingOptions?.meeting_units?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name_ar}</option>)}</select><small className="mt-1 block text-[10px] text-[#718196]">تظهر الجهات التي تملك صلاحية إنشاء اجتماع فيها فقط.</small></label>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">نوع الاجتماع *</span><select required name="meeting_type_id" disabled={meetingOptionsLoading || !(meetingOptions?.meeting_types?.length)} className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs outline-none focus:border-[#0066cc] disabled:cursor-not-allowed disabled:bg-[#f4f7fa]"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الأنواع…" : meetingOptions?.meeting_types?.length ? "اختر نوع الاجتماع" : "لا توجد أنواع اجتماعات نشطة"}</option>{meetingOptions?.meeting_types?.map((type) => <option key={type.id} value={type.id}>{type.name_ar}</option>)}</select></label>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">عنوان الاجتماع *</span><input required name="title_ar" placeholder="مثال: الاجتماع الثالث لمجلس القسم" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs outline-none focus:border-[#0066cc]" /></label>
+              <label className="flex items-center justify-between rounded-2xl border border-[#dbe5ef] bg-[#f8fbfe] p-4"><span><strong className="block text-xs text-[#29445e]">اجتماع دوري</strong><small className="mt-1 block text-[9px] text-[#718196]">إنشاء سلسلة أسبوعية أو شهرية مرتبطة.</small></span><input type="checkbox" checked={recurring} onChange={(event) => setRecurring(event.target.checked)} className="h-5 w-5 accent-[#0877d6]" /></label>
+              {recurring && <div className="grid gap-3 rounded-2xl border border-blue-100 bg-blue-50/50 p-4 sm:grid-cols-3"><label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">التكرار</span><select name="frequency" defaultValue="monthly" className="h-10 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs"><option value="weekly">أسبوعي</option><option value="monthly">شهري</option></select></label><label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">كل</span><input name="interval_count" type="number" min="1" max="12" defaultValue="1" className="h-10 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs" /></label><label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">عدد الاجتماعات</span><input name="occurrence_count" type="number" min="2" max="12" defaultValue="6" className="h-10 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs" /></label></div>}
               <div className="grid gap-4 sm:grid-cols-3">
                 <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">التاريخ *</span><input required type="date" name="scheduled_date" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs outline-none focus:border-[#0066cc]" /></label>
                 <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">بداية *</span><input required type="time" name="start_time" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs outline-none focus:border-[#0066cc]" /></label>

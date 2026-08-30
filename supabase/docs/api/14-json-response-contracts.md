@@ -170,6 +170,8 @@ AgendaItem = {
 | `get_meeting_detail` | `Meeting row + {governance_unit:UnitOption,meeting_type:Option,agenda_items:AgendaItem[],status_history:MeetingStatusHistory[]}` |
 | `get_completed_meeting_record` | `{meeting_id,status,quorum,attendance:{eligible_count,present_count,absent_count,excused_count,records[]},agenda_items:[{topic,discussion_notes,voting_rounds[],decisions[]}],minutes:{approvals[]}?}` |
 | `create_meeting` | `{id,meeting_no,status,idempotent_replay}` |
+| `create_meeting_series` | `{id,occurrences:[{id,meeting_no,status,idempotent_replay,occurrence_number,scheduled_date}]}` |
+| `list_meeting_series` | `MeetingSeries[]` with ordered `occurrences[]` containing meeting identity, date, number, and status |
 | `update_meeting` | Updated meeting detail |
 | `transition_meeting` | `{id,meeting_no,previous_status,status}` |
 | `search_eligible_agenda_topics` | `Page<{id,topic_no,title_ar,priority,status,updated_at}>` |

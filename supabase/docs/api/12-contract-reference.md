@@ -169,10 +169,12 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `admin_update_meeting_type` | `meetings` | `authenticated` | `p_meeting_type_id uuid, p_name_ar text, p_description text, p_is_active boolean, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `complete_meeting_session` | `meetings` | `authenticated` | `p_meeting_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `create_meeting` | `meetings` | `authenticated` | `p_governance_unit_id uuid, p_meeting_type_id uuid, p_title_ar text, p_scheduled_date date, p_start_time time without time zone, p_end_time time without time zone, p_location_type text, p_location_details text, p_title_en text, p_client_request_id uuid` | `jsonb` |
+| `create_meeting_series` | `meetings` | `authenticated` | `p_governance_unit_id uuid, p_meeting_type_id uuid, p_title_ar text, p_first_date date, p_start_time time without time zone, p_end_time time without time zone, p_location_type text, p_location_details text, p_frequency text, p_interval_count integer, p_occurrence_count integer` | `jsonb` |
 | `get_completed_meeting_record` | `meetings` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `get_meeting_detail` | `meetings` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `get_meeting_readiness` | `meetings` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `get_sprint02_form_options` | `meetings` | `authenticated` | `-` | `jsonb` |
+| `list_meeting_series` | `meetings` | `authenticated` | `-` | `jsonb` |
 | `remove_agenda_item` | `meetings` | `authenticated` | `p_agenda_item_id uuid, p_reason text` | `jsonb` |
 | `reorder_agenda_items` | `meetings` | `authenticated` | `p_meeting_id uuid, p_ordered_item_ids uuid[], p_expected_meeting_updated_at timestamp with time zone` | `jsonb` |
 | `search_eligible_agenda_topics` | `meetings` | `authenticated` | `p_meeting_id uuid, p_query text, p_limit integer, p_offset integer` | `jsonb` |
