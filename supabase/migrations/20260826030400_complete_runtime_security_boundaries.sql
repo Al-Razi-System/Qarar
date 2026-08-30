@@ -3,8 +3,32 @@ begin;
 -- The snapshot recovery initially kept this implementation in public.  Public
 -- is reserved for compatibility views: implementations must live with their
 -- owning module and be governed by the same registry as every other command.
-alter function public.get_topic_categories_for_unit(uuid, date)
-  set schema qarar_topics;
+-- Some upgraded databases already have an older module implementation with
+-- the same identity.  Recreate it from the recovered public definition before
+-- removing that compatibility implementation; `ALTER ... SET SCHEMA` alone
+-- would otherwise fail on the duplicate identity.
+do $$
+declare
+  v_public_definition text;
+begin
+  if to_regprocedure('public.get_topic_categories_for_unit(uuid,date)') is not null then
+    if to_regprocedure('qarar_topics.get_topic_categories_for_unit(uuid,date)') is not null then
+      select pg_get_functiondef('public.get_topic_categories_for_unit(uuid,date)'::regprocedure)
+        into v_public_definition;
+      v_public_definition := regexp_replace(
+        v_public_definition,
+        'FUNCTION public\\.get_topic_categories_for_unit',
+        'FUNCTION qarar_topics.get_topic_categories_for_unit'
+      );
+      execute v_public_definition;
+      execute 'drop function public.get_topic_categories_for_unit(uuid, date)';
+    else
+      alter function public.get_topic_categories_for_unit(uuid, date)
+        set schema qarar_topics;
+    end if;
+  end if;
+end
+$$;
 alter function qarar_topics.get_topic_categories_for_unit(uuid, date)
   owner to qarar_topics_executor;
 revoke all on function qarar_topics.get_topic_categories_for_unit(uuid, date)
@@ -23,8 +47,9 @@ where n.nspname = 'qarar_topics'
   and p.proname = 'get_topic_categories_for_unit'
   and pg_get_function_identity_arguments(p.oid) =
       'p_governance_unit_id uuid, p_effective_on date'
-on conflict (function_oid) do update
-set function_name = excluded.function_name,
+on conflict (function_name, identity_arguments) do update
+set function_oid = excluded.function_oid,
+    function_name = excluded.function_name,
     identity_arguments = excluded.identity_arguments,
     module_code = excluded.module_code,
     owning_schema = excluded.owning_schema,

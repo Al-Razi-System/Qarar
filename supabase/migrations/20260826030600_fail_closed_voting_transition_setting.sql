@@ -9,6 +9,7 @@ declare
   v_function regprocedure;
   v_definition text;
   v_updated_definition text;
+  v_updated_count integer := 0;
 begin
   foreach v_function in array array[
     'qarar_governance.act_topic_workflow_step_core(uuid,text,text,uuid,integer)'::regprocedure,
@@ -22,12 +23,19 @@ begin
       'g'
     );
 
-    if v_updated_definition = v_definition then
-      raise exception 'expected voting transition guard was not found in %', v_function;
+    -- The public wrapper is intentionally replaced by later lifecycle
+    -- migrations and may delegate to the guarded core without carrying this
+    -- expression itself.  Tighten every implementation that does contain the
+    -- old nullable check, and require that at least one was updated.
+    if v_updated_definition <> v_definition then
+      execute v_updated_definition;
+      v_updated_count := v_updated_count + 1;
     end if;
-
-    execute v_updated_definition;
   end loop;
+
+  if v_updated_count = 0 then
+    raise exception 'expected voting transition guard was not found in any workflow implementation';
+  end if;
 end
 $$;
 
