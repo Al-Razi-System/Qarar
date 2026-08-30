@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useDeferredValue, useEffect, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useEffectEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Check, FileCheck2, Forward, Inbox, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { topicsRpc } from "../api/topics-client";
@@ -83,6 +83,21 @@ export function TopicsWorkspace({ initialQuery = "", initialTab = "mine" }: { in
     const task = window.setTimeout(() => { void loadTopics(); }, 0);
     return () => window.clearTimeout(task);
   }, [loadTopics]);
+
+  const refreshTopicsOnReturn = useEffectEvent(() => {
+    void loadTopics();
+    if (selected?.id) void openDetail(selected.id);
+  });
+  useEffect(() => {
+    const refresh = () => refreshTopicsOnReturn();
+    const refreshVisible = () => { if (document.visibilityState === "visible") refreshTopicsOnReturn(); };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refreshVisible);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refreshVisible);
+    };
+  }, []);
 
   function changeTab(next: "mine" | "review") {
     setTab(next);

@@ -87,8 +87,8 @@ export type MeetingFormOptions = { meeting_units?: MeetingReference[]; meeting_t
 export const meetingStatusLabels: Record<string, string> = {
   draft: "مسودة", scheduled: "مجدولة", ready_to_start: "جاهزة للبدء",
   in_progress: "منعقدة", waiting_for_minutes: "بانتظار المحضر",
-  waiting_for_approval: "بانتظار الاعتماد", closed: "مغلقة",
-  cancelled: "ملغاة", archived: "مؤرشفة",
+  waiting_for_approval: "بانتظار اعتماد المحضر", closed: "مكتملة",
+  cancelled: "ملغاة", archived: "مكتملة · مؤرشفة",
 };
 
 export const meetingStatusTone: Record<string, string> = {

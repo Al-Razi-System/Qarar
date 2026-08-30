@@ -36,6 +36,29 @@ function truncateText(value?: string | null, max = 150) {
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
+const meetingGroups = [
+  { key: "active", label: "قيد الانعقاد والإكمال", statuses: ["in_progress", "waiting_for_minutes", "waiting_for_approval"] },
+  { key: "upcoming", label: "الاجتماعات القادمة", statuses: ["ready_to_start", "scheduled"] },
+  { key: "drafts", label: "المسودات", statuses: ["draft"] },
+  { key: "completed", label: "الاجتماعات المكتملة", statuses: ["closed", "archived"] },
+  { key: "cancelled", label: "الاجتماعات الملغاة", statuses: ["cancelled"] },
+] as const;
+
+function groupedMeetings(meetings: Meeting[]) {
+  return meetingGroups.map((group) => ({
+    ...group,
+    meetings: meetings.filter((meeting) => group.statuses.some((status) => status === meeting.status)),
+  })).filter((group) => group.meetings.length > 0);
+}
+
+function agendaLockMessage(status: string) {
+  if (status === "waiting_for_minutes") return "انتهت الجلسة، وأصبح جدول الأعمال ثابتًا لحين إعداد المحضر.";
+  if (status === "waiting_for_approval") return "انتهت الجلسة، والمحضر الآن بانتظار المصادقات النهائية.";
+  if (status === "closed" || status === "archived") return "اكتمل الاجتماع واعتمد محضره؛ جدول الأعمال محفوظ كسجل نهائي.";
+  if (status === "cancelled") return "أُلغي الاجتماع وأصبح جدول أعماله للعرض فقط.";
+  return "بدأ الاجتماع، لذلك أصبح جدول الأعمال مقفلًا ولا يمكن إضافة أو إزالة موضوعات.";
+}
+
 export function MeetingsWorkspace() {
   const router = useRouter();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -354,6 +377,21 @@ export function MeetingsWorkspace() {
     return () => window.clearTimeout(timer);
   }, [deferredQuery, statusFilter]);
 
+  const refreshWorkspaceOnReturn = useEffectEvent(() => {
+    void loadMeetings();
+    if (selected?.id) void openDetail(selected.id);
+  });
+  useEffect(() => {
+    const refresh = () => refreshWorkspaceOnReturn();
+    const refreshVisible = () => { if (document.visibilityState === "visible") refreshWorkspaceOnReturn(); };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refreshVisible);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refreshVisible);
+    };
+  }, []);
+
   return (
     <div className="space-y-5">
       {notice && (
@@ -392,8 +430,13 @@ export function MeetingsWorkspace() {
               </div>
             </div>
           ) : (
-            <div className="divide-y divide-[#eef2f6]">
-              {meetings.map((m) => (
+            <div>
+              {groupedMeetings(meetings).map((group) => <section key={group.key} aria-labelledby={`meeting-group-${group.key}`}>
+                <header className="flex items-center justify-between border-y border-[#e9f0f6] bg-[#f8fbfe] px-5 py-2.5 first:border-t-0">
+                  <h3 id={`meeting-group-${group.key}`} className="text-[10px] font-black text-[#40566f]">{group.label}</h3>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black text-[#6f8297] ring-1 ring-[#dfe8f0]">{group.meetings.length}</span>
+                </header>
+                <div className="divide-y divide-[#eef2f6]">{group.meetings.map((m) => (
                 <button key={m.id} onClick={() => openDetail(m.id)} className={`flex w-full items-center gap-4 px-5 py-4 text-right transition hover:bg-[#fbfdff] ${selected?.id === m.id ? "bg-[#edf6ff]" : ""}`}>
                   <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e7f2ff] text-[#0066cc]">
                     <Calendar size={18} />
@@ -409,7 +452,8 @@ export function MeetingsWorkspace() {
                     </p>
                   </div>
                 </button>
-              ))}
+                ))}</div>
+              </section>)}
             </div>
           )}
         </div>
@@ -432,7 +476,7 @@ export function MeetingsWorkspace() {
                 <span className={`mb-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-black ${statusTone[selected.status] ?? ""}`}>{statusLabels[selected.status] ?? selected.status}</span>
                 <h2 className="text-base font-black text-[#0a1330]">{selected.title_ar}</h2>
                 <p className="mt-1 text-[10px] text-[#7b8ba0]">{selected.meeting_no ?? selected.id}</p>
-                {!isAgendaEditable(selected.status) && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[10px] font-bold leading-5 text-amber-800">بدأ الاجتماع، لذلك أصبح جدول الأعمال مقفلًا ولا يمكن إضافة أو إزالة موضوعات.</p>}
+                {!isAgendaEditable(selected.status) && <p className={`mt-3 rounded-lg px-3 py-2 text-[10px] font-bold leading-5 ${["closed", "archived"].includes(selected.status) ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>{agendaLockMessage(selected.status)}</p>}
                 <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
                   <div className="flex items-center gap-1.5 text-[#52647a]"><Calendar size={13} /> {selected.scheduled_date ?? "—"}</div>
                   <div className="flex items-center gap-1.5 text-[#52647a]"><Clock size={13} /> {selected.start_time ?? "—"} - {selected.end_time ?? "—"}</div>
