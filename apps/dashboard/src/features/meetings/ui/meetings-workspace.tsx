@@ -364,7 +364,7 @@ export function MeetingsWorkspace() {
         p_location_type: fd.get("location_type") || "onsite",
         p_location_details: fd.get("location_details") || null,
       };
-      const created = recurring ? await rpc<{ id: string; occurrences: Array<{ id: string }> }>("create_meeting_series", {
+      const created: { id: string; occurrences?: Array<{ id: string }> } = recurring ? await rpc<{ id: string; occurrences: Array<{ id: string }> }>("create_meeting_series", {
         ...common,
         p_first_date: fd.get("scheduled_date"),
         p_frequency: fd.get("frequency"),
@@ -380,7 +380,7 @@ export function MeetingsWorkspace() {
       setRecurring(false);
       setNotice({ kind: "success", text: recurring ? "تم إنشاء سلسلة الاجتماعات وجميع مواعيدها بنجاح." : "تم إنشاء الاجتماع بنجاح." });
       await loadMeetings();
-      const firstMeetingId = "occurrences" in created ? created.occurrences[0]?.id : created.id;
+      const firstMeetingId = created.occurrences?.[0]?.id ?? created.id;
       if (firstMeetingId) await openDetail(firstMeetingId);
     } catch (err) {
       setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر الإنشاء." });
@@ -433,7 +433,7 @@ export function MeetingsWorkspace() {
 
       <nav className="flex gap-2 overflow-x-auto rounded-2xl border border-[#dce7f0] bg-white p-2" aria-label="تصنيف الاجتماعات">
         {[{ key: "all", label: "الكل", statuses: [] as readonly string[] }, ...meetingGroups].map((group) => {
-          const count = group.key === "all" ? meetings.length : meetings.filter((meeting) => group.statuses.includes(meeting.status)).length;
+          const count = group.key === "all" ? meetings.length : meetings.filter((meeting) => group.statuses.some((status) => status === meeting.status)).length;
           return <button key={group.key} type="button" onClick={() => { setActiveGroup(group.key); setSelected(null); }} className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-[10px] font-black transition ${activeGroup === group.key ? "bg-[#0877d6] text-white shadow-[0_7px_18px_rgba(8,119,214,.2)]" : "text-[#526a81] hover:bg-[#f1f7fd]"}`}>{group.label} <span className={`mr-1 rounded-full px-1.5 py-0.5 ${activeGroup === group.key ? "bg-white/20" : "bg-[#edf3f8]"}`}>{count}</span></button>;
         })}
       </nav>
