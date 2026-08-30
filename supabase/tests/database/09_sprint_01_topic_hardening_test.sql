@@ -64,7 +64,9 @@ select is((select submitted_by_user_id from public.topics limit 1), '41000000-00
 select is((select status from public.topics limit 1), 'new', 'topic starts in new status');
 select is((select count(*) from public.topic_status_history)::integer, 1, 'creation writes status history');
 reset role;
-select is((select count(*) from public.audit_logs where action='topics.create')::integer, 1, 'creation writes audit trail');
+select is((select count(*) from public.audit_logs
+  where action='topics.create' and organization_id='41000000-0000-0000-0000-000000000001')::integer,
+  1, 'creation writes audit trail');
 set local role authenticated;
 set local "request.jwt.claims" = '{"sub":"41000000-0000-0000-0000-000000000011","role":"authenticated"}';
 select ok(not has_table_privilege('authenticated','public.topics','INSERT'), 'direct topic insert is revoked');
@@ -104,9 +106,12 @@ select throws_ok(
   'deferred topic accepts resume rather than a direct decision'
 );
 
+update sprint01_state
+set updated_at = (select updated_at from public.topics where id=(select topic_id from sprint01_state));
+
 set local "request.jwt.claims" = '{"sub":"41000000-0000-0000-0000-000000000011","role":"authenticated"}';
 select throws_ok(
-  $$select api_v1.review_topic((select topic_id from sprint01_state),'approve',null,(select updated_at from public.topics where id=(select topic_id from sprint01_state)))$$,
+  $$select api_v1.review_topic((select topic_id from sprint01_state),'approve',null,(select updated_at from sprint01_state))$$,
   '42501',
   'permission denied: topics.review',
   'submitter without review permission cannot review'

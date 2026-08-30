@@ -50,11 +50,23 @@ create table qarar_governance.governance_unit_classes (
 );
 
 alter table qarar_core.governance_units
-  add column governance_class_id uuid,
-  add constraint governance_units_class_tenant_fk
-    foreign key (governance_class_id, organization_id)
-    references qarar_governance.governance_unit_classes(id, organization_id)
-    on delete restrict;
+  add column if not exists governance_class_id uuid;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'governance_units_class_tenant_fk'
+      and conrelid = 'qarar_core.governance_units'::regclass
+  ) then
+    alter table qarar_core.governance_units
+      add constraint governance_units_class_tenant_fk
+      foreign key (governance_class_id, organization_id)
+      references qarar_governance.governance_unit_classes(id, organization_id)
+      on delete restrict;
+  end if;
+end;
+$$;
 
 create table qarar_governance.policies (
   id uuid primary key default gen_random_uuid(),

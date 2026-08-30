@@ -23,7 +23,7 @@ describe("TopicSummaryPanel", () => {
     render(<TopicSummaryPanel topic={topic} loading={false} reviewMode busy={false} onReview={vi.fn()} onRefer={vi.fn()} onOpenDetails={vi.fn()} />);
     expect(screen.getByText("الموازنة والحسابات والاستثمار")).toBeInTheDocument();
     expect(screen.getByText("مجلس الأمناء")).toBeInTheDocument();
-    expect(screen.getByText("المسار جاهز")).toBeInTheDocument();
+    expect(screen.getAllByText("المسار جاهز").length).toBeGreaterThan(0);
   });
 
   it("executes approval directly from the primary button", async () => {

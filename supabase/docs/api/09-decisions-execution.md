@@ -1,22 +1,32 @@
 # Decisions and Execution
 
-## Implementation Status
+Flutter uses four authenticated `api_v1` contracts. All contracts derive the
+organization and actor from the verified session; clients never submit either value.
 
-Frontend contracts for decisions and execution follow-up are **not implemented yet**. They belong to
-Sprint 5. No supported `api_v1` contract currently exists for listing, creating, updating, approving,
-or closing decisions or action items. Clients must not access the `decisions` or `action_items`
-compatibility views directly through PostgREST.
+## Form and search
 
-The target API requires versioned contracts for:
+`get_decision_form_options()` returns active governance units and decision types,
+eligible topics, and eligible meetings. Topic and meeting options carry their
+governance-unit UUID so the client cannot substitute a display name for a relation.
 
-- searching and loading decisions with topic, meeting, and agenda context;
-- drafting and editing a decision with optimistic concurrency;
-- enforcing review, approval, issuance, cancellation, and closure transitions;
-- creating assignments only from an executable decision;
-- updating progress, evidence, due dates, reassignment, completion, and closure;
-- querying overdue work and execution dashboards with tenant and unit scoping;
-- exposing immutable status history and audit references.
+`search_decisions(p_query, p_status, p_limit, p_offset)` returns a tenant-scoped
+page. `p_status = null` means all statuses. Search covers the decision number,
+decision text, and topic title.
 
-The backend must enforce organization isolation, scoped permissions, transition rules, and audit
-events atomically. Exact request and response contracts will be added here with the Sprint 5
-implementation; frontend development must not infer them from physical tables.
+## Create
+
+`create_decision(p_topic_id, p_governance_unit_id, p_decision_text,
+p_decision_type_id, p_meeting_id, p_requires_approval, p_client_request_id)`
+creates a draft. The backend verifies that the topic and optional meeting belong
+to the same organization and governance unit. It allocates the decision number
+atomically and writes status history and audit records in the same transaction.
+Repeating the same request UUID for the same actor returns the original decision.
+
+## Execution read
+
+`get_decision_action_items(p_decision_id)` returns the stored assignments for the
+decision. The response uses actual assignee, unit, status, due date, progress, and
+description values; it does not manufacture placeholder data.
+
+Direct access to compatibility views remains unsupported. Decision transitions and
+execution writes continue to be enforced by the existing backend transition guards.

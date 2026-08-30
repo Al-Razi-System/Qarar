@@ -36,6 +36,11 @@ tables and assignment selectors.
 
 `admin_upsert_role(...)` requires `iam.roles.manage`.
 
+After `20260816080000_iam_authority_provenance_boundary.sql`, an organization- or
+system-scoped role may be created or changed only by a system administrator. The same applies when
+a role becomes elevated because of one of its active permissions; a local-looking role is not a way
+to bypass the authority boundary.
+
 ```json
 {
   "p_role_id": null,
@@ -62,6 +67,24 @@ Permission maintenance should be exposed only to the highest IAM administration 
 Permission codes are stable API identifiers such as `iam.users.manage`; display names may change.
 Do not branch application logic on translated names.
 
+## Authority Provenance Boundary
+
+The backend derives a role's authority from both its declared `role_scope` and every active
+permission assigned to it. The following scope matrix is enforced:
+
+| Permission context scope | Permitted role scopes |
+| --- | --- |
+| `system` | `system` only |
+| `organization` | `organization`, `system` |
+| `governance_unit`, `execution`, `self` | Existing lower-scope semantics; still subject to the target-context permission check and RLS |
+
+A role is elevated when its declared scope is `organization` or `system`, or when it carries an
+active permission in either context. Only a system administrator may change an elevated role,
+elevated permission, its matrix association, or an active membership that grants or revokes it.
+An IAM change request can still be submitted for review, but applying a change that creates or
+removes elevated authority requires the reviewing system administrator. APIs fail closed with a
+permission error instead of downgrading the request to local authority.
+
 ## Assign Role to User
 
 `admin_assign_role(...)` requires `iam.roles.assign` in the target unit.
@@ -79,6 +102,8 @@ Do not branch application logic on translated names.
 
 `admin_revoke_membership(p_membership_id, p_reason)` ends the membership and preserves history.
 Assignment returns the membership UUID. Refresh the affected user's access context after either operation.
+Assigning or revoking an elevated role is system-administrator-only even if the caller has an
+otherwise valid unit-level assignment permission.
 
 ## Change Role Permissions
 

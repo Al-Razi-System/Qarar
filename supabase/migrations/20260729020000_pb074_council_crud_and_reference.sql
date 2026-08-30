@@ -1,13 +1,22 @@
 begin;
 
 alter table qarar_core.governance_units
-  add column created_by_user_id uuid,
-  add column client_request_id uuid,
-  add constraint governance_units_creator_tenant_fk
-    foreign key (created_by_user_id, organization_id)
-    references qarar_iam.users(id, organization_id) on delete restrict;
+  add column if not exists created_by_user_id uuid,
+  add column if not exists client_request_id uuid;
 
-create unique index governance_units_creation_idempotency_uidx
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'governance_units_creator_tenant_fk'
+  ) then
+    alter table qarar_core.governance_units
+      add constraint governance_units_creator_tenant_fk
+        foreign key (created_by_user_id, organization_id)
+        references qarar_iam.users(id, organization_id) on delete restrict;
+  end if;
+end $$;
+
+create unique index if not exists governance_units_creation_idempotency_uidx
   on qarar_core.governance_units(
     organization_id, created_by_user_id, client_request_id
   )

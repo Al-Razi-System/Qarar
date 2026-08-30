@@ -93,6 +93,7 @@ begin
 end $$;
 alter function qarar_core.enforce_council_code_format() owner to qarar_core_executor;
 revoke all on function qarar_core.enforce_council_code_format() from public,anon,authenticated,service_role;
+drop trigger if exists governance_units_enforce_council_code_format on qarar_core.governance_units;
 create trigger governance_units_enforce_council_code_format
 before insert or update of code,unit_type_id on qarar_core.governance_units
 for each row execute function qarar_core.enforce_council_code_format();
@@ -121,6 +122,7 @@ begin
 end $$;
 alter function qarar_iam.enforce_single_council_leader() owner to qarar_iam_executor;
 revoke all on function qarar_iam.enforce_single_council_leader() from public,anon,authenticated,service_role;
+drop trigger if exists memberships_enforce_single_council_leader on qarar_iam.memberships;
 create trigger memberships_enforce_single_council_leader
 before insert or update of organization_id,governance_unit_id,role_id,membership_status,start_date,end_date
 on qarar_iam.memberships for each row execute function qarar_iam.enforce_single_council_leader();
@@ -132,7 +134,7 @@ begin
  raise exception using errcode='55000',message='سجل حالات المجلس للإضافة فقط';
 end $$;
 alter function qarar_core.reject_status_history_mutation() owner to qarar_core_executor;
-revoke all on function qarar_core.reject_status_history_mutation() from public,anon,authenticated,service_role;
+drop trigger if exists governance_unit_status_history_append_only on qarar_core.governance_unit_status_history;
 create trigger governance_unit_status_history_append_only
 before update or delete on qarar_core.governance_unit_status_history
 for each row execute function qarar_core.reject_status_history_mutation();
@@ -165,6 +167,7 @@ begin
 end $$;
 alter function qarar_iam.provision_council_management() owner to qarar_iam_executor;
 revoke all on function qarar_iam.provision_council_management() from public,anon,authenticated,service_role;
+drop trigger if exists provision_council_management on qarar_core.organizations;
 create trigger provision_council_management
 after insert on qarar_core.organizations
 for each row execute function qarar_iam.provision_council_management();
@@ -181,6 +184,7 @@ begin
 end $$;
 alter function qarar_core.provision_default_council_type() owner to qarar_core_executor;
 revoke all on function qarar_core.provision_default_council_type() from public,anon,authenticated,service_role;
+drop trigger if exists provision_default_council_type on qarar_core.organizations;
 create trigger provision_default_council_type after insert on qarar_core.organizations
 for each row execute function qarar_core.provision_default_council_type();
 
@@ -201,6 +205,7 @@ end $$;
 alter function qarar_iam.provision_council_permissions_to_governance_admin() owner to qarar_iam_executor;
 revoke all on function qarar_iam.provision_council_permissions_to_governance_admin()
  from public,anon,authenticated,service_role;
+drop trigger if exists provision_council_permissions_to_governance_admin on qarar_iam.roles;
 create trigger provision_council_permissions_to_governance_admin
 after insert or update of code on qarar_iam.roles
 for each row execute function qarar_iam.provision_council_permissions_to_governance_admin();

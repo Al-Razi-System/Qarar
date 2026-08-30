@@ -49,14 +49,21 @@ values('36363636-3636-3636-3636-363636363636','30303030-3030-3030-3030-303030303
 insert into public.sso_group_role_mappings(id,organization_id,provider_id,external_group,role_id,governance_unit_id)
 values('38383838-3838-3838-3838-383838383838','30303030-3030-3030-3030-303030303030','36363636-3636-3636-3636-363636363636','Reviewers','33333333-3333-3333-3333-333333333333','32323232-3232-3232-3232-323232323232');
 
+set local role service_role;
+set local "request.jwt.claims" to '{"role":"service_role","sub":"f1000000-0000-0000-0000-000000000003","email":"sso@critical.test","sso_provider_id":"37373737-3737-3737-3737-373737373737"}';
+select is(api_v1.sync_current_sso_groups(array['Reviewers']),1,'trusted SSO service sync creates current group membership');
 set local role authenticated;
 set local "request.jwt.claims" to '{"sub":"f1000000-0000-0000-0000-000000000003","email":"sso@critical.test","sso_provider_id":"37373737-3737-3737-3737-373737373737"}';
-select is(api_v1.sync_current_sso_groups(array['Reviewers']),1,'SSO sync creates current group membership');
 select ok(exists(select 1 from public.sso_group_membership_links where user_id='f1000000-0000-0000-0000-000000000003'),'SSO-created membership has provenance link');
-select is(api_v1.sync_current_sso_groups(array[]::text[]),0,'SSO sync accepts removal of all groups');
+set local role service_role;
+set local "request.jwt.claims" to '{"role":"service_role","sub":"f1000000-0000-0000-0000-000000000003","email":"sso@critical.test","sso_provider_id":"37373737-3737-3737-3737-373737373737"}';
+select is(api_v1.sync_current_sso_groups(array[]::text[]),0,'trusted SSO service sync accepts removal of all groups');
+set local role authenticated;
+set local "request.jwt.claims" to '{"sub":"f1000000-0000-0000-0000-000000000003","email":"sso@critical.test","sso_provider_id":"37373737-3737-3737-3737-373737373737"}';
 select is((select membership_status from public.memberships where user_id='f1000000-0000-0000-0000-000000000003' and role_id='33333333-3333-3333-3333-333333333333'),'ended','removed IdP group ends SSO-owned membership');
 
 reset role;
+set local "request.jwt.claims" to '{"sub":"f1000000-0000-0000-0000-000000000001","email":"admin@critical.test"}';
 insert into public.access_delegations(organization_id,delegated_by_user_id,delegated_to_user_id,source_membership_id,starts_at,ends_at,reason)
 values('30303030-3030-3030-3030-303030303030','f1000000-0000-0000-0000-000000000001','f1000000-0000-0000-0000-000000000002','34343434-3434-3434-3434-343434343434',now()-interval '2 hours',now()-interval '1 hour','expired coverage');
 select is(qarar_iam.expire_access_delegations(),1,'delegation expiry job updates elapsed records');

@@ -23,7 +23,9 @@ const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`
 const password = `Qarar-${suffix}!Aa1`
 const builderEmail = `s035-builder-${suffix}@example.test`
 const approverEmail = `s035-approver-${suffix}@example.test`
+const noPermissionEmail = `s035-no-permission-${suffix}@example.test`
 const created = { authUsers: [], organizationId: null }
+const keepFixtures = process.argv.includes("--keep-fixtures")
 
 async function request(path, options = {}, expected = null) {
   const response = await fetch(`${baseUrl}${path}`, options)
@@ -119,6 +121,7 @@ async function cleanup() {
 try {
   const builder = await createAuthUser(builderEmail)
   const approver = await createAuthUser(approverEmail)
+  const noPermission = await createAuthUser(noPermissionEmail)
   const organization = (await rest("organizations", "POST", {
     code: `S035-${suffix}`, name_ar: "Sprint 03.5 HTTP",
   })).body[0]
@@ -138,6 +141,9 @@ try {
   })).body[0]
   const customRouteCategory = (await rest("topic_categories", "POST", {
     organization_id: organization.id, code: `CUSTOM-${suffix}`, name_ar: "Custom Route Topic",
+  })).body[0]
+  const noMatchCategory = (await rest("topic_categories", "POST", {
+    organization_id: organization.id, code: `NOMATCH-${suffix}`, name_ar: "No Matching Regulation Topic",
   })).body[0]
   const role = (await rest("roles", "POST", {
     organization_id: organization.id, code: `GOV-${suffix}`,
@@ -187,6 +193,7 @@ try {
   await rest("users", "POST", [
     { id: builder.id, organization_id: organization.id, email: builderEmail, full_name_ar: "Builder" },
     { id: approver.id, organization_id: organization.id, email: approverEmail, full_name_ar: "Approver" },
+    { id: noPermission.id, organization_id: organization.id, email: noPermissionEmail, full_name_ar: "No Permission" },
   ])
   await rest("memberships", "POST", [
     { organization_id: organization.id, user_id: builder.id, governance_unit_id: unit.id, role_id: role.id },
@@ -205,6 +212,14 @@ try {
 
   const builderHeaders = await login(builderEmail)
   const approverHeaders = await login(approverEmail)
+  const noPermissionHeaders = await login(noPermissionEmail)
+  const deniedPolicySearch = await rest("rpc/admin_search_policies", "POST", {
+    p_query: null,
+    p_status: null,
+    p_limit: 25,
+    p_offset: 0,
+  }, noPermissionHeaders)
+  assert.ok(deniedPolicySearch.response.status >= 400, "a user without governance permissions listed policies")
   const workflow = await rpc("admin_create_workflow_template", {
     p_code: `route-${suffix}`, p_name_ar: "مسار اعتماد القسم",
   }, builderHeaders)
@@ -227,9 +242,17 @@ try {
   }, builderHeaders)
   assert.equal(activatedWorkflow.status, "active")
 
-  const policy = await rpc("admin_create_policy", {
+  const policyRequestId = crypto.randomUUID()
+  const policy = await rpc("admin_create_policy_idempotent", {
     p_code: `policy-${suffix}`, p_name_ar: "لائحة اعتماد الخطط",
+    p_client_request_id: policyRequestId,
   }, builderHeaders)
+  const policyReplay = await rpc("admin_create_policy_idempotent", {
+    p_code: `policy-${suffix}`, p_name_ar: "Ù„Ø§Ø¦Ø­Ø© Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ø®Ø·Ø·",
+    p_client_request_id: policyRequestId,
+  }, builderHeaders)
+  assert.equal(policyReplay.id, policy.id)
+  assert.equal(policyReplay.idempotent_replay, true)
   const version = await rpc("admin_create_policy_version", {
     p_policy_id: policy.id, p_version_label: "1.0",
   }, builderHeaders)
@@ -252,6 +275,10 @@ try {
     p_policy_version_id: version.id,
   }, builderHeaders)
   assert.equal(submitted.legal_status, "under_review")
+  const selfApproval = await rest("rpc/admin_approve_policy_version", "POST", {
+    p_policy_version_id: version.id,
+  }, builderHeaders)
+  assert.ok(selfApproval.response.status >= 400, "the submitting user approved their own policy version")
   const approved = await rpc("admin_approve_policy_version", {
     p_policy_version_id: version.id,
   }, approverHeaders)
@@ -274,6 +301,7 @@ try {
   assert.equal(options.items[0].selection.policy_item_id, policyItem.id)
   assert.equal(options.items[0].selection.scope_assignment_id, policyScope.id)
   assert.equal(options.items[0].can_start_workflow, true)
+  const topicClientRequestId = crypto.randomUUID()
   const topic = await rpc("create_topic_with_selected_regulation", {
     p_title_ar: "اعتماد خطة أكاديمية عبر HTTP",
     p_description: "موضوع متكامل يختبر محرك اللوائح والمسار عبر PostgREST.",
@@ -283,10 +311,23 @@ try {
     p_policy_version_id: version.id,
     p_policy_item_id: policyItem.id,
     p_scope_assignment_id: policyScope.id,
-    p_client_request_id: crypto.randomUUID(),
+    p_client_request_id: topicClientRequestId,
   }, builderHeaders)
   assert.equal(topic.routing_status, "routing_ready")
   assert.equal(topic.policy_version_id, version.id)
+  const topicReplay = await rpc("create_topic_with_selected_regulation", {
+    p_title_ar: "اعتماد خطة أكاديمية عبر HTTP",
+    p_description: "موضوع متكامل يختبر محرك اللوائح والمسار عبر PostgREST.",
+    p_category_id: category.id,
+    p_current_unit_id: unit.id,
+    p_policy_id: policy.id,
+    p_policy_version_id: version.id,
+    p_policy_item_id: policyItem.id,
+    p_scope_assignment_id: policyScope.id,
+    p_client_request_id: topicClientRequestId,
+  }, builderHeaders)
+  assert.equal(topicReplay.idempotent_replay, true)
+  assert.equal(topicReplay.topic_id ?? topicReplay.id, topic.topic_id)
 
   const governance = await rpc("get_topic_governance", { p_topic_id: topic.topic_id }, builderHeaders)
   assert.equal(governance.governance_source, "regulated")
@@ -317,6 +358,55 @@ try {
   assert.equal(replay.next_step_id, completed.next_step_id)
   assert.equal(replay.workflow_status, completed.workflow_status)
   assert.equal(replay.version, completed.version)
+  const staleRetry = await rest("rpc/act_topic_workflow_step", "POST", {
+    p_topic_id: topic.topic_id,
+    p_outcome_code: "completed",
+    p_comment: "A different retry key must not replay a completed step.",
+    p_idempotency_key: crypto.randomUUID(),
+    p_expected_version: 0,
+  }, approverHeaders)
+  assert.ok(staleRetry.response.status >= 400, "stale workflow retry was accepted")
+
+  const competingPolicy = await rpc("admin_create_policy", {
+    p_code: `competing-${suffix}`, p_name_ar: "Competing regulation option",
+  }, builderHeaders)
+  const competingVersion = await rpc("admin_create_policy_version", {
+    p_policy_id: competingPolicy.id, p_version_label: "1.0",
+  }, builderHeaders)
+  await rpc("admin_add_policy_item", {
+    p_policy_version_id: competingVersion.id,
+    p_item_code: "competing_item",
+    p_title_ar: "Competing governed item",
+    p_sort_order: 1,
+    p_governance_mode: "regulation_required",
+    p_topic_category_id: category.id,
+    p_workflow_template_version_id: workflow.draft_version_id,
+  }, builderHeaders)
+  await rpc("admin_set_policy_scope", {
+    p_policy_version_id: competingVersion.id,
+    p_scope_type: "governance_class",
+    p_target_id: classId,
+    p_priority: 10,
+  }, builderHeaders)
+  await rpc("admin_submit_policy_for_review", {
+    p_policy_version_id: competingVersion.id,
+  }, builderHeaders)
+  await rpc("admin_approve_policy_version", {
+    p_policy_version_id: competingVersion.id,
+  }, approverHeaders)
+  await rpc("admin_activate_policy_version", {
+    p_policy_version_id: competingVersion.id,
+    p_effective_from: new Date().toISOString().slice(0, 10),
+  }, approverHeaders)
+  const competingOptions = await rpc("get_topic_regulation_options", {
+    p_governance_unit_id: unit.id,
+    p_topic_category_id: category.id,
+    p_priority: "medium",
+    p_source_type: "new",
+    p_effective_on: new Date().toISOString().slice(0, 10),
+  }, builderHeaders)
+  assert.equal(competingOptions.total, 2)
+  assert.equal(new Set(competingOptions.items.map((item) => item.selection.policy_id)).size, 2)
 
   const votingWorkflow = await rpc("admin_create_workflow_template", {
     p_code: `vote-route-${suffix}`, p_name_ar: "مسار تصويت المجلس",
@@ -338,6 +428,52 @@ try {
   await rpc("admin_activate_workflow_template_version", {
     p_workflow_template_version_id: votingWorkflow.draft_version_id,
   }, builderHeaders)
+
+  const noMatchOptions = await rpc("get_topic_regulation_options", {
+    p_governance_unit_id: unit.id,
+    p_topic_category_id: noMatchCategory.id,
+    p_priority: "medium",
+    p_source_type: "new",
+    p_effective_on: new Date().toISOString().slice(0, 10),
+  }, builderHeaders)
+  assert.equal(noMatchOptions.total, 0)
+  const noMatchException = await rpc("create_topic_exception_request", {
+    p_title_ar: "موضوع بلا لائحة مطابقة",
+    p_description: "يختبر إنشاء طلب استثناء عندما لا توجد لائحة نافذة تطابق الموضوع.",
+    p_category_id: noMatchCategory.id,
+    p_current_unit_id: unit.id,
+    p_workflow_template_version_id: votingWorkflow.draft_version_id,
+    p_reason: "لا توجد لائحة نافذة مطابقة لهذا النوع من الموضوعات.",
+    p_valid_until: new Date(Date.now() + 86_400_000).toISOString(),
+    p_priority: "medium",
+    p_source_type: "new",
+    p_title_en: null,
+    p_client_request_id: crypto.randomUUID(),
+  }, builderHeaders)
+  assert.equal(noMatchException.status, "pending")
+  assert.equal(noMatchException.routing_status, "routing_exception_pending")
+  const noMatchSummary = await rpc("get_topic_governance_summary", {
+    p_topic_id: noMatchException.topic_id,
+  }, builderHeaders)
+  assert.equal(noMatchSummary.exception.status, "pending")
+  assert.equal(noMatchSummary.exception.workflow_name_ar, "مسار تصويت المجلس")
+  const selfExceptionApproval = await rest("rpc/approve_custom_workflow", "POST", {
+    p_exception_id: noMatchException.exception_id,
+    p_approve: true,
+    p_review_comment: "Attempted self approval must fail.",
+  }, builderHeaders)
+  assert.ok(selfExceptionApproval.response.status >= 400, "the requesting user approved their own exception")
+  const approvedNoMatchException = await rpc("approve_custom_workflow", {
+    p_exception_id: noMatchException.exception_id,
+    p_approve: true,
+    p_review_comment: "Approve no-match temporary route.",
+  }, approverHeaders)
+  assert.equal(approvedNoMatchException.status, "approved")
+  const approvedNoMatchSummary = await rpc("get_topic_governance_summary", {
+    p_topic_id: noMatchException.topic_id,
+  }, builderHeaders)
+  assert.equal(approvedNoMatchSummary.exception.status, "approved")
+  assert.equal(approvedNoMatchSummary.topic.routing_status, "routing_ready")
 
   const incompleteVotingWorkflow = await rpc("admin_create_workflow_template", {
     p_code: `incomplete-vote-${suffix}`, p_name_ar: "Incomplete voting route",
@@ -366,7 +502,7 @@ try {
   const votingVersion = await rpc("admin_create_policy_version", {
     p_policy_id: votingPolicy.id, p_version_label: "1.0",
   }, builderHeaders)
-  await rpc("admin_add_policy_item", {
+  const votingPolicyItem = await rpc("admin_add_policy_item", {
     p_policy_version_id: votingVersion.id,
     p_item_code: "1.1",
     p_title_ar: "حسم الموضوع بالتصويت",
@@ -375,7 +511,7 @@ try {
     p_topic_category_id: votingCategory.id,
     p_workflow_template_version_id: votingWorkflow.draft_version_id,
   }, builderHeaders)
-  await rpc("admin_set_policy_scope", {
+  const votingPolicyScope = await rpc("admin_set_policy_scope", {
     p_policy_version_id: votingVersion.id,
     p_scope_type: "governance_class",
     p_target_id: classId,
@@ -398,7 +534,7 @@ try {
   const customRouteVersion = await rpc("admin_create_policy_version", {
     p_policy_id: customRoutePolicy.id, p_version_label: "1.0",
   }, builderHeaders)
-  await rpc("admin_add_policy_item", {
+  const customRoutePolicyItem = await rpc("admin_add_policy_item", {
     p_policy_version_id: customRouteVersion.id,
     p_item_code: "1.1",
     p_title_ar: "Custom route request",
@@ -406,7 +542,7 @@ try {
     p_governance_mode: "custom_route_allowed",
     p_topic_category_id: customRouteCategory.id,
   }, builderHeaders)
-  await rpc("admin_set_policy_scope", {
+  const customRoutePolicyScope = await rpc("admin_set_policy_scope", {
     p_policy_version_id: customRouteVersion.id,
     p_scope_type: "governance_class",
     p_target_id: classId,
@@ -422,11 +558,26 @@ try {
     p_policy_version_id: customRouteVersion.id,
     p_effective_from: new Date().toISOString().slice(0, 10),
   }, approverHeaders)
-  const customRouteTopic = await rpc("create_topic_with_workflow", {
+  const customRouteOptions = await rpc("get_topic_regulation_options", {
+    p_governance_unit_id: unit.id,
+    p_topic_category_id: customRouteCategory.id,
+    p_priority: "medium",
+    p_source_type: "new",
+    p_effective_on: new Date().toISOString().slice(0, 10),
+  }, builderHeaders)
+  assert.equal(customRouteOptions.total, 1)
+  assert.equal(customRouteOptions.items[0].selection.policy_item_id, customRoutePolicyItem.id)
+  assert.equal(customRouteOptions.items[0].selection.scope_assignment_id, customRoutePolicyScope.id)
+  assert.equal(customRouteOptions.items[0].routing_outcome, "custom_route_required")
+  const customRouteTopic = await rpc("create_topic_with_selected_regulation", {
     p_title_ar: "Custom route expiry test",
     p_description: "Exercise the expiry guard for a temporary governed route.",
     p_category_id: customRouteCategory.id,
     p_current_unit_id: unit.id,
+    p_policy_id: customRoutePolicy.id,
+    p_policy_version_id: customRouteVersion.id,
+    p_policy_item_id: customRoutePolicyItem.id,
+    p_scope_assignment_id: customRoutePolicyScope.id,
     p_client_request_id: crypto.randomUUID(),
   }, builderHeaders)
   assert.equal(customRouteTopic.routing_status, "routing_exception_pending")
@@ -480,11 +631,25 @@ try {
     { result: "no_votes", votes: [], outcome: "no_vote", workflow: "completed" },
   ]
   for (const scenario of voteScenarios) {
-    scenario.topic = await rpc("create_topic_with_workflow", {
+    const scenarioOptions = await rpc("get_topic_regulation_options", {
+      p_governance_unit_id: unit.id,
+      p_topic_category_id: votingCategory.id,
+      p_priority: "medium",
+      p_source_type: "new",
+      p_effective_on: new Date().toISOString().slice(0, 10),
+    }, builderHeaders)
+    assert.equal(scenarioOptions.total, 1)
+    assert.equal(scenarioOptions.items[0].selection.policy_item_id, votingPolicyItem.id)
+    assert.equal(scenarioOptions.items[0].selection.scope_assignment_id, votingPolicyScope.id)
+    scenario.topic = await rpc("create_topic_with_selected_regulation", {
       p_title_ar: `موضوع نتيجة ${scenario.result}`,
       p_description: `موضوع متكامل لاختبار انتقال المسار تلقائيًا عند نتيجة ${scenario.result}.`,
       p_category_id: votingCategory.id,
       p_current_unit_id: unit.id,
+      p_policy_id: votingPolicy.id,
+      p_policy_version_id: votingVersion.id,
+      p_policy_item_id: votingPolicyItem.id,
+      p_scope_assignment_id: votingPolicyScope.id,
       p_client_request_id: crypto.randomUUID(),
     }, builderHeaders)
     assert.equal(scenario.topic.routing_status, "routing_ready")
@@ -644,5 +809,15 @@ try {
   assert.equal(detail.versions[0].items.length, 1)
   console.log("Sprint 03.5 governance and four-result voting workflow HTTP flow passed")
 } finally {
-  await cleanup()
+  if (keepFixtures) {
+    console.log(JSON.stringify({
+      message: "Regulation demo fixtures retained",
+      organization_id: created.organizationId,
+      builder_email: builderEmail,
+      approver_email: approverEmail,
+      password,
+    }, null, 2))
+  } else {
+    await cleanup()
+  }
 }

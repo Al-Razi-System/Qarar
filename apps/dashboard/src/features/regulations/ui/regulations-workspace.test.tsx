@@ -195,7 +195,7 @@ describe("RegulationsWorkspace", () => {
 
   it("يستورد حزمة اللائحة ذريًا مع idempotency وتسجيل تدقيقي", () => {
     const source = readFileSync(
-      join(process.cwd(), "../supabase/migrations/20260801040000_atomic_policy_bundle_import.sql"),
+      join(process.cwd(), "../../supabase/migrations/20260801040000_atomic_policy_bundle_import.sql"),
       "utf8",
     );
 
@@ -303,7 +303,7 @@ describe("RegulationsWorkspace", () => {
   it("يدعم بيانات الملكية والمرفقات ويستخدم محرك المطابقة الفعلي", () => {
     const workspace = readFileSync(join(process.cwd(), "src/features/regulations/ui/policy-management-workspace.tsx"), "utf8");
     const designer = readFileSync(join(process.cwd(), "src/features/regulations/ui/regulations-workspace.tsx"), "utf8");
-    const migration = readFileSync(join(process.cwd(), "../supabase/migrations/20260802010000_policy_metadata_attachments_matcher.sql"), "utf8");
+    const migration = readFileSync(join(process.cwd(), "../../supabase/migrations/20260802010000_policy_metadata_attachments_matcher.sql"), "utf8");
 
     expect(workspace).toContain("p_owner_governance_unit_id");
     expect(workspace).toContain("admin_add_policy_attachment");

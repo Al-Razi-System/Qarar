@@ -4,7 +4,8 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const root = fileURLToPath(new URL("../functions/", import.meta.url))
-const allowed = new Set(["generate-minutes/index.ts"])
+// Edge Functions must use governed api_v1 contracts rather than compatibility tables/views.
+const allowed = new Set([])
 const dependencies = []
 
 async function walk(path, relative = "") {
@@ -12,8 +13,11 @@ async function walk(path, relative = "") {
     const childRelative = join(relative, entry.name).replaceAll("\\", "/")
     const child = join(path, entry.name)
     if (entry.isDirectory()) await walk(child, childRelative)
-    else if (entry.name.endsWith(".ts") && (await readFile(child, "utf8")).includes(".from(")) {
-      dependencies.push(childRelative)
+    else if (entry.name.endsWith(".ts")) {
+      const source = await readFile(child, "utf8")
+      // Supabase table access uses `.from("relation")`; do not mistake
+      // standard helpers such as Array.from(...) for database dependencies.
+      if (/\.from\s*\(\s*["'`]/.test(source)) dependencies.push(childRelative)
     }
   }
 }

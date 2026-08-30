@@ -78,29 +78,17 @@ The implemented backend is a database-centric modular monolith. Application tabl
 owned by `qarar_*` schemas, frontend RPCs are versioned in `api_v1`, and architecture registries
 make ownership testable. See [`docs/architecture/README.md`](docs/architecture/README.md).
 
-## First User Bootstrap
+## Initial Organization Administrator
 
 `supabase/seed.sql` intentionally creates only reference data. It does not create `auth.users` rows.
 
-After creating the first account through Supabase Auth, call the bootstrap RPC as that authenticated user:
+Do **not** expose `api_v1.bootstrap_current_user_profile(...)` to an authenticated browser or
+mobile client. Phase 0 makes the legacy function service-only because its former first-user behavior
+could grant system administration in a known organization.
 
-```sql
-select api_v1.bootstrap_current_user_profile(
-  p_organization_code => 'qarar-demo',
-  p_full_name_ar => 'مسؤول النظام'
-);
-```
-
-This function:
-
-- requires `auth.uid()`;
-- requires an authenticated email claim;
-- creates a matching `qarar_iam.users` profile for the current Auth user;
-- marks the first user in the organization as `is_system_admin = true`;
-- returns the existing profile if the same user already bootstrapped the same organization;
-- rejects any attempt after the organization already has a user.
-
-Later user provisioning should be implemented through an explicit admin flow, not through seed data.
+Until an approved onboarding workflow exists, provision an organization's initial administrator only
+through a controlled, audited server-side process. The service-role key remains server-only. Later
+user provisioning must use the explicit invitation and administrator flows, not seed data.
 
 ## IAM, RBAC, and SSO Governance
 
@@ -134,15 +122,20 @@ SSO setup is intentionally split:
 
 1. Configure the SAML provider in Supabase Auth using the Supabase CLI or hosted dashboard.
 2. Store the returned Supabase SSO provider id in `sso_identity_providers.supabase_sso_provider_id`.
-3. Register the verified email domains in `sso_domains`.
-4. After SSO login, call `register_current_sso_login(...)` so Qarar links the Supabase Auth identity to the correct organization, invitation, role, and unit.
+3. Register an email domain as pending. Phase 0 disables every historical SSO domain and clears its
+   former `verified_at` value because it could have been self-attested. A client cannot set
+   `verified_at` or activate a domain; complete ownership re-verification through a controlled,
+   audited server-side workflow before enabling SSO.
+4. After SSO login, call `register_current_sso_login(...)` only after the exact email domain is
+   active and has a verified ownership timestamp, so Qarar can link the Supabase Auth identity to
+   the correct organization, invitation, role, and unit.
 
 ## Design Notes
 
 - `auth.users` remains the authentication source. `qarar_iam.users` stores the Qarar application profile and organization context.
 - Every operational table added here has `organization_id` to support tenant isolation.
 - Cross-table references that carry tenant-sensitive data use composite `(id, organization_id)` constraints to prevent records from pointing to users, roles, units, categories, or topics in another organization.
-- First-user bootstrap is exposed as `api_v1.bootstrap_current_user_profile(...)`; it is limited to the first profile in an existing organization.
+- First-user bootstrap is a legacy **service-only** function pending a controlled onboarding replacement; it is never a client-facing entry point.
 - RLS is enabled on all created tables.
 - No delete policies are defined for sensitive operational tables.
 - Audit logs are append-only for authenticated users and readable only by system/governance/audit roles.
@@ -159,11 +152,10 @@ Validated locally with Supabase CLI `2.109.1`:
 - Public schema contains 10 baseline tables.
 - Public schema contains 25 RLS policies.
 - Public schema contains composite foreign keys that enforce tenant consistency on `memberships`, `topics`, `topic_status_history`, and `audit_logs`.
-- Public schema contains first-user bootstrap RPC `bootstrap_current_user_profile`.
-- First-user bootstrap RPC was tested with a local `auth.users` record and produced one `public.users` system-admin profile.
+- The legacy first-user bootstrap function is service-only; client-side onboarding is intentionally blocked pending a controlled replacement.
 - Seed data contains 1 organization, 7 roles, and 3 topic categories.
 - IAM migration `20260721000000_iam_rbac_sso.sql` was applied against the local `supabase_db_qarar` container.
-- Database test `supabase/tests/database/06_iam_rbac_sso_test.sql` passed 22/22 assertions.
+- Database test `supabase/tests/database/06_iam_rbac_sso_test.sql` passed 23/23 assertions.
 - IAM operations test `supabase/tests/database/07_iam_operations_hardening_test.sql` passed 17/17 assertions.
 - Critical IAM closure test `supabase/tests/database/08_iam_critical_closure_test.sql` passed 16/16 assertions.
 - Sprint 02 defensive and production-contract tests pass 32/32 assertions.

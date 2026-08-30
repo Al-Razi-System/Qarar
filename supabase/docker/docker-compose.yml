@@ -1,4 +1,4 @@
-﻿name: supabase
+name: supabase
 services:
   analytics:
     container_name: qarar-supabase-analytics
@@ -64,6 +64,9 @@ services:
       GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: ${MAILER_URLPATHS_EMAIL_CHANGE}
       GOTRUE_MAILER_URLPATHS_INVITE: ${MAILER_URLPATHS_INVITE}
       GOTRUE_MAILER_URLPATHS_RECOVERY: ${MAILER_URLPATHS_RECOVERY}
+      GOTRUE_MFA_TOTP_ENROLL_ENABLED: ${MFA_TOTP_ENROLL_ENABLED:-true}
+      GOTRUE_MFA_TOTP_VERIFY_ENABLED: ${MFA_TOTP_VERIFY_ENABLED:-true}
+      GOTRUE_MFA_MAX_ENROLLED_FACTORS: ${MFA_MAX_ENROLLED_FACTORS:-5}
       GOTRUE_SITE_URL: ${SITE_URL}
       GOTRUE_SMS_AUTOCONFIRM: ${ENABLE_PHONE_AUTOCONFIRM}
       GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL}
@@ -87,12 +90,6 @@ services:
     image: public.ecr.aws/supabase/gotrue:v2.192.0
     restart: unless-stopped
   db:
-    command:
-      - postgres
-      - -c
-      - config_file=/etc/postgresql/postgresql.conf
-      - -c
-      - log_min_messages=fatal
     container_name: qarar-supabase-db
     environment:
       JWT_EXP: ${JWT_EXPIRY}
@@ -144,12 +141,9 @@ services:
         source: ./volumes/db/jwt.sql
         target: /docker-entrypoint-initdb.d/init-scripts/99-jwt.sql
         type: bind
-      - bind:
-          create_host_path: true
-          selinux: Z
-        source: ./volumes/db/data
+      - source: qarar-db-data
         target: /var/lib/postgresql/data
-        type: bind
+        type: volume
       - bind:
           create_host_path: true
           selinux: Z
@@ -181,13 +175,16 @@ services:
       db:
         condition: service_healthy
         required: true
+      storage:
+        condition: service_started
+        required: true
     environment:
       PGDATABASE: ${POSTGRES_DB}
       PGHOST: db
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGPORT: ${POSTGRES_PORT}
       PGUSER: supabase_admin
-    image: public.ecr.aws/docker/library/postgres:17-alpine
+    image: public.ecr.aws/supabase/postgres:17.6.1.139
     restart: "no"
     volumes:
       - bind:
@@ -222,6 +219,9 @@ services:
         condition: service_healthy
         required: true
     environment:
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      QARAR_ACTIVATION_TOKEN_SECRET: ${QARAR_ACTIVATION_TOKEN_SECRET:-}
       JWT_SECRET: ${JWT_SECRET}
       SMTP_FROM: ${SMTP_SENDER_NAME} <${SMTP_ADMIN_EMAIL}>
       SMTP_HOST: ${SMTP_HOST}
@@ -275,17 +275,17 @@ services:
     image: darthsim/imgproxy:v3.30.1
     restart: unless-stopped
     volumes:
-      - bind:
-          create_host_path: true
-          selinux: z
-        source: ./volumes/storage
-        target: /var/lib/storage
-        type: bind
+      # Docker-managed storage supports the extended attributes required by
+      # storage-api. Windows bind mounts do not provide them reliably.
+      - qarar-storage-data:/var/lib/storage
   kong:
     container_name: qarar-supabase-kong
     depends_on:
       db-migrate:
         condition: service_completed_successfully
+        required: true
+      login-rate-limit-redis:
+        condition: service_healthy
         required: true
       studio:
         condition: service_healthy
@@ -303,9 +303,10 @@ services:
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
-      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction,post-function
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction,post-function,rate-limiting
       KONG_PROXY_ACCESS_LOG: /dev/stdout combined
       KONG_ROUTER_FLAVOR: expressions
+      QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD: ${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}
       SERVICE_ROLE_KEY_ASYMMETRIC: ${SERVICE_ROLE_KEY_ASYMMETRIC:-}
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
@@ -345,6 +346,46 @@ services:
         source: ./volumes/api/kong-entrypoint.sh
         target: /home/kong/kong-entrypoint.sh
         type: bind
+  # A shared, password-protected counter store for the dashboard and Kong.
+  # Counters have Redis TTLs, while AOF preserves a short active window across
+  # a Redis restart; it is not a business-data store and exposes no host port.
+  login-rate-limit-redis:
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --save
+      - ""
+      - --dir
+      - /data
+      - --bind
+      - 0.0.0.0
+      - --protected-mode
+      - "yes"
+      - --requirepass
+      - ${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}
+    environment:
+      REDISCLI_AUTH: ${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}
+    healthcheck:
+      interval: 5s
+      retries: 5
+      test:
+        - CMD-SHELL
+        - redis-cli --no-auth-warning ping | grep -qx PONG
+      timeout: 3s
+    image: redis:7.4.7-alpine
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    volumes:
+      - source: qarar-login-rate-limit-redis-data
+        target: /data
+        type: volume
   mail:
     container_name: qarar-supabase-mail
     environment:
@@ -425,9 +466,6 @@ services:
       db:
         condition: service_healthy
         required: true
-      db-migrate:
-        condition: service_completed_successfully
-        required: true
     environment:
       PGRST_ADMIN_SERVER_HOST: localhost
       PGRST_ADMIN_SERVER_PORT: 3001
@@ -455,9 +493,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-        required: true
-      db-migrate:
-        condition: service_completed_successfully
         required: true
       imgproxy:
         condition: service_started
@@ -498,12 +533,8 @@ services:
     image: public.ecr.aws/supabase/storage-api:v1.62.5
     restart: unless-stopped
     volumes:
-      - bind:
-          create_host_path: true
-          selinux: z
-        source: ./volumes/storage
-        target: /var/lib/storage
-        type: bind
+      # Keep image proxy and the storage API on the same persistent volume.
+      - qarar-storage-data:/var/lib/storage
   studio:
     container_name: qarar-supabase-studio
     depends_on:
@@ -592,6 +623,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_PORT: ${POSTGRES_PORT}
       REGION: local
+      RLIMIT_NOFILE: "10000"
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       VAULT_ENC_KEY: ${VAULT_ENC_KEY}
     healthcheck:
@@ -638,7 +670,7 @@ services:
         - CMD-SHELL
         - wget --no-verbose --tries=1 --spider http://vector:9001/health
       timeout: 5s
-    image: timberio/vector:0.53.0-alpine
+    image: public.ecr.aws/supabase/vector:0.53.0-alpine
     restart: unless-stopped
     security_opt:
       - label=disable
@@ -659,3 +691,6 @@ services:
 volumes:
   db-config: null
   deno-cache: null
+  qarar-db-data: null
+  qarar-login-rate-limit-redis-data: null
+  qarar-storage-data: null

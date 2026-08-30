@@ -85,6 +85,10 @@ begin
     v_volatility:=case f.provolatile when 'i' then 'immutable' when 's' then 'stable' else 'volatile' end;
     v_sql:=case when f.proretset then format('select * from %s',v_call)
       else format('select %s',v_call) end;
+    -- Legacy facade functions can share the same signature while returning a
+    -- different type. Recreate them from the registry-backed contract.
+    execute format('drop function if exists api_v1.%I(%s)',
+      c.contract_name,c.identity_arguments);
     execute format(
       'create or replace function api_v1.%I(%s) returns %s language sql %s security definer set search_path=pg_catalog as %L',
       c.contract_name,v_arguments,v_result,v_volatility,v_sql

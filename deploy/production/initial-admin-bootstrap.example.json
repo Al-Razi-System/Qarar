@@ -1,0 +1,11 @@
+{
+  "organization_code": "university_a",
+  "auth_user_id": "00000000-0000-4000-8000-000000000000",
+  "email": "first.admin@university.example",
+  "full_name_ar": "المدير الأول",
+  "full_name_en": "First Administrator",
+  "employee_no": "EMP-001",
+  "mobile": "+966500000000",
+  "job_title": "Platform Administrator",
+  "approval_reference": "CHG-20260816-001"
+}

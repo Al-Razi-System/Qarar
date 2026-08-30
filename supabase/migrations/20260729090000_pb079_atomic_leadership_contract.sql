@@ -55,7 +55,7 @@ alter function qarar_iam.admin_assign_council_leadership_pair(uuid,uuid,uuid,dat
 revoke all on function qarar_iam.admin_assign_council_leadership_pair(uuid,uuid,uuid,date,text,timestamptz)
  from public,anon,authenticated,service_role;
 
-create function api_v1.admin_assign_council_leadership(
+create or replace function api_v1.admin_assign_council_leadership(
  p_council_id uuid,p_chair_user_id uuid,p_rapporteur_user_id uuid,
  p_effective_date date,p_reason text,p_expected_updated_at timestamptz
 )returns jsonb language sql volatile security definer set search_path=pg_catalog as $$

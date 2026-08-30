@@ -5,14 +5,19 @@
 | Function | Purpose | Auth |
 |---|---|---|
 | `iam-admin` | User creation, status/lock controls, session revocation, invitations, password recovery | Required; permission checked |
-| `generate-minutes` | Generate a meeting-minutes draft | Required through caller client |
+| `generate-minutes` | Generate an AI-assisted meeting-minutes draft | Required; runtime JWT verification and defensive caller verification |
 
 Invoke from Flutter:
 
 ```dart
 final response = await supabase.functions.invoke(
   'iam-admin',
-  body: {'action': 'create_user', 'email': email, 'full_name_ar': name},
+  body: {
+    'action': 'create_user',
+    'email': email,
+    'full_name_ar': name,
+    'temporary_password': temporaryPassword,
+  },
 );
 ```
 
@@ -27,25 +32,23 @@ are documented in [02-users-admin.md](./02-users-admin.md); session behavior is 
 
 ## Evidence Storage
 
-The `evidence-files` bucket is private. Use the authenticated Storage client so bucket policies and
-tenant ownership are applied.
+The production bucket is `qarar-evidence` and is private. Browser and mobile clients **must not**
+write to this bucket directly: a direct Storage upload would bypass the Dashboard BFF's content
+signature checks and its mandatory pre-storage malware scan.
 
-```dart
-final path = '$organizationId/topics/$topicId/${const Uuid().v4()}-$safeName';
-await supabase.storage.from('evidence-files').upload(path, file);
-```
+For current administrative attachments, submit multipart data to the authenticated BFF route:
 
-Store the resulting object path in the relevant application record. Do not store signed URLs;
-generate short-lived signed URLs when rendering or downloading:
+- `POST /api/admin/topics/upload`
+- `POST /api/admin/regulations/upload`
 
-```dart
-final url = await supabase.storage
-    .from('evidence-files')
-    .createSignedUrl(objectPath, 300);
-```
+The BFF authorizes the target entity, limits the request to 25 MiB, verifies the actual file type,
+scans it over its private ClamAV protocol, and only then writes a generated object path. A malware
+verdict returns `422`; an unavailable scanner returns `503` and does not store the file. Do not
+retry a `503` by calling Storage directly.
 
-Validate extension, MIME type, and file size in the client for usability, while treating backend
-bucket limits and policies as authoritative. Never use a public bucket for governance evidence.
+Downloads also go through the authenticated BFF routes and use `Content-Disposition: attachment`,
+`X-Content-Type-Options: nosniff`, and `Cache-Control: private, no-store`. Never use a public bucket
+or persist signed URLs for governance evidence. See the [upload malware-scanning runbook](../../../docs/UPLOAD_MALWARE_SCANNING_RUNBOOK.md) for production deployment requirements.
 
 ## Operational Errors
 

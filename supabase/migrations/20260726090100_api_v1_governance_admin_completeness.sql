@@ -32,12 +32,15 @@ on conflict(function_oid) do update set function_name=excluded.function_name,
 do $$
 declare c record;f record;v_arguments text;v_result text;v_call_arguments text;v_call text;v_sql text;
 begin
-  for c in select * from qarar_architecture.api_contract_registry
-  where api_version='v1' and contract_name in(
+  for c in select r.* from qarar_architecture.api_contract_registry r
+  where r.api_version='v1' and r.contract_name in(
     'admin_search_policies','admin_get_policy_detail','admin_update_policy',
     'admin_update_policy_item','admin_remove_policy_item','admin_remove_policy_scope',
     'admin_create_workflow_version','admin_update_workflow_step',
     'admin_remove_workflow_step','admin_activate_workflow_template_version')
+    and exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname=r.implementation_schema and p.proname=r.implementation_name
+        and pg_get_function_identity_arguments(p.oid)=r.identity_arguments)
   loop
     select p.* into f from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname=c.implementation_schema and p.proname=c.implementation_name
@@ -49,6 +52,7 @@ begin
       coalesce(v_call_arguments,''));
     v_sql:=case when f.proretset then format('select * from %s',v_call)
       else format('select %s',v_call) end;
+    execute format('drop function if exists api_v1.%I(%s)',c.contract_name,c.identity_arguments);
     execute format(
       'create or replace function api_v1.%I(%s) returns %s language sql %s security definer set search_path=pg_catalog as %L',
       c.contract_name,v_arguments,v_result,

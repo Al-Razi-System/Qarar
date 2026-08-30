@@ -98,6 +98,63 @@ services:
     plugins:
       - name: cors
 
+  # Password grants are reachable directly through the API gateway as well as
+  # through the dashboard BFF. Keep a shared Redis-backed ceiling here so a
+  # caller cannot bypass the dashboard's per-email/per-IP controls by calling
+  # GoTrue through Kong.
+  - name: auth-v1-token-rate-limited
+    _comment: 'Auth: /auth/v1/token -> http://auth:9999/token with shared rate limit'
+    url: http://auth:9999/token
+    routes:
+      - name: auth-v1-token-rate-limited
+        # Only password grants belong to the interactive-login control. Refresh
+        # grants are handled by the normal Auth route so a dashboard session
+        # renewal never shares this password-attempt budget.
+        expression: 'http.method == "POST" && http.path == "/auth/v1/token" && any(http.queries.grant_type) == "password"'
+        priority: 100
+        strip_path: true
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: false
+      - name: request-transformer
+        config:
+          add:
+            headers:
+              - "Authorization: $LUA_AUTH_EXPR"
+          replace:
+            headers:
+              - "Authorization: $LUA_AUTH_EXPR"
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon
+      - name: rate-limiting
+        config:
+          # DB-less Kong cannot use the cluster policy. Redis is shared by all
+          # dashboard/Kong replicas; -1 disables periodic batching and keeps
+          # increments synchronous, so replicas do not diverge locally.
+          policy: redis
+          sync_rate: -1
+          fault_tolerant: false
+          hide_client_headers: true
+          # The trusted reverse proxy writes this header for both the public
+          # dashboard and API paths. The dashboard forwards only a value it
+          # has validated, so users do not collapse into one container IP.
+          limit_by: header
+          header_name: X-Qarar-Client-IP
+          minute: 10
+          hour: 60
+          redis:
+            host: login-rate-limit-redis
+            port: 6379
+            password: $QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD
+            database: 0
+            timeout: 1000
+
   ## Secure Auth routes
   - name: auth-v1
     _comment: 'Auth: /auth/v1/* -> http://auth:9999/*'

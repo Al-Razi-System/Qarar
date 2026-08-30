@@ -5,11 +5,12 @@ import { readJsonObject } from "@/shared/security/json-body";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
 
 export async function POST(request: Request) {
+  const originError = rejectUntrustedMutation(request);
+  if (originError) return originError;
+
   if (process.env.QARAR_SSO_ENABLED !== "true") {
     return NextResponse.json({ message: "الدخول الموحد غير متاح في هذا الإصدار." }, { status: 404 });
   }
-  const originError = rejectUntrustedMutation(request);
-  if (originError) return originError;
 
   const parsedBody = await readJsonObject(request);
   if (!parsedBody.ok) return parsedBody.response;

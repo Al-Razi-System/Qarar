@@ -35,10 +35,13 @@ insert into public.permissions(id,organization_id,code,module,action,context_sco
 ('44000000-0000-0000-0000-000000000049','44000000-0000-0000-0000-000000000001','attendance.check_in','attendance','check_in','governance_unit','Self check-in'),
 ('44000000-0000-0000-0000-000000000050','44000000-0000-0000-0000-000000000001','attendance.verify','attendance','verify','governance_unit','Verify attendance'),
 ('44000000-0000-0000-0000-000000000051','44000000-0000-0000-0000-000000000001','attendance.override','attendance','override','governance_unit','Override attendance'),
-('44000000-0000-0000-0000-000000000052','44000000-0000-0000-0000-000000000001','attendance.lock','attendance','lock','governance_unit','Lock attendance');
+('44000000-0000-0000-0000-000000000052','44000000-0000-0000-0000-000000000001','attendance.lock','attendance','lock','governance_unit','Lock attendance'),
+('44000000-0000-0000-0000-000000000053','44000000-0000-0000-0000-000000000001','topics.read','topics','read','governance_unit','Read governed topics');
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select '44000000-0000-0000-0000-000000000001','44000000-0000-0000-0000-000000000031',id
-from public.permissions where organization_id='44000000-0000-0000-0000-000000000001';
+from public.permissions
+where organization_id='44000000-0000-0000-0000-000000000001'
+  and left(id::text,8)='44000000';
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select '44000000-0000-0000-0000-000000000001','44000000-0000-0000-0000-000000000032',id
 from public.permissions where id in(

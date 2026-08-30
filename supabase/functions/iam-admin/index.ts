@@ -1,10 +1,13 @@
 import { createClient } from "@supabase/supabase-js"
 import nodemailer from "nodemailer"
 import { createIamAdminHandler } from "./handler.ts"
+import { parseAllowedOrigins } from "./security.ts"
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? ""
 const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? ""
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+const isProduction = Deno.env.get("NODE_ENV") === "production"
+const originConfiguration = parseAllowedOrigins(Deno.env.get("ALLOWED_ORIGINS"), { requireHttps: isProduction })
 
 const admin = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -25,6 +28,10 @@ const handler = createIamAdminHandler({
     auth: { persistSession: false, autoRefreshToken: false },
   }),
   admin,
+  allowedOrigins: originConfiguration.allowedOrigins,
+  originConfigurationValid: originConfiguration.valid,
+  isProduction,
+  activationTokenSecret: Deno.env.get("QARAR_ACTIVATION_TOKEN_SECRET") ?? "",
   sendEmail: async (message) => {
     await mailer.sendMail({ from: Deno.env.get("SMTP_FROM") ?? "Qarar <noreply@qarar.local>", ...message })
   },

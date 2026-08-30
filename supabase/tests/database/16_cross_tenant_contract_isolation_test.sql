@@ -47,6 +47,8 @@ insert into public.agenda_items(
  '46000000-0000-0000-0000-000000000041','46000000-0000-0000-0000-000000000031',1
 );
 
+-- This fixture tests tenant isolation, not the voting-readiness trigger.
+set local session_replication_role = replica;
 insert into public.voting_rounds(
  id,organization_id,meeting_id,agenda_item_id,round_number,eligible_voter_count,
  opened_by_user_id
@@ -55,6 +57,7 @@ insert into public.voting_rounds(
  '46000000-0000-0000-0000-000000000041','46000000-0000-0000-0000-000000000051',
  1,0,'46000000-0000-0000-0000-000000000012'
 );
+set local session_replication_role = origin;
 
 insert into public.audit_logs(
  id,organization_id,actor_user_id,action,entity_type,entity_id
@@ -80,7 +83,7 @@ select throws_ok(
 
 select throws_ok(
  $$select api_v1.get_meeting_detail('46000000-0000-0000-0000-000000000041')$$,
- 'P0002','meeting not found',
+ 'P0002','الاجتماع غير موجود.',
  'Meetings hides a foreign-tenant meeting');
 
 select throws_ok(

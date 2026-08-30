@@ -2,6 +2,10 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MeetingsWorkspace } from "./meetings/ui/meetings-workspace";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
 describe("RTL and accessibility contracts", () => {
   it("exposes named controls and keeps the document RTL-ready", () => {
     document.documentElement.dir = "rtl";

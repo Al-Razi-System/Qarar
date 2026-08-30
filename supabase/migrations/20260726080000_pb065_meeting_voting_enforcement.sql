@@ -1,6 +1,6 @@
 begin;
 
-alter table qarar_topics.topics drop constraint topics_governance_source_check;
+alter table qarar_topics.topics drop constraint if exists topics_governance_source_check;
 alter table qarar_topics.topics add constraint topics_governance_source_check
   check(governance_source is null or governance_source in('regulated','custom','exception','legacy'));
 alter table qarar_topics.topics alter column governance_source set default 'legacy';

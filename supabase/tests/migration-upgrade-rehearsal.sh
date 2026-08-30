@@ -2,6 +2,25 @@
 set -eu
 
 compose="docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml"
+upgrade_cutoff="20260724040000"
+
+is_upgrade_migration() {
+  version=$1
+  [ "$(printf '%s\n%s\n' "$version" "$upgrade_cutoff" | sort | head -n 1)" = "$upgrade_cutoff" ]
+}
+
+apply_migration() {
+  migration=$1
+  version=$(basename "$migration" .sql)
+  checksum=$(sha256sum "$migration" | awk '{print $1}')
+  {
+    cat "$migration"
+    printf "\ninsert into qarar_internal.applied_migrations(version,checksum_sha256) values ('%s','%s');\n" \
+      "$version" "$checksum"
+  } | docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
+    -v ON_ERROR_STOP=1 --single-transaction
+}
+
 attempt=0
 until $compose pull db; do
   attempt=$((attempt + 1))
@@ -37,8 +56,11 @@ docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres -v ON_ERROR_
 create schema if not exists qarar_internal;
 create table if not exists qarar_internal.applied_migrations(
  version text primary key,
+ checksum_sha256 text,
  applied_at timestamptz not null default now()
 );
+alter table qarar_internal.applied_migrations
+ add column if not exists checksum_sha256 text;
 -- The database image initializes auth.users, while GoTrue normally creates
 -- auth.sessions on first start. The upgrade rehearsal runs without GoTrue so
 -- project migrations cannot be applied accidentally by its Compose dependency.
@@ -53,17 +75,34 @@ returns jsonb language sql stable as $$
  select coalesce(
   nullif(current_setting('request.jwt.claim',true),''),
   nullif(current_setting('request.jwt.claims',true),''),
-  '{}'
+ '{}'
  )::jsonb
 $$;
+
+-- Storage API normally creates these tables. This rehearsal deliberately
+-- starts only PostgreSQL, so provide the smallest compatible surface needed
+-- by project migrations without starting the rest of the Compose stack.
+create schema if not exists storage;
+create table if not exists storage.buckets(
+ id text primary key,
+ name text not null,
+ public boolean not null default false,
+ file_size_limit bigint,
+ allowed_mime_types text[]
+);
+create table if not exists storage.objects(
+ id uuid primary key default gen_random_uuid(),
+ bucket_id text not null references storage.buckets(id),
+ name text not null,
+ metadata jsonb
+);
 SQL
 
 for migration in $(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
-  case "$(basename "$migration")" in
-    20260724040*|20260726*|20260728*|20260729*) continue ;;
-  esac
-  docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
-    -v ON_ERROR_STOP=1 --single-transaction < "$migration"
+  version=$(basename "$migration" .sql)
+  if ! is_upgrade_migration "$version"; then
+    apply_migration "$migration"
+  fi
 done
 
 docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 <<'SQL'
@@ -88,24 +127,11 @@ values('91000000-0000-0000-0000-000000000031',
  '91000000-0000-0000-0000-000000000011','new');
 SQL
 
-for migration in $(find supabase/migrations -maxdepth 1 -type f -name '20260724040*.sql' | sort); do
-  docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
-    -v ON_ERROR_STOP=1 --single-transaction < "$migration"
-done
-
-for migration in $(find supabase/migrations -maxdepth 1 -type f -name '20260726*.sql' | sort); do
-  docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
-    -v ON_ERROR_STOP=1 --single-transaction < "$migration"
-done
-
-for migration in $(find supabase/migrations -maxdepth 1 -type f -name '20260728*.sql' | sort); do
-  docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
-    -v ON_ERROR_STOP=1 --single-transaction < "$migration"
-done
-
-for migration in $(find supabase/migrations -maxdepth 1 -type f -name '20260729*.sql' | sort); do
-  docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
-    -v ON_ERROR_STOP=1 --single-transaction < "$migration"
+for migration in $(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+  version=$(basename "$migration" .sql)
+  if is_upgrade_migration "$version"; then
+    apply_migration "$migration"
+  fi
 done
 
 docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres -v ON_ERROR_STOP=1 <<'SQL'
