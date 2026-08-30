@@ -5,7 +5,7 @@ import { isJsonObject, readJsonObject } from "@/shared/security/json-body";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
 
 const contracts = new Set([
-  "search_meetings", "create_meeting", "get_meeting_detail", "update_meeting",
+  "search_meetings", "create_meeting", "get_meeting_detail", "get_completed_meeting_record", "update_meeting",
   "transition_meeting", "get_sprint02_form_options",
   "admin_list_meeting_types", "admin_create_meeting_type", "admin_update_meeting_type",
   "search_eligible_agenda_topics", "add_agenda_item", "remove_agenda_item", "reorder_agenda_items",

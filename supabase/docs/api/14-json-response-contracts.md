@@ -168,6 +168,7 @@ AgendaItem = {
 | `get_sprint02_form_options` | `{meeting_types:Option[],meeting_units:UnitOption[],referral_units:UnitOption[],location_types:string[]}` |
 | `search_meetings` | `Page<MeetingSummary>` |
 | `get_meeting_detail` | `Meeting row + {governance_unit:UnitOption,meeting_type:Option,agenda_items:AgendaItem[],status_history:MeetingStatusHistory[]}` |
+| `get_completed_meeting_record` | `{meeting_id,status,quorum,attendance:{eligible_count,present_count,absent_count,excused_count,records[]},agenda_items:[{topic,discussion_notes,voting_rounds[],decisions[]}],minutes:{approvals[]}?}` |
 | `create_meeting` | `{id,meeting_no,status,idempotent_replay}` |
 | `update_meeting` | Updated meeting detail |
 | `transition_meeting` | `{id,meeting_no,previous_status,status}` |

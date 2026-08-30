@@ -40,6 +40,11 @@ plus `p_limit` (1-100) and `p_offset`. It returns `{items,total,limit,offset}`.
 ordered agenda items with topic summaries, `voting_status` and frozen `voting_result`, and
 chronological `status_history`.
 
+`get_completed_meeting_record` takes `{"p_meeting_id":"<uuid>"}` for a closed or archived
+meeting. It returns one governed read model containing the final quorum snapshot, attendance totals
+and named records, ordered agenda topics with discussion notes, voting rounds and decisions, plus
+the approved minutes and approval/signature statuses.
+
 ## Update Meeting
 
 Permission: `meetings.manage`. Allowed only in `draft` or `scheduled`.

@@ -13,6 +13,7 @@ import {
   type MeetingMinutes, type MeetingReadiness, type MinuteApproval, type SignatureStrokes,
 } from "../model/meeting";
 import { MeetingAgendaPanel } from "./meeting-agenda-panel";
+import { CompletedMeetingSummary } from "./completed-meeting-summary";
 import { MeetingMinutesWorkspace } from "./meeting-minutes-workspace";
 
 type Notice = { kind: "success" | "error"; text: string };
@@ -130,7 +131,7 @@ export function MeetingsWorkspace() {
           setNotice({ kind: "error", text: error instanceof Error ? `تعذر فحص جاهزية الاجتماع: ${error.message}` : "تعذر فحص جاهزية الاجتماع." });
         }
       } else setReadiness(null);
-      if (["waiting_for_minutes", "waiting_for_approval", "closed"].includes(detail.status)) {
+      if (["waiting_for_minutes", "waiting_for_approval", "closed", "archived"].includes(detail.status)) {
         await loadMinutes(meetingId);
       } else {
         setMinutes(null); setMinutesText("");
@@ -485,7 +486,7 @@ export function MeetingsWorkspace() {
                 </div>
               </div>
 
-              <MeetingAgendaPanel
+              {["closed", "archived"].includes(selected.status) ? <CompletedMeetingSummary meeting={selected} /> : <MeetingAgendaPanel
                 items={selected.agenda_items ?? []}
                 editable={Boolean(selected.capabilities?.can_manage_agenda)}
                 busy={detailLoading}
@@ -493,17 +494,17 @@ export function MeetingsWorkspace() {
                 onAdd={() => void openAgendaModal()}
                 onMove={(index, direction) => void moveAgendaItem(index, direction)}
                 onRemove={(id) => void removeAgendaItem(id)}
-              />
+              />}
 
               {readiness && ["draft","scheduled","ready_to_start"].includes(selected.status) && <div className="p-5"><h3 className="mb-3 text-xs font-black text-[#0a1330]">جاهزية الاجتماع</h3><div className="grid gap-2 sm:grid-cols-2">{readiness.checks.map((check) => <div key={check.code} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-[10px] font-bold ${check.complete ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}><span className={`grid h-5 w-5 place-items-center rounded-full ${check.complete ? "bg-emerald-600 text-white" : "bg-amber-400 text-white"}`}>{check.complete ? "✓" : "!"}</span><span>{check.label}{typeof check.count === "number" ? ` (${check.count})` : ""}</span></div>)}</div></div>}
 
-              {(["waiting_for_minutes", "waiting_for_approval", "closed"].includes(selected.status)) && (
+              {(["waiting_for_minutes", "waiting_for_approval", "closed", "archived"].includes(selected.status)) && (
                 <div className="p-5"><MeetingMinutesWorkspace meeting={selected} minutes={minutes} text={minutesText} loading={minutesLoading} onTextChange={setMinutesText} onGenerate={() => void generateMinutesDraft()} onSave={() => void saveMinutesDraft()} onSubmit={() => void submitMinutes()} onSign={signMinutes} onReturn={returnMinutes} /></div>
               )}
 
               {/* Transition Actions */}
               <div className="flex flex-wrap gap-2 p-5">
-                {(["waiting_for_minutes", "waiting_for_approval", "closed"].includes(selected.status)) && <Link href={`/admin/meetings/${selected.id}/minutes`} className="flex items-center gap-1.5 rounded-xl bg-[#0877d6] px-4 py-2.5 text-[11px] font-black text-white shadow-[0_7px_18px_rgba(8,119,214,.2)]"><FileText size={14} />فتح مساحة المحضر والمصادقات</Link>}
+                {(["waiting_for_minutes", "waiting_for_approval", "closed", "archived"].includes(selected.status)) && <Link href={`/admin/meetings/${selected.id}/minutes`} className="flex items-center gap-1.5 rounded-xl bg-[#0877d6] px-4 py-2.5 text-[11px] font-black text-white shadow-[0_7px_18px_rgba(8,119,214,.2)]"><FileText size={14} />فتح مساحة المحضر والمصادقات</Link>}
                 {selected.capabilities?.can_schedule && <button onClick={() => transitionMeeting("scheduled")} className="flex items-center gap-1.5 rounded-xl bg-[#0066cc] px-3 py-2 text-[11px] font-bold text-white"><Play size={14} /> جدولة</button>}
                 {selected.status === "scheduled" && <>{selected.capabilities?.can_send_invitations && <button onClick={() => void sendInvitations()} disabled={!readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "تجهيز دعوات أعضاء المجلس"} className="flex items-center gap-1.5 rounded-xl border border-[#bfd5e8] px-3 py-2 text-[11px] font-bold text-[#0066cc] disabled:opacity-40"><Users size={14} /> تجهيز الدعوات</button>}{selected.capabilities?.can_prepare_session && <button onClick={() => transitionMeeting("ready_to_start")} disabled={!readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "قفل التحضير وتجهيز الجلسة"} className="flex items-center gap-1.5 rounded-xl bg-[#f28c28] px-3 py-2 text-[11px] font-bold text-white disabled:bg-[#a9b6c5]"><Users size={14} /> تجهيز الجلسة</button>}</>}
                 {selected.capabilities?.can_start_session && <button onClick={() => void openLiveSession()} className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white"><Play size={14} /> فتح الجلسة الحية</button>}
