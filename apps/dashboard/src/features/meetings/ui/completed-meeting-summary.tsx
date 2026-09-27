@@ -3,7 +3,8 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import { CheckCircle2, FileCheck2, LoaderCircle, UserCheck, UserMinus, Users, Vote } from "lucide-react";
 import { meetingRpc } from "../api/meetings-client";
-import type { MeetingDetail } from "../model/meeting";
+import type { MeetingDetail, MeetingTopicAttachment } from "../model/meeting";
+import { TopicAttachmentsPanel } from "./topic-attachments-panel";
 
 type CompletedMeetingData = {
   attendance: {
@@ -19,7 +20,7 @@ type CompletedMeetingData = {
     agenda_order: number;
     agenda_status: string;
     discussion_notes: string | null;
-    topic: { topic_no: string; title_ar: string } | null;
+    topic: { id: string; topic_no: string; title_ar: string } | null;
     voting_rounds: Array<{ id: string; status: string; result: string | null; approve_count: number; reject_count: number; abstain_count: number }>;
     decisions: Array<{ id: string; decision_no: string; decision_status: string; decision_text: string }>;
   }>;
@@ -49,7 +50,7 @@ const voteLabels: Record<string, string> = {
   no_vote: "دون تصويت",
 };
 
-export function CompletedMeetingSummary({ meeting }: { meeting: MeetingDetail }) {
+export function CompletedMeetingSummary({ meeting, attachments }: { meeting: MeetingDetail; attachments: MeetingTopicAttachment[] }) {
   const [data, setData] = useState<CompletedMeetingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +108,7 @@ export function CompletedMeetingSummary({ meeting }: { meeting: MeetingDetail })
           return <div key={item.id} className="space-y-3 p-4">
             <div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#e5f2ff] text-[11px] font-black text-[#0877d6]">{item.agenda_order}</span><div className="min-w-0 flex-1"><strong className="block text-xs leading-5 text-[#142d47]">{item.topic?.title_ar ?? "موضوع الاجتماع"}</strong><p className="mt-0.5 text-[9px] text-[#7a8b9d]">{item.topic?.topic_no ?? "—"} · {agendaLabels[item.agenda_status ?? "pending"] ?? item.agenda_status}</p></div></div>
             {item.discussion_notes && <p className="rounded-xl bg-[#f7fafc] px-3 py-2 text-[10px] leading-5 text-[#536a81]"><strong className="text-[#27445f]">ملخص المناقشة: </strong>{item.discussion_notes}</p>}
+            {item.topic?.id && <TopicAttachmentsPanel meetingId={meeting.id} attachments={attachments.filter((attachment) => attachment.topic_id === item.topic?.id)} compact />}
             {finalRound && <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-[#e2eaf2] p-2 text-center"><VoteStat label="النتيجة" value={voteLabels[finalRound.result ?? ""] ?? finalRound.result ?? "—"} /><VoteStat label="موافق" value={finalRound.approve_count ?? 0} /><VoteStat label="غير موافق" value={finalRound.reject_count ?? 0} /><VoteStat label="ممتنع" value={finalRound.abstain_count ?? 0} /></div>}
             {decision && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3"><div className="flex items-center gap-1.5 text-[9px] font-black text-emerald-800"><CheckCircle2 size={13} />{decision.decision_no} · {decision.decision_status}</div><p className="mt-1.5 text-[10px] leading-5 text-emerald-900">{decision.decision_text}</p></div>}
           </div>;

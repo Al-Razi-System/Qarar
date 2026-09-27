@@ -23,7 +23,7 @@ export type AgendaDiscussionItem = {
   workflow_step_name_ar?: string | null;
   requires_voting?: boolean;
   voting_available_now?: boolean;
-  topic?: { title_ar: string };
+  topic?: { id: string; title_ar: string };
 };
 
 export type VotingRound = {

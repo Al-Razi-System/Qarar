@@ -1,0 +1,60 @@
+services:
+  dashboard:
+    build:
+      context: ./apps/dashboard
+      dockerfile: Dockerfile
+    container_name: qarar-dashboard
+    environment:
+      APP_ORIGIN: https://qarar.prideidea.com
+      APP_ORIGIN_ALIASES: https://qrar.prideidea.com
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: production
+      PORT: 3000
+      QARAR_SUPABASE_ANON_KEY: ${ANON_KEY}
+      QARAR_SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      QARAR_SUPABASE_URL: http://qarar-supabase-kong:8000
+      QARAR_LOGIN_RATE_LIMIT_CLIENT_IP_HEADER: x-qarar-client-ip
+      QARAR_LOGIN_RATE_LIMIT_HMAC_SECRET: ${QARAR_LOGIN_RATE_LIMIT_HMAC_SECRET}
+      QARAR_LOGIN_RATE_LIMIT_REDIS_HOST: qarar-login-rate-limit-redis
+      QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD: ${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}
+      QARAR_LOGIN_RATE_LIMIT_REDIS_PORT: 6379
+    networks:
+      - fateen_net
+      - supabase_default
+    restart: unless-stopped
+    depends_on:
+      login-rate-limit-redis:
+        condition: service_healthy
+
+  login-rate-limit-redis:
+    image: redis:7-alpine
+    container_name: qarar-login-rate-limit-redis
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - redis-cli -a "$${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}" ping | grep PONG
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    environment:
+      QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD: ${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}
+    networks:
+      - fateen_net
+    restart: unless-stopped
+    volumes:
+      - login-rate-limit-data:/data
+
+networks:
+  fateen_net:
+    external: true
+  supabase_default:
+    external: true
+
+volumes:
+  login-rate-limit-data:

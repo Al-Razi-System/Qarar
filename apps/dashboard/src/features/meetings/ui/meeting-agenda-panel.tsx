@@ -1,10 +1,14 @@
 import { ArrowDown, ArrowUp, ClipboardList, Plus, Sparkles, Trash2 } from "lucide-react";
-import type { AgendaItem } from "../model/meeting";
+import Link from "next/link";
+import type { AgendaItem, MeetingTopicAttachment } from "../model/meeting";
+import { TopicAttachmentsPanel } from "./topic-attachments-panel";
 
 const priorityLabels: Record<string, string> = { low: "منخفضة", medium: "متوسطة", high: "عالية", urgent: "عاجلة" };
 
-export function MeetingAgendaPanel({ items, editable, busy, eligibleCount, onAdd, onMove, onRemove }: {
+export function MeetingAgendaPanel({ meetingId, items, attachments, editable, busy, eligibleCount, onAdd, onMove, onRemove }: {
+  meetingId: string;
   items: AgendaItem[];
+  attachments: MeetingTopicAttachment[];
   editable: boolean;
   busy: boolean;
   eligibleCount: number | null;
@@ -46,6 +50,8 @@ export function MeetingAgendaPanel({ items, editable, busy, eligibleCount, onAdd
               {item.is_exception && <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-800">إدراج استثنائي</span>}
             </div>
             {item.topic?.submitted_by_name_ar && <p className="mt-2 text-[10px] text-[#718196]">مقدم الموضوع: <strong className="text-[#40566f]">{item.topic.submitted_by_name_ar}</strong></p>}
+            {item.topic?.id && <div className="mt-3"><TopicAttachmentsPanel meetingId={meetingId} attachments={attachments.filter((attachment) => attachment.topic_id === item.topic?.id)} compact /></div>}
+            {item.topic?.id && <Link href={`/admin/topics/${item.topic.id}`} className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#d8e5ef] bg-[#f8fbfe] px-3 py-2 text-[9px] font-black text-[#0877d6] hover:border-[#9bc7e9] hover:bg-blue-50"><Plus size={12} />فتح الموضوع وإدارة مرفقاته</Link>}
           </div>
           {editable && <div className="flex shrink-0 items-center gap-1">
             <button type="button" onClick={() => onMove(index, -1)} disabled={busy || index === 0} title="نقل البند إلى أعلى" aria-label="نقل البند إلى أعلى" className="rounded-lg border border-[#dce8f2] p-2 text-[#0877d1] hover:bg-blue-50 disabled:opacity-30"><ArrowUp size={14} /></button>

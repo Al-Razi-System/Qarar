@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, FileCheck2, MessageSquareText, Play, Save, Vote } from "lucide-react";
 import type { AgendaDiscussionItem, Decision, LiveMeetingSession, MyVote, VotingRound } from "../model/live-meeting";
+import type { MeetingTopicAttachment } from "../model/meeting";
 import { OpenVoteCard, type VoteValue } from "./open-vote-card";
+import { TopicAttachmentsPanel } from "./topic-attachments-panel";
 import { VoteResultPanel } from "./vote-result-panel";
 
 type DiscussionStatus = "under_discussion" | "discussed" | "postponed";
 type UpdateDiscussion = (item: AgendaDiscussionItem, status: DiscussionStatus, notes: string | null) => Promise<boolean>;
 
-export function LiveAgendaConsole({ session, agenda, myVotes, rounds, decisions, busy, onCastVote, onUpdateDiscussion, onOpenRound, onCloseRound, onCreateDecision, onComplete }: {
-  session: LiveMeetingSession; agenda: AgendaDiscussionItem[]; myVotes: MyVote[]; rounds: VotingRound[]; decisions: Decision[]; busy: boolean;
+export function LiveAgendaConsole({ session, agenda, attachments, myVotes, rounds, decisions, busy, onCastVote, onUpdateDiscussion, onOpenRound, onCloseRound, onCreateDecision, onComplete }: {
+  session: LiveMeetingSession; agenda: AgendaDiscussionItem[]; attachments: MeetingTopicAttachment[]; myVotes: MyVote[]; rounds: VotingRound[]; decisions: Decision[]; busy: boolean;
   onCastVote: (roundId: string, value: VoteValue, note: string | null) => void; onUpdateDiscussion: UpdateDiscussion;
   onOpenRound: (item: AgendaDiscussionItem) => void; onCloseRound: (round: VotingRound) => void;
   onCreateDecision: (round: VotingRound, item: AgendaDiscussionItem) => void; onComplete: () => void;
@@ -40,7 +42,7 @@ export function LiveAgendaConsole({ session, agenda, myVotes, rounds, decisions,
     {pendingVotes.map((vote) => <OpenVoteCard key={vote.voting_round_id} vote={vote} busy={busy} onCast={onCastVote} />)}
     <section className="overflow-hidden rounded-[1.6rem] border border-[#dce6ef] bg-white shadow-sm">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e7edf3] bg-[#fbfdff] px-5 py-4 sm:px-6"><div><p className="text-[9px] font-black text-[#f28c28]">الجلسة حسب ترتيب جدول الأعمال</p><h2 className="mt-1 text-base font-black text-[#0a1b35]">المناقشات والنتائج والتصويت</h2><p className="mt-1 text-[10px] text-[#73869a]">{manager ? "أنه المناقشة، افتح التصويت، ثم راجع الملخص النهائي بعد احتساب النتيجة." : recorder ? "دوّن ملاحظات المناقشة، ثم أكمل الملخص النهائي بعد إغلاق التصويت." : "تابع البنود بالترتيب وشارك في التصويت عند فتحه."}</p></div><span className="rounded-full bg-[#eaf4fd] px-3 py-1.5 text-[10px] font-black text-[#0877d6]">{ordered.length} بنود</span></header>
-      <div className="space-y-3 p-4 sm:p-6">{ordered.length === 0 ? <EmptyAgenda /> : ordered.map((item) => <AgendaCard key={item.id} item={item} session={session} rounds={rounds} decisions={decisions} busy={busy} quorumOk={quorumOk} expanded={expandedItemId === item.id} onToggle={() => setExpandedOverride({ activeItemId, itemId: expandedItemId === item.id ? null : item.id })} onUpdate={onUpdateDiscussion} onOpenRound={onOpenRound} onCloseRound={onCloseRound} onCreateDecision={onCreateDecision} />)}</div>
+      <div className="space-y-3 p-4 sm:p-6">{ordered.length === 0 ? <EmptyAgenda /> : ordered.map((item) => <AgendaCard key={item.id} item={item} attachments={attachments.filter((attachment) => attachment.topic_id === item.topic?.id)} session={session} rounds={rounds} decisions={decisions} busy={busy} quorumOk={quorumOk} expanded={expandedItemId === item.id} onToggle={() => setExpandedOverride({ activeItemId, itemId: expandedItemId === item.id ? null : item.id })} onUpdate={onUpdateDiscussion} onOpenRound={onOpenRound} onCloseRound={onCloseRound} onCreateDecision={onCreateDecision} />)}</div>
       {manager && <footer className="space-y-3 border-t border-[#e7edf3] bg-[#f8fbfe] p-5">
         {!canComplete && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950" role="status">
           <div className="flex items-center gap-2"><AlertCircle size={17} className="shrink-0 text-amber-600" /><h3 className="text-[11px] font-black">لا يمكن إنهاء الجلسة قبل استكمال الإجراءات التالية</h3></div>
@@ -52,8 +54,8 @@ export function LiveAgendaConsole({ session, agenda, myVotes, rounds, decisions,
   </div>;
 }
 
-function AgendaCard({ item, session, rounds, decisions, busy, quorumOk, expanded, onToggle, onUpdate, onOpenRound, onCloseRound, onCreateDecision }: {
-  item: AgendaDiscussionItem; session: LiveMeetingSession; rounds: VotingRound[]; decisions: Decision[]; busy: boolean; quorumOk: boolean; expanded: boolean;
+function AgendaCard({ item, attachments, session, rounds, decisions, busy, quorumOk, expanded, onToggle, onUpdate, onOpenRound, onCloseRound, onCreateDecision }: {
+  item: AgendaDiscussionItem; attachments: MeetingTopicAttachment[]; session: LiveMeetingSession; rounds: VotingRound[]; decisions: Decision[]; busy: boolean; quorumOk: boolean; expanded: boolean;
   onToggle: () => void;
   onUpdate: UpdateDiscussion; onOpenRound: (item: AgendaDiscussionItem) => void; onCloseRound: (round: VotingRound) => void;
   onCreateDecision: (round: VotingRound, item: AgendaDiscussionItem) => void;
@@ -102,6 +104,7 @@ function AgendaCard({ item, session, rounds, decisions, busy, quorumOk, expanded
         </button>
       </div>
     </div>
+    {expanded && attachments.length > 0 && <div className="border-b border-[#e6edf4] bg-white p-4 sm:px-5"><TopicAttachmentsPanel meetingId={session.meeting.id} attachments={attachments} /></div>}
     {expanded && showSummary && (item.agenda_status === "under_discussion" || item.agenda_status === "discussed" || Boolean(item.discussion_notes)) && <div className="bg-white/80 p-4"><div className="mb-2 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><MessageSquareText size={16} className="text-[#0877d6]" /><div><h4 className="text-[11px] font-black text-[#172a42]">{votingFinished ? "ملخص النتائج والتوصيات النهائي" : "ملاحظات المناقشة الأولية"}</h4><p className="text-[9px] text-[#7a8da1]">{recorder ? votingFinished ? "أكمل النتيجة النهائية بعد التصويت لتغذية مسودة المحضر." : "يمكن حفظ ملاحظات أولية الآن، ولا تعيق فتح التصويت." : chair ? "نسخة متابعة للرئيس؛ التحرير من اختصاص مقرر المجلس." : "النتيجة النهائية المعتمدة لهذا البند."}</p></div></div>{recorder && changed && <span className="rounded-full bg-amber-50 px-2 py-1 text-[9px] font-black text-amber-700">غير محفوظ</span>}</div>
       {recorder && editorOpen ? <textarea value={notes} onChange={(event) => { setNotes(event.target.value); setSavedPhase(null); }} disabled={!canEditSummary} placeholder={votingFinished ? "اكتب خلاصة المناقشة ونتيجة التصويت والتوصية النهائية..." : "دوّن ملاحظات المناقشة الأولية إن وجدت..."} className="min-h-28 w-full resize-y rounded-xl border border-[#d8e4ee] bg-white p-3 text-[11px] leading-6 text-[#243a52] outline-none focus:border-[#0877d6] focus:ring-2 focus:ring-blue-100 disabled:bg-[#f6f8fa]" /> : <div className="min-h-20 rounded-xl border border-[#d8e4ee] bg-[#f8fbfe] p-3 text-[11px] leading-6 text-[#243a52]">{notes || item.discussion_notes || "لم يحفظ المقرر ملاحظات بعد، وهذا لا يمنع فتح التصويت."}</div>}
       {canEditSummary && <div className="mt-3 flex flex-wrap items-center gap-2">{editorOpen ? <button onClick={() => void saveSummary()} disabled={busy || !valid || !changed} className="flex items-center gap-1 rounded-xl bg-[#0877d6] px-3 py-2 text-[10px] font-black text-white transition hover:bg-[#0668bd] disabled:opacity-40"><Save size={13} />{votingFinished ? "حفظ الملخص النهائي" : "حفظ ملاحظات المقرر"}</button> : <button onClick={() => setEditingPhase(summaryPhase)} className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-[10px] font-black text-blue-700">تعديل الملخص</button>}{savedPhase === summaryPhase && !editorOpen && <span role="status" className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black text-emerald-700"><CheckCircle2 size={13} />تم الحفظ بنجاح</span>}</div>}

@@ -172,6 +172,7 @@ AgendaItem = {
 | `create_meeting` | `{id,meeting_no,status,idempotent_replay}` |
 | `create_meeting_series` | `{id,occurrences:[{id,meeting_no,status,idempotent_replay,occurrence_number,scheduled_date}]}` |
 | `list_meeting_series` | `MeetingSeries[]` with ordered `occurrences[]` containing meeting identity, date, number, and status |
+| `list_meeting_topic_attachments` | `MeetingTopicAttachment[]` with `{id,topic_id,file_name,file_url,mime_type,file_size_bytes,description?,created_at}` |
 | `update_meeting` | Updated meeting detail |
 | `transition_meeting` | `{id,meeting_no,previous_status,status}` |
 | `search_eligible_agenda_topics` | `Page<{id,topic_no,title_ar,priority,status,updated_at}>` |

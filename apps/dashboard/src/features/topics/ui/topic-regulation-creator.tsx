@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle, ArrowLeft, BookOpen, Check, ChevronDown, ChevronLeft, FileCheck2,
-  FileText, FolderTree, Gavel, Layers3, LoaderCircle, Route, Search, ShieldCheck, Sparkles,
+  FileText, FolderTree, Gavel, Layers3, LoaderCircle, Paperclip, Route, Search, ShieldCheck, Sparkles, Trash2,
 } from "lucide-react";
 
 type Notice = { kind: "success" | "error"; text: string; detail?: string };
+type PendingAttachment = { id: string; file: File; description: string };
 type ReferenceOption = { id: string; code: string; name_ar: string; [key: string]: unknown };
 type TopicFormOptions = {
   governance_units: ReferenceOption[];
@@ -152,6 +153,12 @@ type TopicSummary = {
     workflow_template_version_id?: string | null;
     workflow_name_ar?: string | null;
   } | null;
+};
+type GovernanceSummaryResponse = Omit<Partial<TopicSummary>, "topic"> & {
+  topic?: TopicSummary["topic"];
+  topic_id?: string;
+  routing_status?: string;
+  governance_source?: string | null;
 };
 
 const input = "h-10 w-full rounded-xl border border-[#dce5ef] bg-white px-3 text-xs text-[#0a1330] outline-none transition focus:border-[#0066cc] focus:ring-2 focus:ring-[#0066cc]/10";
@@ -302,6 +309,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
   const [loadingReferences, setLoadingReferences] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const clientRequestId = useRef<string | null>(null);
 
   const selectedOption = useMemo(() => options.find((option) => selectionKey(option) === selectedKey), [options, selectedKey]);
@@ -688,6 +696,25 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     return { created, topicId };
   }
 
+  async function uploadPendingAttachments(topicId: string) {
+    const failures: string[] = [];
+    for (const attachment of pendingAttachments) {
+      const body = new FormData();
+      body.set("topicId", topicId);
+      body.set("file", attachment.file);
+      if (attachment.description.trim()) body.set("description", attachment.description.trim());
+      try {
+        const response = await fetch("/api/admin/topics/upload", { method: "POST", body });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error?.message ?? "تعذر رفع الملف.");
+      } catch (error) {
+        failures.push(`${attachment.file.name}: ${error instanceof Error ? error.message : "تعذر رفع الملف"}`);
+      }
+    }
+    if (failures.length) throw new Error(`تم إنشاء الموضوع، لكن تعذر رفع بعض المرفقات: ${failures.join("؛ ")}`);
+    return pendingAttachments.length;
+  }
+
   async function verifySelectionBeforeCreation(option: RegulationOption) {
     const current = await rpc<RegulationOptionsResponse>("get_topic_regulation_options", {
       p_governance_unit_id: form.unit,
@@ -729,7 +756,21 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
   }
 
   async function loadSummary(topicId: string) {
-    const nextSummary = await rpc<TopicSummary>("get_topic_governance_summary", { p_topic_id: topicId });
+    const [governance, detail] = await Promise.all([
+      rpc<GovernanceSummaryResponse>("get_topic_governance_summary", { p_topic_id: topicId }),
+      rpc<{ id: string; topic_no?: string | null; title_ar: string; status: string; routing_status?: string | null; governance_source?: string | null }>("get_topic_detail", { p_topic_id: topicId }),
+    ]);
+    const nextSummary: TopicSummary = {
+      ...governance,
+      topic: governance.topic ?? {
+        id: detail.id,
+        topic_no: detail.topic_no,
+        title_ar: detail.title_ar,
+        status: detail.status,
+        routing_status: detail.routing_status ?? governance.routing_status ?? "not_started",
+        governance_source: detail.governance_source ?? governance.governance_source,
+      },
+    };
     setSummary(nextSummary);
     return nextSummary;
   }
@@ -753,12 +794,14 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
       if (!verifiedOption) return;
       const { topicId } = await createTopicFromSelection(verifiedOption);
       await loadSummary(topicId);
+      const uploadedCount = await uploadPendingAttachments(topicId);
+      setPendingAttachments([]);
       setExceptionResult(null);
       if (onFollowTopic) {
         await onFollowTopic(topicId);
         return;
       }
-      setNotice({ kind: "success", text: "تم إنشاء الموضوع وربطه باللائحة وتشغيل المسار تلقائيًا." });
+      setNotice({ kind: "success", text: `تم إنشاء الموضوع وربطه باللائحة وتشغيل المسار تلقائيًا${uploadedCount ? `، ورفع ${uploadedCount} مرفق.` : "."}` });
     } catch (error) {
       setNotice({ kind: "error", text: error instanceof Error ? error.message : "تعذر إنشاء الموضوع.", detail: (error as Error & { detail?: string }).detail });
     } finally {
@@ -911,6 +954,17 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                 setLoadingCategories(Boolean(form.unit));
                 resetOptions({ ...form, effectiveOn: event.target.value, category: "" });
               }}/></Field>
+              <div className="md:col-span-2 rounded-xl border border-[#dce5ef] bg-white p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div><p className="text-[11px] font-black text-[#34465e]">مرفقات الموضوع</p><p className="mt-1 text-[10px] text-[#7d8da1]">PDF أو PNG أو JPEG أو DOCX، حتى 25 ميجابايت لكل ملف. تُرفع بعد إنشاء الموضوع مباشرة.</p></div>
+                  <label className="flex h-9 cursor-pointer items-center gap-2 rounded-xl border border-[#9cc7ef] bg-[#edf6ff] px-3 text-[10px] font-black text-[#0066cc] hover:bg-[#e2f1ff]"><Paperclip size={14}/> اختيار ملفات<input aria-label="اختيار مرفقات الموضوع" className="hidden" type="file" multiple accept="application/pdf,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => {
+                    const files = Array.from(event.currentTarget.files ?? []);
+                    setPendingAttachments((current) => [...current, ...files.map((file) => ({ id: globalThis.crypto?.randomUUID?.() ?? `${file.name}-${file.lastModified}-${Math.random()}`, file, description: "" }))]);
+                    event.currentTarget.value = "";
+                  }}/></label>
+                </div>
+                {pendingAttachments.length > 0 && <div className="mt-3 space-y-2">{pendingAttachments.map((attachment) => <div key={attachment.id} className="grid gap-2 rounded-xl bg-[#f8fbff] p-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(180px,.8fr)_auto] sm:items-center"><div className="min-w-0"><p className="truncate text-[10px] font-black text-[#24364e]">{attachment.file.name}</p><p className="mt-0.5 text-[9px] text-[#7b8ba0]">{Math.max(1, Math.ceil(attachment.file.size / 1024))} KB</p></div><input aria-label={`وصف ${attachment.file.name}`} className={input} value={attachment.description} onChange={(event) => setPendingAttachments((current) => current.map((item) => item.id === attachment.id ? { ...item, description: event.target.value } : item))} placeholder="وصف اختياري للمرفق"/><button type="button" aria-label={`إزالة ${attachment.file.name}`} onClick={() => setPendingAttachments((current) => current.filter((item) => item.id !== attachment.id))} className="grid h-9 w-9 place-items-center rounded-lg text-red-600 hover:bg-red-50"><Trash2 size={15}/></button></div>)}</div>}
+              </div>
               <div className={`rounded-xl border p-3 ${canMoveToRegulation ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-[#dce5ef] bg-white text-[#617287]"}`}>
                 <p className="text-[10px] font-black">جاهزية المرحلة الأولى</p>
                 <p className="mt-1 text-[11px] leading-5">{canMoveToRegulation ? "اكتملت البيانات؛ يمكنك الانتقال لاختيار اللائحة المنطبقة." : nextBlockedReason}</p>
@@ -1040,6 +1094,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                 <ReviewItem title="المادة الحاكمة" value={selectedOption?.item.title_ar ?? "—"} hint={selectedOption ? (scopeLabels[selectedOption.scope.type] ?? "النطاق المحدد في اللائحة") : "—"}/>
                 <ReviewItem title="المتطلبات المكتملة" value="بيانات الموضوع والجهة والفئة مكتملة" hint="تم التحقق منها قبل هذه الصفحة." tone="green"/>
                 <ReviewItem title="المتطلبات الناقصة" value={immediateRequirements.length ? immediateRequirements.map((requirement) => requirement.name).join("، ") : "لا توجد متطلبات قبل الإرسال"} hint={immediateRequirements.length ? "تأكد من إرفاقها أو استكمالها وفق الإجراء المعتمد." : "—"} tone={immediateRequirements.length ? "amber" : "green"}/>
+                <ReviewItem title="المرفقات المختارة" value={pendingAttachments.length ? `${pendingAttachments.length} مرفق جاهز للرفع` : "لا توجد مرفقات"} hint={pendingAttachments.length ? pendingAttachments.map((attachment) => attachment.file.name).join("، ") : "يمكن إنشاء الموضوع دون مرفقات ما لم تشترط اللائحة خلاف ذلك."} tone={pendingAttachments.length ? "green" : "blue"}/>
                 <ReviewItem title="المسار الذي سيبدأ" value={routePreview?.workflow_name || selectedPreview?.workflow.name || "مسار الاعتماد"} hint={routePreview?.message || "سيتم تشغيل المسار تلقائيًا بعد الإنشاء."}/>
                 <ReviewItem title="المجلس الأول المستلم" value={firstRouteStep?.responsible_entity || "ستحدد عند بدء المسار"} hint={firstRouteStep?.responsible_unit_id && firstRouteStep.responsible_unit_id !== form.unit ? "سيتم تحويل المسؤولية إليه تلقائياً عند الإنشاء." : (firstRouteStep?.responsible_role || "—")}/>
               </div>

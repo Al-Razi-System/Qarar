@@ -45,9 +45,13 @@ meeting. It returns one governed read model containing the final quorum snapshot
 and named records, ordered agenda topics with discussion notes, voting rounds and decisions, plus
 the approved minutes and approval/signature statuses.
 
-`create_meeting_series` creates 2-12 independently governed meeting occurrences in one weekly or
-monthly series. `list_meeting_series` returns each visible series with its ordered occurrences,
+`create_meeting_series` creates 2-36 independently governed meeting occurrences in a weekly,
+monthly, quarterly, semiannual, annual, or custom-day-interval series. `list_meeting_series` returns each visible series with its ordered occurrences,
 dates, meeting numbers, and lifecycle statuses.
+
+`list_meeting_topic_attachments` returns private attachment metadata for all agenda topics to an
+authorized meeting reader or roster participant, so the same evidence remains available before,
+during, and after the meeting.
 
 ## Update Meeting
 
