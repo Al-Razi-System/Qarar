@@ -34,6 +34,7 @@ describe("TopicRegulationCreator", () => {
 
     [
       "المسار اللائحي",
+      "استكمال مسار سابق",
       "مسار مخصص",
       "استثناء لائحي",
       "كيف تريد أن يسير هذا الموضوع؟",
@@ -69,6 +70,10 @@ describe("TopicRegulationCreator", () => {
       "get_topic_exception_workflow_options",
       "create_topic_custom_route_draft",
       "create_topic_governance_exception_request",
+      "get_topic_prior_route_candidate_steps",
+      "create_topic_prior_route_request",
+      "add_prior_route_evidence_attachment",
+      "submit_topic_prior_route_request",
     ].forEach((contract) => {
       expect(source).toContain(contract);
       expect(route).toContain(`"${contract}"`);

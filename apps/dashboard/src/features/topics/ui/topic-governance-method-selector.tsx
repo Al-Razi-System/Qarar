@@ -1,10 +1,17 @@
-import { BookOpen, Route, ShieldAlert } from "lucide-react";
+import { BookOpen, History, Route, ShieldAlert } from "lucide-react";
 import type {
   TopicGovernanceMethod,
   TopicGovernanceMethodAvailability,
 } from "../model/topic-creation";
 
 const methods = [
+  {
+    id: "prior" as const,
+    title: "استكمال مسار سابق",
+    description: "إثبات المجالس التي ناقشت الموضوع سابقًا والبدء من أول مجلس متبقٍ.",
+    badge: "موضوع قائم",
+    icon: History,
+  },
   {
     id: "regulation" as const,
     title: "المسار اللائحي",
@@ -42,10 +49,10 @@ export function TopicGovernanceMethodSelector({
       <div className="mb-5 text-center">
         <p className="text-[11px] font-black text-[#0877df]">اختر طريقة المعالجة</p>
         <h2 id="governance-method-title" className="mt-1 text-xl font-black text-[#0a1330]">كيف تريد أن يسير هذا الموضوع؟</h2>
-        <p className="mx-auto mt-2 max-w-2xl text-xs leading-6 text-[#617287]">المسار اللائحي هو الخيار المقترح. المسار المخصص والاستثناء يرسلان للمراجعة ولا يبدآن تلقائيًا.</p>
+        <p className="mx-auto mt-2 max-w-2xl text-xs leading-6 text-[#617287]">اختر المسار اللائحي للموضوع الجديد، أو وثّق المجالس السابقة لموضوع قائم. المسارات غير القياسية لا تبدأ قبل مراجعة مستقلة.</p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3" role="radiogroup" aria-label="اختيار طريقة الحوكمة">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" role="radiogroup" aria-label="اختيار طريقة الحوكمة">
         {methods.map((method) => {
           const Icon = method.icon;
           const state = availability[method.id];

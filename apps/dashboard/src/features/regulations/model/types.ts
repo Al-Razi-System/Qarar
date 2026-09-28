@@ -264,3 +264,30 @@ export type TopicCustomRouteDraft = {
     governance_unit_name_ar: string;
   }>;
 };
+export type TopicPriorRouteRequest = {
+  id: string;
+  topic_id: string;
+  topic_no?: string | null;
+  topic_title_ar: string;
+  status: string;
+  requested_by_user_id: string;
+  requester_name_ar: string;
+  submitted_at?: string | null;
+  steps: Array<{
+    id: string;
+    sequence_no: number;
+    step_title: string;
+    responsible_unit_name_ar?: string | null;
+    meeting_date: string;
+    meeting_reference?: string | null;
+    decision_type: string;
+    decision_text: string;
+    bypass_reason: string;
+    attachments: Array<{
+      id: string;
+      file_name: string;
+      file_url: string;
+      mime_type: string;
+    }>;
+  }>;
+};

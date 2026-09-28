@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertCircle, ArrowLeft, BookOpen, Check, ChevronDown, ChevronLeft, FileCheck2,
-  FileText, FolderTree, Gavel, Layers3, LoaderCircle, Paperclip, Search, ShieldCheck, Sparkles, Trash2,
+  AlertCircle, ArrowLeft, BookOpen, Check, FileCheck2, LoaderCircle, Paperclip,
+  Search, ShieldCheck, Sparkles, Trash2,
 } from "lucide-react";
 import {
   resolveCreationStep,
@@ -14,6 +14,11 @@ import {
 import { TopicCreationProgress } from "./topic-creation-progress";
 import { TopicCustomRouteDesigner, type CustomRouteStepDraft } from "./topic-custom-route-designer";
 import { TopicGovernanceMethodSelector } from "./topic-governance-method-selector";
+import {
+  TopicPriorRouteDesigner,
+  type PriorRouteEvidenceDraft,
+  type PriorRouteStep,
+} from "./topic-prior-route-designer";
 
 type Notice = { kind: "success" | "error"; text: string; detail?: string };
 type PendingAttachment = { id: string; file: File; description: string };
@@ -295,6 +300,9 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [priorRouteSteps, setPriorRouteSteps] = useState<PriorRouteStep[]>([]);
+  const [loadingPriorRouteSteps, setLoadingPriorRouteSteps] = useState(false);
+  const [priorRouteStepsLoaded, setPriorRouteStepsLoaded] = useState(false);
   const clientRequestId = useRef<string | null>(null);
 
   const selectedOption = useMemo(() => options.find((option) => selectionKey(option) === selectedKey), [options, selectedKey]);
@@ -329,6 +337,12 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
         : exceptionScenario?.kind === "custom_route"
           ? "تسمح نتيجة المطابقة بطلب مسار مخصص."
           : "يمكن اقتراح مسار مختلف، ولن يعمل قبل مراجعته واعتماده.",
+    },
+    prior: {
+      available: Boolean(selectedOption?.can_start_workflow),
+      reason: selectedOption?.can_start_workflow
+        ? "المسار الأصلي محفوظ؛ وثّق فقط مراحله المنفذة سابقًا."
+        : "يلزم مسار لائحي مكتمل قبل إثبات مراحله السابقة.",
     },
     exception: {
       available: true,
@@ -457,6 +471,36 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     return () => { mounted = false; };
   }, [exceptionWorkflowsLoaded, form.unit, loadExceptionWorkflowOptions, shouldShowExceptionDesigner]);
 
+  async function loadPriorRouteCandidateSteps(option: RegulationOption) {
+    if (priorRouteStepsLoaded || loadingPriorRouteSteps) return;
+    setLoadingPriorRouteSteps(true);
+    setNotice(null);
+    try {
+      const result = await rpc<{ steps: PriorRouteStep[] }>("get_topic_prior_route_candidate_steps", {
+        p_governance_unit_id: form.unit,
+        p_topic_category_id: form.category,
+        p_priority: form.priority,
+        p_source_type: form.source,
+        p_effective_on: form.effectiveOn,
+        p_policy_id: option.selection.policy_id,
+        p_policy_version_id: option.selection.policy_version_id,
+        p_policy_item_id: option.selection.policy_item_id,
+        p_scope_assignment_id: option.selection.scope_assignment_id,
+      });
+      setPriorRouteSteps(result.steps ?? []);
+      setPriorRouteStepsLoaded(true);
+    } catch (error) {
+      setPriorRouteStepsLoaded(true);
+      setNotice({
+        kind: "error",
+        text: error instanceof Error ? error.message : "تعذر تحميل مراحل المسار السابق.",
+        detail: (error as Error & { detail?: string }).detail,
+      });
+    } finally {
+      setLoadingPriorRouteSteps(false);
+    }
+  }
+
   function resetOptions(next = form) {
     setForm(next);
     setOptions([]);
@@ -474,6 +518,9 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     setExceptionResult(null);
     setExceptionWorkflowOptions(null);
     setExceptionWorkflowsLoaded(false);
+    setPriorRouteSteps([]);
+    setLoadingPriorRouteSteps(false);
+    setPriorRouteStepsLoaded(false);
     setGovernanceMethodOverride(null);
     setNotice(null);
   }
@@ -824,6 +871,75 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     }
   }
 
+  async function createPriorRouteRequest(evidence: PriorRouteEvidenceDraft[]) {
+    if (!selectedOption?.can_start_workflow || !hasTopicData || !form.unit || !form.category) {
+      setNotice({ kind: "error", text: "يلزم موضوع مكتمل ومسار لائحي جاهز قبل توثيق المراحل السابقة." });
+      return;
+    }
+    setBusy(true);
+    setNotice(null);
+    try {
+      const result = await rpc<{
+        topic_id: string;
+        request_id: string;
+        evidence: Array<{ id: string; template_step_id: string; sequence_no: number }>;
+      }>("create_topic_prior_route_request", {
+        p_title_ar: form.title.trim(),
+        p_description: form.description.trim(),
+        p_category_id: form.category,
+        p_current_unit_id: form.unit,
+        p_policy_id: selectedOption.selection.policy_id,
+        p_policy_version_id: selectedOption.selection.policy_version_id,
+        p_policy_item_id: selectedOption.selection.policy_item_id,
+        p_scope_assignment_id: selectedOption.selection.scope_assignment_id,
+        p_evidence: evidence.map((item) => ({
+          template_step_id: item.template_step_id,
+          meeting_date: item.meeting_date,
+          meeting_reference: item.meeting_reference,
+          decision_type: item.decision_type,
+          decision_text: item.decision_text,
+          bypass_reason: item.bypass_reason,
+        })),
+        p_priority: form.priority,
+        p_source_type: form.source,
+        p_title_en: null,
+        p_client_request_id: getClientRequestId(),
+      });
+      if (!result.topic_id || !result.request_id) throw new Error("تعذر تثبيت طلب استكمال المسار.");
+      const evidenceIds = new Map(result.evidence.map((item) => [item.template_step_id, item.id]));
+      for (const item of evidence) {
+        const stepEvidenceId = evidenceIds.get(item.template_step_id);
+        if (!stepEvidenceId) throw new Error("تعذر ربط دليل بإحدى المراحل السابقة.");
+        for (const file of item.files) {
+          const body = new FormData();
+          body.set("topicId", result.topic_id);
+          body.set("file", file);
+          body.set("description", `دليل مرحلة سابقة: ${item.meeting_reference || item.meeting_date}`);
+          const response = await fetch("/api/admin/topics/upload", { method: "POST", body });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error?.message ?? `تعذر رفع ${file.name}`);
+          const attachmentId = String(payload.data?.attachment?.id ?? "");
+          if (!attachmentId) throw new Error(`رُفع ${file.name} دون معرف صالح للمرفق.`);
+          await rpc("add_prior_route_evidence_attachment", {
+            p_step_evidence_id: stepEvidenceId,
+            p_topic_attachment_id: attachmentId,
+          });
+        }
+      }
+      await rpc("submit_topic_prior_route_request", { p_request_id: result.request_id });
+      await loadSummary(result.topic_id);
+      setNotice({ kind: "success", text: "تم إنشاء الموضوع وإرسال إثباتات المجالس السابقة للمراجعة المستقلة." });
+    } catch (error) {
+      setNotice({
+        kind: "error",
+        text: error instanceof Error ? error.message : "تعذر إرسال إثباتات المسار السابق.",
+        detail: (error as Error & { detail?: string }).detail,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function requestException() {
     if (!hasTopicData || !form.unit || !form.category) {
       setNotice({ kind: "error", text: "أكمل عنوان الموضوع ووصفه والجهة وفئة الموضوع قبل طلب الاستثناء." });
@@ -1001,6 +1117,9 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
             onChange={(method) => {
               setGovernanceMethodOverride(method);
               setReviewReady(false);
+              if (method === "prior" && selectedOption && !priorRouteStepsLoaded) {
+                void loadPriorRouteCandidateSteps(selectedOption);
+              }
             }}
           />
           </>}
@@ -1066,6 +1185,12 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                 onSubmit={createCustomRouteDraft}
               />
             </div>}
+            {screen === "governance" && governanceMethod === "prior" && !summary && <TopicPriorRouteDesigner
+              steps={priorRouteSteps}
+              loading={loadingPriorRouteSteps}
+              busy={busy}
+              onSubmit={createPriorRouteRequest}
+            />}
 {screen === "review" && <section className="mt-4 overflow-hidden rounded-2xl border border-[#0a1330]/10 bg-white shadow-[0_16px_36px_rgba(10,19,48,.12)]">
               <div className="bg-[#0a1330] px-5 py-4 text-white">
                 <p className="text-[10px] font-black text-[#8fc7ff]">المرحلة 5 · المراجعة والإنشاء</p>
@@ -1167,118 +1292,6 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
   </div>;
 }
 
-function TopicRouteTimeline({ preview, loading }: { preview: TopicRoutePreview | null; loading: boolean }) {
-  if (loading) {
-    return <div className="mt-3 rounded-xl border border-[#d9e8f6] bg-[#f8fbff] px-4 py-5 text-center text-[11px] font-bold text-[#52647a]"><LoaderCircle className="mx-auto mb-2 animate-spin text-[#0066cc]" size={18}/> جارٍ بناء معاينة المسار…</div>;
-  }
-  if (!preview) {
-    return <div className="mt-3 rounded-xl border border-dashed border-[#cfe2f4] bg-[#f8fbff] px-4 py-4 text-[11px] text-[#617287]">تعذر إظهار خطوات المسار حاليًا. أعد تحميل المعاينة قبل المتابعة.</div>;
-  }
-  if (preview.status !== "ready" || !preview.steps.length) {
-    return <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-[11px] leading-6 text-amber-900">{preview.message}</div>;
-  }
-  const displaySteps = [{
-    title: "تقديم الموضوع",
-    responsible_entity: "الجهة المختارة",
-    responsible_role: "مقدّم الموضوع",
-    transition_requirement: "تأكيد إنشاء الموضوع بعد مراجعة اللائحة والمتطلبات.",
-    expected_duration: null,
-  }, ...preview.steps];
-
-  return <section className="mt-3 rounded-xl border border-[#d9e8f6] bg-[#fbfdff] p-4">
-    <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-      <div>
-        <p className="text-[10px] font-black text-[#0066cc]">المرحلة 4 · معاينة المسار</p>
-        <h4 className="mt-1 text-xs font-black text-[#0a1330]">ماذا سيحدث لموضوعي بعد الإرسال؟</h4>
-        <p className="mt-1 text-[10px] text-[#617287]">{preview.workflow_name || "مسار الاعتماد"} — {preview.message}</p>
-      </div>
-      <SmallBadge tone="green">{displaySteps.length} خطوات</SmallBadge>
-    </div>
-    <ol className="relative mr-2 space-y-3 border-r-2 border-[#cfe2f4] pr-5">
-      {displaySteps.map((step, index) => <li key={`${step.title}-${index}`} className="relative">
-        <span className="absolute -right-[2.05rem] top-3 grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-[#0066cc] text-[10px] font-black text-white shadow-sm">{index + 1}</span>
-        <div className="rounded-xl border border-[#e2e9f1] bg-white p-3 shadow-[0_4px_12px_rgba(22,50,79,.04)]">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <strong className="text-xs text-[#0a1330]">{step.title}</strong>
-            {step.expected_duration && <SmallBadge tone="slate">{step.expected_duration}</SmallBadge>}
-          </div>
-          <div className="mt-2 grid gap-2 text-[10px] leading-5 text-[#52647a] sm:grid-cols-3">
-            <p><span className="font-black text-[#34465e]">الجهة المسؤولة: </span>{step.responsible_entity}</p>
-            <p><span className="font-black text-[#34465e]">المسؤول: </span>{step.responsible_role}</p>
-            <p><span className="font-black text-[#34465e]">للانتقال: </span>{step.transition_requirement}</p>
-          </div>
-        </div>
-      </li>)}
-    </ol>
-  </section>;
-}
-
-function ExecutiveRequirements({ preview, loading }: { preview?: RegulationPreview; loading: boolean }) {
-  if (loading) {
-    return <div className="rounded-xl border border-[#d9e8f6] bg-white px-4 py-3 text-[11px] font-bold text-[#52647a]">جارٍ تجهيز قائمة المتطلبات التنفيذية…</div>;
-  }
-  if (!preview) {
-    return <div className="rounded-xl border border-dashed border-[#cfe2f4] bg-white px-4 py-3 text-[11px] text-[#617287]">افتح تفاصيل اللائحة المختارة لعرض المتطلبات التي تخص هذا الموضوع.</div>;
-  }
-
-  const immediateRequirements = preview.requirements.filter((requirement) => requirement.timing === "before_submission");
-  const additionalApproval = preview.rule_summary.some((rule) => rule.requires_workflow);
-  const rows = [
-    {
-      item: "المستندات والمتطلبات",
-      status: immediateRequirements.length ? "ناقص" : "غير مطلوبة",
-      tone: immediateRequirements.length ? "amber" as const : "slate" as const,
-      required: immediateRequirements.length
-        ? immediateRequirements.map((requirement) => requirement.name).join("، ")
-        : "—",
-    },
-    {
-      item: "الجهة المخولة",
-      status: "مكتمل",
-      tone: "green" as const,
-      required: preview.scope.target_name,
-    },
-    {
-      item: "النصاب",
-      status: "يطبق لاحقًا",
-      tone: "blue" as const,
-      required: "يُحتسب عند انعقاد جلسة المجلس وفق إعدادات النصاب النافذة.",
-    },
-    {
-      item: "التصويت",
-      status: "يطبق لاحقًا",
-      tone: "blue" as const,
-      required: "يُطبّق فقط إن تضمّن مسار الاعتماد خطوة تصويت معتمدة.",
-    },
-    {
-      item: "موافقة إضافية",
-      status: additionalApproval ? "يطبق لاحقًا" : "غير مطلوبة",
-      tone: additionalApproval ? "blue" as const : "slate" as const,
-      required: additionalApproval ? "ستُحدّد ضمن خطوات مسار الاعتماد بعد إنشاء الموضوع." : "—",
-    },
-  ];
-
-  return <section className="overflow-hidden rounded-xl border border-[#d9e8f6] bg-white">
-    <div className="flex flex-wrap items-start justify-between gap-2 border-b border-[#edf1f5] px-4 py-3">
-      <div>
-        <p className="text-[10px] font-black text-[#0066cc]">المرحلة 3 · المتطلبات والقيود</p>
-        <h4 className="mt-1 text-xs font-black text-[#0a1330]">ما الذي تحتاجه الآن؟</h4>
-      </div>
-      <span className="text-[10px] leading-5 text-[#617287]">تُعرض القواعد التقنية التفصيلية داخل إدارة اللوائح فقط.</span>
-    </div>
-    <div className="hidden grid-cols-[minmax(110px,.8fr)_minmax(105px,.6fr)_minmax(0,2fr)] gap-3 bg-[#f8fbff] px-4 py-2 text-[10px] font-black text-[#617287] sm:grid">
-      <span>العنصر</span><span>الحالة</span><span>المطلوب</span>
-    </div>
-    <div className="divide-y divide-[#edf1f5]">
-      {rows.map((row) => <div key={row.item} className="grid gap-2 px-4 py-3 text-[11px] sm:grid-cols-[minmax(110px,.8fr)_minmax(105px,.6fr)_minmax(0,2fr)] sm:items-center sm:gap-3">
-        <strong className="text-[#0a1330]">{row.item}</strong>
-        <div><span className="sm:hidden text-[10px] font-bold text-[#7b8ba0]">الحالة: </span><SmallBadge tone={row.tone}>{row.status}</SmallBadge></div>
-        <p className="leading-5 text-[#52647a]"><span className="sm:hidden text-[10px] font-bold text-[#7b8ba0]">المطلوب: </span>{row.required}</p>
-      </div>)}
-    </div>
-  </section>;
-}
-
 function RegulationPreviewCard({
   preview,
   loading,
@@ -1332,119 +1345,6 @@ function RegulationPreviewCard({
     </div>
     {!canStartWorkflow && <p className="rounded-lg bg-amber-50 px-3 py-2 text-[10px] leading-5 text-amber-800">هذا الاختيار يحتاج إلى استثناء أو مسار بديل قبل بدء الاعتماد.</p>}
   </div>;
-}
-
-function RegulationTreePicker({
-  trees,
-  expandedNodes,
-  activeNodeId,
-  selectedKey,
-  selectedScopeLabel,
-  onToggleNode,
-  onChooseScope,
-}: {
-  trees: RegulationTree[];
-  expandedNodes: Record<string, boolean>;
-  activeNodeId: string;
-  selectedKey: string;
-  selectedScopeLabel: string;
-  onToggleNode: (nodeId: string) => void;
-  onChooseScope: (tree: RegulationTree, node?: RegulationTreeNode, mode?: "primary" | "supporting") => void;
-}) {
-  if (!trees.length) {
-    return <div className="rounded-2xl border border-dashed border-[#c8d8e8] bg-[#fbfdff] p-5 text-center text-[11px] text-[#617287]">جارٍ تجهيز هيكل اللائحة. يمكنك مؤقتًا استخدام البطاقات التفصيلية أدناه.</div>;
-  }
-
-  return <section className="overflow-hidden rounded-2xl border border-[#d8e6f3] bg-[#fbfdff]">
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e5edf5] bg-white px-4 py-3">
-      <div className="flex gap-2">
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#edf6ff] text-[#0066cc]"><FolderTree size={18}/></span>
-        <div><h3 className="text-xs font-black text-[#0a1330]">شجرة اللوائح والمواد</h3><p className="mt-1 text-[10px] leading-5 text-[#617287]">اختر اللائحة كاملة أو فصلًا أو مادةً أو بندًا. يُثبت النظام المادة المطابقة كمرجع قانوني للمسار.</p></div>
-      </div>
-      <div className="flex flex-wrap gap-1.5"><SmallBadge tone="blue">لائحة ← فصل ← مادة ← بند</SmallBadge>{selectedScopeLabel && <SmallBadge tone="green">المختار: {selectedScopeLabel}</SmallBadge>}</div>
-    </div>
-    <div className="space-y-3 p-3">
-      {trees.map((tree) => <RegulationTreeRoot key={`${tree.policy.id}:${tree.version.id}`} tree={tree} expandedNodes={expandedNodes} activeNodeId={activeNodeId} selectedKey={selectedKey} onToggleNode={onToggleNode} onChooseScope={onChooseScope}/>) }
-    </div>
-    <div className="border-t border-[#e5edf5] bg-white px-4 py-2.5 text-[10px] leading-5 text-[#617287]">اختيار فصل أو اللائحة كاملة لا يتجاوز التحقق القانوني: يربط النظام الموضوع تلقائيًا بأفضل مادة مطابقة من النطاق المحدد ثم يعيد التحقق قبل الإنشاء.</div>
-  </section>;
-}
-
-function RegulationTreeRoot({
-  tree, expandedNodes, activeNodeId, selectedKey, onToggleNode, onChooseScope,
-}: {
-  tree: RegulationTree;
-  expandedNodes: Record<string, boolean>;
-  activeNodeId: string;
-  selectedKey: string;
-  onToggleNode: (nodeId: string) => void;
-  onChooseScope: (tree: RegulationTree, node?: RegulationTreeNode, mode?: "primary" | "supporting") => void;
-}) {
-  const policyNodeId = `policy:${tree.policy.id}:${tree.version.id}`;
-  const byParent = new Map<string, RegulationTreeNode[]>();
-  const nodeMap = new Map(tree.nodes.map((node) => [node.id, node]));
-  tree.nodes.forEach((node) => {
-    const parentKey = node.parent_id && nodeMap.has(node.parent_id) ? node.parent_id : "root";
-    byParent.set(parentKey, [...(byParent.get(parentKey) ?? []), node]);
-  });
-  const roots = (byParent.get("root") ?? []).sort((a, b) => a.sort_order - b.sort_order);
-  const hasSelectionBelow = (node?: RegulationTreeNode) => {
-    const descendants = node ? [node, ...collectDescendants(node.id, byParent)] : tree.nodes;
-    return descendants.some((entry) => entry.selections.length > 0);
-  };
-
-  return <article className="overflow-hidden rounded-xl border border-[#d5e3f1] bg-white">
-    <div className={`flex flex-wrap items-center justify-between gap-3 px-3 py-3 ${activeNodeId === policyNodeId ? "bg-[#edf6ff]" : "bg-white"}`}>
-      <div className="flex min-w-0 items-center gap-2.5"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#0a4b90] text-white"><BookOpen size={15}/></span><div className="min-w-0"><h4 className="truncate text-xs font-black text-[#0a1330]">{tree.policy.name_ar}</h4><p className="mt-0.5 text-[10px] text-[#617287]">{tree.policy.code} · الإصدار النافذ: {tree.version.label || tree.version.number}</p></div></div>
-      <div className="flex flex-wrap items-center gap-2"><SmallBadge tone="slate">{tree.nodes.length} عنصرًا</SmallBadge><button type="button" disabled={!hasSelectionBelow()} onClick={() => onChooseScope(tree)} className="flex h-8 items-center gap-1 rounded-lg bg-[#0066cc] px-3 text-[10px] font-black text-white disabled:bg-[#a8b8c9]"><ShieldCheck size={13}/> اختيارها كمرجع حاكم</button><button type="button" disabled={!hasSelectionBelow() || !selectedKey} onClick={() => onChooseScope(tree, undefined, "supporting")} className="h-8 rounded-lg border border-[#9cc7ef] bg-white px-3 text-[10px] font-black text-[#0066cc] disabled:opacity-40">+ مرجع مساند</button></div>
-    </div>
-    <div className="border-t border-[#edf2f7] px-2 py-2">
-      {roots.length ? roots.map((node) => <RegulationTreeBranch key={node.id} tree={tree} node={node} byParent={byParent} expandedNodes={expandedNodes} activeNodeId={activeNodeId} selectedKey={selectedKey} onToggleNode={onToggleNode} onChooseScope={onChooseScope}/>) : <p className="px-3 py-2 text-[10px] text-[#7b8ba0]">لا توجد عناصر منشورة ضمن هذه اللائحة.</p>}
-    </div>
-  </article>;
-}
-
-function RegulationTreeBranch({
-  tree, node, byParent, expandedNodes, activeNodeId, selectedKey, onToggleNode, onChooseScope,
-}: {
-  tree: RegulationTree;
-  node: RegulationTreeNode;
-  byParent: Map<string, RegulationTreeNode[]>;
-  expandedNodes: Record<string, boolean>;
-  activeNodeId: string;
-  selectedKey: string;
-  onToggleNode: (nodeId: string) => void;
-  onChooseScope: (tree: RegulationTree, node: RegulationTreeNode, mode?: "primary" | "supporting") => void;
-}) {
-  const children = (byParent.get(node.id) ?? []).sort((a, b) => a.sort_order - b.sort_order);
-  const descendants = collectDescendants(node.id, byParent);
-  const selectableCount = [node, ...descendants].filter((entry) => entry.selections.length > 0).length;
-  const isExpanded = expandedNodes[node.id] ?? (node.item_type === "chapter" || node.item_type === "section");
-  const isActive = activeNodeId === node.id || node.selections.some((selection) => `${selection.policy_id}:${selection.policy_version_id}:${selection.policy_item_id}:${selection.scope_assignment_id}` === selectedKey);
-  const directSelection = node.selections[0];
-  const nodeKey = directSelection ? `${directSelection.policy_id}:${directSelection.policy_version_id}:${directSelection.policy_item_id}:${directSelection.scope_assignment_id}` : "";
-  const nodeIsSelected = nodeKey === selectedKey;
-  const selectable = selectableCount > 0;
-  const icon = node.item_type === "chapter" || node.item_type === "section" ? <Layers3 size={14}/> : node.item_type === "clause" ? <Gavel size={14}/> : <FileText size={14}/>;
-
-  return <div className="relative mr-1">
-    <div className={`group flex min-h-10 items-center gap-2 rounded-lg px-2 py-1.5 transition ${isActive ? "bg-[#edf6ff] text-[#0058b3]" : "hover:bg-[#f7fbff]"}`}>
-      <button type="button" aria-label={`توسيع ${node.title_ar}`} disabled={!children.length} onClick={() => onToggleNode(node.id)} className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[#617287] hover:bg-[#dceeff] disabled:opacity-0">{isExpanded ? <ChevronDown size={15}/> : <ChevronLeft size={15}/>}</button>
-      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${node.item_type === "chapter" || node.item_type === "section" ? "bg-[#eef5ff] text-[#0066cc]" : "bg-slate-100 text-[#617287]"}`}>{icon}</span>
-      <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-[#0a1330]"><span className="ml-1 text-[#0066cc]">{node.code}</span>{node.title_ar}</p><p className="mt-0.5 text-[9px] text-[#7b8ba0]">{itemTypeLabel(node.item_type)} {selectable ? `· ${selectableCount} مادة/بند مطابق` : "· غير منطبق على هذا الموضوع"}</p></div>
-      {selectable && <div className="flex shrink-0 gap-1"><button type="button" onClick={() => onChooseScope(tree, node)} className={`rounded-lg px-2.5 py-1.5 text-[10px] font-black ${nodeIsSelected ? "bg-emerald-600 text-white" : "border border-[#9cc7ef] bg-white text-[#0066cc] hover:bg-[#edf6ff]"}`}>{nodeIsSelected ? "مرجع حاكم مختار" : node.item_type === "chapter" || node.item_type === "section" ? "اختيار الفصل" : node.item_type === "clause" ? "اختيار البند" : "اختيار المادة"}</button>{selectedKey && !nodeIsSelected && <button type="button" title="إضافته دون تغيير المرجع الحاكم" onClick={() => onChooseScope(tree, node, "supporting")} className="rounded-lg border border-[#d6e4f0] bg-white px-2 py-1.5 text-[10px] font-black text-[#526f8c] hover:bg-[#f3f8fc]">+ مرجع مساند</button>}</div>}
-    </div>
-    {children.length > 0 && isExpanded && <div className="mr-5 border-r border-[#cfe1f2] pr-2">{children.map((child) => <RegulationTreeBranch key={child.id} tree={tree} node={child} byParent={byParent} expandedNodes={expandedNodes} activeNodeId={activeNodeId} selectedKey={selectedKey} onToggleNode={onToggleNode} onChooseScope={onChooseScope}/>)}</div>}
-  </div>;
-}
-
-function collectDescendants(nodeId: string, byParent: Map<string, RegulationTreeNode[]>): RegulationTreeNode[] {
-  const children = byParent.get(nodeId) ?? [];
-  return children.flatMap((child) => [child, ...collectDescendants(child.id, byParent)]);
-}
-
-function itemTypeLabel(itemType: string) {
-  return ({ chapter: "فصل", section: "قسم", article: "مادة", clause: "بند", procedure: "إجراء" } as Record<string, string>)[itemType] ?? "عنصر تشريعي";
 }
 
 function PreviewDetail({ title, value, wide = false }: { title: string; value: string; wide?: boolean }) {

@@ -9,6 +9,7 @@ describe("topic creation model", () => {
   it("يفضل المسار اللائحي عندما يكون جاهزاً", () => {
     const availability: TopicGovernanceMethodAvailability = {
       regulation: { available: true, reason: "جاهز" },
+      prior: { available: true, reason: "مسار جاهز" },
       custom: { available: true, reason: "مسموح" },
       exception: { available: false, reason: "غير مطلوب" },
     };
@@ -19,6 +20,7 @@ describe("topic creation model", () => {
   it("ينتقل للمسار المخصص عند غياب مسار لائحي", () => {
     const availability: TopicGovernanceMethodAvailability = {
       regulation: { available: false, reason: "غير موجود" },
+      prior: { available: false, reason: "لا يوجد مسار" },
       custom: { available: true, reason: "مسموح" },
       exception: { available: false, reason: "غير مطلوب" },
     };
@@ -29,6 +31,7 @@ describe("topic creation model", () => {
   it("يبقي البدائل الخاضعة للمراجعة قابلة للاختيار", () => {
     const availability: TopicGovernanceMethodAvailability = {
       regulation: { available: true, reason: "جاهز" },
+      prior: { available: true, reason: "يتطلب إثباتاً" },
       custom: { available: true, reason: "يتطلب اعتماداً" },
       exception: { available: true, reason: "يتطلب صلاحية" },
     };

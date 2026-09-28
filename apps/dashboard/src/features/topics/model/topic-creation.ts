@@ -1,4 +1,4 @@
-export type TopicGovernanceMethod = "regulation" | "custom" | "exception";
+export type TopicGovernanceMethod = "regulation" | "prior" | "custom" | "exception";
 
 export type TopicGovernanceMethodAvailability = Record<TopicGovernanceMethod, {
   available: boolean;

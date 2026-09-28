@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   BookOpenCheck,
@@ -30,6 +31,7 @@ import type {
   PolicyItem,
   ReferenceOption,
   TopicCustomRouteDraft,
+  TopicPriorRouteRequest,
   WorkflowTemplate,
 } from "../model/types";
 import { workflowTemplatesFromResponse } from "../model/workflow-contract";
@@ -460,6 +462,7 @@ export function RegulationsWorkspace({
 }: {
   initialPolicies: Policy[];
 }) {
+  const router = useRouter();
   const legacyInlineDetailEnabled: boolean = false;
   const [policies, setPolicies] = useState(initialPolicies);
   const [tab, setTab] = useState<
@@ -485,6 +488,8 @@ export function RegulationsWorkspace({
   }>({ units: [], classes: [], categories: [] });
   const [exceptions, setExceptions] = useState<GovernanceException[]>([]);
   const [customRouteDrafts, setCustomRouteDrafts] = useState<TopicCustomRouteDraft[]>([]);
+  const [priorRouteRequests, setPriorRouteRequests] = useState<TopicPriorRouteRequest[]>([]);
+  const [priorRouteReviewComments, setPriorRouteReviewComments] = useState<Record<string, string>>({});
   const [modal, setModal] = useState<Modal>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -1003,10 +1008,14 @@ export function RegulationsWorkspace({
         rpc<{ items: TopicCustomRouteDraft[] }>("admin_list_topic_custom_route_drafts", {
           p_status: null, p_limit: 100, p_offset: 0,
         }),
+        rpc<{ items: TopicPriorRouteRequest[] }>("admin_list_topic_prior_route_requests", {
+          p_status: null,
+        }),
       ]));
       if (result) {
         setExceptions(result[0].items);
         setCustomRouteDrafts(result[1].items);
+        setPriorRouteRequests(result[2].items);
       }
     }
   }
@@ -1551,6 +1560,23 @@ export function RegulationsWorkspace({
     if (result) await changeTab("exceptions");
   }
 
+  async function reviewPriorRouteRequest(item: TopicPriorRouteRequest, approve: boolean) {
+    const comment = priorRouteReviewComments[item.id]?.trim() ?? "";
+    if (comment.length < 5) {
+      setNotice({ kind: "error", text: "اكتب ملاحظة مراجعة واضحة قبل اعتماد الأدلة أو رفضها." });
+      return;
+    }
+    const result = await execute(
+      () => rpc("review_topic_prior_route_request", {
+        p_request_id: item.id,
+        p_action: approve ? "approve" : "reject",
+        p_comment: comment,
+      }),
+      approve ? "تم اعتماد الأدلة وتفعيل أول مجلس متبقٍ." : "تم رفض إثبات المسار السابق.",
+    );
+    if (result) await changeTab("exceptions");
+  }
+
   async function importPolicyBundle() {
     let bundle: Record<string, unknown>;
     try {
@@ -1572,8 +1598,7 @@ export function RegulationsWorkspace({
         }),
       "تم استيراد الحزمة كاملة داخل معاملة واحدة.",
     );
-    if (result)
-      window.location.assign(`/admin/regulations/${result.policy_id}`);
+    if (result) router.push(`/admin/regulations/${result.policy_id}`);
   }
 
   return (
@@ -3182,6 +3207,32 @@ export function RegulationsWorkspace({
                     <Plus size={15} />
                     طلب استثناء
                   </button>
+                </div>
+                <div className="border-b border-[#edf1f5] bg-gradient-to-l from-[#eef8ff] to-white p-5">
+                  <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-black text-[#0877df]">استكمال موضوعات قائمة</p>
+                      <h3 className="mt-1 text-sm font-black text-[#17283f]">إثبات المجالس المنفذة خارج النظام</h3>
+                      <p className="mt-1 text-[10px] leading-5 text-[#718196]">تحقق من تاريخ كل مجلس وقراره ومحضره قبل تفعيل أول مرحلة متبقية.</p>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black text-[#0877df] shadow-sm">{priorRouteRequests.filter((item) => item.status === "submitted").length} بانتظار التحقق</span>
+                  </div>
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    {priorRouteRequests.map((request) => <article key={request.id} className="overflow-hidden rounded-2xl border border-[#cfe0ef] bg-white shadow-[0_8px_22px_rgba(20,55,90,.06)]">
+                      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[#edf1f5] p-4">
+                        <div><p className="text-[9px] font-black text-[#0877df]">{request.topic_no || "موضوع قائم"}</p><h4 className="mt-1 text-sm font-black text-[#17283f]">{request.topic_title_ar}</h4><p className="mt-1 text-[9px] text-[#8190a3]">قدمه: {request.requester_name_ar}{request.submitted_at ? ` · ${new Date(request.submitted_at).toLocaleDateString("ar-SA")}` : ""}</p></div><Badge value={request.status}/>
+                      </header>
+                      <ol className="space-y-3 p-4">
+                        {request.steps.map((step) => <li key={step.id} className="rounded-xl border border-[#e1e9f1] bg-[#fbfdff] p-3">
+                          <div className="flex items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-600 text-[10px] font-black text-white">{step.sequence_no}</span><div className="min-w-0 flex-1"><strong className="text-[11px] text-[#24364e]">{step.responsible_unit_name_ar || step.step_title}</strong><p className="mt-0.5 text-[9px] text-[#7b8ba0]">{step.step_title} · {new Date(step.meeting_date).toLocaleDateString("ar-SA")}{step.meeting_reference ? ` · ${step.meeting_reference}` : ""}</p></div></div>
+                          <div className="mt-3 grid gap-2 rounded-lg bg-white p-2.5 text-[9px] leading-5 text-[#52647a] sm:grid-cols-2"><p><b className="text-[#24364e]">القرار: </b>{step.decision_text}</p><p><b className="text-[#24364e]">سبب التسجيل: </b>{step.bypass_reason}</p></div>
+                          <div className="mt-2 flex flex-wrap gap-2">{step.attachments.map((attachment)=><a key={attachment.id} href={attachment.file_url} target="_blank" rel="noreferrer" className="rounded-lg border border-[#b9d8f2] bg-[#eef7ff] px-2.5 py-1.5 text-[9px] font-black text-[#0877df]">عرض {attachment.file_name}</a>)}</div>
+                        </li>)}
+                      </ol>
+                      {request.status === "submitted" && <footer className="space-y-3 border-t border-[#edf1f5] bg-[#fbfdff] p-4"><label className="block"><span className="mb-1.5 block text-[9px] font-black text-[#52647a]">ملاحظة المراجع *</span><textarea value={priorRouteReviewComments[request.id] ?? ""} onChange={(event)=>setPriorRouteReviewComments((current)=>({...current,[request.id]:event.target.value}))} placeholder="دوّن نتيجة فحص المحاضر والقرارات…" className="min-h-20 w-full rounded-xl border border-[#d7e2ec] bg-white p-3 text-[10px] leading-5"/></label><div className="flex flex-wrap gap-2"><button disabled={(priorRouteReviewComments[request.id]?.trim().length ?? 0)<5||busy} onClick={()=>reviewPriorRouteRequest(request,true)} className="rounded-lg bg-emerald-600 px-4 py-2 text-[9px] font-black text-white disabled:bg-[#a8b8c9]">اعتماد وبدء المرحلة التالية</button><button disabled={(priorRouteReviewComments[request.id]?.trim().length ?? 0)<5||busy} onClick={()=>reviewPriorRouteRequest(request,false)} className="rounded-lg bg-red-50 px-4 py-2 text-[9px] font-black text-red-700 disabled:text-[#a8b8c9]">رفض الأدلة</button></div></footer>}
+                    </article>)}
+                    {!priorRouteRequests.length&&<div className="rounded-xl border border-dashed border-[#cfdce9] bg-white p-6 text-center text-[11px] text-[#8291a4] xl:col-span-2">لا توجد طلبات لاستكمال مسار سابق.</div>}
+                  </div>
                 </div>
                 <div className="border-b border-[#edf1f5] bg-[#f8fbff] p-5">
                   <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
