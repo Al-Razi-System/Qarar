@@ -94,6 +94,7 @@ function mockRegulationRpc(overrides: Record<string, unknown> = {}) {
       admin_list_topic_categories: { items: references.categories },
       admin_search_policies: { items: policies },
       admin_list_governance_exceptions: { items: [] },
+      admin_list_topic_custom_route_drafts: { items: [] },
       ...overrides,
     };
     if (!(contract in dataByContract)) {

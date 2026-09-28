@@ -11,26 +11,42 @@ afterEach(() => {
 });
 
 describe("TopicRegulationCreator", () => {
-  it("يعرض مسار إنشاء موضوع مرتبط بلائحة بالتسلسل الصحيح", () => {
-    const source = readFileSync(
+  it("يعرض رحلة إنشاء مبسطة ويفصل طرق الحوكمة بوضوح", () => {
+    const creatorSource = readFileSync(
       join(process.cwd(), "src/features/topics/ui/topic-regulation-creator.tsx"),
+      "utf8",
+    );
+    const progressSource = readFileSync(
+      join(process.cwd(), "src/features/topics/ui/topic-creation-progress.tsx"),
+      "utf8",
+    );
+    const methodSource = readFileSync(
+      join(process.cwd(), "src/features/topics/ui/topic-governance-method-selector.tsx"),
       "utf8",
     );
 
     [
-      "بيانات الموضوع والجهة والتصنيف",
-      "اختيار اللائحة والمادة",
-      "المتطلبات والقيود",
-      "معاينة مسار الاعتماد",
-      "المراجعة والإنشاء",
-      "متابعة الموضوع بعد الإنشاء",
+      "بيانات الموضوع",
+      "الحوكمة والمسار",
+      "المراجعة والإرسال",
+      "المتابعة",
+    ].forEach((label) => expect(progressSource).toContain(label));
+
+    [
+      "المسار اللائحي",
+      "مسار مخصص",
+      "استثناء لائحي",
+      "كيف سيُعالج هذا الموضوع؟",
+    ].forEach((label) => expect(methodSource).toContain(label));
+
+    [
       "اللائحة المختارة",
       "البند المنطبق",
       "المسار الحالي",
       "الخطوة الحالية",
       "الجهة المسؤولة",
       "النتائج المتاحة",
-    ].forEach((label) => expect(source).toContain(label));
+    ].forEach((label) => expect(creatorSource).toContain(label));
   });
 
   it("يستخدم عقود اللوائح الحديثة للبحث والإنشاء والملخص", () => {
@@ -53,6 +69,7 @@ describe("TopicRegulationCreator", () => {
         "create_topic_exception_request",
         "request_custom_workflow",
         "get_topic_exception_workflow_options",
+        "create_topic_custom_route_draft",
     ].forEach((contract) => {
       expect(source).toContain(contract);
       expect(route).toContain(`"${contract}"`);
@@ -117,7 +134,7 @@ describe("TopicRegulationCreator", () => {
     ].forEach((label) => expect(source).toContain(label));
   });
 
-  it("ينشئ طلب استثناء فعليًا عندما لا توجد لائحة مطابقة", async () => {
+  it("ينشئ مسودة مسار مخصص مستقلة عندما لا توجد لائحة مطابقة", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
       const body = JSON.parse(String(init?.body ?? "{}"));
@@ -133,22 +150,14 @@ describe("TopicRegulationCreator", () => {
           effective_on: "2026-08-24",
           categories: [{ id: "cat-1", code: "academic", name_ar: "برامج أكاديمية", executable_item_count: 1 }],
         },
-        admin_list_workflow_templates: { items: [{
-          id: "workflow-1",
-          code: "temporary-route",
-          name_ar: "مسار مؤقت",
-          versions: [{ id: "workflow-version-1", version_no: 1, status: "active", validation_status: "valid" }],
-        }] },
-        get_topic_exception_workflow_options: {
-          can_request: true,
-          items: [{ id: "workflow-version-1", label: "مسار مؤقت معتمد", description: "مسار مؤقت للمراجعة" }],
-        },
+        admin_list_workflow_templates: { items: [] },
         get_topic_regulation_options: { total: 0, items: [] },
-        create_topic_exception_request: {
+        create_topic_custom_route_draft: {
           topic_id: "topic-1",
-          exception_id: "exception-1",
-          status: "pending",
-          routing_status: "routing_exception_pending",
+          custom_route_draft_id: "draft-1",
+          status: "submitted",
+          routing_status: "routing_pending",
+          governance_source: "custom",
         },
         get_topic_governance_summary: {
           topic: {
@@ -156,21 +165,22 @@ describe("TopicRegulationCreator", () => {
             topic_no: "TOP-1",
             title_ar: "إنشاء برنامج جديد",
             status: "new",
-            routing_status: "routing_exception_pending",
+            routing_status: "routing_pending",
             governance_source: "custom",
           },
           regulation: null,
           item: null,
           workflow: null,
           current_step: null,
-          exception: {
-            id: "exception-1",
-            status: "pending",
-            reason: "لا توجد لائحة مطابقة لهذا النوع من الموضوعات",
-            valid_until: new Date(Date.now() + 86_400_000).toISOString(),
-            requested_source: "custom",
-            workflow_name_ar: "مسار مؤقت",
-          },
+          exception: null,
+        },
+        get_topic_detail: {
+          id: "topic-1",
+          topic_no: "TOP-1",
+          title_ar: "إنشاء برنامج جديد",
+          status: "new",
+          routing_status: "routing_pending",
+          governance_source: "custom",
         },
       };
       return new Response(JSON.stringify({ data: dataByContract[contract] }), { status: 200 });
@@ -185,22 +195,19 @@ describe("TopicRegulationCreator", () => {
     await user.selectOptions(screen.getByLabelText("فئة الموضوع"), "cat-1");
     await user.click(screen.getByRole("button", { name: /التالي: عرض اللائحة المنطبقة/ }));
 
-      await screen.findByRole("button", { name: /طلب مسار استثنائي/ });
-      await screen.findByText("مسار مؤقت معتمد");
-      await user.selectOptions(screen.getAllByRole("combobox").at(-1)!, "workflow-version-1");
-    const reasonInput = screen.getByPlaceholderText(/اكتب السبب/);
-    await user.clear(reasonInput);
+    const reasonInput = await screen.findByPlaceholderText(/لا توجد لائحة نافذة/);
     await user.type(reasonInput, "لا توجد لائحة مطابقة لهذا النوع من الموضوعات");
-      await user.click(screen.getByRole("button", { name: /طلب مسار استثنائي/ }));
+    await user.click(screen.getByRole("button", { name: /إنشاء الموضوع وإرسال المسار للاعتماد/ }));
 
-    await screen.findByText("تم إرسال طلب الاستثناء. الحالة الآن: بانتظار الاعتماد.");
-    const exceptionCall = fetchMock.mock.calls.map((call) => JSON.parse(String(call[1]?.body))).find((body) => body.contract === "create_topic_exception_request");
-    expect(exceptionCall.params).toMatchObject({
+    await screen.findByText(/تم إنشاء الموضوع وإرسال مساره المخصص للاعتماد/);
+    const customRouteCall = fetchMock.mock.calls.map((call) => JSON.parse(String(call[1]?.body))).find((body) => body.contract === "create_topic_custom_route_draft");
+    expect(customRouteCall.params).toMatchObject({
       p_title_ar: "إنشاء برنامج جديد",
       p_current_unit_id: "unit-1",
       p_category_id: "cat-1",
-      p_workflow_template_version_id: "workflow-version-1",
-      p_reason: "لا توجد لائحة مطابقة لهذا النوع من الموضوعات",
+      p_route_name_ar: "مسار معالجة الموضوع",
+      p_rationale: "لا توجد لائحة مطابقة لهذا النوع من الموضوعات",
     });
+    expect(customRouteCall.params.p_steps).toHaveLength(2);
   }, 15_000);
 });

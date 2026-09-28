@@ -244,3 +244,23 @@ export type GovernanceException = {
   requested_at: string;
   workflow_name_ar?: string | null;
 };
+export type TopicCustomRouteDraft = {
+  id: string;
+  topic_id: string;
+  topic_title_ar: string;
+  name_ar: string;
+  rationale: string;
+  status: string;
+  submitted_at: string;
+  reviewed_at?: string | null;
+  review_comment?: string | null;
+  steps: Array<{
+    id: string;
+    sequence_no: number;
+    name_ar: string;
+    step_type: string;
+    responsibility: string;
+    governance_unit_id: string;
+    governance_unit_name_ar: string;
+  }>;
+};

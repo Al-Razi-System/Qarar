@@ -52,6 +52,8 @@ const contracts = new Set([
   "request_custom_workflow",
   "approve_custom_workflow",
   "create_topic_exception_request",
+  "admin_list_topic_custom_route_drafts",
+  "approve_topic_custom_route_draft",
   "admin_import_policy_bundle",
   "admin_add_policy_attachment",
   "admin_remove_policy_attachment",

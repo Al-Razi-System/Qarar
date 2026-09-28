@@ -29,6 +29,7 @@ import type {
   Policy,
   PolicyItem,
   ReferenceOption,
+  TopicCustomRouteDraft,
   WorkflowTemplate,
 } from "../model/types";
 import { workflowTemplatesFromResponse } from "../model/workflow-contract";
@@ -483,6 +484,7 @@ export function RegulationsWorkspace({
     categories: ReferenceOption[];
   }>({ units: [], classes: [], categories: [] });
   const [exceptions, setExceptions] = useState<GovernanceException[]>([]);
+  const [customRouteDrafts, setCustomRouteDrafts] = useState<TopicCustomRouteDraft[]>([]);
   const [modal, setModal] = useState<Modal>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -994,13 +996,18 @@ export function RegulationsWorkspace({
     if (next === "workflows" || next === "matcher" || next === "exceptions")
       await loadWorkflows();
     if (next === "exceptions") {
-      const result = await execute(() =>
-        rpc<{ items: GovernanceException[] }>(
-          "admin_list_governance_exceptions",
-          { p_status: null, p_limit: 100, p_offset: 0 },
-        ),
-      );
-      if (result) setExceptions(result.items);
+      const result = await execute(() => Promise.all([
+        rpc<{ items: GovernanceException[] }>("admin_list_governance_exceptions", {
+          p_status: null, p_limit: 100, p_offset: 0,
+        }),
+        rpc<{ items: TopicCustomRouteDraft[] }>("admin_list_topic_custom_route_drafts", {
+          p_status: null, p_limit: 100, p_offset: 0,
+        }),
+      ]));
+      if (result) {
+        setExceptions(result[0].items);
+        setCustomRouteDrafts(result[1].items);
+      }
     }
   }
 
@@ -1526,6 +1533,20 @@ export function RegulationsWorkspace({
             : "تم الرفض بعد المراجعة.",
         }),
       approve ? "تم اعتماد الاستثناء." : "تم رفض الاستثناء.",
+    );
+    if (result) await changeTab("exceptions");
+  }
+
+  async function reviewCustomRouteDraft(item: TopicCustomRouteDraft, approve: boolean) {
+    const result = await execute(
+      () => rpc("approve_topic_custom_route_draft", {
+        p_custom_route_draft_id: item.id,
+        p_approve: approve,
+        p_review_comment: approve
+          ? "تمت مراجعة مراحل المسار المخصص واعتمادها."
+          : "تم رفض المسار المخصص بعد المراجعة.",
+      }),
+      approve ? "تم اعتماد المسار المخصص وبدء تنفيذه." : "تم رفض المسار المخصص.",
     );
     if (result) await changeTab("exceptions");
   }
@@ -3161,6 +3182,47 @@ export function RegulationsWorkspace({
                     <Plus size={15} />
                     طلب استثناء
                   </button>
+                </div>
+                <div className="border-b border-[#edf1f5] bg-[#f8fbff] p-5">
+                  <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <h3 className="text-xs font-black text-[#17283f]">مسارات الموضوعات المخصصة</h3>
+                      <p className="mt-1 text-[10px] text-[#8190a3]">مسارات دائمة خاصة بموضوع واحد، منفصلة عن الاستثناءات المؤقتة.</p>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black text-[#52647a]">{customRouteDrafts.filter((item) => item.status === "submitted").length} بانتظار المراجعة</span>
+                  </div>
+                  <div className="grid gap-3 xl:grid-cols-2">
+                    {customRouteDrafts.map((draft) => (
+                      <article key={draft.id} className="rounded-2xl border border-[#dce5ef] bg-white p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] font-black text-[#0066cc]">{draft.topic_title_ar}</p>
+                            <h4 className="mt-1 text-sm font-black text-[#17283f]">{draft.name_ar}</h4>
+                            <p className="mt-1 text-[10px] leading-5 text-[#6b7b8f]">{draft.rationale}</p>
+                          </div>
+                          <Badge value={draft.status} />
+                        </div>
+                        <ol className="mt-3 space-y-2">
+                          {draft.steps.map((step) => (
+                            <li key={step.id} className="flex items-center gap-3 rounded-xl bg-[#f8fafc] px-3 py-2">
+                              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#edf6ff] text-[10px] font-black text-[#0066cc]">{step.sequence_no}</span>
+                              <span className="min-w-0">
+                                <strong className="block text-[10px] text-[#24364e]">{step.name_ar}</strong>
+                                <span className="mt-0.5 block text-[9px] text-[#7b8ba0]">{step.governance_unit_name_ar}</span>
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                        {draft.status === "submitted" && (
+                          <div className="mt-3 flex gap-2 border-t border-[#edf1f5] pt-3">
+                            <button onClick={() => reviewCustomRouteDraft(draft, true)} className="rounded-lg bg-emerald-600 px-3 py-2 text-[9px] font-bold text-white">اعتماد وتشغيل</button>
+                            <button onClick={() => reviewCustomRouteDraft(draft, false)} className="rounded-lg bg-red-50 px-3 py-2 text-[9px] font-bold text-red-700">رفض</button>
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                    {!customRouteDrafts.length && <div className="rounded-xl border border-dashed border-[#cfdce9] bg-white p-5 text-center text-[11px] text-[#8291a4] xl:col-span-2">لا توجد مسارات مخصصة بانتظار المراجعة.</div>}
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[900px] text-right">

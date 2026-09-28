@@ -5,6 +5,15 @@ import {
   AlertCircle, ArrowLeft, BookOpen, Check, ChevronDown, ChevronLeft, FileCheck2,
   FileText, FolderTree, Gavel, Layers3, LoaderCircle, Paperclip, Route, Search, ShieldCheck, Sparkles, Trash2,
 } from "lucide-react";
+import {
+  resolveCreationStep,
+  resolveDefaultGovernanceMethod,
+  type TopicGovernanceMethod,
+  type TopicGovernanceMethodAvailability,
+} from "../model/topic-creation";
+import { TopicCreationProgress } from "./topic-creation-progress";
+import { TopicCustomRouteDesigner, type CustomRouteStepDraft } from "./topic-custom-route-designer";
+import { TopicGovernanceMethodSelector } from "./topic-governance-method-selector";
 
 type Notice = { kind: "success" | "error"; text: string; detail?: string };
 type PendingAttachment = { id: string; file: File; description: string };
@@ -256,15 +265,6 @@ function SmallBadge({ children, tone = "blue" }: { children: React.ReactNode; to
   return <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${classes[tone]}`}>{children}</span>;
 }
 
-const creationStages = [
-  "بيانات الموضوع والجهة والتصنيف",
-  "اختيار اللائحة والمادة",
-  "المتطلبات والقيود",
-  "معاينة مسار الاعتماد",
-  "المراجعة والإنشاء",
-  "متابعة الموضوع بعد الإنشاء",
-];
-
 type TopicRegulationCreatorProps = {
   /** Called only after the server confirms creation and the user chooses to open the new topic. */
   onFollowTopic?: (topicId: string) => void | Promise<void>;
@@ -300,6 +300,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
   const [reviewReady, setReviewReady] = useState(false);
   const [summary, setSummary] = useState<TopicSummary | null>(null);
   const [exceptionResult, setExceptionResult] = useState<Record<string, unknown> | null>(null);
+  const [governanceMethodOverride, setGovernanceMethodOverride] = useState<TopicGovernanceMethod | null>(null);
   const [exceptionForm, setExceptionForm] = useState({
     reason: "",
     workflowVersionId: "",
@@ -330,7 +331,34 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
         : selectedOption && !selectedOption.can_start_workflow && selectedPolicyAllowsException
           ? { kind: "incomplete_route", title: "المسار غير مكتمل", description: "تسمح السياسة بطلب استثناء مؤقت إلى أن يكتمل مسار اللائحة." }
           : null;
-  const shouldShowExceptionDesigner = Boolean(exceptionScenario || summary?.exception?.status);
+  const governanceAvailability = useMemo<TopicGovernanceMethodAvailability>(() => ({
+    regulation: {
+      available: Boolean(selectedOption?.can_start_workflow),
+      reason: selectedOption?.can_start_workflow
+        ? "المطابقة مكتملة والمسار جاهز للتشغيل."
+        : "لا يوجد مسار لائحي مكتمل يمكن تشغيله الآن.",
+    },
+    custom: {
+      available: Boolean(exceptionScenario?.kind === "no_regulation" || exceptionScenario?.kind === "custom_route"),
+      reason: exceptionScenario?.kind === "no_regulation"
+        ? "لا توجد لائحة منطبقة؛ يمكن اقتراح مسار معتمد."
+        : exceptionScenario?.kind === "custom_route"
+          ? "تسمح نتيجة المطابقة بطلب مسار مخصص."
+          : "هذا الخيار غير مسموح وفق نتيجة المطابقة الحالية.",
+    },
+    exception: {
+      available: Boolean(exceptionScenario?.kind === "incomplete_route"),
+      reason: exceptionScenario?.kind === "incomplete_route"
+        ? "يمكن طلب مسار مؤقت حتى يكتمل المسار اللائحي."
+        : "لا توجد حالة استثنائية تبرر تجاوز المسار الحالي.",
+    },
+  }), [exceptionScenario?.kind, selectedOption?.can_start_workflow]);
+  const defaultGovernanceMethod = resolveDefaultGovernanceMethod(governanceAvailability);
+  const governanceMethod = governanceMethodOverride && governanceAvailability[governanceMethodOverride].available
+    ? governanceMethodOverride
+    : defaultGovernanceMethod;
+  const shouldShowExceptionDesigner = Boolean(summary?.exception?.status)
+    || (governanceMethod === "exception" && Boolean(exceptionScenario));
   const hasPendingException = summary?.exception?.status === "pending" || exceptionResult?.status === "pending";
   const titleLength = form.title.trim().length;
   const descriptionLength = form.description.trim().length;
@@ -357,17 +385,11 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
           : !form.category
             ? "اختر فئة الموضوع."
             : "";
-  const currentStage = summary
-    ? 6
-    : reviewReady
-      ? 5
-      : routePreviewed
-        ? 4
-        : selectedOption
-          ? 3
-          : hasTestedRegulations
-            ? 2
-            : 1;
+  const currentCreationStep = resolveCreationStep({
+    hasMatchedGovernance: hasTestedRegulations,
+    isReadyForReview: reviewReady,
+    isCreated: Boolean(summary),
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -470,6 +492,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     setExceptionResult(null);
     setExceptionWorkflowOptions(null);
     setExceptionWorkflowsLoaded(false);
+    setGovernanceMethodOverride(null);
     setNotice(null);
   }
 
@@ -809,6 +832,65 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     }
   }
 
+  async function createCustomRouteDraft({
+    routeName,
+    rationale,
+    steps,
+  }: {
+    routeName: string;
+    rationale: string;
+    steps: CustomRouteStepDraft[];
+  }) {
+    if (!hasTopicData || !form.unit || !form.category) {
+      setNotice({ kind: "error", text: "أكمل بيانات الموضوع والجهة والفئة قبل تصميم المسار المخصص." });
+      return;
+    }
+    if (!governanceAvailability.custom.available) {
+      setNotice({ kind: "error", text: "لا تسمح نتيجة المطابقة الحالية بإنشاء مسار مخصص لهذا الموضوع." });
+      return;
+    }
+
+    setBusy(true);
+    setNotice(null);
+    try {
+      const result = await rpc<Record<string, unknown>>("create_topic_custom_route_draft", {
+        p_title_ar: form.title.trim(),
+        p_description: form.description.trim(),
+        p_category_id: form.category,
+        p_current_unit_id: form.unit,
+        p_route_name_ar: routeName.trim(),
+        p_rationale: rationale.trim(),
+        p_steps: steps.map(({ name_ar, step_type, responsibility, governance_unit_id }) => ({
+          name_ar: name_ar.trim(),
+          step_type,
+          responsibility,
+          governance_unit_id,
+        })),
+        p_priority: form.priority,
+        p_source_type: form.source,
+        p_title_en: null,
+        p_client_request_id: getClientRequestId(),
+      });
+      const topicId = String(result.topic_id ?? "");
+      if (!topicId) throw new Error("تم حفظ المسار لكن لم يرجع معرف الموضوع.");
+      const uploadedCount = await uploadPendingAttachments(topicId);
+      await loadSummary(topicId);
+      setPendingAttachments([]);
+      setNotice({
+        kind: "success",
+        text: `تم إنشاء الموضوع وإرسال مساره المخصص للاعتماد${uploadedCount ? `، ورفع ${uploadedCount} مرفق.` : "."}`,
+      });
+    } catch (error) {
+      setNotice({
+        kind: "error",
+        text: error instanceof Error ? error.message : "تعذر حفظ المسار المخصص.",
+        detail: (error as Error & { detail?: string }).detail,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function requestException() {
     if (!exceptionScenario && !summary?.exception?.status) {
       setNotice({ kind: "error", text: "لا يتاح طلب مسار استثنائي إلا عند غياب لائحة منطبقة أو وجود مسار تسمح السياسة باستثنائه." });
@@ -898,9 +980,9 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     <section className="overflow-hidden rounded-2xl border border-[#d9e4ef] bg-white shadow-sm">
       <div className="grid gap-4 border-b border-[#edf2f7] bg-[#fbfdff] p-5 xl:grid-cols-[1fr_auto] xl:items-end">
         <div>
-          <p className="mb-1.5 text-[11px] font-black text-[#ff7a00]">إنشاء موضوع محكوم بلائحة</p>
-          <h1 className="text-2xl font-black text-[#0a1330]">موضوع جديد مع اختيار اللائحة المناسبة</h1>
-          <p className="mt-2 max-w-4xl text-xs leading-6 text-[#66778d]">ابدأ ببيانات الموضوع، اختر المجلس وفئة الموضوع، ثم يعرض النظام اللوائح المطابقة لتختار منها قبل إنشاء الموضوع والمسار تلقائيًا.</p>
+          <p className="mb-1.5 text-[11px] font-black text-[#ff7a00]">إنشاء موضوع</p>
+          <h1 className="text-2xl font-black text-[#0a1330]">موضوع جديد ومسار معالجة واضح</h1>
+          <p className="mt-2 max-w-4xl text-xs leading-6 text-[#66778d]">أدخل بيانات الموضوع مرة واحدة، ثم يوضح لك النظام طريقة الحوكمة والمسار قبل الإرسال.</p>
         </div>
         <div className="flex items-center gap-2 rounded-xl border border-[#dbe8f5] bg-white px-3 py-2 text-[11px] font-bold text-[#53677f]">
           {busy || loadingReferences ? <LoaderCircle className="animate-spin text-[#0066cc]" size={15}/> : <Sparkles className="text-[#ff7a00]" size={15}/>}
@@ -908,16 +990,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
         </div>
       </div>
 
-      <div className="grid gap-2 border-b border-[#edf2f7] p-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-        {creationStages.map((label, index) => {
-          const done = currentStage > index + 1;
-          const active = currentStage === index + 1;
-          return <div key={label} className={`rounded-xl border px-3 py-2 ${done ? "border-emerald-200 bg-emerald-50 text-emerald-800" : active ? "border-[#8ebeea] bg-[#edf6ff] text-[#0066cc]" : "border-[#e2e9f1] bg-[#fbfdff] text-[#74849a]"}`}>
-            <span className={`mb-1 grid h-5 w-5 place-items-center rounded-full text-[8px] font-black ${done ? "bg-emerald-600 text-white" : active ? "bg-[#0066cc] text-white" : "bg-[#edf2f7] text-[#7b8ba0]"}`}>{done ? <Check size={10}/> : index + 1}</span>
-            <strong className="text-[9px] leading-4">{label}</strong>
-          </div>;
-        })}
-      </div>
+      <TopicCreationProgress currentStep={currentCreationStep} />
 
       <div className="grid gap-5 p-5 xl:grid-cols-[minmax(360px,.78fr)_minmax(0,1.22fr)]">
         <div className="space-y-4">
@@ -997,7 +1070,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
               </div>
               {hasTestedRegulations && <div className="flex gap-2"><SmallBadge tone="blue">{options.length} عنصر مطابق</SmallBadge><SmallBadge tone="green">{readyOptions} جاهزة</SmallBadge></div>}
             </div>
-            {!hasTestedRegulations ? <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-[#c8d8e8] bg-[#fbfdff] p-8 text-center"><div><Route className="mx-auto text-[#86a8c9]" size={34}/><h3 className="mt-3 text-sm font-black text-[#24364e]">أكمل البيانات ثم اضغط «التالي»</h3><p className="mt-2 max-w-md text-xs leading-6 text-[#8291a4]">سيجلب النظام اللوائح النافذة المناسبة للجهة والفئة وتاريخ المطابقة، دون الحاجة إلى معرفة المصطلحات القانونية التقنية.</p></div></div> : !options.length ? <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-amber-200 bg-amber-50/40 p-8 text-center"><div><AlertCircle className="mx-auto text-amber-600" size={34}/><h3 className="mt-3 text-sm font-black text-[#24364e]">لم يتم العثور على لائحة منطبقة</h3><p className="mt-2 max-w-md text-xs leading-6 text-[#8291a4]">لا يمكن إنشاء موضوع غير محكوم بلائحة. يمكنك مراجعة البيانات أو طلب استثناء عند الحاجة.</p></div></div> :
+            {!hasTestedRegulations ? <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-[#c8d8e8] bg-[#fbfdff] p-8 text-center"><div><Route className="mx-auto text-[#86a8c9]" size={34}/><h3 className="mt-3 text-sm font-black text-[#24364e]">أكمل البيانات ثم اضغط «التالي»</h3><p className="mt-2 max-w-md text-xs leading-6 text-[#8291a4]">سيجلب النظام اللوائح النافذة المناسبة للجهة والفئة وتاريخ المطابقة، دون الحاجة إلى معرفة المصطلحات القانونية التقنية.</p></div></div> : !options.length ? <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-amber-200 bg-amber-50/40 p-8 text-center"><div><AlertCircle className="mx-auto text-amber-600" size={34}/><h3 className="mt-3 text-sm font-black text-[#24364e]">لم يتم العثور على لائحة منطبقة</h3><p className="mt-2 max-w-md text-xs leading-6 text-[#8291a4]">يمكنك مراجعة البيانات أو اقتراح مسار مخصص معتمد لهذا الموضوع.</p></div></div> :
               <>
               <RegulationTreePicker
                 trees={regulationTrees}
@@ -1047,7 +1120,25 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                 })}
                 </div>
               </details></>}
-            {selectedOption && <div className="mt-4 space-y-3 rounded-2xl border border-[#d9e8f6] bg-[#f8fbff] p-4">
+            {hasTestedRegulations && <div className="mt-4">
+              <TopicGovernanceMethodSelector
+                value={governanceMethod}
+                availability={governanceAvailability}
+                onChange={(method) => {
+                  setGovernanceMethodOverride(method);
+                  setReviewReady(false);
+                }}
+              />
+            </div>}
+            {hasTestedRegulations && governanceMethod === "custom" && !summary && <div className="mt-4">
+              <TopicCustomRouteDesigner
+                units={references.units}
+                initialUnitId={form.unit}
+                busy={busy}
+                onSubmit={createCustomRouteDraft}
+              />
+            </div>}
+            {selectedOption && governanceMethod !== "custom" && <div className="mt-4 space-y-3 rounded-2xl border border-[#d9e8f6] bg-[#f8fbff] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-black text-[#0066cc]">المرحلة 3 · المتطلبات والقيود</p>
