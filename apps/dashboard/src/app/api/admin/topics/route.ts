@@ -13,7 +13,7 @@ const contracts = new Set([
   "create_topic_with_regulation_bundle", "list_topic_regulation_references",
   "get_topic_governance_summary", "request_custom_workflow",
   "create_topic_exception_request", "get_topic_exception_workflow_options",
-  "create_topic_custom_route_draft",
+  "create_topic_custom_route_draft", "create_topic_governance_exception_request",
   "list_topic_attachments", "add_topic_attachment", "remove_topic_attachment",
   "get_topic_requirements_status", "fulfill_topic_requirement", "get_topic_meeting_history",
 ]);

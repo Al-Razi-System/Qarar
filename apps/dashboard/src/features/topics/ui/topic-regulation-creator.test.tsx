@@ -36,7 +36,7 @@ describe("TopicRegulationCreator", () => {
       "المسار اللائحي",
       "مسار مخصص",
       "استثناء لائحي",
-      "كيف سيُعالج هذا الموضوع؟",
+      "كيف تريد أن يسير هذا الموضوع؟",
     ].forEach((label) => expect(methodSource).toContain(label));
 
     [
@@ -65,11 +65,10 @@ describe("TopicRegulationCreator", () => {
       "get_topic_regulation_preview",
       "get_topic_regulation_route_preview",
       "create_topic_with_regulation_bundle",
-        "get_topic_governance_summary",
-        "create_topic_exception_request",
-        "request_custom_workflow",
-        "get_topic_exception_workflow_options",
-        "create_topic_custom_route_draft",
+      "get_topic_governance_summary",
+      "get_topic_exception_workflow_options",
+      "create_topic_custom_route_draft",
+      "create_topic_governance_exception_request",
     ].forEach((contract) => {
       expect(source).toContain(contract);
       expect(route).toContain(`"${contract}"`);
@@ -112,6 +111,80 @@ describe("TopicRegulationCreator", () => {
     expect(nextButton).toBeEnabled();
   });
 
+  it("يتيح المسار المخصص والاستثناء حتى عند وجود مسار لائحي جاهز", async () => {
+    const user = userEvent.setup();
+    const option = {
+      selection: {
+        policy_id: "policy-1",
+        policy_version_id: "version-1",
+        policy_item_id: "item-1",
+        scope_assignment_id: "scope-1",
+      },
+      policy: { code: "REG-1", name_ar: "لائحة المجلس" },
+      version: { number: 1, label: "الإصدار النافذ" },
+      item: { code: "ART-1", title_ar: "المادة المنظمة للموضوع" },
+      scope: { type: "governance_unit", priority: 1 },
+      governance_mode: "strict_regulated",
+      automation_status: "ready",
+      routing_outcome: "workflow_started",
+      can_start_workflow: true,
+    };
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
+      const contract = JSON.parse(String(init?.body ?? "{}")).contract as string;
+      const dataByContract: Record<string, unknown> = {
+        get_topic_form_options: {
+          governance_units: [{ id: "unit-1", code: "department", name_ar: "مجلس القسم" }],
+          priorities: ["medium"],
+          source_types: ["new"],
+        },
+        get_topic_categories_for_unit: {
+          governance_unit_id: "unit-1",
+          effective_on: "2026-08-24",
+          categories: [{ id: "cat-1", code: "academic", name_ar: "برامج أكاديمية", executable_item_count: 1 }],
+        },
+        admin_list_workflow_templates: { items: [] },
+        get_topic_regulation_options: { total: 1, items: [option] },
+        get_topic_regulation_tree: { total: 0, items: [] },
+        get_topic_regulation_preview: {
+          article: { title: "المادة", official_text: "النص النظامي" },
+          rule_summary: [],
+          scope: { target_name: "مجلس القسم", description: "نطاق المجلس" },
+          workflow: { name: "المسار المعتمد", description: "مسار اعتماد جاهز" },
+          requirements: [],
+          attachments: [],
+          approval_effect: "اعتماد",
+          voting_effect: "تصويت",
+        },
+        get_topic_exception_workflow_options: {
+          can_request: true,
+          items: [{ id: "workflow-version-1", label: "مسار مؤقت معتمد" }],
+        },
+      };
+      return new Response(JSON.stringify({ data: dataByContract[contract] }), { status: 200 });
+    });
+
+    render(<TopicRegulationCreator />);
+    await user.type(screen.getByLabelText("عنوان الموضوع"), "اعتماد برنامج جديد");
+    await user.type(screen.getByLabelText("وصف الموضوع"), "طلب اعتماد برنامج أكاديمي جديد للمجلس المختص.");
+    await user.selectOptions(screen.getByLabelText("جهة تقديم الموضوع"), "unit-1");
+    await screen.findByRole("option", { name: "برامج أكاديمية (1)" });
+    await user.selectOptions(screen.getByLabelText("فئة الموضوع"), "cat-1");
+    await user.click(screen.getByRole("button", { name: /التالي: عرض اللائحة المنطبقة/ }));
+
+    const custom = await screen.findByRole("radio", { name: /مسار مخصص/ });
+    const exception = screen.getByRole("radio", { name: /استثناء لائحي/ });
+    expect(custom).toBeEnabled();
+    expect(exception).toBeEnabled();
+
+    await user.click(custom);
+    expect(await screen.findByText("مصمم المسار المخصص")).toBeInTheDocument();
+
+    await user.click(exception);
+    expect(await screen.findByText("استخدم مسارًا بديلًا لمدة محددة")).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "مسار مؤقت معتمد" })).toBeInTheDocument();
+  }, 15_000);
+
   it("يعرض مسار الاستثناء وحالاته للمستخدم غير التقني", () => {
     const source = readFileSync(
       join(process.cwd(), "src/features/topics/ui/topic-regulation-creator.tsx"),
@@ -120,10 +193,7 @@ describe("TopicRegulationCreator", () => {
 
     [
       "طلب استثناء",
-      "ذكر السبب",
-      "اعتماد الاستثناء",
-      "إنشاء مسار مؤقت أو مخصص",
-      "متابعة الموضوع",
+      "استخدم مسارًا بديلًا لمدة محددة",
       "بانتظار الاعتماد",
       "معتمد",
       "مرفوض",

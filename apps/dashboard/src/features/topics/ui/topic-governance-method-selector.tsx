@@ -15,7 +15,7 @@ const methods = [
   {
     id: "custom" as const,
     title: "مسار مخصص",
-    description: "اختيار مسار مناسب للموضوع عندما لا توجد لائحة قابلة للتطبيق.",
+    description: "صمّم مراحل معالجة مختلفة وأرسلها لاعتماد مسؤول الحوكمة.",
     badge: "يتطلب اعتماداً",
     icon: Route,
   },
@@ -38,14 +38,14 @@ export function TopicGovernanceMethodSelector({
   onChange: (method: TopicGovernanceMethod) => void;
 }) {
   return (
-    <section className="rounded-2xl border border-[#d9e4ef] bg-white p-4 shadow-sm" aria-labelledby="governance-method-title">
-      <div className="mb-4">
-        <p className="text-[10px] font-black text-[#ff7a00]">طريقة حوكمة الموضوع</p>
-        <h2 id="governance-method-title" className="mt-1 text-base font-black text-[#0a1330]">كيف سيُعالج هذا الموضوع؟</h2>
-        <p className="mt-1 text-[11px] leading-5 text-[#617287]">يعرض النظام الخيارات المسموح بها فقط، مع توضيح سبب عدم إتاحة أي خيار آخر.</p>
+    <section aria-labelledby="governance-method-title">
+      <div className="mb-5 text-center">
+        <p className="text-[11px] font-black text-[#0877df]">اختر طريقة المعالجة</p>
+        <h2 id="governance-method-title" className="mt-1 text-xl font-black text-[#0a1330]">كيف تريد أن يسير هذا الموضوع؟</h2>
+        <p className="mx-auto mt-2 max-w-2xl text-xs leading-6 text-[#617287]">المسار اللائحي هو الخيار المقترح. المسار المخصص والاستثناء يرسلان للمراجعة ولا يبدآن تلقائيًا.</p>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-3" role="radiogroup" aria-label="اختيار طريقة الحوكمة">
+      <div className="grid gap-3 md:grid-cols-3" role="radiogroup" aria-label="اختيار طريقة الحوكمة">
         {methods.map((method) => {
           const Icon = method.icon;
           const state = availability[method.id];
@@ -58,23 +58,23 @@ export function TopicGovernanceMethodSelector({
               aria-checked={selected}
               disabled={!state.available}
               onClick={() => onChange(method.id)}
-              className={`min-h-40 rounded-2xl border p-4 text-right transition ${
+              className={`group rounded-2xl border p-4 text-right transition ${
                 selected
-                  ? "border-[#0066cc] bg-[#edf6ff] shadow-[0_10px_24px_rgba(0,102,204,.10)] ring-1 ring-[#0066cc]"
+                  ? "border-[#0877df] bg-[#f0f7ff] shadow-[0_12px_30px_rgba(8,119,223,.12)] ring-1 ring-[#0877df]"
                   : state.available
-                    ? "border-[#dce5ef] bg-white hover:border-[#8ebeea] hover:bg-[#fbfdff]"
+                    ? "border-[#dce5ef] bg-white hover:-translate-y-0.5 hover:border-[#8ebeea] hover:shadow-md"
                     : "cursor-not-allowed border-[#e4e9ef] bg-[#f7f9fb] opacity-65"
               }`}
             >
               <span className="flex items-start justify-between gap-3">
-                <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${selected ? "bg-[#0066cc] text-white" : "bg-[#edf3f8] text-[#526a82]"}`}>
+                <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${selected ? "bg-[#0877df] text-white" : "bg-[#edf3f8] text-[#526a82] group-hover:bg-[#e5f2ff] group-hover:text-[#0877df]"}`}>
                   <Icon size={19} />
                 </span>
-                <span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${selected ? "bg-white text-[#0066cc]" : "bg-[#edf2f7] text-[#617287]"}`}>{method.badge}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${selected ? "bg-white text-[#0877df]" : "bg-[#edf2f7] text-[#617287]"}`}>{method.badge}</span>
               </span>
               <strong className="mt-3 block text-sm font-black text-[#0a1330]">{method.title}</strong>
               <span className="mt-1 block text-[11px] leading-5 text-[#617287]">{method.description}</span>
-              <span className={`mt-3 block text-[10px] font-bold leading-5 ${state.available ? "text-emerald-700" : "text-[#7b8ba0]"}`}>{state.reason}</span>
+              <span className={`mt-3 block border-t pt-3 text-[10px] font-bold leading-5 ${state.available ? "border-[#e4edf6] text-emerald-700" : "border-[#e4e9ef] text-[#7b8ba0]"}`}>{state.reason}</span>
             </button>
           );
         })}

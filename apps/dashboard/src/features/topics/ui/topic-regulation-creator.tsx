@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle, ArrowLeft, BookOpen, Check, ChevronDown, ChevronLeft, FileCheck2,
-  FileText, FolderTree, Gavel, Layers3, LoaderCircle, Paperclip, Route, Search, ShieldCheck, Sparkles, Trash2,
+  FileText, FolderTree, Gavel, Layers3, LoaderCircle, Paperclip, Search, ShieldCheck, Sparkles, Trash2,
 } from "lucide-react";
 import {
   resolveCreationStep,
@@ -189,18 +189,6 @@ const scopeLabels: Record<string, string> = {
   governance_unit_type: "نوع وحدة",
   unit_subtree: "وحدة وفروعها",
 };
-const governanceModeLabels: Record<string, string> = {
-  regulation_required: "مسار اللائحة إلزامي",
-  regulated_fallback_allowed: "يسمح بمسار بديل",
-  custom_route_allowed: "يسمح بمسار مخصص",
-};
-const routingLabels: Record<string, string> = {
-  resolved: "جاهزة لإنشاء المسار",
-  blocked: "محظورة مؤقتًا",
-  custom_route_required: "تحتاج مسارًا مخصصًا",
-  policy_partially_ready: "اللائحة غير مكتملة الجاهزية",
-  policy_not_implemented: "المسار غير مطبق",
-};
 const outcomeLabels: Record<string, string> = {
   approved: "يعتمد",
   returned: "يعاد للتعديل",
@@ -285,16 +273,12 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
   });
   const [options, setOptions] = useState<RegulationOption[]>([]);
   const [regulationTrees, setRegulationTrees] = useState<RegulationTree[]>([]);
-  const [expandedTreeNodes, setExpandedTreeNodes] = useState<Record<string, boolean>>({});
-  const [activeTreeNodeId, setActiveTreeNodeId] = useState("");
-  const [selectedScopeLabel, setSelectedScopeLabel] = useState("");
   const [hasTestedRegulations, setHasTestedRegulations] = useState(false);
   const [selectedKey, setSelectedKey] = useState("");
   const [selectedReferences, setSelectedReferences] = useState<SelectedRegulationReference[]>([]);
   const [expandedKey, setExpandedKey] = useState("");
   const [regulationPreviews, setRegulationPreviews] = useState<Record<string, RegulationPreview>>({});
   const [loadingPreviewKey, setLoadingPreviewKey] = useState("");
-  const [routePreviewed, setRoutePreviewed] = useState(false);
   const [routePreview, setRoutePreview] = useState<TopicRoutePreview | null>(null);
   const [loadingRoutePreview, setLoadingRoutePreview] = useState(false);
   const [reviewReady, setReviewReady] = useState(false);
@@ -339,18 +323,20 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
         : "لا يوجد مسار لائحي مكتمل يمكن تشغيله الآن.",
     },
     custom: {
-      available: Boolean(exceptionScenario?.kind === "no_regulation" || exceptionScenario?.kind === "custom_route"),
+      available: true,
       reason: exceptionScenario?.kind === "no_regulation"
-        ? "لا توجد لائحة منطبقة؛ يمكن اقتراح مسار معتمد."
+        ? "لا توجد لائحة منطبقة؛ يمكنك تصميم مسار ورفعه للاعتماد."
         : exceptionScenario?.kind === "custom_route"
           ? "تسمح نتيجة المطابقة بطلب مسار مخصص."
-          : "هذا الخيار غير مسموح وفق نتيجة المطابقة الحالية.",
+          : "يمكن اقتراح مسار مختلف، ولن يعمل قبل مراجعته واعتماده.",
     },
     exception: {
-      available: Boolean(exceptionScenario?.kind === "incomplete_route"),
+      available: true,
       reason: exceptionScenario?.kind === "incomplete_route"
         ? "يمكن طلب مسار مؤقت حتى يكتمل المسار اللائحي."
-        : "لا توجد حالة استثنائية تبرر تجاوز المسار الحالي.",
+        : selectedOption?.can_start_workflow
+          ? "يمكن طلب تجاوز المسار اللائحي بسبب موثق ومدة محددة."
+          : "يمكن طلب مسار مؤقت بمدة محددة بعد التحقق من صلاحيتك.",
     },
   }), [exceptionScenario?.kind, selectedOption?.can_start_workflow]);
   const defaultGovernanceMethod = resolveDefaultGovernanceMethod(governanceAvailability);
@@ -358,7 +344,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     ? governanceMethodOverride
     : defaultGovernanceMethod;
   const shouldShowExceptionDesigner = Boolean(summary?.exception?.status)
-    || (governanceMethod === "exception" && Boolean(exceptionScenario));
+    || governanceMethod === "exception";
   const hasPendingException = summary?.exception?.status === "pending" || exceptionResult?.status === "pending";
   const titleLength = form.title.trim().length;
   const descriptionLength = form.description.trim().length;
@@ -475,16 +461,12 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     setForm(next);
     setOptions([]);
     setRegulationTrees([]);
-    setExpandedTreeNodes({});
-    setActiveTreeNodeId("");
-    setSelectedScopeLabel("");
     setHasTestedRegulations(false);
     setSelectedKey("");
     setSelectedReferences([]);
     setExpandedKey("");
     setRegulationPreviews({});
     setLoadingPreviewKey("");
-    setRoutePreviewed(false);
     setRoutePreview(null);
     setLoadingRoutePreview(false);
     setReviewReady(false);
@@ -559,7 +541,6 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
       return next.filter((entry, index) => next.findIndex((candidate) => candidate.policy_id === entry.policy_id
         && candidate.policy_version_id === entry.policy_version_id && candidate.policy_item_id === entry.policy_item_id) === index);
     });
-    setRoutePreviewed(false);
     setRoutePreview(null);
     setReviewReady(false);
   }
@@ -569,58 +550,8 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     void openRegulationPreview(option, true);
   }
 
-  function chooseTreeScope(tree: RegulationTree, node?: RegulationTreeNode, mode: "primary" | "supporting" = "primary") {
-    const byId = new Map(tree.nodes.map((entry) => [entry.id, entry]));
-    const nodeIds = new Set<string>();
-    const includeDescendants = (id: string) => {
-      nodeIds.add(id);
-      tree.nodes.filter((entry) => entry.parent_id === id).forEach((child) => includeDescendants(child.id));
-    };
-    if (node) includeDescendants(node.id);
-    else tree.nodes.forEach((entry) => nodeIds.add(entry.id));
-
-    const candidateKeys = new Set<string>();
-    tree.nodes.filter((entry) => nodeIds.has(entry.id)).forEach((entry) => {
-      entry.selections.forEach((selection) => candidateKeys.add(`${selection.policy_id}:${selection.policy_version_id}:${selection.policy_item_id}:${selection.scope_assignment_id}`));
-    });
-    const candidates = options
-      .filter((option) => candidateKeys.has(selectionKey(option)))
-      .sort((a, b) => Number(b.can_start_workflow) - Number(a.can_start_workflow));
-    const chosen = candidates[0];
-    if (!chosen) {
-      setNotice({ kind: "error", text: "لا توجد مادة أو بند قابل للربط بهذا النطاق لهذا الموضوع. اختر مادة مطابقة أو راجع بيانات الموضوع." });
-      return;
-    }
-
-    const label = node
-      ? `${itemTypeLabel(node.item_type)}: ${node.title_ar}`
-      : `اللائحة كاملة: ${tree.policy.name_ar}`;
-    const reference = {
-      policy_id: tree.policy.id,
-      policy_version_id: tree.version.id,
-      policy_item_id: node?.id ?? null,
-      scope_assignment_id: chosen.selection.scope_assignment_id,
-      reference_type: node?.item_type ?? "policy",
-      label,
-    };
-    if (mode === "supporting" && selectedOption) {
-      setSelectedReferences((current) => current.some((entry) => entry.policy_id === reference.policy_id
-        && entry.policy_version_id === reference.policy_version_id && entry.policy_item_id === reference.policy_item_id)
-        ? current : [...current, { ...reference, is_primary: false }]);
-      setNotice({ kind: "success", text: `تمت إضافة «${label}» كمرجع تشريعي مساند للموضوع.` });
-    } else {
-      setActiveTreeNodeId(node?.id ?? `policy:${tree.policy.id}:${tree.version.id}`);
-      setSelectedScopeLabel(label);
-      chooseAndPreviewRegulation(chosen, reference);
-    }
-    if (node && byId.get(node.id)?.item_type !== "clause") {
-      setExpandedTreeNodes((current) => ({ ...current, [node.id]: true }));
-    }
-  }
-
-  async function showRoutePreview() {
-    if (!selectedOption) return;
-    setRoutePreviewed(true);
+  async function showRoutePreview(): Promise<TopicRoutePreview | null> {
+    if (!selectedOption) return null;
     setLoadingRoutePreview(true);
     setNotice(null);
     try {
@@ -636,6 +567,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
         p_scope_assignment_id: selectedOption.selection.scope_assignment_id,
       });
       setRoutePreview(preview);
+      return preview;
     } catch (error) {
       setRoutePreview(null);
       setNotice({
@@ -643,6 +575,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
         text: error instanceof Error ? error.message : "تعذر تحميل معاينة المسار.",
         detail: (error as Error & { detail?: string }).detail,
       });
+      return null;
     } finally {
       setLoadingRoutePreview(false);
     }
@@ -657,7 +590,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
       setNotice({ kind: "error", text: "اختر المجلس/الجهة وفئة الموضوع أولًا." });
       return;
     }
-      setBusy(true); setNotice(null); setSummary(null); setSelectedKey(""); setSelectedReferences([]); setExpandedKey(""); setRegulationPreviews({}); setLoadingPreviewKey(""); setRoutePreviewed(false); setRoutePreview(null); setLoadingRoutePreview(false); setReviewReady(false); setHasTestedRegulations(false); setExceptionWorkflowOptions(null); setExceptionWorkflowsLoaded(false); setRegulationTrees([]); setExpandedTreeNodes({}); setActiveTreeNodeId(""); setSelectedScopeLabel("");
+      setBusy(true); setNotice(null); setSummary(null); setSelectedKey(""); setSelectedReferences([]); setExpandedKey(""); setRegulationPreviews({}); setLoadingPreviewKey(""); setRoutePreview(null); setLoadingRoutePreview(false); setReviewReady(false); setHasTestedRegulations(false); setExceptionWorkflowOptions(null); setExceptionWorkflowsLoaded(false); setRegulationTrees([]);
     try {
       const params = {
         p_governance_unit_id: form.unit,
@@ -673,9 +606,10 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
       setOptions(result.items ?? []);
       setRegulationTrees(treeResult?.items ?? []);
       setHasTestedRegulations(true);
-      if (result.items?.length === 1) {
-        chooseRegulation(result.items[0]);
-        void openRegulationPreview(result.items[0]);
+      const recommended = result.items?.find((item) => item.can_start_workflow) ?? result.items?.[0];
+      if (recommended) {
+        chooseRegulation(recommended);
+        void openRegulationPreview(recommended);
       }
         if (!result.items?.length) setNotice({ kind: "error", text: "لا توجد لائحة نافذة تطابق بيانات هذا الموضوع." });
         if (!result.items?.length) await loadExceptionWorkflowOptions();
@@ -758,7 +692,6 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
       candidate.policy.code === option.policy.code && candidate.item.code === option.item.code
     );
     setOptions(current.items ?? []);
-    setRoutePreviewed(false);
     setReviewReady(false);
     if (refreshed) {
       chooseRegulation(refreshed);
@@ -892,10 +825,6 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
   }
 
   async function requestException() {
-    if (!exceptionScenario && !summary?.exception?.status) {
-      setNotice({ kind: "error", text: "لا يتاح طلب مسار استثنائي إلا عند غياب لائحة منطبقة أو وجود مسار تسمح السياسة باستثنائه." });
-      return;
-    }
     if (!hasTopicData || !form.unit || !form.category) {
       setNotice({ kind: "error", text: "أكمل عنوان الموضوع ووصفه والجهة وفئة الموضوع قبل طلب الاستثناء." });
       return;
@@ -918,33 +847,21 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     }
     setBusy(true); setNotice(null);
     try {
-      let topicId = summary?.topic.id;
-      let result: Record<string, unknown>;
-      if (selectedOption?.routing_outcome === "custom_route_required") {
-        const createdTopic = topicId ? { topicId } : await createTopicFromSelection(selectedOption);
-        topicId = createdTopic.topicId;
-        result = await rpc<Record<string, unknown>>("request_custom_workflow", {
-          p_topic_id: topicId,
-          p_workflow_template_version_id: exceptionForm.workflowVersionId,
-          p_reason: exceptionForm.reason,
-          p_valid_until: new Date(exceptionForm.validUntil).toISOString(),
-        });
-      } else {
-        result = await rpc<Record<string, unknown>>("create_topic_exception_request", {
-          p_title_ar: form.title,
-          p_description: form.description.trim(),
-          p_category_id: form.category,
-          p_current_unit_id: form.unit,
-          p_workflow_template_version_id: exceptionForm.workflowVersionId,
-          p_reason: exceptionForm.reason,
-          p_valid_until: new Date(exceptionForm.validUntil).toISOString(),
-          p_priority: form.priority,
-          p_source_type: form.source,
-          p_title_en: null,
-          p_client_request_id: getClientRequestId(),
-        });
-        topicId = String(result.topic_id ?? "");
-      }
+      const result = await rpc<Record<string, unknown>>("create_topic_governance_exception_request", {
+        p_title_ar: form.title.trim(),
+        p_description: form.description.trim(),
+        p_category_id: form.category,
+        p_current_unit_id: form.unit,
+        p_workflow_template_version_id: exceptionForm.workflowVersionId,
+        p_reason: exceptionForm.reason.trim(),
+        p_valid_until: new Date(exceptionForm.validUntil).toISOString(),
+        p_priority: form.priority,
+        p_source_type: form.source,
+        p_title_en: null,
+        p_client_request_id: getClientRequestId(),
+        p_effective_on: form.effectiveOn,
+      });
+      const topicId = String(result.topic_id ?? result.id ?? "");
       setExceptionResult(result);
       if (topicId) await loadSummary(topicId);
       if (topicId && onFollowTopic) {
@@ -974,15 +891,26 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
     }
   }
 
-  return <div className="mx-auto max-w-[1360px] space-y-5">
+  const screen = summary ? "done" : reviewReady ? "review" : hasTestedRegulations ? "governance" : "details";
+
+  async function continueRegulationToReview() {
+    if (!selectedOption?.can_start_workflow) {
+      setNotice({ kind: "error", text: "اختر لائحة لها مسار اعتماد جاهز، أو استخدم المسار المخصص أو الاستثناء." });
+      return;
+    }
+    const preview = await showRoutePreview();
+    if (preview?.status === "ready") setReviewReady(true);
+  }
+
+  return <div className="mx-auto max-w-[1040px] space-y-5">
     {notice && <div className={`flex items-start gap-3 rounded-2xl border p-4 text-xs shadow-sm ${notice.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}><span className="mt-0.5">{notice.kind === "success" ? <Check size={16}/> : <AlertCircle size={16}/>}</span><div><strong>{notice.text}</strong>{notice.detail && <details className="mt-2 text-[10px] opacity-80"><summary>تفاصيل تقنية</summary><p dir="ltr" className="mt-1 break-all">{notice.detail}</p></details>}</div></div>}
 
-    <section className="overflow-hidden rounded-2xl border border-[#d9e4ef] bg-white shadow-sm">
+    <section className="overflow-hidden rounded-3xl border border-[#d9e4ef] bg-white shadow-[0_18px_55px_rgba(15,42,70,.08)]">
       <div className="grid gap-4 border-b border-[#edf2f7] bg-[#fbfdff] p-5 xl:grid-cols-[1fr_auto] xl:items-end">
         <div>
           <p className="mb-1.5 text-[11px] font-black text-[#ff7a00]">إنشاء موضوع</p>
-          <h1 className="text-2xl font-black text-[#0a1330]">موضوع جديد ومسار معالجة واضح</h1>
-          <p className="mt-2 max-w-4xl text-xs leading-6 text-[#66778d]">أدخل بيانات الموضوع مرة واحدة، ثم يوضح لك النظام طريقة الحوكمة والمسار قبل الإرسال.</p>
+          <h1 className="text-xl font-black text-[#0a1330]">{screen === "details" ? "أدخل بيانات الموضوع" : screen === "governance" ? "اختر طريقة المعالجة" : screen === "review" ? "راجع قبل الإرسال" : "تم إنشاء الموضوع"}</h1>
+          <p className="mt-2 max-w-4xl text-xs leading-6 text-[#66778d]">{screen === "details" ? "الحقول الأساسية فقط، ثم سيقترح النظام المسار المناسب." : screen === "governance" ? "اختر المسار اللائحي أو صمّم مسارًا مخصصًا أو اطلب استثناءً." : screen === "review" ? "تأكد من البيانات والمسار قبل الإنشاء." : "يمكنك فتح الموضوع ومتابعة حالته."}</p>
         </div>
         <div className="flex items-center gap-2 rounded-xl border border-[#dbe8f5] bg-white px-3 py-2 text-[11px] font-bold text-[#53677f]">
           {busy || loadingReferences ? <LoaderCircle className="animate-spin text-[#0066cc]" size={15}/> : <Sparkles className="text-[#ff7a00]" size={15}/>}
@@ -992,8 +920,8 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
 
       <TopicCreationProgress currentStep={currentCreationStep} />
 
-      <div className="grid gap-5 p-5 xl:grid-cols-[minmax(360px,.78fr)_minmax(0,1.22fr)]">
-        <div className="space-y-4">
+      <div className="p-5 sm:p-7">
+        <div className={screen === "details" ? "mx-auto max-w-3xl space-y-4" : "hidden"}>
           <div className="rounded-2xl border border-[#e2e9f1] bg-[#fbfdff] p-4">
             <div className="mb-4 flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#edf6ff] text-[#0066cc]"><FileCheck2 size={18}/></span><div><h2 className="text-sm font-black text-[#0a1330]">بيانات الموضوع</h2><p className="text-[10px] text-[#7b8ba0]">هذه البيانات تُستخدم لاستخراج اللوائح المطابقة.</p></div></div>
             <div className="grid gap-3 md:grid-cols-2">
@@ -1061,8 +989,23 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
           </div>
         </div>
 
-        <div className="space-y-4">
-          <section className="rounded-2xl border border-[#e2e9f1] bg-white p-4">
+        <div className={screen !== "details" ? "space-y-4" : "hidden"}>
+          {screen === "governance" && <>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dce7f1] bg-[#f8fbff] px-4 py-3">
+            <div><p className="text-sm font-black text-[#0a1330]">{form.title}</p><p className="mt-1 text-xs text-[#66778d]">{selectedUnit?.name_ar} · {selectedCategory?.name_ar}</p></div>
+            <button type="button" onClick={() => resetOptions(form)} className="h-10 rounded-xl border border-[#cddbea] bg-white px-4 text-xs font-black text-[#52647a] hover:border-[#0877df] hover:text-[#0877df]">تعديل البيانات</button>
+          </div>
+          <TopicGovernanceMethodSelector
+            value={governanceMethod}
+            availability={governanceAvailability}
+            onChange={(method) => {
+              setGovernanceMethodOverride(method);
+              setReviewReady(false);
+            }}
+          />
+          </>}
+
+          {screen === "governance" && governanceMethod === "regulation" && <section className="rounded-2xl border border-[#e2e9f1] bg-white p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h2 className="text-sm font-black text-[#0a1330]">{hasTestedRegulations ? `تم العثور على ${regulationTrees.length} لائحة و${options.length} مادة أو بند مطابق` : "اختبار اللوائح المنطبقة"}</h2>
@@ -1070,19 +1013,11 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
               </div>
               {hasTestedRegulations && <div className="flex gap-2"><SmallBadge tone="blue">{options.length} عنصر مطابق</SmallBadge><SmallBadge tone="green">{readyOptions} جاهزة</SmallBadge></div>}
             </div>
-            {!hasTestedRegulations ? <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-[#c8d8e8] bg-[#fbfdff] p-8 text-center"><div><Route className="mx-auto text-[#86a8c9]" size={34}/><h3 className="mt-3 text-sm font-black text-[#24364e]">أكمل البيانات ثم اضغط «التالي»</h3><p className="mt-2 max-w-md text-xs leading-6 text-[#8291a4]">سيجلب النظام اللوائح النافذة المناسبة للجهة والفئة وتاريخ المطابقة، دون الحاجة إلى معرفة المصطلحات القانونية التقنية.</p></div></div> : !options.length ? <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-amber-200 bg-amber-50/40 p-8 text-center"><div><AlertCircle className="mx-auto text-amber-600" size={34}/><h3 className="mt-3 text-sm font-black text-[#24364e]">لم يتم العثور على لائحة منطبقة</h3><p className="mt-2 max-w-md text-xs leading-6 text-[#8291a4]">يمكنك مراجعة البيانات أو اقتراح مسار مخصص معتمد لهذا الموضوع.</p></div></div> :
+            {!options.length ? <div className="grid min-h-44 place-items-center rounded-2xl border border-dashed border-amber-200 bg-amber-50/40 p-8 text-center"><div><AlertCircle className="mx-auto text-amber-600" size={34}/><h3 className="mt-3 text-sm font-black text-[#24364e]">لم يتم العثور على لائحة منطبقة</h3><p className="mt-2 max-w-md text-xs leading-6 text-[#8291a4]">اختر «مسار مخصص» أو «استثناء لائحي» أعلاه للمتابعة.</p></div></div> :
               <>
-              <RegulationTreePicker
-                trees={regulationTrees}
-                expandedNodes={expandedTreeNodes}
-                activeNodeId={activeTreeNodeId}
-                selectedKey={selectedKey}
-                selectedScopeLabel={selectedScopeLabel}
-                onToggleNode={(nodeId) => setExpandedTreeNodes((current) => ({ ...current, [nodeId]: !current[nodeId] }))}
-                onChooseScope={chooseTreeScope}
-              />
+              {selectedOption && <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4"><div className="flex items-start justify-between gap-3"><div><SmallBadge tone={selectedOption.can_start_workflow ? "green" : "amber"}>{selectedOption.can_start_workflow ? "المسار المقترح" : "يتطلب معالجة"}</SmallBadge><h3 className="mt-3 text-base font-black text-[#0a1330]">{selectedOption.policy.name_ar}</h3><p className="mt-1 text-xs leading-6 text-[#52647a]">{selectedOption.item.title_ar}</p></div><BookOpen className="text-[#0877df]" size={26}/></div></div>}
               <details className="mt-3 rounded-xl border border-[#e2e9f1] bg-[#fbfdff] p-3">
-                <summary className="cursor-pointer text-[11px] font-black text-[#52647a]">عرض البطاقات التفصيلية البديلة</summary>
+                <summary className="cursor-pointer text-xs font-black text-[#52647a]">عرض النتائج الأخرى والتفاصيل القانونية ({options.length})</summary>
                 <div className="mt-3 grid gap-3">
                 {options.map((option) => {
                   const key = selectionKey(option);
@@ -1120,17 +1055,10 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                 })}
                 </div>
               </details></>}
-            {hasTestedRegulations && <div className="mt-4">
-              <TopicGovernanceMethodSelector
-                value={governanceMethod}
-                availability={governanceAvailability}
-                onChange={(method) => {
-                  setGovernanceMethodOverride(method);
-                  setReviewReady(false);
-                }}
-              />
-            </div>}
-            {hasTestedRegulations && governanceMethod === "custom" && !summary && <div className="mt-4">
+            {selectedOption?.can_start_workflow && <button type="button" disabled={busy || loadingRoutePreview} onClick={() => void continueRegulationToReview()} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0877df] text-sm font-black text-white shadow-[0_10px_22px_rgba(8,119,223,.18)] disabled:bg-[#a8b8c9]"><ArrowLeft size={17}/>{loadingRoutePreview ? "جارٍ تجهيز المسار…" : "متابعة إلى المراجعة"}</button>}
+          </section>}
+
+            {screen === "governance" && governanceMethod === "custom" && !summary && <div>
               <TopicCustomRouteDesigner
                 units={references.units}
                 initialUnitId={form.unit}
@@ -1138,41 +1066,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                 onSubmit={createCustomRouteDraft}
               />
             </div>}
-            {selectedOption && governanceMethod !== "custom" && <div className="mt-4 space-y-3 rounded-2xl border border-[#d9e8f6] bg-[#f8fbff] p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-black text-[#0066cc]">المرحلة 3 · المتطلبات والقيود</p>
-                  <h3 className="mt-1 text-sm font-black text-[#0a1330]">التحقق قبل بدء مسار الاعتماد</h3>
-                  <p className="mt-1 text-[11px] leading-5 text-[#617287]">يعتمد الموضوع على البند المحدد ونطاقه وقابلية اللائحة لتشغيل المسار. لا تُنشأ أي معاملة قبل اجتياز هذا التحقق.</p>
-                </div>
-                <SmallBadge tone={selectedOption.can_start_workflow ? "green" : "amber"}>{selectedOption.can_start_workflow ? "جاهز للتشغيل" : "يتطلب معالجة"}</SmallBadge>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-3">
-                <SummaryTile title="المادة المنطبقة" value={selectedOption.item.title_ar}/>
-                <SummaryTile title="نطاق التطبيق" value={scopeLabels[selectedOption.scope.type] ?? "النطاق المحدد في اللائحة"}/>
-                <SummaryTile title="قاعدة الحوكمة" value={governanceModeLabels[selectedOption.governance_mode] ?? selectedOption.governance_mode} hint={routingLabels[selectedOption.routing_outcome] ?? selectedOption.routing_outcome}/>
-              </div>
-              <ExecutiveRequirements preview={selectedPreview} loading={loadingPreviewKey === selectedKey} />
-              {!routePreviewed && <button onClick={() => void showRoutePreview()} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-[#9cc7ef] bg-white px-4 text-xs font-black text-[#0066cc] hover:bg-[#edf6ff]">
-                <Route size={15}/> معاينة مسار الاعتماد
-              </button>}
-              {routePreviewed && <div className="rounded-xl border border-[#cfe2f4] bg-white p-3">
-                <p className="text-[10px] font-black text-[#0066cc]">المرحلة 4 · معاينة مسار الاعتماد</p>
-                <p className="mt-1 text-xs font-bold text-[#0a1330]">{selectedOption.can_start_workflow ? "سيتم إنشاء مسار الاعتماد تلقائيًا وفتح أول خطوة للمسؤول عنها." : "لا يمكن تشغيل المسار تلقائيًا؛ يمكنك إرسال طلب استثناء لمسار مؤقت أو مخصص."}</p>
-                <TopicRouteTimeline preview={routePreview} loading={loadingRoutePreview} />
-                {firstRouteStep && <div className={`mt-3 flex items-start gap-3 rounded-xl border px-4 py-3 ${firstRouteStep.responsible_unit_id && firstRouteStep.responsible_unit_id !== form.unit ? "border-amber-200 bg-amber-50 text-amber-950" : "border-emerald-200 bg-emerald-50 text-emerald-950"}`}>
-                  <Route className="mt-0.5 shrink-0" size={17}/>
-                  <div>
-                    <p className="text-xs font-black">المجلس الذي سيستلم الموضوع أولاً: {firstRouteStep.responsible_entity}</p>
-                    <p className="mt-1 text-[10px] leading-5">{firstRouteStep.responsible_unit_id && firstRouteStep.responsible_unit_id !== form.unit ? `سيحوّل النظام المسؤولية تلقائياً من جهة التقديم «${selectedUnit?.name_ar ?? "المحددة"}» إلى هذا المجلس عند الإنشاء، ولن يظهر الموضوع في مراجعات جهة التقديم.` : "جهة التقديم هي نفسها المجلس الأول في المسار."}</p>
-                  </div>
-                </div>}
-                {selectedOption.can_start_workflow && routePreview?.status === "ready" && !loadingRoutePreview && !reviewReady && <button onClick={() => setReviewReady(true)} className="mt-3 flex h-10 items-center justify-center gap-2 rounded-xl bg-[#0066cc] px-4 text-xs font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.18)]">
-                  <FileCheck2 size={15}/> الانتقال للمراجعة والإنشاء
-                </button>}
-              </div>}
-            </div>}
-{reviewReady && <section className="mt-4 overflow-hidden rounded-2xl border border-[#0a1330]/10 bg-white shadow-[0_16px_36px_rgba(10,19,48,.12)]">
+{screen === "review" && <section className="mt-4 overflow-hidden rounded-2xl border border-[#0a1330]/10 bg-white shadow-[0_16px_36px_rgba(10,19,48,.12)]">
               <div className="bg-[#0a1330] px-5 py-4 text-white">
                 <p className="text-[10px] font-black text-[#8fc7ff]">المرحلة 5 · المراجعة والإنشاء</p>
                 <h2 className="mt-1 text-base font-black">راجِع ملخص الموضوع قبل بدء المسار</h2>
@@ -1196,14 +1090,12 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                 </button>
               </div>
             </section>}
-          </section>
-
-          {shouldShowExceptionDesigner && <section className="rounded-2xl border border-amber-200 bg-[#fffaf2] p-4 shadow-sm">
+          {screen === "governance" && shouldShowExceptionDesigner && <section className="rounded-2xl border border-amber-200 bg-[#fffaf2] p-5 shadow-sm">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black text-[#ff7a00]">مسار بديل عند التعذر</p>
-                <h2 className="mt-1 text-sm font-black text-[#0a1330]">{exceptionScenario?.title ?? "طلب مسار استثنائي"}</h2>
-                <p className="mt-1 max-w-2xl text-[11px] leading-5 text-[#6d7c90]">{exceptionScenario?.description ?? "الطلب بانتظار المراجعة؛ لا يمكن أن يبدأ الموضوع قبل اعتماد الاستثناء."}</p>
+                <p className="text-xs font-black text-[#d56700]">طلب استثناء</p>
+                <h2 className="mt-1 text-base font-black text-[#0a1330]">استخدم مسارًا بديلًا لمدة محددة</h2>
+                <p className="mt-1 max-w-2xl text-xs leading-6 text-[#6d7c90]">وثّق سبب تجاوز المسار المقترح واختر البديل. لن يبدأ قبل موافقة مراجع مستقل.</p>
               </div>
               <SmallBadge tone={summary?.exception?.status === "approved" ? "green" : summary?.exception?.status === "rejected" || summary?.exception?.status === "expired" ? "amber" : "blue"}>
                 {exceptionStatusLabels[summary?.exception?.status ?? String(exceptionResult?.status ?? "pending")] ?? "بانتظار الاعتماد"}
@@ -1213,15 +1105,6 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
             <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-white px-3 py-3 text-[11px] leading-5 text-amber-900">
               <AlertCircle className="mt-0.5 shrink-0 text-[#ff7a00]" size={16}/>
               <p><strong>تنبيه:</strong> لن يبدأ الموضوع أو أي اعتماد أو تصويت قبل اعتماد طلب المسار الاستثنائي من الجهة المخولة.</p>
-            </div>
-
-            <div className="mb-4 grid gap-2 md:grid-cols-5">
-              {["طلب استثناء", "ذكر السبب", "اعتماد الاستثناء", "إنشاء مسار مؤقت أو مخصص", "متابعة الموضوع"].map((label, index) => (
-                <div key={label} className="rounded-xl border border-amber-100 bg-white px-3 py-2 text-center">
-                  <span className="mx-auto mb-1 grid h-5 w-5 place-items-center rounded-full bg-[#ff7a00]/10 text-[9px] font-black text-[#ff7a00]">{index + 1}</span>
-                  <strong className="text-[10px] leading-4 text-[#24364e]">{label}</strong>
-                </div>
-              ))}
             </div>
 
             {!exceptionWorkflowsLoaded && <div className="rounded-xl border border-[#d9e8f6] bg-white px-4 py-4 text-center text-[11px] font-bold text-[#52647a]"><LoaderCircle className="mx-auto mb-2 animate-spin text-[#0066cc]" size={17}/>جارٍ تجهيز المسارات المؤقتة المسموح بها لك…</div>}
@@ -1252,8 +1135,8 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
             </div>}
 
             <div className="mt-4 flex flex-wrap gap-2">
-              <button disabled={busy || !exceptionWorkflowsLoaded || !exceptionWorkflowOptions?.can_request || !activeWorkflowVersions.length || hasPendingException || !hasTopicData || !form.unit || !form.category || !exceptionForm.workflowVersionId || exceptionForm.reason.trim().length < 10} onClick={requestException} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-[#0066cc] px-4 text-xs font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.18)] disabled:cursor-not-allowed disabled:bg-[#a8b8c9]">
-                {busy ? <LoaderCircle className="animate-spin" size={15}/> : <ShieldCheck size={15}/>} {hasPendingException ? "الطلب بانتظار الاعتماد" : "طلب مسار استثنائي"}
+              <button disabled={busy || !exceptionWorkflowsLoaded || !exceptionWorkflowOptions?.can_request || !activeWorkflowVersions.length || hasPendingException || !hasTopicData || !form.unit || !form.category || !exceptionForm.workflowVersionId || exceptionForm.reason.trim().length < 10} onClick={requestException} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#d56700] px-5 text-sm font-black text-white shadow-[0_8px_18px_rgba(213,103,0,.18)] disabled:cursor-not-allowed disabled:bg-[#a8b8c9]">
+                {busy ? <LoaderCircle className="animate-spin" size={16}/> : <ShieldCheck size={16}/>} {hasPendingException ? "الطلب بانتظار الاعتماد" : "إرسال طلب الاستثناء"}
               </button>
               {(summary?.exception || exceptionResult) && <button disabled={busy} onClick={refreshExceptionStatus} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-[#cddbea] bg-white px-4 text-xs font-black text-[#0a1330] disabled:cursor-not-allowed disabled:opacity-60">
                 تحديث حالة الاستثناء
