@@ -164,6 +164,9 @@ export async function POST(request: Request) {
         retryAfter && /^\d+$/.test(retryAfter) ? { "Retry-After": retryAfter } : undefined,
       );
     }
+    if (authResponse.status >= 500) {
+      return jsonError("خدمة الدخول غير متاحة مؤقتًا.", 503);
+    }
     return jsonError("البريد الإلكتروني أو كلمة المرور غير صحيحة.", 401);
   }
 

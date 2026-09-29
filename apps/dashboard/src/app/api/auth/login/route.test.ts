@@ -67,6 +67,21 @@ describe("POST /api/auth/login", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("لا يعرض عطل خدمة المصادقة على أنه بيانات دخول خاطئة", async () => {
+    vi.stubEnv("QARAR_SUPABASE_URL", "http://kong:8000");
+    vi.stubEnv("QARAR_SUPABASE_ANON_KEY", "runtime-anon-key");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response("Internal Server Error", { status: 500 }),
+    ));
+
+    const response = await POST(loginRequest());
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      message: "خدمة الدخول غير متاحة مؤقتًا.",
+    });
+  });
+
   it("يستخدم عنوان ومفتاح Supabase المحقونين في وقت التشغيل", async () => {
     vi.stubEnv("QARAR_SUPABASE_URL", "http://kong:8000/");
     vi.stubEnv("QARAR_SUPABASE_ANON_KEY", "runtime-anon-key");

@@ -52,7 +52,10 @@ services:
     environment:
       QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD: ${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}
     networks:
-      - fateen_net
+      fateen_net:
+      supabase_default:
+        aliases:
+          - login-rate-limit-redis
     restart: unless-stopped
     volumes:
       - login-rate-limit-data:/data

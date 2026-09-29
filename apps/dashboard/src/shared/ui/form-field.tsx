@@ -6,6 +6,8 @@ export function FormField({
   hint,
   error,
   className = "",
+  type,
+  dir,
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & {
   label: string;
@@ -27,6 +29,8 @@ export function FormField({
         <input
           suppressHydrationWarning
           className="min-w-0 flex-1 bg-transparent text-sm text-[#0a1330] outline-none placeholder:text-[#9aa8b9]"
+          type={type}
+          dir={dir ?? (type === "email" || type === "password" ? "ltr" : undefined)}
           {...props}
         />
       </span>
