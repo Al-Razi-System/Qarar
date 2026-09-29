@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, ArrowLeft, BookOpen, Check, FileCheck2, LoaderCircle, Paperclip, Search, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import { resolveCreationStep, resolveDefaultGovernanceMethod, type TopicGovernanceMethod, type TopicGovernanceMethodAvailability } from "../model/topic-creation";
 import { TopicCreationProgress } from "./topic-creation-progress";
+import { readUploadResponse } from "@/shared/api/upload-response";
 import { TopicCustomRouteDesigner, type CustomRouteStepDraft } from "./topic-custom-route-designer";
 import { TopicGovernanceMethodSelector } from "./topic-governance-method-selector";
 import { TopicPriorRouteDesigner, type PriorRouteEvidenceDraft, type PriorRouteStep } from "./topic-prior-route-designer";
@@ -760,8 +761,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
           method: "POST",
           body,
         });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error?.message ?? "تعذر رفع الملف.");
+        await readUploadResponse(response);
       } catch (error) {
         failures.push(`${attachment.file.name}: ${error instanceof Error ? error.message : "تعذر رفع الملف"}`);
       }
@@ -992,9 +992,8 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
             method: "POST",
             body,
           });
-          const payload = await response.json();
-          if (!response.ok) throw new Error(payload.error?.message ?? `تعذر رفع ${file.name}`);
-          const attachmentId = String(payload.data?.attachment?.id ?? "");
+          const payload = await readUploadResponse<{ attachment?: { id?: string } }>(response);
+          const attachmentId = String(payload.attachment?.id ?? "");
           if (!attachmentId) throw new Error(`رُفع ${file.name} دون معرف صالح للمرفق.`);
           for (const stepEvidenceId of stepEvidenceIds) {
             await rpc("add_prior_route_evidence_attachment", {

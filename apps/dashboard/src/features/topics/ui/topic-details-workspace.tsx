@@ -7,6 +7,7 @@ import {
   FolderOpen, Gavel, GitPullRequestArrow, Landmark, LoaderCircle, Paperclip,
   Route, ShieldCheck, Vote,
 } from "lucide-react";
+import { readUploadResponse } from "@/shared/api/upload-response";
 
 type TopicDetail = {
   id: string;
@@ -202,8 +203,8 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
     setAttachmentBusy(true); setNotice(null);
     try {
       const form = new FormData(); form.set("file", file); form.set("topicId", topicId); if (requirementCode) form.set("requirementCode", requirementCode);
-      const response = await fetch("/api/admin/topics/upload", { method: "POST", body: form }); const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error?.message ?? "تعذر رفع الملف.");
+      const response = await fetch("/api/admin/topics/upload", { method: "POST", body: form });
+      await readUploadResponse(response);
       setAttachments(await rpc<TopicAttachment[]>("list_topic_attachments", { p_topic_id: topicId }));
       setRequirementsStatus(await rpc<RequirementsStatus>("get_topic_requirements_status", { p_topic_id: topicId }));
     } catch (error) { setNotice({ kind: "error", text: error instanceof Error ? error.message : "تعذر رفع الملف." }); }

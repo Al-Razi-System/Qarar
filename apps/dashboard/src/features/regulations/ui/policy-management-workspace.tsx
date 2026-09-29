@@ -21,6 +21,7 @@ import {
   Workflow,
   X,
 } from "lucide-react";
+import { readUploadResponse } from "@/shared/api/upload-response";
 import type {
   Policy,
   PolicyItem,
@@ -747,11 +748,9 @@ export function PolicyManagementWorkspace({
       method: "POST",
       body: form,
     });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok)
-      throw new Error(payload.error?.message ?? "تعذر رفع الملف.");
+    const payload = await readUploadResponse(response);
     setAttachmentFile(null);
-    return payload.data;
+    return payload;
   }
 
   async function remove(
