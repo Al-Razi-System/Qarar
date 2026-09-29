@@ -14,7 +14,7 @@ const contracts = new Set([
   "get_topic_governance_summary", "request_custom_workflow",
   "create_topic_exception_request", "get_topic_exception_workflow_options",
   "create_topic_custom_route_draft", "create_topic_governance_exception_request",
-  "get_topic_prior_route_candidate_steps", "create_topic_prior_route_request",
+  "get_topic_prior_route_candidate_steps", "get_topic_prior_route_request", "create_topic_prior_route_request",
   "add_prior_route_evidence_attachment", "submit_topic_prior_route_request",
   "list_topic_attachments", "add_topic_attachment", "remove_topic_attachment",
   "get_topic_requirements_status", "fulfill_topic_requirement", "get_topic_meeting_history",
