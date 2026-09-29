@@ -83,6 +83,10 @@ type RequirementStatus = { code: string; name: string; type: string; mandatory: 
 type RequirementsStatus = { items: RequirementStatus[]; missing_mandatory: number; ready_for_review: boolean };
 type RegulationReference = { id: string; label: string; reference_type: string; is_primary: boolean; policy_name?: string; version_no?: number; item_code?: string | null; item_title?: string | null };
 type TopicMeetingHistory = { agenda_item_id: string; agenda_status: string; discussion_notes?: string | null; meeting: { id: string; meeting_no?: string; title: string; status: string; scheduled_date?: string; unit_name?: string }; voting_rounds: Array<{ id: string; round_number: number; status: string; result?: string | null; eligible_voter_count?: number; approve_count?: number; reject_count?: number; abstain_count?: number; opened_at?: string; closed_at?: string | null }>; decisions: Array<{ id: string; decision_no: string; decision_text: string; decision_status: string; requires_approval: boolean; issued_at?: string | null }> };
+type PriorRouteAttachment = { id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number };
+type PriorRouteStep = { id: string; sequence_no: number; step_title: string; responsible_unit_name_ar?: string | null; meeting_date: string; meeting_reference?: string | null; decision_type: string; decision_text: string; bypass_reason: string; attachments: PriorRouteAttachment[] };
+type PriorRouteRequest = { id: string; topic_id: string; status: string; is_requester: boolean; submitted_at?: string | null; reviewed_at?: string | null; review_comment?: string | null; steps: PriorRouteStep[] };
+type PriorRouteCouncil = PriorRouteStep & { evidence_ids: string[]; covered_step_titles: string[]; all_steps_have_evidence: boolean };
 
 type TabId = "summary" | "regulation" | "requirements" | "workflow" | "referrals" | "decisions" | "activity";
 type Notice = { kind: "error"; text: string } | null;
@@ -124,6 +128,30 @@ function dateLabel(value?: string | null) {
   return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("ar-YE", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
+function groupPriorRouteCouncils(steps: PriorRouteStep[]): PriorRouteCouncil[] {
+  const groups: PriorRouteCouncil[] = [];
+  for (const step of [...steps].sort((left, right) => left.sequence_no - right.sequence_no)) {
+    const previous = groups.at(-1);
+    const sameMeeting = previous
+      && previous.responsible_unit_name_ar === step.responsible_unit_name_ar
+      && previous.meeting_date === step.meeting_date
+      && previous.meeting_reference === step.meeting_reference
+      && previous.decision_type === step.decision_type
+      && previous.decision_text === step.decision_text
+      && previous.bypass_reason === step.bypass_reason;
+    if (!sameMeeting) {
+      groups.push({ ...step, evidence_ids: [step.id], covered_step_titles: [step.step_title], all_steps_have_evidence: step.attachments.length > 0 });
+      continue;
+    }
+    previous.evidence_ids.push(step.id);
+    previous.all_steps_have_evidence = previous.all_steps_have_evidence && step.attachments.length > 0;
+    if (!previous.covered_step_titles.includes(step.step_title)) previous.covered_step_titles.push(step.step_title);
+    const attachmentIds = new Set(previous.attachments.map((attachment) => attachment.id));
+    previous.attachments.push(...step.attachments.filter((attachment) => !attachmentIds.has(attachment.id)));
+  }
+  return groups;
+}
+
 function EmptyState({ icon: Icon, title, description }: { icon: typeof FileText; title: string; description: string }) {
   return <div className="grid min-h-56 place-items-center rounded-2xl border border-dashed border-[#caddec] bg-[#fbfdff] p-8 text-center">
     <div><Icon className="mx-auto text-[#82a3c3]" size={32} /><h3 className="mt-3 text-sm font-black text-[#193451]">{title}</h3><p className="mt-2 max-w-lg text-xs leading-6 text-[#72839a]">{description}</p></div>
@@ -139,6 +167,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
   const [requirementsStatus, setRequirementsStatus] = useState<RequirementsStatus | null>(null);
   const [regulationReferences, setRegulationReferences] = useState<RegulationReference[]>([]);
   const [meetingHistory, setMeetingHistory] = useState<TopicMeetingHistory[]>([]);
+  const [priorRouteRequest, setPriorRouteRequest] = useState<PriorRouteRequest | null>(null);
   const [attachmentBusy, setAttachmentBusy] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("summary");
   const [loading, setLoading] = useState(true);
@@ -160,6 +189,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
           rpc<RequirementsStatus>("get_topic_requirements_status", { p_topic_id: topicId }).then((data) => { if (alive) setRequirementsStatus(data); }).catch(() => undefined),
           rpc<RegulationReference[]>("list_topic_regulation_references", { p_topic_id: topicId }).then((data) => { if (alive) setRegulationReferences(data ?? []); }).catch(() => undefined),
           rpc<TopicMeetingHistory[]>("get_topic_meeting_history", { p_topic_id: topicId }).then((data) => { if (alive) setMeetingHistory(data ?? []); }).catch(() => undefined),
+          rpc<PriorRouteRequest | null>("get_topic_prior_route_request", { p_topic_id: topicId }).then((data) => { if (alive) setPriorRouteRequest(data); }).catch(() => undefined),
         ];
         if (detail.policy_id && detail.policy_version_id && detail.policy_item_id && detail.policy_scope_assignment_id && detail.current_unit_id && detail.category_id) {
           background.push(rpc<RegulationPreview>("get_topic_regulation_preview", {
@@ -209,6 +239,42 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
       setRequirementsStatus(await rpc<RequirementsStatus>("get_topic_requirements_status", { p_topic_id: topicId }));
     } catch (error) { setNotice({ kind: "error", text: error instanceof Error ? error.message : "تعذر رفع الملف." }); }
     finally { setAttachmentBusy(false); }
+  }
+
+  async function refreshPriorRouteRequest() {
+    setPriorRouteRequest(await rpc<PriorRouteRequest | null>("get_topic_prior_route_request", { p_topic_id: topicId }));
+  }
+
+  async function uploadPriorRouteEvidence(council: PriorRouteCouncil, file: File) {
+    setAttachmentBusy(true); setNotice(null);
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      form.set("topicId", topicId);
+      form.set("description", `محضر مجلس سابق: ${council.responsible_unit_name_ar || council.step_title}`);
+      const response = await fetch("/api/admin/topics/upload", { method: "POST", body: form });
+      const payload = await readUploadResponse<{ attachment?: { id?: string } }>(response);
+      const attachmentId = String(payload.attachment?.id ?? "");
+      if (!attachmentId) throw new Error("رُفع الملف دون معرف صالح للمرفق.");
+      for (const evidenceId of council.evidence_ids) {
+        await rpc("add_prior_route_evidence_attachment", { p_step_evidence_id: evidenceId, p_topic_attachment_id: attachmentId });
+      }
+      await refreshPriorRouteRequest();
+      setAttachments(await rpc<TopicAttachment[]>("list_topic_attachments", { p_topic_id: topicId }));
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "تعذر رفع محضر المجلس السابق." });
+    } finally { setAttachmentBusy(false); }
+  }
+
+  async function submitPriorRouteRequest() {
+    if (!priorRouteRequest) return;
+    setAttachmentBusy(true); setNotice(null);
+    try {
+      await rpc("submit_topic_prior_route_request", { p_request_id: priorRouteRequest.id });
+      await refreshPriorRouteRequest();
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "تعذر إرسال إثباتات المجالس السابقة." });
+    } finally { setAttachmentBusy(false); }
   }
 
   async function removeAttachment(attachmentId: string) {
@@ -268,7 +334,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
     <section className="rounded-3xl border border-[#dce7f1] bg-white p-5 shadow-[0_10px_28px_rgba(24,48,80,.045)] sm:p-7">
       {activeTab === "summary" && <Summary topic={topic} workflow={workflow} preview={preview} />}
       {activeTab === "regulation" && <Regulation topic={topic} preview={preview} references={regulationReferences} />}
-      {activeTab === "requirements" && <Requirements preview={preview} requirementsStatus={requirementsStatus} attachments={attachments} busy={attachmentBusy} onUpload={uploadAttachment} onRemove={removeAttachment} onFulfill={fulfillRequirement} />}
+      {activeTab === "requirements" && <Requirements preview={preview} requirementsStatus={requirementsStatus} attachments={attachments} priorRouteRequest={priorRouteRequest} busy={attachmentBusy} onUpload={uploadAttachment} onUploadPriorEvidence={uploadPriorRouteEvidence} onSubmitPriorRoute={submitPriorRouteRequest} onRemove={removeAttachment} onFulfill={fulfillRequirement} />}
       {activeTab === "workflow" && <Workflow workflow={workflow} busy={workflowBusy} onAction={actOnWorkflow} />}
       {activeTab === "referrals" && <Referrals referrals={referrals} />}
       {activeTab === "decisions" && <Decisions preview={preview} meetings={meetingHistory} />}
@@ -298,9 +364,16 @@ function Regulation({ topic, preview, references }: { topic: TopicDetail; previe
   return <div className="space-y-6"><SectionTitle icon={Landmark} title="اللائحة والمادة الحاكمة" description="المرجع النظامي الذي يحدد نطاق الموضوع ومساره." /><div className="grid gap-3 md:grid-cols-3"><Info label="اللائحة" value="لائحة مرتبطة بالموضوع" /><Info label="الإصدار" value={topic.policy_version_id ? "الإصدار النافذ المختار" : "—"} /><Info label="المادة" value={preview?.article?.title ?? "مادة مرتبطة بالموضوع"} /></div><ReferenceList references={references} />{preview ? <div className="grid gap-4 lg:grid-cols-[1.5fr_.8fr]"><div className="rounded-2xl border border-[#e2ebf3] p-5"><h3 className="text-sm font-black text-[#0a1330]">{preview.article?.title}</h3><p className="mt-3 whitespace-pre-wrap text-xs leading-7 text-[#43566d]">{preview.article?.official_text}</p>{preview.article?.interpretation && <p className="mt-4 rounded-xl bg-[#f7fafc] p-3 text-[11px] leading-6 text-[#617287]"><strong>التفسير التنفيذي: </strong>{preview.article.interpretation}</p>}</div><div className="rounded-2xl border border-[#dce9f5] bg-[#f8fbff] p-5"><p className="text-[10px] font-black text-[#0066cc]">نطاق التطبيق</p><h3 className="mt-2 text-sm font-black text-[#0a1330]">{preview.scope?.target_name}</h3><p className="mt-2 text-[11px] leading-6 text-[#63758b]">{preview.scope?.description}</p></div></div> : <EmptyState icon={ShieldCheck} title="المرجع مرتبط ومحمي" description="تعذر تحميل النص التفصيلي لهذه اللائحة بحسابك الحالي، بينما يبقى ربط الموضوع باللائحة والمادة محفوظًا." />}</div>;
 }
 
-function Requirements({ preview, requirementsStatus, attachments, busy, onUpload, onRemove, onFulfill }: { preview: RegulationPreview | null; requirementsStatus: RequirementsStatus | null; attachments: TopicAttachment[]; busy: boolean; onUpload: (file: File, requirementCode?: string) => void; onRemove: (id: string) => void; onFulfill: (code: string) => void }) {
+function Requirements({ preview, requirementsStatus, attachments, priorRouteRequest, busy, onUpload, onUploadPriorEvidence, onSubmitPriorRoute, onRemove, onFulfill }: { preview: RegulationPreview | null; requirementsStatus: RequirementsStatus | null; attachments: TopicAttachment[]; priorRouteRequest: PriorRouteRequest | null; busy: boolean; onUpload: (file: File, requirementCode?: string) => void; onUploadPriorEvidence: (council: PriorRouteCouncil, file: File) => void; onSubmitPriorRoute: () => void; onRemove: (id: string) => void; onFulfill: (code: string) => void }) {
+  const priorCouncils = groupPriorRouteCouncils(priorRouteRequest?.steps ?? []);
+  const priorRouteReady = priorCouncils.length > 0 && priorCouncils.every((council) => council.all_steps_have_evidence);
   return <div className="space-y-6">
     <SectionTitle icon={Paperclip} title="المتطلبات والمرفقات" description="استكمل المستندات المطلوبة قبل الإحالة أو العرض على الجهة المختصة." />
+    {priorRouteRequest && <div className="overflow-hidden rounded-2xl border border-[#b9d8f2] bg-[#f8fbff]">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#dceaf6] bg-[#edf7ff] p-4"><div><p className="text-[10px] font-black text-[#0877df]">استكمال مسار سابق</p><h3 className="mt-1 text-sm font-black text-[#173654]">محاضر وقرارات المجالس السابقة</h3><p className="mt-1 text-[10px] leading-5 text-[#61778e]">البيانات محفوظة. أكمل المرفقات الناقصة ثم أرسلها للمراجعة المستقلة.</p></div><span className={`rounded-full px-3 py-1.5 text-[10px] font-black ${priorRouteRequest.status === "draft" ? "bg-amber-100 text-amber-800" : priorRouteRequest.status === "submitted" ? "bg-blue-100 text-blue-700" : priorRouteRequest.status === "approved" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-700"}`}>{priorRouteRequest.status === "draft" ? "مسودة تحتاج استكمال" : priorRouteRequest.status === "submitted" ? "بانتظار المراجعة" : priorRouteRequest.status === "approved" ? "تم اعتماد الأدلة" : statusLabels[priorRouteRequest.status] ?? priorRouteRequest.status}</span></div>
+      <div className="space-y-3 p-4">{priorCouncils.map((council, index) => <article key={council.id} className="rounded-xl border border-[#dbe7f2] bg-white p-4"><div className="flex flex-wrap items-start gap-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#0066cc] text-xs font-black text-white">{index + 1}</span><div className="min-w-0 flex-1"><h4 className="text-xs font-black text-[#193651]">{council.responsible_unit_name_ar || council.step_title}</h4><p className="mt-1 text-[10px] text-[#71849a]">{dateLabel(council.meeting_date)}{council.meeting_reference ? ` · ${council.meeting_reference}` : ""}</p></div><span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${council.all_steps_have_evidence ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>{council.all_steps_have_evidence ? "المحضر مرفوع" : "المحضر مطلوب"}</span></div><div className="mt-3 grid gap-2 rounded-lg bg-[#f8fbfd] p-3 text-[10px] leading-5 text-[#52677d] md:grid-cols-2"><p><b className="text-[#183650]">القرار: </b>{council.decision_text}</p><p><b className="text-[#183650]">سبب التجاوز: </b>{council.bypass_reason}</p></div><div className="mt-3 flex flex-wrap items-center gap-2">{council.attachments.map((attachment) => <a key={attachment.id} href={attachment.file_url} target="_blank" rel="noreferrer" className="rounded-lg border border-[#b9d8f2] bg-[#eef7ff] px-2.5 py-1.5 text-[9px] font-black text-[#0877df]">عرض {attachment.file_name}</a>)}{priorRouteRequest.status === "draft" && priorRouteRequest.is_requester && <label className={`cursor-pointer rounded-lg bg-[#0066cc] px-3 py-2 text-[9px] font-black text-white ${busy ? "pointer-events-none opacity-50" : ""}`}>{council.all_steps_have_evidence ? "إضافة محضر آخر" : "رفع محضر المجلس"}<input className="hidden" type="file" accept="application/pdf,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) onUploadPriorEvidence(council, file); event.currentTarget.value = ""; }} /></label>}</div></article>)}</div>
+      {priorRouteRequest.status === "draft" && priorRouteRequest.is_requester && <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#dceaf6] bg-white p-4"><p className="text-[10px] text-[#667b91]">لن تتغير بداية المسار إلا بعد إرسال الأدلة واعتمادها من مراجع مستقل.</p><button disabled={!priorRouteReady || busy} onClick={onSubmitPriorRoute} className="rounded-xl bg-emerald-600 px-4 py-2.5 text-[10px] font-black text-white disabled:cursor-not-allowed disabled:bg-[#aebdca]">{busy ? "جارٍ الحفظ…" : "إرسال الأدلة للمراجعة"}</button></div>}
+    </div>}
     <RequirementsChecklist status={requirementsStatus} busy={busy} onUpload={onUpload} onFulfill={onFulfill} />
     {preview ? <div className="overflow-hidden rounded-2xl border border-[#e3ebf3]">
       <div className="grid grid-cols-[1fr_auto_auto] gap-4 bg-[#f8fafc] px-4 py-3 text-[10px] font-black text-[#617287]"><span>المتطلب</span><span>موعده</span><span>الحالة</span></div>

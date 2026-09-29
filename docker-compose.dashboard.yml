@@ -18,8 +18,15 @@ services:
       QARAR_LOGIN_RATE_LIMIT_REDIS_HOST: qarar-login-rate-limit-redis
       QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD: ${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}
       QARAR_LOGIN_RATE_LIMIT_REDIS_PORT: 6379
+      QARAR_UPLOAD_SCAN_ADAPTER: clamav-internal
+      QARAR_UPLOAD_SCAN_HOST: clamav
+      QARAR_UPLOAD_SCAN_MAX_BYTES: 26214400
+      QARAR_UPLOAD_SCAN_PORT: 3310
+      QARAR_UPLOAD_SCAN_REQUIRED: "true"
+      QARAR_UPLOAD_SCAN_TIMEOUT_MS: 30000
     networks:
       - fateen_net
+      - qarar_upload_scanner
       - supabase_default
     restart: unless-stopped
     depends_on:
@@ -53,6 +60,9 @@ services:
 networks:
   fateen_net:
     external: true
+  qarar_upload_scanner:
+    external: true
+    name: qarar-upload-scanner
   supabase_default:
     external: true
 
