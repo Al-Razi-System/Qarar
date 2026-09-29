@@ -13,6 +13,7 @@ import { TopicSummaryPanel } from "./topic-summary-panel";
 type Notice = { kind: "success" | "error"; text: string };
 type GovernanceUnit = { id: string; name_ar: string };
 type ReviewResult = { status?: string; updated_at?: string };
+type PriorRouteSummary = { topic_id: string; status: string; missing_evidence_count: number };
 
 const reviewStatusOptions = [
   ["", "جميع الحالات النشطة"], ["new", "بانتظار المراجعة"],
@@ -68,7 +69,15 @@ export function TopicsWorkspace({ initialQuery = "", initialTab = "mine" }: { in
         params.p_governance_unit_id = null;
       }
       const result = await topicsRpc<{ items: Topic[]; total: number }>(contract, params);
-      setTopics(result.items ?? []);
+      const items = result.items ?? [];
+      const summaries = items.length
+        ? await topicsRpc<PriorRouteSummary[]>("get_topic_prior_route_summaries", { p_topic_ids: items.map((topic) => topic.id) })
+        : [];
+      const summariesByTopic = new Map(summaries.map((summary) => [summary.topic_id, summary]));
+      setTopics(items.map((topic) => {
+        const summary = summariesByTopic.get(topic.id);
+        return summary ? { ...topic, prior_route_status: summary.status, prior_route_missing_evidence_count: summary.missing_evidence_count } : topic;
+      }));
       setTotal(result.total ?? 0);
     } catch (error) {
       setTopics([]);

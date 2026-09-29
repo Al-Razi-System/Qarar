@@ -111,6 +111,16 @@ const statusLabels: Record<string, string> = {
 
 const priorityLabels: Record<string, string> = { low: "منخفضة", medium: "متوسطة", high: "عالية", urgent: "عاجلة" };
 
+function topicDisplayStatus(topicStatus: string, priorRouteRequest: PriorRouteRequest | null) {
+  if (priorRouteRequest?.status === "draft") {
+    const missingEvidence = priorRouteRequest.steps.some((step) => step.attachments.length === 0);
+    return missingEvidence ? "مطلوب استكمال أدلة المجالس السابقة" : "جاهز لإرسال الأدلة";
+  }
+  if (priorRouteRequest?.status === "submitted") return "بانتظار مراجعة أدلة المسار السابق";
+  if (priorRouteRequest?.status === "rejected") return "أدلة المسار بحاجة لتصحيح";
+  return statusLabels[topicStatus] ?? topicStatus;
+}
+
 async function rpc<T>(contract: string, params: Record<string, unknown>) {
   const response = await fetch("/api/admin/topics", {
     method: "POST",
@@ -320,7 +330,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
     <header className="overflow-hidden rounded-3xl border border-[#dce7f1] bg-white shadow-[0_10px_28px_rgba(24,48,80,.06)]">
       <div className="border-b border-[#e8eef5] bg-[linear-gradient(120deg,#0a1330_0%,#0066cc_68%,#1e88e5_100%)] px-5 py-5 text-white sm:px-7">
         <p className="text-[10px] font-black text-[#ffbb78]">تفاصيل الموضوع</p>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-xl font-black sm:text-2xl">{topic.title_ar}</h1><p className="mt-1 text-[11px] text-white/75">{topic.topic_no ?? "موضوع مسجل"} · أنشئ في {dateLabel(topic.created_at)}</p></div><span className="rounded-full bg-white/15 px-3 py-1.5 text-[10px] font-black text-white">{statusLabels[topic.status] ?? topic.status}</span></div>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-xl font-black sm:text-2xl">{topic.title_ar}</h1><p className="mt-1 text-[11px] text-white/75">{topic.topic_no ?? "موضوع مسجل"} · أنشئ في {dateLabel(topic.created_at)}</p></div><span className="rounded-full bg-white/15 px-3 py-1.5 text-[10px] font-black text-white">{topicDisplayStatus(topic.status, priorRouteRequest)}</span></div>
       </div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-5 py-4 text-[11px] font-bold text-[#526f8c] sm:px-7" aria-label="سلسلة حوكمة الموضوع">
         {headerPath.map((item, index) => <span key={`${item}-${index}`} className="flex items-center gap-2"><span className={index === 0 ? "text-[#0a1330]" : ""}>{item}</span>{index < headerPath.length - 1 && <span className="text-[#9aabc0]">←</span>}</span>)}
@@ -335,10 +345,10 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
       {activeTab === "summary" && <Summary topic={topic} workflow={workflow} preview={preview} />}
       {activeTab === "regulation" && <Regulation topic={topic} preview={preview} references={regulationReferences} />}
       {activeTab === "requirements" && <Requirements preview={preview} requirementsStatus={requirementsStatus} attachments={attachments} priorRouteRequest={priorRouteRequest} busy={attachmentBusy} onUpload={uploadAttachment} onUploadPriorEvidence={uploadPriorRouteEvidence} onSubmitPriorRoute={submitPriorRouteRequest} onRemove={removeAttachment} onFulfill={fulfillRequirement} />}
-      {activeTab === "workflow" && <Workflow workflow={workflow} busy={workflowBusy} onAction={actOnWorkflow} />}
+      {activeTab === "workflow" && <Workflow workflow={workflow} priorRouteRequest={priorRouteRequest} busy={workflowBusy} onAction={actOnWorkflow} />}
       {activeTab === "referrals" && <Referrals referrals={referrals} />}
-      {activeTab === "decisions" && <Decisions preview={preview} meetings={meetingHistory} />}
-      {activeTab === "activity" && <ActivityLog items={topic.history ?? []} />}
+      {activeTab === "decisions" && <Decisions preview={preview} meetings={meetingHistory} priorRouteRequest={priorRouteRequest} />}
+      {activeTab === "activity" && <ActivityLog items={topic.history ?? []} priorRouteRequest={priorRouteRequest} topicCreatedAt={topic.created_at} />}
     </section>
   </div>;
 }
@@ -411,16 +421,21 @@ function RequirementsChecklist({ status, busy, onUpload, onFulfill }: { status: 
   </div>;
 }
 
-function Workflow({ workflow, busy, onAction }: { workflow: Workflow | null; busy: boolean; onAction: (outcome: WorkflowOutcome) => void }) {
+function Workflow({ workflow, priorRouteRequest, busy, onAction }: { workflow: Workflow | null; priorRouteRequest: PriorRouteRequest | null; busy: boolean; onAction: (outcome: WorkflowOutcome) => void }) {
   if (!workflow?.steps?.length) return <EmptyState icon={Route} title="المسار لم يبدأ بعد" description="سيظهر تسلسل الاعتماد هنا فور إنشاء المسار أو اعتماد المسار الاستثنائي." />;
   return <div className="space-y-6">
     <SectionTitle icon={Route} title="مسار الاعتماد" description="تعرّف على الخطوة الحالية وما يلزم للانتقال إلى التالية." />
     <div className="space-y-3">
       {workflow.steps.map((step, index) => {
         const active = step.status === "active";
-        const done = step.status === "completed";
         const sequence = step.sequence_no ?? index + 1;
+        const priorEvidence = priorRouteRequest?.steps.find((evidence) => evidence.sequence_no === sequence);
+        const priorApproved = Boolean(priorEvidence && priorRouteRequest?.status === "approved");
+        const done = step.status === "completed" || priorApproved;
         const allowedOutcomes = step.snapshot?.allowed_outcomes ?? [];
+        const stepStatus = priorEvidence && !priorApproved
+          ? priorRouteRequest?.status === "submitted" ? "موثقة سابقاً — بانتظار اعتماد الأدلة" : "موثقة كمسودة — تحتاج استكمال"
+          : statusLabels[step.status ?? ""] ?? step.status;
 
         return <div key={step.id} className={`relative rounded-2xl border p-4 ${active ? "border-[#8ac1f2] bg-[#f2f8ff]" : done ? "border-emerald-100 bg-emerald-50/40" : "border-[#e5edf4] bg-white"}`}>
           <div className="flex items-start gap-3">
@@ -430,10 +445,12 @@ function Workflow({ workflow, busy, onAction }: { workflow: Workflow | null; bus
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap justify-between gap-2">
                 <h3 className="text-xs font-black text-[#18324e]">{step.snapshot?.name_ar ?? `الخطوة ${sequence}`}</h3>
-                <span className="text-[10px] font-bold text-[#63768d]">{statusLabels[step.status ?? ""] ?? step.status}</span>
+                <span className={`text-[10px] font-bold ${priorEvidence && !priorApproved ? "text-amber-700" : "text-[#63768d]"}`}>{stepStatus}</span>
               </div>
               <p className="mt-1 text-[11px] text-[#6d7f94]">
-                {active ? "هذه هي الخطوة الحالية. اختر الإجراء المناسب بعد مراجعة الموضوع والمستندات." : done ? `تمت في ${dateLabel(step.acted_at)}` : "تُفتح بعد اكتمال الخطوة السابقة."}
+                {priorEvidence && !priorApproved
+                  ? `سُجل اجتماع ${priorEvidence.responsible_unit_name_ar || "المجلس"} بتاريخ ${dateLabel(priorEvidence.meeting_date)}، ولا تُعد المرحلة مكتملة نظامياً قبل اعتماد الأدلة.`
+                  : active ? "هذه هي الخطوة الحالية. اختر الإجراء المناسب بعد مراجعة الموضوع والمستندات." : done ? `تمت في ${dateLabel(step.acted_at ?? priorRouteRequest?.reviewed_at)}` : "تُفتح بعد اكتمال الخطوة السابقة."}
               </p>
               {step.required_permission_code && <p className="mt-1 text-[10px] text-[#7b8ba0]">هذه الخطوة موجهة للدور المختص ضمن المسار.</p>}
               {step.comment && <p className="mt-2 rounded-lg bg-white/70 p-2 text-[11px] text-[#53677e]"><strong>ملاحظة الإجراء: </strong>{step.comment}</p>}
@@ -452,21 +469,35 @@ function Workflow({ workflow, busy, onAction }: { workflow: Workflow | null; bus
 
 function Referrals({ referrals }: { referrals: Referral[] }) { if (!referrals.length) return <EmptyState icon={GitPullRequestArrow} title="لا توجد إحالات" description="ستظهر الإحالات بين الجهات هنا فور تسجيلها على الموضوع." />; return <div className="space-y-6"><SectionTitle icon={GitPullRequestArrow} title="الإحالات" description="سجل انتقال الموضوع بين الجهات واختصاصاتها." />{referrals.map((referral) => <div key={referral.id} className="rounded-2xl border border-[#e4edf5] p-4"><div className="flex flex-wrap items-center gap-2 text-xs font-black text-[#18324e]"><span>{referral.from_unit_name_ar || "الجهة السابقة"}</span><ArrowRight className="text-[#7e9abb]" size={15}/><span>{referral.to_unit_name_ar || "الجهة المحال إليها"}</span><span className="mr-auto rounded-full bg-[#edf6ff] px-2 py-1 text-[10px] text-[#0066cc]">{statusLabels[referral.status ?? ""] ?? referral.status ?? "قيد المعالجة"}</span></div><p className="mt-2 text-[11px] leading-6 text-[#60748a]">{referral.referral_reason || "لم يُسجل سبب الإحالة."}</p><p className="mt-2 text-[10px] text-[#8797a9]">أحيل في {dateLabel(referral.referred_at)}</p></div>)}</div>; }
 
-function Decisions({ preview, meetings }: { preview: RegulationPreview | null; meetings: TopicMeetingHistory[] }) {
+function Decisions({ preview, meetings, priorRouteRequest }: { preview: RegulationPreview | null; meetings: TopicMeetingHistory[]; priorRouteRequest: PriorRouteRequest | null }) {
   const hasResults = meetings.some((meeting) => meeting.voting_rounds.length || meeting.decisions.length);
+  const priorCouncils = groupPriorRouteCouncils(priorRouteRequest?.steps ?? []);
   return <div className="space-y-6"><SectionTitle icon={Gavel} title="القرارات والتصويت" description="سجل الاجتماعات وجولات التصويت والقرارات المرتبطة بهذا الموضوع." />
     {preview?.approval_effect && <div className="rounded-2xl border border-blue-100 bg-[#f3f8ff] p-4 text-xs leading-6 text-[#405f7e]"><strong className="text-[#0066cc]">أثر اللائحة على الاعتماد: </strong>{preview.approval_effect}<br/><strong className="text-[#0066cc]">أثرها على التصويت: </strong>{preview.voting_effect}</div>}
+    {priorCouncils.length > 0 && <section className="overflow-hidden rounded-2xl border border-[#b9d8f2]">
+      <header className="flex flex-wrap items-center justify-between gap-3 bg-[#edf7ff] px-4 py-3"><div><h3 className="text-xs font-black text-[#173654]">المجالس السابقة الموثقة</h3><p className="mt-1 text-[10px] text-[#61778e]">اجتماعات عُقدت قبل إدخال الموضوع إلى النظام، لذلك لا توجد لها جولة تصويت إلكترونية داخل قرار.</p></div><span className={`rounded-full px-2.5 py-1 text-[9px] font-black ${priorRouteRequest?.status === "approved" ? "bg-emerald-100 text-emerald-700" : priorRouteRequest?.status === "submitted" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-800"}`}>{priorRouteRequest?.status === "approved" ? "معتمدة ومكتملة" : priorRouteRequest?.status === "submitted" ? "بانتظار اعتماد الأدلة" : "مسودة تحتاج استكمال"}</span></header>
+      <div className="grid gap-3 p-4 lg:grid-cols-2">{priorCouncils.map((council) => <article key={council.id} className="rounded-xl border border-[#dfe9f2] bg-white p-4"><div className="flex items-start justify-between gap-3"><div><h4 className="text-xs font-black text-[#18324e]">{council.responsible_unit_name_ar || council.step_title}</h4><p className="mt-1 text-[10px] text-[#74869b]">{council.meeting_reference || "اجتماع سابق"} · {dateLabel(council.meeting_date)}</p></div><span className="rounded-full bg-[#eef4fa] px-2 py-1 text-[9px] font-black text-[#506980]">{statusLabels[council.decision_type] ?? council.decision_type}</span></div><div className="mt-3 rounded-lg bg-emerald-50/60 p-3"><p className="text-[9px] font-black text-emerald-700">القرار المسجل</p><p className="mt-1 text-[11px] leading-6 text-[#35546a]">{council.decision_text}</p></div><div className="mt-2 rounded-lg bg-[#f8fafc] p-3 text-[10px] leading-5 text-[#617287]"><strong>سبب تجاوز المرحلة: </strong>{council.bypass_reason}</div><p className="mt-2 text-[9px] text-[#7a8b9e]">التصويت الإلكتروني: غير متاح — الاجتماع تم خارج النظام.</p></article>)}</div>
+    </section>}
     {meetings.length ? <div className="space-y-4">{meetings.map((entry) => <article key={entry.agenda_item_id} className="overflow-hidden rounded-2xl border border-[#dfe8f1]">
       <header className="flex flex-wrap items-center justify-between gap-3 bg-[#f8fbfe] px-4 py-3"><div><h3 className="text-xs font-black text-[#18324e]">{entry.meeting.title}</h3><p className="mt-1 text-[10px] text-[#74869b]">{entry.meeting.meeting_no || "اجتماع"} · {dateLabel(entry.meeting.scheduled_date)} · {entry.meeting.unit_name || "الجهة المختصة"}</p></div><span className="rounded-full bg-[#edf4fa] px-2 py-1 text-[10px] font-black text-[#506980]">{statusLabels[entry.meeting.status] ?? entry.meeting.status}</span></header>
       <div className="grid gap-3 p-4 lg:grid-cols-2">
         <div><p className="text-[10px] font-black text-[#61758c]">جولات التصويت</p>{entry.voting_rounds.length ? <div className="mt-2 space-y-2">{entry.voting_rounds.map((round) => <div key={round.id} className="rounded-xl border border-[#e5edf4] p-3 text-[10px] text-[#536980]"><div className="flex justify-between gap-2"><strong>الجولة {round.round_number}</strong><span>{round.result || statusLabels[round.status] || round.status}</span></div><p className="mt-2">موافق: {round.approve_count ?? 0} · رافض: {round.reject_count ?? 0} · ممتنع: {round.abstain_count ?? 0} · المؤهلون: {round.eligible_voter_count ?? 0}</p></div>)}</div> : <p className="mt-2 rounded-xl bg-[#fafcfe] p-3 text-[10px] text-[#7a8b9e]">لم تُفتح جولة تصويت بعد.</p>}</div>
         <div><p className="text-[10px] font-black text-[#61758c]">القرارات الصادرة</p>{entry.decisions.length ? <div className="mt-2 space-y-2">{entry.decisions.map((decision) => <div key={decision.id} className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3"><div className="flex justify-between gap-2 text-[10px] font-black text-emerald-800"><span>{decision.decision_no}</span><span>{statusLabels[decision.decision_status] ?? decision.decision_status}</span></div><p className="mt-2 text-[11px] leading-6 text-[#35546a]">{decision.decision_text}</p></div>)}</div> : <p className="mt-2 rounded-xl bg-[#fafcfe] p-3 text-[10px] text-[#7a8b9e]">لم يصدر قرار بعد.</p>}</div>
       </div>
-    </article>)}</div> : <EmptyState icon={hasResults ? Vote : Gavel} title="لم يُدرج الموضوع في اجتماع بعد" description="بعد اعتماد الموضوع وإضافته إلى جدول أعمال اجتماع، ستظهر هنا الجلسة والتصويت والقرار الناتج." />}
+    </article>)}</div> : priorCouncils.length === 0 ? <EmptyState icon={hasResults ? Vote : Gavel} title="لم يُدرج الموضوع في اجتماع بعد" description="بعد اعتماد الموضوع وإضافته إلى جدول أعمال اجتماع، ستظهر هنا الجلسة والتصويت والقرار الناتج." /> : null}
   </div>;
 }
 
-function ActivityLog({ items }: { items: ActivityItem[] }) { if (!items.length) return <EmptyState icon={Activity} title="لا يوجد نشاط مسجل بعد" description="سيظهر هنا سجل إنشاء الموضوع وتغير حالته والإجراءات المصرح بها." />; return <div className="space-y-6"><SectionTitle icon={Activity} title="سجل النشاط والتدقيق" description="سجل زمني غير قابل للتعديل لتغيرات الموضوع وإجراءاته." /><div className="space-y-3">{items.map((item) => <div key={item.id} className="flex gap-3 rounded-2xl border border-[#e6edf4] p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#0066cc]"/><div><p className="text-xs font-black text-[#203952]">{item.from_status ? `${statusLabels[item.from_status] ?? item.from_status} ← ` : ""}{statusLabels[item.to_status] ?? item.to_status}</p>{item.change_reason && <p className="mt-1 text-[11px] leading-6 text-[#62758c]">{item.change_reason}</p>}<p className="mt-2 text-[10px] text-[#8797a9]">{item.changed_by_name_ar || "النظام"} · {dateLabel(item.changed_at)}</p></div></div>)}</div></div>; }
+function ActivityLog({ items, priorRouteRequest, topicCreatedAt }: { items: ActivityItem[]; priorRouteRequest: PriorRouteRequest | null; topicCreatedAt?: string }) {
+  const priorCouncils = groupPriorRouteCouncils(priorRouteRequest?.steps ?? []);
+  if (!items.length && !priorRouteRequest) return <EmptyState icon={Activity} title="لا يوجد نشاط مسجل بعد" description="سيظهر هنا سجل إنشاء الموضوع وتغير حالته والإجراءات المصرح بها." />;
+  return <div className="space-y-6"><SectionTitle icon={Activity} title="سجل النشاط والتدقيق" description="سجل زمني غير قابل للتعديل لتغيرات الموضوع وإجراءاته." /><div className="space-y-3">
+    {priorRouteRequest && <div className="flex gap-3 rounded-2xl border border-[#cfe3f4] bg-[#f8fbff] p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#0877df]"/><div><p className="text-xs font-black text-[#203952]">تسجيل مسار سابق لـ {priorCouncils.length} {priorCouncils.length === 1 ? "مجلس" : "مجالس"}</p><p className="mt-1 text-[11px] leading-6 text-[#62758c]">{priorCouncils.map((council) => council.responsible_unit_name_ar || council.step_title).join("، ")}</p><p className="mt-2 text-[10px] text-[#8797a9]">{dateLabel(topicCreatedAt)} · {priorRouteRequest.status === "approved" ? "اعتمدت الأدلة وأغلقت المراحل السابقة" : priorRouteRequest.status === "submitted" ? "أرسلت الأدلة للمراجعة المستقلة" : "حُفظت كمسودة تحتاج استكمال"}</p></div></div>}
+    {priorRouteRequest?.submitted_at && <div className="flex gap-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600"/><div><p className="text-xs font-black text-[#203952]">إرسال أدلة المسار السابق للمراجعة</p><p className="mt-1 text-[11px] leading-6 text-[#62758c]">اكتملت مرفقات المجالس السابقة وأُحيلت إلى مراجع مستقل.</p><p className="mt-2 text-[10px] text-[#8797a9]">{dateLabel(priorRouteRequest.submitted_at)}</p></div></div>}
+    {priorRouteRequest?.reviewed_at && <div className="flex gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-600"/><div><p className="text-xs font-black text-[#203952]">{priorRouteRequest.status === "approved" ? "اعتماد أدلة المجالس السابقة" : "إعادة أدلة المجالس السابقة للتصحيح"}</p>{priorRouteRequest.review_comment && <p className="mt-1 text-[11px] leading-6 text-[#62758c]">{priorRouteRequest.review_comment}</p>}<p className="mt-2 text-[10px] text-[#8797a9]">{dateLabel(priorRouteRequest.reviewed_at)}</p></div></div>}
+    {items.map((item) => <div key={item.id} className="flex gap-3 rounded-2xl border border-[#e6edf4] p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#0066cc]"/><div><p className="text-xs font-black text-[#203952]">{item.from_status ? `${statusLabels[item.from_status] ?? item.from_status} ← ` : ""}{statusLabels[item.to_status] ?? item.to_status}</p>{item.change_reason && <p className="mt-1 text-[11px] leading-6 text-[#62758c]">{item.change_reason}</p>}<p className="mt-2 text-[10px] text-[#8797a9]">{item.changed_by_name_ar || "النظام"} · {dateLabel(item.changed_at)}</p></div></div>)}
+  </div></div>;
+}
 
 function SectionTitle({ icon: Icon, title, description }: { icon: typeof FileText; title: string; description: string }) { return <div className="flex items-start gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#edf6ff] text-[#0066cc]"><Icon size={19}/></span><div><h2 className="text-base font-black text-[#0a1330]">{title}</h2><p className="mt-1 text-[11px] leading-5 text-[#72839a]">{description}</p></div></div>; }
 function Info({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-[#e4edf5] bg-[#fbfdff] p-3"><p className="text-[10px] font-black text-[#718196]">{label}</p><p className="mt-1.5 text-xs font-black text-[#18324e]">{value}</p></div>; }

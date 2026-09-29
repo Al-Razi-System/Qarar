@@ -20,6 +20,8 @@ export type Topic = {
   priority: string;
   source_type?: string | null;
   routing_status?: string | null;
+  prior_route_status?: string | null;
+  prior_route_missing_evidence_count?: number;
   governance_source?: string | null;
   category_id?: string;
   category_name_ar?: string | null;
@@ -89,6 +91,18 @@ export function topicUnitName(topic: TopicDetail | Topic) {
 }
 
 export function topicStatus(topic: Topic) {
+  if (topic.prior_route_status === "draft") return {
+    label: (topic.prior_route_missing_evidence_count ?? 0) > 0 ? "مطلوب استكمال الأدلة" : "جاهز لإرسال الأدلة",
+    className: "bg-amber-50 text-amber-800 ring-amber-200",
+  };
+  if (topic.prior_route_status === "submitted") return {
+    label: "بانتظار مراجعة أدلة المسار",
+    className: "bg-sky-50 text-sky-700 ring-sky-200",
+  };
+  if (topic.prior_route_status === "rejected") return {
+    label: "أدلة المسار بحاجة لتصحيح",
+    className: "bg-red-50 text-red-700 ring-red-200",
+  };
   return topicStatusMeta[topic.status] ?? {
     label: "حالة غير معرّفة",
     className: "bg-slate-100 text-slate-700 ring-slate-200",
@@ -103,4 +117,3 @@ export function routingStatusLabel(status?: string | null) {
   if (!status) return "لم يبدأ المسار";
   return routingStatusLabels[status] ?? "حالة مسار غير معرّفة";
 }
-
