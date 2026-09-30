@@ -169,6 +169,14 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
         return json(request, dependencies, { error: "role_is_required_when_governance_unit_is_provided" }, 400)
       }
 
+      // Validate every deployment dependency before creating either the Auth
+      // identity or the application profile. A missing signing secret/origin
+      // must never leave a partially provisioned account behind.
+      const appOrigin = dependencies.allowedOrigins?.[0]
+      if (!appOrigin) throw new Error("activation application origin is not configured")
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      const token = await issueActivationToken(dependencies.activationTokenSecret ?? "", expiresAt)
+
       const bootstrapPassword = `${base64Url(crypto.getRandomValues(new Uint8Array(32)))}aA1!`
       const { data: created, error: createError } = await dependencies.admin.auth.admin.createUser({
         email,
@@ -197,8 +205,6 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
         await dependencies.admin.auth.admin.deleteUser(userId, false)
         throw new Error(`application provisioning failed: ${finalizeError.message}`)
       }
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      const token = await issueActivationToken(dependencies.activationTokenSecret ?? "", expiresAt)
       const { data: invitation, error: invitationError } = await api(dependencies.admin).rpc("service_issue_activation_invitation", {
         p_actor_user_id: actorUserId,
         p_auth_user_id: userId,
@@ -213,8 +219,6 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
         await dependencies.admin.auth.admin.deleteUser(userId, false)
         throw new Error(`activation invitation failed: ${invitationError.message}`)
       }
-      const appOrigin = dependencies.allowedOrigins?.[0]
-      if (!appOrigin) throw new Error("activation application origin is not configured")
       const activationUrl = `${appOrigin}/activate#token=${encodeURIComponent(token)}`
       await dependencies.sendEmail({
         to: email,

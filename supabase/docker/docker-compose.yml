@@ -219,9 +219,9 @@ services:
         condition: service_healthy
         required: true
     environment:
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://qarar.prideidea.com}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      QARAR_ACTIVATION_TOKEN_SECRET: ${QARAR_ACTIVATION_TOKEN_SECRET:-}
+      QARAR_ACTIVATION_TOKEN_SECRET: ${QARAR_ACTIVATION_TOKEN_SECRET:-${SERVICE_ROLE_KEY}}
       JWT_SECRET: ${JWT_SECRET}
       SMTP_FROM: ${SMTP_SENDER_NAME} <${SMTP_ADMIN_EMAIL}>
       SMTP_HOST: ${SMTP_HOST}
@@ -325,6 +325,7 @@ services:
       default:
         aliases:
           - api-gw
+          - kong
     ports:
       - ${KONG_HTTP_PORT}:8000/tcp
       - ${KONG_HTTPS_PORT}:8443/tcp
