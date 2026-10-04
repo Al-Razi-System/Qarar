@@ -31,10 +31,10 @@ services:
       - supabase_default
     restart: unless-stopped
     depends_on:
-      login-rate-limit-redis:
+      dashboard-login-rate-limit-redis:
         condition: service_healthy
 
-  login-rate-limit-redis:
+  dashboard-login-rate-limit-redis:
     image: redis:7-alpine
     container_name: qarar-login-rate-limit-redis
     command:
@@ -55,8 +55,6 @@ services:
     networks:
       fateen_net:
       supabase_default:
-        aliases:
-          - login-rate-limit-redis
     restart: unless-stopped
     volumes:
       - login-rate-limit-data:/data
