@@ -7,6 +7,7 @@ const PUBLIC_ERROR_CODES = new Set([
   "22023",
   "23505",
   "23514",
+  "42501",
   "23P01",
   "40001",
   "P0002",
@@ -56,5 +57,15 @@ export function safeAdminError(
       ? upstreamCode
       : "ADMIN_OPERATION_FAILED";
 
-  return { code, message: fallbackMessage, status };
+  const upstreamMessage = error instanceof Error ? error.message.trim() : "";
+  const authoredArabicMessage = /[\u0600-\u06ff]/.test(upstreamMessage)
+    ? upstreamMessage
+    : "";
+  const message = code === "42501"
+    ? (authoredArabicMessage || "لا تملك الصلاحية المطلوبة لتنفيذ هذه العملية.")
+    : code !== "ADMIN_OPERATION_FAILED" && authoredArabicMessage
+      ? authoredArabicMessage
+      : fallbackMessage;
+
+  return { code, message, status };
 }

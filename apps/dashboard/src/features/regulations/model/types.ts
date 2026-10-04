@@ -272,6 +272,8 @@ export type TopicPriorRouteRequest = {
   status: string;
   requested_by_user_id: string;
   requester_name_ar: string;
+  can_review?: boolean;
+  review_block_reason?: string | null;
   submitted_at?: string | null;
   steps: Array<{
     id: string;

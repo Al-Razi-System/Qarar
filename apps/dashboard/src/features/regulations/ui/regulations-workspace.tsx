@@ -317,6 +317,8 @@ const legalLabels: Record<string, string> = {
   suspended: "معلّق",
   expired: "منتهي",
   archived: "مؤرشف",
+  submitted: "بانتظار المراجعة",
+  rejected: "مرفوض",
 };
 const typeLabels: Record<string, string> = {
   regulation: "لائحة",
@@ -333,6 +335,8 @@ const statusClass: Record<string, string> = {
   expired: "bg-slate-100 text-slate-500",
   active: "bg-emerald-50 text-emerald-700",
   pending: "bg-amber-50 text-amber-700",
+  submitted: "bg-amber-50 text-amber-700",
+  rejected: "bg-red-50 text-red-700",
 };
 const automationLabels: Record<string, string> = {
   not_configured: "غير مهيأ",
@@ -473,11 +477,13 @@ function Dialog({
   onClose,
   children,
   wide = false,
+  feedback,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  feedback?: Notice | null;
 }) {
   return (
     <div
@@ -501,7 +507,10 @@ function Dialog({
             <X size={15} />
           </button>
         </header>
-        <div className="p-5">{children}</div>
+        <div className="p-5">
+          {feedback && <div role={feedback.kind === "error" ? "alert" : "status"} className={`mb-4 rounded-xl border p-3 text-[11px] font-bold leading-5 ${feedback.kind === "error" ? "border-red-200 bg-red-50 text-red-800" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}><p>{feedback.text}</p>{feedback.detail && <details className="mt-2 text-[9px] opacity-80"><summary>تفاصيل إضافية</summary><p dir="ltr" className="mt-1 break-all">{feedback.detail}</p></details>}</div>}
+          {children}
+        </div>
       </section>
     </div>
   );
@@ -546,6 +555,10 @@ export function RegulationsWorkspace({
   const [priorRouteReviewComments, setPriorRouteReviewComments] = useState<
     Record<string, string>
   >({});
+  const reviewablePriorRouteRequests = useMemo(
+    () => priorRouteRequests.filter((request) => request.status !== "draft"),
+    [priorRouteRequests],
+  );
   const [modal, setModal] = useState<Modal>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -1057,8 +1070,9 @@ export function RegulationsWorkspace({
     if (next === "workflows" || next === "matcher" || next === "exceptions")
       await loadWorkflows();
     if (next === "exceptions") {
-      const result = await execute(() =>
-        Promise.all([
+      setBusy(true);
+      try {
+        const result = await Promise.allSettled([
           rpc<{ items: GovernanceException[] }>(
             "admin_list_governance_exceptions",
             {
@@ -1081,12 +1095,29 @@ export function RegulationsWorkspace({
               p_status: null,
             },
           ),
-        ]),
-      );
-      if (result) {
-        setExceptions(result[0].items);
-        setCustomRouteDrafts(result[1].items);
-        setPriorRouteRequests(result[2].items);
+        ]);
+        if (result[0].status === "fulfilled")
+          setExceptions(result[0].value.items);
+        if (result[1].status === "fulfilled")
+          setCustomRouteDrafts(result[1].value.items);
+        if (result[2].status === "fulfilled")
+          setPriorRouteRequests(result[2].value.items);
+
+        const failed = result.filter(
+          (item): item is PromiseRejectedResult => item.status === "rejected",
+        );
+        if (failed.length) {
+          const firstError = failed[0].reason;
+          setNotice({
+            kind: "error",
+            text:
+              firstError instanceof Error
+                ? firstError.message
+                : "تعذر تحميل بعض قوائم المراجعة.",
+          });
+        }
+      } finally {
+        setBusy(false);
       }
     }
   }
@@ -1859,7 +1890,7 @@ export function RegulationsWorkspace({
           </nav>
         </header>
 
-        <div className="grid items-start gap-4 xl:grid-cols-[230px_minmax(0,1fr)]">
+        <div className="grid items-start gap-4 2xl:grid-cols-[230px_minmax(0,1fr)]">
           <RegulationsNavigation active={tab} onChange={changeTab} />
           <div className="min-w-0">
             {tab === "policies" && (
@@ -3280,19 +3311,12 @@ export function RegulationsWorkspace({
                 <div className="flex items-center justify-between border-b border-[#edf1f5] p-5">
                   <div>
                     <h2 className="text-sm font-black text-[#17283f]">
-                      طلبات الاستثناءات والمسارات المؤقتة
+                      مراجعة مسارات الموضوعات
                     </h2>
                     <p className="mt-1 text-[10px] text-[#8190a3]">
-                      مراجعة مستقلة مع صلاحية زمنية وسجل تدقيقي.
+                      اعتمد المراحل المنفذة سابقًا، أو راجع المسارات المخصصة والاستثنائية كلٌ في قسمه.
                     </p>
                   </div>
-                  <button
-                    onClick={() => setModal("exception")}
-                    className="flex h-10 items-center gap-2 rounded-xl bg-[#0066cc] px-4 text-xs font-bold text-white"
-                  >
-                    <Plus size={15} />
-                    طلب استثناء
-                  </button>
                 </div>
                 <div className="border-b border-[#edf1f5] bg-gradient-to-l from-[#eef8ff] to-white p-5">
                   <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -3318,19 +3342,26 @@ export function RegulationsWorkspace({
                     </span>
                   </div>
                   <div className="grid gap-4 xl:grid-cols-2">
-                    {priorRouteRequests.map((request) => (
+                    {reviewablePriorRouteRequests.map((request) => (
                       <article
                         key={request.id}
                         className="overflow-hidden rounded-2xl border border-[#cfe0ef] bg-white shadow-[0_8px_22px_rgba(20,55,90,.06)]"
                       >
                         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[#edf1f5] p-4">
-                          <div>
-                            <p className="text-[9px] font-black text-[#0877df]">
+                          <div className="min-w-0">
+                            <Link
+                              href={`/admin/topics/${request.topic_id}`}
+                              className="inline-flex items-center gap-1 text-[9px] font-black text-[#0877df] hover:underline"
+                            >
                               {request.topic_no || "موضوع قائم"}
-                            </p>
-                            <h4 className="mt-1 text-sm font-black text-[#17283f]">
+                              <ChevronLeft size={12} />
+                            </Link>
+                            <Link
+                              href={`/admin/topics/${request.topic_id}`}
+                              className="mt-1 block text-sm font-black text-[#17283f] hover:text-[#0877df] hover:underline"
+                            >
                               {request.topic_title_ar}
-                            </h4>
+                            </Link>
                             <p className="mt-1 text-[9px] text-[#8190a3]">
                               قدمه: {request.requester_name_ar}
                               {request.submitted_at
@@ -3403,6 +3434,12 @@ export function RegulationsWorkspace({
                         </ol>
                         {request.status === "submitted" && (
                           <footer className="space-y-3 border-t border-[#edf1f5] bg-[#fbfdff] p-4">
+                            {request.can_review === false && (
+                              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[10px] font-bold leading-5 text-amber-800">
+                                {request.review_block_reason ||
+                                  "هذا الطلب يحتاج مراجعًا مستقلًا لاعتماده."}
+                              </div>
+                            )}
                             <label className="block">
                               <span className="mb-1.5 block text-[9px] font-black text-[#52647a]">
                                 ملاحظة المراجع *
@@ -3420,10 +3457,14 @@ export function RegulationsWorkspace({
                                 placeholder="دوّن نتيجة فحص المحاضر والقرارات…"
                                 className="min-h-20 w-full rounded-xl border border-[#d7e2ec] bg-white p-3 text-[10px] leading-5"
                               />
+                              <span className="mt-1.5 block text-[9px] text-[#718196]">
+                                اكتب 5 أحرف على الأقل لتفعيل زري الاعتماد والرفض.
+                              </span>
                             </label>
                             <div className="flex flex-wrap gap-2">
                               <button
                                 disabled={
+                                  request.can_review === false ||
                                   (priorRouteReviewComments[request.id]?.trim()
                                     .length ?? 0) < 5 || busy
                                 }
@@ -3436,6 +3477,7 @@ export function RegulationsWorkspace({
                               </button>
                               <button
                                 disabled={
+                                  request.can_review === false ||
                                   (priorRouteReviewComments[request.id]?.trim()
                                     .length ?? 0) < 5 || busy
                                 }
@@ -3451,7 +3493,7 @@ export function RegulationsWorkspace({
                         )}
                       </article>
                     ))}
-                    {!priorRouteRequests.length && (
+                    {!reviewablePriorRouteRequests.length && (
                       <div className="rounded-xl border border-dashed border-[#cfdce9] bg-white p-6 text-center text-[11px] text-[#8291a4] xl:col-span-2">
                         لا توجد طلبات لاستكمال مسار سابق.
                       </div>
@@ -3548,6 +3590,23 @@ export function RegulationsWorkspace({
                   </div>
                 </div>
                 <div className="overflow-x-auto">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#edf1f5] p-5">
+                    <div>
+                      <h3 className="text-xs font-black text-[#17283f]">
+                        الاستثناءات المؤقتة
+                      </h3>
+                      <p className="mt-1 text-[9px] text-[#8190a3]">
+                        هذا القسم فقط لطلب الخروج المؤقت عن المسار الأصلي، ولا يخص إثبات المجالس السابقة.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setModal("exception")}
+                      className="flex h-9 items-center gap-2 rounded-xl border border-[#bed7ef] bg-white px-4 text-[10px] font-bold text-[#0066cc]"
+                    >
+                      <Plus size={14} />
+                      إنشاء استثناء مؤقت
+                    </button>
+                  </div>
                   <table className="w-full min-w-[900px] text-right">
                     <thead className="bg-[#f8fafc] text-[10px] text-[#718196]">
                       <tr>
@@ -3622,6 +3681,7 @@ export function RegulationsWorkspace({
           <Dialog
             title={editingPolicy ? "تعديل بيانات اللائحة" : "إنشاء لائحة جديدة"}
             onClose={closeModal}
+            feedback={notice}
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
@@ -3710,7 +3770,7 @@ export function RegulationsWorkspace({
           </Dialog>
         )}
         {modal === "version" && (
-          <Dialog title="إنشاء إصدار جديد" onClose={closeModal}>
+          <Dialog title="إنشاء إصدار جديد" onClose={closeModal} feedback={notice}>
             <div className="space-y-4">
               <Field label="وسم الإصدار">
                 <input

@@ -38,7 +38,7 @@ jobs:
       - run: npm run test:ci
       - name: Verify documentation encoding
         working-directory: ${{ github.workspace }}
-        run: npm run test:docs-encoding
+        run: npm run test:development-governance
 
   api-contracts:
     runs-on: ubuntu-latest

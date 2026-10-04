@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarClock, GitBranch, Pencil, UserPlus, UsersRound, X } from "lucide-react";
 import type { CouncilMembership, ReferenceOption, RoleOption, UserOption } from "../model/types";
 
@@ -22,11 +22,39 @@ export function MoveCouncilDialog({ parents, currentId, onClose, onConfirm }: { 
   return <Shell title="نقل المجلس داخل الهيكل" description="سيتم تحديث مستوى المجلس وجميع المجالس التابعة مع منع العلاقات الدائرية." icon={GitBranch} onClose={onClose}><form onSubmit={submit}><div className="space-y-4 p-5">{error && <p className="rounded-xl bg-red-50 p-3 text-xs font-bold text-red-700">{error}</p>}<label className="block text-xs font-black text-[#344861]">الوحدة الأب الجديدة<select value={parent} onChange={(e) => setParent(e.target.value)} className={`${field} mt-2`}><option value="">جذر الهيكل</option>{parents.filter((p) => p.id !== currentId).map((p) => <option key={p.id} value={p.id}>{p.name_ar}</option>)}</select></label><label className="block text-xs font-black text-[#344861]">سبب النقل *<textarea required minLength={5} rows={3} value={reason} onChange={(e) => setReason(e.target.value)} className={`${field} mt-2 h-auto py-3`} /></label></div><Footer saving={saving} onClose={onClose} label="اعتماد النقل" /></form></Shell>;
 }
 
-export function MemberDialog({ users, roles, onClose, onConfirm }: { users: UserOption[]; roles: RoleOption[]; onClose: () => void; onConfirm: (value: { userId: string; roleId: string; title: string; start: string; end: string | null }) => Promise<void> }) {
+export function MemberDialog({ users, excludedUserIds = [], roles, onClose, onConfirm }: { users: UserOption[]; excludedUserIds?: string[]; roles: RoleOption[]; onClose: () => void; onConfirm: (value: { userId: string; roleId: string; title: string; start: string; end: string | null }) => Promise<void> }) {
   const membershipRoles = roles.filter((role) => role.role_scope === "governance_unit" && !["council_chair", "council_rapporteur"].includes(role.code));
+  const excluded = useMemo(() => new Set(excludedUserIds), [excludedUserIds]);
+  const initialUsers = useMemo(() => users.filter((user) => !excluded.has(user.id)), [excluded, users]);
   const today = new Date().toISOString().slice(0, 10); const [userId, setUserId] = useState(""); const [roleId, setRoleId] = useState(""); const [title, setTitle] = useState("عضو مجلس"); const [start, setStart] = useState(today); const [end, setEnd] = useState(""); const [saving, setSaving] = useState(false); const [error, setError] = useState("");
-  async function submit(e: React.FormEvent) { e.preventDefault(); setSaving(true); setError(""); try { await onConfirm({ userId, roleId, title, start, end: end || null }); onClose(); } catch (x) { setError(x instanceof Error ? x.message : "تعذر إضافة العضو."); } finally { setSaving(false); } }
-  return <Shell title="إضافة عضو إلى المجلس" description="اختر مستخدماً غير مضاف وحدد فترة عضويته. الرئيس والمقرر يعينان من إجراء القيادة المنفصل." icon={UserPlus} onClose={onClose}><form onSubmit={submit}><div className="grid gap-4 p-5 sm:grid-cols-2">{error && <p className="sm:col-span-2 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-700">{error}</p>}{!users.length && <p className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-800">جميع المستخدمين المتاحين أعضاء فعالون في المجلس حالياً.</p>}<Label text="المستخدم"><select required disabled={!users.length} value={userId} onChange={(e) => setUserId(e.target.value)} className={`${field} disabled:bg-slate-100`}><option value="">اختر المستخدم</option>{users.map((u) => <option key={u.id} value={u.id}>{u.full_name_ar} - {u.email}</option>)}</select></Label><Label text="نوع العضوية"><select required disabled={!membershipRoles.length} value={roleId} onChange={(e) => setRoleId(e.target.value)} className={`${field} disabled:bg-slate-100`}><option value="">اختر نوع العضوية</option>{membershipRoles.map((role) => <option key={role.id} value={role.id}>{role.name_ar}</option>)}</select></Label><Label text="المسمى داخل المجلس"><input required value={title} onChange={(e) => setTitle(e.target.value)} className={field} /></Label><Label text="تاريخ البداية"><input required type="date" value={start} onChange={(e) => setStart(e.target.value)} className={field} /></Label><Label text="تاريخ النهاية (اختياري)"><input type="date" min={start} value={end} onChange={(e) => setEnd(e.target.value)} className={field} /></Label></div><Footer saving={saving} onClose={onClose} label="إضافة العضو" disabled={!users.length || !membershipRoles.length} /></form></Shell>;
+  const [userQuery, setUserQuery] = useState(""); const [availableUsers, setAvailableUsers] = useState(initialUsers); const [loadingUsers, setLoadingUsers] = useState(false); const [userLoadError, setUserLoadError] = useState("");
+  const visibleUsers = userQuery.trim() ? availableUsers : initialUsers;
+
+  useEffect(() => {
+    if (!userQuery.trim()) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoadingUsers(true); setUserLoadError("");
+      try {
+        const params = new URLSearchParams({ offset: "0", query: userQuery.trim() });
+        const response = await fetch(`/api/admin/users?${params.toString()}`, { signal: controller.signal });
+        const payload = await response.json().catch(() => ({})) as { items?: UserOption[]; message?: string };
+        if (!response.ok) throw new Error(payload.message || "تعذر تحميل المستخدمين حالياً.");
+        const nextUsers = (payload.items ?? []).filter((user) => !excluded.has(user.id));
+        setAvailableUsers(nextUsers);
+        setUserId((current) => current && !nextUsers.some((user) => user.id === current) ? "" : current);
+      } catch (cause) {
+        if (controller.signal.aborted) return;
+        setUserLoadError(cause instanceof Error ? cause.message : "تعذر تحميل المستخدمين حالياً.");
+      } finally {
+        if (!controller.signal.aborted) setLoadingUsers(false);
+      }
+    }, 300);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [excluded, initialUsers, userQuery]);
+
+  async function submit(e: React.FormEvent) { e.preventDefault(); if (saving || !userId || !roleId) return; setSaving(true); setError(""); try { await onConfirm({ userId, roleId, title, start, end: end || null }); onClose(); } catch (x) { setError(x instanceof Error ? x.message : "تعذر إضافة العضو."); } finally { setSaving(false); } }
+  return <Shell title="إضافة عضو إلى المجلس" description="ابحث في جميع مستخدمي المنظمة، ثم حدد فترة العضوية. الرئيس والمقرر يعينان من إجراء القيادة المنفصل." icon={UserPlus} onClose={onClose}><form onSubmit={submit}><div className="grid gap-4 p-5 sm:grid-cols-2">{error && <p role="alert" className="sm:col-span-2 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-700">{error}</p>}<div className="sm:col-span-2"><Label text="البحث عن مستخدم"><input value={userQuery} onChange={(e) => { const value = e.target.value; setUserQuery(value); setUserLoadError(""); if (!value.trim()) { setLoadingUsers(false); setUserId((current) => current && !initialUsers.some((user) => user.id === current) ? "" : current); } }} className={field} placeholder="ابحث بالاسم، البريد أو الرقم الوظيفي..." /></Label><p className="mt-1 text-[10px] text-[#75879b]">اكتب جزءاً من الاسم أو البريد للوصول إلى مستخدم خارج القائمة الأولية.</p></div>{userLoadError && <p role="alert" className="sm:col-span-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700">{userLoadError}</p>}{!loadingUsers && !visibleUsers.length && <p className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-800">{userQuery.trim() ? "لا يوجد مستخدم متاح يطابق البحث. تحقق من الاسم أو البريد." : "لا يوجد مستخدم متاح في القائمة الأولية. استخدم البحث للوصول إلى بقية المستخدمين."}</p>}<Label text="المستخدم"><select required disabled={loadingUsers || !visibleUsers.length} value={userId} onChange={(e) => setUserId(e.target.value)} className={`${field} disabled:bg-slate-100`}><option value="">{loadingUsers ? "جارٍ البحث..." : "اختر المستخدم"}</option>{visibleUsers.map((u) => <option key={u.id} value={u.id}>{u.full_name_ar} - {u.email}</option>)}</select></Label><Label text="نوع العضوية"><select required disabled={!membershipRoles.length} value={roleId} onChange={(e) => setRoleId(e.target.value)} className={`${field} disabled:bg-slate-100`}><option value="">اختر نوع العضوية</option>{membershipRoles.map((role) => <option key={role.id} value={role.id}>{role.name_ar}</option>)}</select></Label><Label text="المسمى داخل المجلس"><input required value={title} onChange={(e) => setTitle(e.target.value)} className={field} /></Label><Label text="تاريخ البداية"><input required type="date" value={start} onChange={(e) => setStart(e.target.value)} className={field} /></Label><Label text="تاريخ النهاية (اختياري)"><input type="date" min={start} value={end} onChange={(e) => setEnd(e.target.value)} className={field} /></Label></div><Footer saving={saving} onClose={onClose} label="إضافة العضو" disabled={loadingUsers || !userId || !roleId || !membershipRoles.length} /></form></Shell>;
 }
 
 export function LeadershipDialog({ users, members, onClose, onConfirm }: { users: UserOption[]; members: CouncilMembership[]; onClose: () => void; onConfirm: (chair: string, rapporteur: string, date: string, reason: string) => Promise<void> }) {

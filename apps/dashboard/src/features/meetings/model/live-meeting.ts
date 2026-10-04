@@ -38,6 +38,8 @@ export type VotingRound = {
   votes_cast_count?: number;
   tie_break_applied?: boolean;
   chair_vote?: "approve" | "reject" | "abstain" | null;
+  closed_at?: string | null;
+  participation?: Array<{ user_id: string; full_name_ar: string; has_voted: boolean }>;
 };
 
 export type LiveMeetingSession = {
@@ -81,3 +83,28 @@ export type LiveMeetingSession = {
 
 export type MyVote = { voting_round_id: string; title_ar: string; has_voted: boolean };
 export type Decision = { id: string; decision_no: string; agenda_item_id: string; decision_status: string; decision_text: string };
+
+export type TopicMeetingHistory = {
+  agenda_item_id: string;
+  agenda_status: string;
+  discussion_notes?: string | null;
+  meeting: { id: string; meeting_no?: string; title: string; status: string; scheduled_date?: string; unit_name?: string };
+  voting_rounds: Array<{ id: string; round_number: number; status: string; result?: string | null; eligible_voter_count?: number; approve_count?: number; reject_count?: number; abstain_count?: number }>;
+  decisions: Array<{ id: string; decision_no: string; decision_text: string; decision_status: string }>;
+};
+
+export type PriorRouteStep = {
+  id: string;
+  sequence_no: number;
+  step_title: string;
+  responsible_unit_name_ar?: string | null;
+  meeting_date: string;
+  meeting_reference?: string | null;
+  decision_type: string;
+  decision_text: string;
+  bypass_reason: string;
+  attachments: Array<{ id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number }>;
+};
+
+export type PriorRouteRequest = { id: string; topic_id: string; status: string; steps: PriorRouteStep[] };
+export type TopicGovernanceHistory = { meetings: TopicMeetingHistory[]; priorRoute: PriorRouteRequest | null };

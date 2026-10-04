@@ -3,7 +3,13 @@ import { readFile, rm } from "node:fs/promises";
 import { dockerEnv, fixturePath } from "./fixture";
 
 export default async function globalTeardown() {
-  const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
+  let fixture: { userId: string; organizationId: string; extraUserIds?: string[] };
+  try {
+    fixture = JSON.parse(await readFile(fixturePath, "utf8"));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
   execFileSync("docker", [
     "exec", "qarar-supabase-db", "psql", "-X", "-v", "ON_ERROR_STOP=1",
     "-U", "supabase_admin", "-d", "postgres", "-Atqc", `
@@ -24,9 +30,11 @@ export default async function globalTeardown() {
   ]);
   const env = await dockerEnv();
   const base = env.SUPABASE_PUBLIC_URL || "http://127.0.0.1:54321";
-  await fetch(`${base}/auth/v1/admin/users/${fixture.userId}`, {
-    method: "DELETE",
-    headers: { apikey: env.SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SERVICE_ROLE_KEY}` },
-  });
+  for (const userId of [fixture.userId, ...(fixture.extraUserIds ?? [])]) {
+    await fetch(`${base}/auth/v1/admin/users/${userId}`, {
+      method: "DELETE",
+      headers: { apikey: env.SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SERVICE_ROLE_KEY}` },
+    });
+  }
   await rm(fixturePath, { force: true });
 }

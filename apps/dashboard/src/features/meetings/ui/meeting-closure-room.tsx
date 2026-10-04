@@ -18,9 +18,19 @@ export function MeetingClosureRoom({ meetingId }: { meetingId: string }) {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const dirtyRef = useRef(false);
+  const generationAttemptedRef = useRef(false);
   const refresh = useEffectEvent((silent = false, forceText = false) => load(silent, forceText));
 
   useEffect(() => { void refresh(false, true); }, [meetingId]);
+
+  useEffect(() => {
+    if (meeting?.status !== "waiting_for_minutes" || minutes?.id || !minutes?.viewer_can_edit || busy || generationAttemptedRef.current) return;
+    generationAttemptedRef.current = true;
+    void perform(
+      () => meetingRpc("generate_meeting_minutes_draft", { p_meeting_id: meeting.id }),
+      "جُهزت مسودة المحضر تلقائياً من بيانات الجلسة.",
+    );
+  }, [busy, meeting, minutes]);
 
   useEffect(() => {
     if (["closed", "archived"].includes(meeting?.status ?? "")) return;
@@ -73,8 +83,16 @@ export function MeetingClosureRoom({ meetingId }: { meetingId: string }) {
   }
 
   async function sign(approval: MinuteApproval, signature: SignatureStrokes) {
-    const ok = await perform(() => meetingRpc("sign_meeting_minutes_approval", { p_approval_id: approval.id, p_signature_strokes: signature, p_expected_updated_at: approval.updated_at }), "حُفظ توقيعك وربط ببصمة النسخة النهائية.");
-    if (!ok) throw new Error("تعذر حفظ التوقيع.");
+    setBusy(true); setNotice(null);
+    try {
+      await meetingRpc("sign_meeting_minutes_approval", { p_approval_id: approval.id, p_signature_strokes: signature, p_expected_updated_at: approval.updated_at });
+      await load(true, true);
+      setNotice({ kind: "success", text: "حُفظ توقيعك وربط ببصمة النسخة النهائية." });
+    } catch (error) {
+      const text = messageOf(error, "تعذر حفظ التوقيع.");
+      setNotice({ kind: "error", text });
+      throw new Error(text);
+    } finally { setBusy(false); }
   }
 
   async function returnForRevision(approval: MinuteApproval, reason: string) {

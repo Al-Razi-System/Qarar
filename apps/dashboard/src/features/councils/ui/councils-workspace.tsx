@@ -182,7 +182,7 @@ export function CouncilsWorkspace({ initialSearch, initialTree, options, roles, 
     {creating && <CouncilFormDialog options={councilOptions} onClose={() => setCreating(false)} onSubmit={createCouncil} />}
     {editing && detail && <CouncilFormDialog mode="edit" options={councilOptions} initialValues={toFormValues(detail)} onClose={() => setEditing(false)} onSubmit={updateCouncil} />}
     {moving && detail && <MoveCouncilDialog parents={councilOptions.parent_units} currentId={detail.id} onClose={() => setMoving(false)} onConfirm={moveCouncil} />}
-    {addingMember && <MemberDialog users={users.filter((user) => !members.some((membership) => membership.user_id === user.id && membership.is_effective && !isLeadershipRole(membership.role_code)))} roles={roles} onClose={() => setAddingMember(false)} onConfirm={addMember} />}
+    {addingMember && <MemberDialog users={users} excludedUserIds={members.filter((membership) => membership.is_effective && !isLeadershipRole(membership.role_code)).map((membership) => membership.user_id)} roles={roles} onClose={() => setAddingMember(false)} onConfirm={addMember} />}
     {leadership && <LeadershipDialog users={users} members={members} onClose={() => setLeadership(false)} onConfirm={assignLeadership} />}
     {editingMember && <EditMembershipDialog membership={editingMember} onClose={() => setEditingMember(null)} onConfirm={(value) => updateMembership(editingMember, value)} />}
     {endingMember && <EndMembershipDialog membership={endingMember} onClose={() => setEndingMember(null)} onConfirm={(date, reason) => endMembership(endingMember, date, reason)} />}

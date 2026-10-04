@@ -24,6 +24,32 @@ describe("safeAdminError", () => {
     });
   });
 
+  it("يعرض رسالة التحقق العربية الآمنة بدل إخفائها", () => {
+    const source = Object.assign(new Error("لا يمكن إغلاق التصويت قبل اكتمال أصوات الأعضاء."), {
+      status: 400,
+      code: "23514",
+    });
+
+    expect(safeAdminError(source, "تعذر تنفيذ العملية.")).toEqual({
+      code: "23514",
+      message: "لا يمكن إغلاق التصويت قبل اكتمال أصوات الأعضاء.",
+      status: 400,
+    });
+  });
+
+  it("يترجم منع الصلاحية غير الموصوف دون كشف رسالة داخلية", () => {
+    const source = Object.assign(new Error("permission denied for relation decisions"), {
+      status: 403,
+      code: "42501",
+    });
+
+    expect(safeAdminError(source, "تعذر تنفيذ العملية.")).toEqual({
+      code: "42501",
+      message: "لا تملك الصلاحية المطلوبة لتنفيذ هذه العملية.",
+      status: 403,
+    });
+  });
+
   it("يستبدل أكواد المصدر غير المصرح بعرضها", () => {
     expect(
       safeAdminError({ status: 500, code: "P0001", message: "internal policy implementation" }, "تعذر تنفيذ العملية."),

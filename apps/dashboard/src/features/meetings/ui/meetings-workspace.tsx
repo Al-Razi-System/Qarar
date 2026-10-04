@@ -12,6 +12,7 @@ import {
   type AgendaCandidate, type Meeting, type MeetingDetail, type MeetingFormOptions,
   type MeetingMinutes, type MeetingReadiness, type MeetingTopicAttachment, type MinuteApproval, type SignatureStrokes,
 } from "../model/meeting";
+import { localDateKey, meetingOperationalGroup } from "../model/meeting-operational-state";
 import { MeetingAgendaPanel } from "./meeting-agenda-panel";
 import { CompletedMeetingSummary } from "./completed-meeting-summary";
 import { MeetingMinutesWorkspace } from "./meeting-minutes-workspace";
@@ -48,6 +49,7 @@ function truncateText(value?: string | null, max = 150) {
 
 const meetingGroups = [
   { key: "upcoming", label: "القادمة", description: "مجدولة وجاهزة للبدء", statuses: ["ready_to_start", "scheduled"] },
+  { key: "missed", label: "تحتاج إجراء", description: "فات موعدها ولم تُفتح", statuses: [] },
   { key: "live", label: "منعقدة الآن", description: "جلسات قيد الانعقاد", statuses: ["in_progress"] },
   { key: "completion", label: "قيد الإكمال", description: "المحاضر والمصادقات", statuses: ["waiting_for_minutes", "waiting_for_approval"] },
   { key: "completed", label: "المكتملة", description: "السجل النهائي والأرشيف", statuses: ["closed", "archived"] },
@@ -58,6 +60,7 @@ const meetingGroups = [
 const groupPresentation = {
   all: { icon: Layers3, tone: "border-slate-200 bg-white text-slate-700", active: "border-[#0877d6] bg-[#0877d6] text-white" },
   upcoming: { icon: CalendarDays, tone: "border-blue-100 bg-blue-50/70 text-blue-800", active: "border-blue-600 bg-blue-600 text-white" },
+  missed: { icon: AlertCircle, tone: "border-amber-200 bg-amber-50/70 text-amber-900", active: "border-amber-500 bg-amber-500 text-white" },
   live: { icon: CircleDot, tone: "border-emerald-100 bg-emerald-50/70 text-emerald-800", active: "border-emerald-600 bg-emerald-600 text-white" },
   completion: { icon: FileText, tone: "border-amber-100 bg-amber-50/70 text-amber-900", active: "border-amber-500 bg-amber-500 text-white" },
   completed: { icon: CheckCircle2, tone: "border-violet-100 bg-violet-50/70 text-violet-800", active: "border-violet-600 bg-violet-600 text-white" },
@@ -65,10 +68,10 @@ const groupPresentation = {
   cancelled: { icon: X, tone: "border-red-100 bg-red-50/70 text-red-800", active: "border-red-600 bg-red-600 text-white" },
 } as const;
 
-function groupedMeetings(meetings: Meeting[]) {
+function groupedMeetings(meetings: Meeting[], today: string) {
   return meetingGroups.map((group) => ({
     ...group,
-    meetings: meetings.filter((meeting) => group.statuses.some((status) => status === meeting.status)),
+    meetings: meetings.filter((meeting) => meetingOperationalGroup(meeting, today) === group.key),
   })).filter((group) => group.meetings.length > 0);
 }
 
@@ -114,6 +117,7 @@ export function MeetingsWorkspace() {
   const [minutesText, setMinutesText] = useState("");
   const [readiness, setReadiness] = useState<MeetingReadiness | null>(null);
   const [topicAttachments, setTopicAttachments] = useState<MeetingTopicAttachment[]>([]);
+  const today = localDateKey();
 
   async function loadMeetings() {
     setLoading(true); setNotice(null);
@@ -528,9 +532,9 @@ export function MeetingsWorkspace() {
         </div>
       </div>
 
-      <nav className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7" aria-label="تصنيف الاجتماعات">
+      <nav className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8" aria-label="تصنيف الاجتماعات">
         {[{ key: "all", label: "كل الاجتماعات", description: "جميع الحالات", statuses: [] as readonly string[] }, ...meetingGroups].map((group) => {
-          const count = group.key === "all" ? meetings.length : meetings.filter((meeting) => group.statuses.some((status) => status === meeting.status)).length;
+          const count = group.key === "all" ? meetings.length : meetings.filter((meeting) => meetingOperationalGroup(meeting, today) === group.key).length;
           const presentation = groupPresentation[group.key as keyof typeof groupPresentation]; const Icon = presentation.icon;
           return <button key={group.key} type="button" onClick={() => { setActiveGroup(group.key); setSelected(null); }} className={`min-h-24 rounded-2xl border p-3 text-right transition hover:-translate-y-0.5 hover:shadow-md ${activeGroup === group.key ? presentation.active : presentation.tone}`}><div className="flex items-start justify-between"><span className={`grid h-9 w-9 place-items-center rounded-xl ${activeGroup === group.key ? "bg-white/15" : "bg-white/80"}`}><Icon size={17} /></span><strong className="text-xl font-black">{count}</strong></div><h3 className="mt-2 text-[11px] font-black">{group.label}</h3><p className={`mt-0.5 text-[8px] ${activeGroup === group.key ? "text-white/75" : "opacity-70"}`}>{group.description}</p></button>;
         })}
@@ -555,7 +559,7 @@ export function MeetingsWorkspace() {
             </div>
           ) : (
             <div className="space-y-4 p-4">
-              {groupedMeetings(meetings).filter((group) => activeGroup === "all" || group.key === activeGroup).map((group) => <section key={group.key} aria-labelledby={`meeting-group-${group.key}`} className="overflow-hidden rounded-2xl border border-[#e4ebf2]">
+              {groupedMeetings(meetings, today).filter((group) => activeGroup === "all" || group.key === activeGroup).map((group) => <section key={group.key} aria-labelledby={`meeting-group-${group.key}`} className="overflow-hidden rounded-2xl border border-[#e4ebf2]">
                 <header className="flex items-center justify-between border-y border-[#e9f0f6] bg-[#f8fbfe] px-5 py-2.5 first:border-t-0">
                   <h3 id={`meeting-group-${group.key}`} className="text-[10px] font-black text-[#40566f]">{group.label}</h3>
                   <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black text-[#6f8297] ring-1 ring-[#dfe8f0]">{group.meetings.length}</span>

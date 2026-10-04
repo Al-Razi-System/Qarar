@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(28);
+select plan(30);
 
 insert into public.organizations(id,code,name_ar) values
 ('43000000-0000-0000-0000-000000000001','s02-prod','Sprint 02 Production'),
@@ -95,7 +95,13 @@ select is(api_v1.transition_meeting((select meeting_id from s02_state),'schedule
  (select updated_at from public.meetings where id=(select meeting_id from s02_state)))->>'status','scheduled','valid lifecycle transition succeeds');
 select is((select count(*) from public.meeting_status_history where meeting_id=(select meeting_id from s02_state))::int,2,'lifecycle appends status history');
 select is((api_v1.search_eligible_agenda_topics((select meeting_id from s02_state),null,25,0)->>'total')::int,1,'eligible search returns approved topics in meeting unit only');
+select ok((api_v1.create_meeting(
+ '43000000-0000-0000-0000-000000000022','43000000-0000-0000-0000-000000000024',
+ 'Second production meeting',current_date+9,'09:00','10:00','hybrid','Room and link',null,
+ '43000000-0000-0000-0000-000000000098'
+)->>'id') is not null,'a second meeting exists to verify agenda isolation');
 update s02_state set item1=(api_v1.add_agenda_item((select meeting_id from s02_state),'43000000-0000-0000-0000-000000000052',false,null)->>'id')::uuid;
+select is((select count(*)::integer from public.agenda_items where topic_id='43000000-0000-0000-0000-000000000052' and meeting_id<>(select meeting_id from s02_state)),0,'adding a topic changes only the selected meeting');
 select ok(
   (api_v1.get_meeting_detail((select meeting_id from s02_state))->'agenda_items'->0) ?& array['voting_status','voting_result'],
   'meeting detail agenda exposes voting state required by frontend'
@@ -121,7 +127,7 @@ reset role;
 select cmp_ok((select count(*) from public.audit_logs
  where organization_id='43000000-0000-0000-0000-000000000001'
  and action in('topics.referral.request','topics.referral.accept','meetings.create','meetings.update',
- 'meetings.transition','agenda.item.add','agenda.reorder','agenda.item.remove')),'=',9::bigint,
+ 'meetings.transition','agenda.item.add','agenda.reorder','agenda.item.remove')),'=',10::bigint,
  'all state-changing contracts append audit records');
 
 set local role authenticated;

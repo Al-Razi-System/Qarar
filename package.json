@@ -27,6 +27,7 @@
     "import:regulation-bundles": "node scripts/import-binary-regulation-bundles.mjs",
     "replace:local-regulations": "python scripts/replace-local-regulations.py --confirm-local-replace",
     "test:docs-encoding": "node scripts/verify-documentation-encoding.mjs",
+    "test:development-governance": "node scripts/verify-development-governance.mjs && npm run test:docs-encoding",
     "test:bootstrap-admin": "node --test scripts/bootstrap-initial-admin.test.mjs",
     "test:auth-redirect-production": "node --test scripts/auth-redirect-production-config.test.mjs",
     "test:upload-scanner-production": "node --test scripts/upload-malware-scan-production-config.test.mjs",

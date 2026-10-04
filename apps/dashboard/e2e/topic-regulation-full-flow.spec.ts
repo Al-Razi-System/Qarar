@@ -1,15 +1,32 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { fixturePath } from "./fixture";
 
-test("مسار كامل: إنشاء موضوع ← اختيار لائحة ← إنشاء المسار ← عرض الخطوة الحالية", async ({ page }) => {
-  await page.route("**/api/admin/regulations", async (route) => {
+test("واجهة إنشاء موضوع: البيانات ← اللائحة ← مراجعة المسار ← إرسال الإنشاء مرة واحدة", async ({ page }) => {
+  const topicId = "11111111-1111-4111-8111-111111111111";
+  const calledContracts: string[] = [];
+  const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
+  const login = await page.request.post("/api/auth/login", {
+    data: { email: fixture.email, password: fixture.password },
+    headers: { "x-qarar-client-ip": "127.0.0.1" },
+  });
+  const loginBody = await login.json() as { authenticated?: boolean; message?: string };
+  expect(login.status(), loginBody.message ?? "فشل تسجيل الدخول في بيئة الاختبار").toBe(200);
+  expect(loginBody.authenticated, "يجب أن تنشئ بيئة الاختبار جلسة كاملة").toBe(true);
+  await page.route("**/api/admin/topics", async (route) => {
     const request = route.request();
     const body = request.postDataJSON() as { contract: string; params?: Record<string, unknown> };
+    calledContracts.push(body.contract);
     const responses: Record<string, unknown> = {
-      admin_list_governance_units: {
-        items: [{ id: "unit-1", code: "department", name_ar: "مجلس القسم" }],
+      get_topic_form_options: {
+        governance_units: [{ id: "unit-1", code: "department", name_ar: "مجلس القسم" }],
+        priorities: ["low", "medium", "high", "urgent"],
+        source_types: ["new", "lower_unit", "higher_unit", "peer_unit", "administrative"],
       },
-      admin_list_topic_categories: {
-        items: [{ id: "cat-1", code: "academic", name_ar: "برامج أكاديمية" }],
+      get_topic_categories_for_unit: {
+        governance_unit_id: "unit-1",
+        effective_on: "2026-10-02",
+        categories: [{ id: "cat-1", code: "academic", name_ar: "برامج أكاديمية", executable_item_count: 1 }],
       },
       admin_list_workflow_templates: [{
         id: "workflow-1",
@@ -36,8 +53,34 @@ test("مسار كامل: إنشاء موضوع ← اختيار لائحة ← �
           can_start_workflow: true,
         }],
       },
-      create_topic_with_selected_regulation: {
-        topic_id: "topic-1",
+      get_topic_regulation_tree: { total: 0, items: [] },
+      get_topic_regulation_preview: {
+        article: {
+          title: "إنشاء برنامج أكاديمي جديد",
+          official_text: "يعتمد إنشاء البرامج الأكاديمية الجديدة وفق مسار الاعتماد المحدد.",
+        },
+        rule_summary: [{ name: "مسار اعتماد إلزامي", description: "يجب تشغيل مسار الاعتماد الأكاديمي.", requires_workflow: true }],
+        scope: { target_name: "مجلس القسم", description: "تنطبق على الجهة مقدمة الموضوع." },
+        workflow: { name: "مسار اعتماد البرامج", description: "مسار يبدأ بمراجعة مجلس القسم." },
+        requirements: [],
+        attachments: [],
+        approval_effect: "ينشأ القرار بعد إكمال المسار.",
+        voting_effect: "تطبق قواعد التصويت في خطوة المجلس.",
+      },
+      get_topic_regulation_route_preview: {
+        status: "ready",
+        workflow_name: "مسار اعتماد البرامج",
+        message: "المسار جاهز للتشغيل.",
+        steps: [{
+          title: "مراجعة مجلس القسم",
+          responsible_unit_id: "unit-1",
+          responsible_entity: "مجلس القسم",
+          responsible_role: "مقرر المجلس",
+          transition_requirement: "اعتماد الموضوع",
+        }],
+      },
+      create_topic_with_regulation_bundle: {
+        topic_id: topicId,
         routing_status: "routing_ready",
         policy_id: "policy-1",
         policy_version_id: "version-1",
@@ -48,7 +91,7 @@ test("مسار كامل: إنشاء موضوع ← اختيار لائحة ← �
       },
       get_topic_governance_summary: {
         topic: {
-          id: "topic-1",
+          id: topicId,
           topic_no: "TOP-2026-000001",
           title_ar: "إنشاء برنامج بكالوريوس الأمن السيبراني",
           status: "new",
@@ -81,6 +124,14 @@ test("مسار كامل: إنشاء موضوع ← اختيار لائحة ← �
           action_version: 0,
         },
       },
+      get_topic_detail: {
+        id: topicId,
+        topic_no: "TOP-2026-000001",
+        title_ar: "إنشاء برنامج بكالوريوس الأمن السيبراني",
+        status: "new",
+        routing_status: "routing_ready",
+        governance_source: "regulated",
+      },
     };
 
     await route.fulfill({
@@ -90,29 +141,31 @@ test("مسار كامل: إنشاء موضوع ← اختيار لائحة ← �
     });
   });
 
-  await page.goto("/admin/requests");
-  await expect(page.getByRole("heading", { name: "موضوع جديد مع اختيار اللائحة المناسبة" })).toBeVisible();
+  await page.goto("/admin/topics");
+  await page.getByRole("button", { name: "إنشاء موضوع" }).click();
+  await expect(page.getByRole("heading", { name: "بيانات مختصرة، ثم اختيار المسار" })).toBeVisible();
 
   await page.getByLabel("عنوان الموضوع").fill("إنشاء برنامج بكالوريوس الأمن السيبراني");
-  await page.getByLabel("وصف مختصر").fill("طلب إنشاء برنامج أكاديمي جديد وفق لائحة البرامج الأكاديمية.");
-  await page.getByLabel("المجلس/الجهة المسؤولة").selectOption("unit-1");
+  await page.getByLabel("وصف الموضوع").fill("طلب إنشاء برنامج أكاديمي جديد وفق لائحة البرامج الأكاديمية.");
+  await page.getByLabel("جهة تقديم الموضوع").selectOption("unit-1");
   await page.getByLabel("فئة الموضوع").selectOption("cat-1");
-  await page.getByRole("button", { name: /عرض اللوائح المطابقة/ }).click();
+  await page.getByRole("button", { name: /التالي: عرض اللائحة المنطبقة/ }).click();
 
   await expect(page.getByText("لائحة اعتماد البرامج والمقررات الأكاديمية").first()).toBeVisible();
-  await expect(page.getByText("إنشاء برنامج أكاديمي جديد").first()).toBeVisible();
-  await page.getByRole("button", { name: /لائحة اعتماد البرامج والمقررات الأكاديمية/ }).click();
-  await page.getByRole("button", { name: /تأكيد وإنشاء الموضوع والمسار/ }).click();
+  await expect(page.getByRole("heading", { name: "لائحة اعتماد البرامج والمقررات الأكاديمية" })).toBeVisible();
+  await page.getByRole("button", { name: "متابعة إلى المراجعة" }).click();
+  await expect(page.getByRole("heading", { name: "راجِع ملخص الموضوع قبل بدء المسار" })).toBeVisible();
+  await page.getByRole("button", { name: "إنشاء الموضوع وبدء المسار" }).click();
 
-  await expect(page.getByText("تم إنشاء الموضوع وربطه باللائحة وتشغيل المسار تلقائيًا.")).toBeVisible();
-  await expect(page.getByText("اللائحة المختارة").first()).toBeVisible();
-  await expect(page.getByText("البند المنطبق").first()).toBeVisible();
-  await expect(page.getByText("المسار الحالي").first()).toBeVisible();
-  await expect(page.getByText("الخطوة الحالية").first()).toBeVisible();
-  await expect(page.getByText("الجهة المسؤولة").first()).toBeVisible();
-  await expect(page.getByText("النتائج المتاحة").first()).toBeVisible();
-  await expect(page.getByText("مراجعة مجلس القسم").first()).toBeVisible();
-  await expect(page.getByText("يعتمد").first()).toBeVisible();
-  await expect(page.getByText("يعاد للتعديل").first()).toBeVisible();
-  await expect(page.getByText("يرفض").first()).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "بيانات مختصرة، ثم اختيار المسار" })).toBeHidden();
+  expect(calledContracts.filter((contract) => contract === "create_topic_with_regulation_bundle")).toHaveLength(1);
+  expect(calledContracts).toEqual(expect.arrayContaining([
+    "get_topic_form_options",
+    "get_topic_categories_for_unit",
+    "get_topic_regulation_options",
+    "get_topic_regulation_route_preview",
+    "create_topic_with_regulation_bundle",
+    "get_topic_governance_summary",
+    "get_topic_detail",
+  ]));
 });

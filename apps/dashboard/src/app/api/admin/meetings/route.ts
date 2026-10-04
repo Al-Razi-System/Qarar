@@ -43,6 +43,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ data });
   } catch (error) {
     const safeError = safeAdminError(error, "تعذر تنفيذ العملية.", 500);
+    console.error("[meetings-api] operation failed", {
+      contract: typeof parsedBody.value.contract === "string" ? parsedBody.value.contract : "unknown",
+      status: safeError.status,
+      code: safeError.code,
+      upstreamCode: typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined,
+      message: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json({ error: { code: safeError.code, message: safeError.message } }, { status: safeError.status });
   }
 }

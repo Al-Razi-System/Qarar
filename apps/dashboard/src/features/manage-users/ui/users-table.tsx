@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Ellipsis,
-  Filter,
   KeyRound,
   LockKeyhole,
   Mail,
@@ -76,12 +75,15 @@ const actionCopy: Record<
   },
 };
 
-async function requestJson(url: string, init?: RequestInit) {
+async function requestJson<T = unknown>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.message ?? "تعذر تنفيذ الطلب.");
-  return data;
+  return data as T;
 }
+
+const usersPageSize = 25;
+type UsersPage = { items: ManagedUser[]; total: number };
 
 export function UsersTable({
   users,
@@ -92,6 +94,12 @@ export function UsersTable({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [displayedUsers, setDisplayedUsers] = useState(users);
+  const [displayedTotal, setDisplayedTotal] = useState(total);
+  const [page, setPage] = useState(0);
+  const [loadingPage, setLoadingPage] = useState(false);
+  const serverPageSignatureRef = useRef(JSON.stringify({ users, total }));
+  const previousQueryRef = useRef(query);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [pending, setPending] = useState<{
     user: ManagedUser;
@@ -116,15 +124,49 @@ export function UsersTable({
     };
   }, []);
 
-  const filtered = useMemo(
-    () =>
-      users.filter((user) =>
-        `${user.full_name_ar} ${user.email} ${user.employee_no ?? ""}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-      ),
-    [query, users],
-  );
+  useEffect(() => {
+    const nextSignature = JSON.stringify({ users, total });
+    if (serverPageSignatureRef.current === nextSignature) return;
+    serverPageSignatureRef.current = nextSignature;
+    setDisplayedUsers(users);
+    setDisplayedTotal(total);
+    setPage(0);
+  }, [users, total]);
+
+  async function loadUsers(nextPage: number, nextQuery: string, signal?: AbortSignal) {
+    setLoadingPage(true);
+    setMessage(null);
+    try {
+      const params = new URLSearchParams({ offset: String(nextPage * usersPageSize) });
+      if (nextQuery.trim()) params.set("query", nextQuery.trim());
+      const result = await requestJson<UsersPage>(`/api/admin/users?${params.toString()}`, { signal });
+      setDisplayedUsers(result.items);
+      setDisplayedTotal(result.total);
+      setPage(nextPage);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setMessage({
+        type: "error",
+        text:
+          error instanceof Error && !(error instanceof TypeError)
+            ? error.message
+            : "تعذر تحميل المستخدمين حالياً.",
+      });
+    } finally {
+      if (!signal?.aborted) setLoadingPage(false);
+    }
+  }
+
+  useEffect(() => {
+    if (previousQueryRef.current === query) return;
+    previousQueryRef.current = query;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => void loadUsers(0, query, controller.signal), 300);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
 
   function openActions(user: ManagedUser, element: HTMLButtonElement) {
     const rect = element.getBoundingClientRect();
@@ -225,6 +267,7 @@ export function UsersTable({
     <>
       {message && (
         <div
+          role={message.type === "error" ? "alert" : "status"}
           className={`mb-4 rounded-xl border px-4 py-3 text-xs ${message.type === "success" ? "border-[#bfe9d9] bg-[#ecfaf4] text-[#167957]" : "border-red-200 bg-red-50 text-red-700"}`}
         >
           {message.text}
@@ -244,18 +287,13 @@ export function UsersTable({
               className="h-11 w-full rounded-xl border border-[#dfe7ef] bg-[#fafcfe] pr-10 pl-4 text-xs outline-none focus:border-[#9bc9f2] focus:bg-white"
             />
           </div>
-          <button
-            type="button"
-            className="flex h-11 items-center justify-center gap-2 rounded-xl border border-[#dfe7ef] bg-white px-4 text-xs font-bold text-[#52647a] hover:bg-[#f8fafc]"
-          >
-            <Filter size={15} /> تصفية
-          </button>
           <p className="text-xs text-[#7a8b9e] sm:mr-auto">
             إجمالي المستخدمين:{" "}
-            <strong className="text-[#0a1330]">{total}</strong>
+            <strong className="text-[#0a1330]">{displayedTotal}</strong>
           </p>
         </div>
-        {filtered.length === 0 ? (
+        {loadingPage && <div role="status" className="border-b border-[#edf1f5] bg-[#f7fbff] px-4 py-2 text-[11px] font-bold text-[#0066cc]">جارٍ تحميل المستخدمين…</div>}
+        {displayedUsers.length === 0 ? (
           <div className="grid min-h-[300px] place-items-center p-8 text-center">
             <div>
               <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#edf5fd] text-[#0066cc]">
@@ -283,7 +321,7 @@ export function UsersTable({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((user) => {
+                {displayedUsers.map((user) => {
                   const initials = user.full_name_ar
                     .split(" ")
                     .slice(0, 2)
@@ -347,6 +385,15 @@ export function UsersTable({
               </tbody>
             </table>
           </div>
+        )}
+        {displayedTotal > usersPageSize && (
+          <nav aria-label="ترقيم صفحات المستخدمين" className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf1f5] px-4 py-3">
+            <p className="text-[11px] text-[#718196]">الصفحة <strong className="text-[#0a1330]">{page + 1}</strong> من {Math.max(1, Math.ceil(displayedTotal / usersPageSize))}</p>
+            <div className="flex gap-2">
+              <button type="button" aria-label="الصفحة السابقة" disabled={loadingPage || page === 0} onClick={() => void loadUsers(page - 1, query)} className="h-9 rounded-xl border border-[#dfe7ef] px-4 text-[11px] font-bold text-[#52647a] disabled:cursor-not-allowed disabled:opacity-40">السابق</button>
+              <button type="button" aria-label="الصفحة التالية" disabled={loadingPage || (page + 1) * usersPageSize >= displayedTotal} onClick={() => void loadUsers(page + 1, query)} className="h-9 rounded-xl bg-[#0066cc] px-4 text-[11px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#a8b8c9]">التالي</button>
+            </div>
+          </nav>
         )}
       </div>
       {openMenu && (

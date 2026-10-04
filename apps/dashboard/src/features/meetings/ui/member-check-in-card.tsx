@@ -35,7 +35,9 @@ export function MemberCheckInCard({ meetingId, attendance, canCheckIn, compact =
       setScannerOpen(false);
       await onCompleted("أُرسل طلب حضورك للتحقق من رئيس المجلس أو المقرر.");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر تسجيل حضورك.");
+      const message = caught instanceof Error ? caught.message : "تعذر تسجيل حضورك.";
+      setError(message);
+      throw new Error(message);
     } finally {
       setBusy(false);
     }
@@ -43,7 +45,11 @@ export function MemberCheckInCard({ meetingId, attendance, canCheckIn, compact =
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    await checkIn(tokenInput);
+    try {
+      await checkIn(tokenInput);
+    } catch {
+      // The manual form renders the failure next to the submitted action.
+    }
   }
 
   if (verified) return <section className={`overflow-hidden rounded-[1.6rem] border border-emerald-200 bg-emerald-50 ${compact ? "p-4" : "p-6"}`}><div className="flex items-center gap-4"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-900/10"><CheckCircle2 size={24} /></span><div><p className="text-[10px] font-black text-emerald-700">حضورك معتمد</p><h2 className="mt-1 text-sm font-black text-[#0a2630]">تم التحقق من وجودك في الجلسة</h2><p className="mt-1 text-[10px] text-emerald-800">يُحتسب حضورك الآن ضمن النصاب.</p></div></div></section>;
@@ -59,6 +65,6 @@ export function MemberCheckInCard({ meetingId, attendance, canCheckIn, compact =
         {!canCheckIn && <p className="mt-3 text-[10px] font-bold text-amber-700">تسجيل الحضور مغلق حالياً، أو ثُبّت سجل الاجتماع.</p>}
       </form>
     </section>
-    {scannerOpen && <QrCheckInScanner onClose={() => setScannerOpen(false)} onDetected={(value) => void checkIn(value)} />}
+    {scannerOpen && <QrCheckInScanner onClose={() => setScannerOpen(false)} onDetected={checkIn} />}
   </>;
 }

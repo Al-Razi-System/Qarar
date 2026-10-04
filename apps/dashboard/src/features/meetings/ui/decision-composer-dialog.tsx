@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, FileCheck2, LoaderCircle, Scale, X } from "lucide-react";
 import type { AgendaDiscussionItem, VotingRound } from "../model/live-meeting";
 
-export function DecisionComposerDialog({ item, round, busy, onClose, onSubmit }: {
+export function DecisionComposerDialog({ item, round, busy, error, isRapporteur, onClose, onSubmit }: {
   item: AgendaDiscussionItem;
   round: VotingRound;
   busy: boolean;
+  error?: string | null;
+  isRapporteur: boolean;
   onClose: () => void;
   onSubmit: (text: string) => Promise<boolean>;
 }) {
@@ -54,7 +56,8 @@ export function DecisionComposerDialog({ item, round, busy, onClose, onSubmit }:
 
       <footer className="flex flex-wrap justify-end gap-2 border-t border-[#e4ecf3] bg-[#fbfdff] px-6 py-4 sm:px-7">
         <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-[#d5e1eb] bg-white px-5 py-2.5 text-[11px] font-black text-[#536b82] disabled:opacity-40">إلغاء</button>
-        <button type="button" onClick={() => void submit()} disabled={!valid || busy} className="flex items-center gap-2 rounded-xl bg-[#0877d6] px-6 py-2.5 text-[11px] font-black text-white shadow-[0_8px_20px_rgba(8,119,214,.22)] transition hover:bg-[#0668bd] disabled:cursor-not-allowed disabled:bg-[#a8b8c7]">{busy ? <LoaderCircle size={15} className="animate-spin" /> : <FileCheck2 size={15} />}اعتماد الصياغة وإنشاء القرار</button>
+          {error && <div role="alert" className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-bold leading-5 text-red-800">{error}</div>}
+          <button type="button" onClick={() => void submit()} disabled={!valid || busy} className="flex items-center gap-2 rounded-xl bg-[#0877d6] px-6 py-2.5 text-[11px] font-black text-white shadow-[0_8px_20px_rgba(8,119,214,.22)] transition hover:bg-[#0668bd] disabled:cursor-not-allowed disabled:bg-[#a8b8c7]">{busy ? <LoaderCircle size={15} className="animate-spin" /> : <FileCheck2 size={15} />}{isRapporteur ? "حفظ الصياغة وإرسالها للاعتماد" : "إنشاء القرار وإرساله للاعتماد"}</button>
       </footer>
     </div>
   </div>;

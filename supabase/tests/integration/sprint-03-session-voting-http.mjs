@@ -2,7 +2,12 @@ import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
 import { readFile } from "node:fs/promises"
 
-const envText = await readFile(new URL("../../docker/.env", import.meta.url), "utf8")
+const envUrl = new URL("../../docker/.env", import.meta.url)
+const exampleEnvUrl = new URL("../../docker/.env.example", import.meta.url)
+const envText = await readFile(envUrl, "utf8").catch((error) => {
+  if (error?.code !== "ENOENT") throw error
+  return readFile(exampleEnvUrl, "utf8")
+})
 const env = Object.fromEntries(envText.split(/\r?\n/).filter((line) => line && !line.startsWith("#") && line.includes("=")).map((line) => {
   const separator = line.indexOf("=")
   return [line.slice(0, separator), line.slice(separator + 1)]
@@ -101,6 +106,7 @@ try {
   const unit = (await rest("governance_units", "POST", {
     organization_id: organization.id, unit_type_id: unitType.id,
     code: `UNIT-${suffix}`, name_ar: "Main Council", quorum_percentage: 50,
+    minute_approval_rule: "all_present_members",
   })).body[0]
   const managerRole = (await rest("roles", "POST", {
     organization_id: organization.id, code: `MANAGER-${suffix}`, name_ar: "Manager", role_scope: "governance_unit",
@@ -112,7 +118,9 @@ try {
     ["attendance.read", "attendance", "read"], ["attendance.manage", "attendance", "manage"],
     ["quorum.read", "quorum", "read"], ["quorum.manage", "quorum", "manage"],
     ["voting.read", "voting", "read"], ["voting.manage", "voting", "manage"],
-    ["voting.cast", "voting", "cast"], ["meetings.manage", "meetings", "manage"],
+    ["voting.cast", "voting", "cast"], ["meetings.read", "meetings", "read"],
+    ["meetings.manage", "meetings", "manage"], ["agenda.manage", "agenda", "manage"],
+    ["topics.read", "topics", "read"],
     ["attendance.check_in", "attendance", "check_in"],
     ["attendance.verify", "attendance", "verify"],
     ["attendance.override", "attendance", "override"],
@@ -127,7 +135,7 @@ try {
     ...permissions.map((permission) => ({
       organization_id: organization.id, role_id: managerRole.id, permission_id: permission.id,
     })),
-    ...["attendance.read", "attendance.check_in", "quorum.read", "voting.read", "voting.cast"].map((code) => ({
+    ...["attendance.read", "attendance.check_in", "quorum.read", "voting.read", "voting.cast", "topics.read", "meetings.read"].map((code) => ({
       organization_id: organization.id, role_id: memberRole.id, permission_id: permissionByCode[code],
     })),
   ])
@@ -204,6 +212,14 @@ try {
   }, managerHeaders)
   assert.equal(lockedSession.body.meeting.attendance_locked, true)
 
+  const discussed = await rest("rpc/update_agenda_discussion", "POST", {
+    p_agenda_item_id: agendaItem.id,
+    p_status: "discussed",
+    p_discussion_notes: "اكتملت مناقشة بند الاختبار وأصبح جاهزاً للتصويت.",
+    p_expected_updated_at: agendaItem.updated_at,
+  }, managerHeaders)
+  assert.equal(discussed.response.status, 200, JSON.stringify(discussed.body))
+
   const round = await rest("rpc/open_voting_round", "POST", {
     p_agenda_item_id: agendaItem.id,
     p_expected_meeting_updated_at: lockedSession.body.meeting.updated_at,
@@ -226,6 +242,14 @@ try {
     p_voting_round_id: round.body.voting_round_id, p_vote_value: "approve", p_vote_note: "HTTP approve",
   }, memberHeaders)
   assert.equal(memberVote.response.status, 200, JSON.stringify(memberVote.body))
+
+  // The server is the final guard, not the disabled browser button: a chair
+  // cannot freeze a partial result while an eligible attendee has not voted.
+  const prematureClose = await rest("rpc/close_voting_round", "POST", {
+    p_voting_round_id: round.body.voting_round_id, p_reason: "premature close must fail",
+  }, managerHeaders)
+  assert.ok(prematureClose.response.status >= 400, "partial voting round was closed")
+
   const managerVote = await rest("rpc/cast_vote", "POST", {
     p_voting_round_id: round.body.voting_round_id, p_vote_value: "approve", p_vote_note: "HTTP approve",
   }, managerHeaders)
@@ -241,10 +265,96 @@ try {
   }, managerHeaders)
   assert.equal(detail.body.votes.length, 2)
 
+  const decision = await rest("rpc/create_decision_from_voting_round", "POST", {
+    p_voting_round_id: round.body.voting_round_id,
+    p_decision_text: "اعتماد التوصية الواردة في بند الاختبار بعد اكتمال التصويت.",
+    p_requires_approval: true,
+  }, managerHeaders)
+  assert.equal(decision.response.status, 200, JSON.stringify(decision.body))
+  assert.match(decision.body.decision_no, /^DEC-/)
+
+  const refreshedAgenda = await rest(`agenda_items?id=eq.${agendaItem.id}&select=updated_at`, "GET")
+  assert.equal(refreshedAgenda.response.status, 200, JSON.stringify(refreshedAgenda.body))
+  const finalSummary = await rest("rpc/update_agenda_discussion", "POST", {
+    p_agenda_item_id: agendaItem.id,
+    p_status: "discussed",
+    p_discussion_notes: "اعتمد المجلس نتيجة التصويت والتوصية النهائية المثبتة في القرار.",
+    p_expected_updated_at: refreshedAgenda.body[0].updated_at,
+  }, managerHeaders)
+  assert.equal(finalSummary.response.status, 200, JSON.stringify(finalSummary.body))
+
+  const beforeCompletion = await rest("rpc/get_meeting_session_detail", "POST", {
+    p_meeting_id: meeting.id,
+  }, managerHeaders)
+  const completed = await rest("rpc/complete_meeting_session", "POST", {
+    p_meeting_id: meeting.id,
+    p_expected_updated_at: beforeCompletion.body.meeting.updated_at,
+  }, managerHeaders)
+  assert.equal(completed.response.status, 200, JSON.stringify(completed.body))
+  assert.equal(completed.body.status, "waiting_for_minutes")
+
+  const generated = await rest("rpc/generate_meeting_minutes_draft", "POST", {
+    p_meeting_id: meeting.id,
+  }, managerHeaders)
+  assert.equal(generated.response.status, 200, JSON.stringify(generated.body))
+  const draft = await rest("rpc/get_meeting_minutes", "POST", {
+    p_meeting_id: meeting.id,
+  }, managerHeaders)
+  assert.equal(draft.response.status, 200, JSON.stringify(draft.body))
+  assert.ok((draft.body.content_draft ?? "").length >= 20)
+
+  const submitted = await rest("rpc/submit_meeting_minutes", "POST", {
+    p_meeting_id: meeting.id,
+    p_content_final: draft.body.content_draft,
+    p_expected_updated_at: draft.body.updated_at,
+  }, managerHeaders)
+  assert.equal(submitted.response.status, 200, JSON.stringify(submitted.body))
+  assert.equal(submitted.body.approvers, 2)
+
+  const managerMinutes = await rest("rpc/get_meeting_minutes", "POST", {
+    p_meeting_id: meeting.id,
+  }, managerHeaders)
+  assert.equal(managerMinutes.response.status, 200, JSON.stringify(managerMinutes.body))
+  const managerApproval = managerMinutes.body.approvals.find((approval) => approval.user_id === manager.id)
+  const memberApproval = managerMinutes.body.approvals.find((approval) => approval.user_id === member.id)
+  assert.ok(managerApproval && memberApproval, "each present identity must receive its own approval")
+
+  const managerSigned = await rest("rpc/sign_meeting_minutes_approval", "POST", {
+    p_approval_id: managerApproval.id,
+    p_signature_strokes: [[[0.1, 0.2], [0.4, 0.5], [0.8, 0.3]]],
+    p_expected_updated_at: managerApproval.updated_at,
+  }, managerHeaders)
+  assert.equal(managerSigned.response.status, 200, JSON.stringify(managerSigned.body))
+  assert.equal(managerSigned.body.meeting_closed, false)
+
+  const crossIdentitySign = await rest("rpc/sign_meeting_minutes_approval", "POST", {
+    p_approval_id: memberApproval.id,
+    p_signature_strokes: [[[0.2, 0.3], [0.5, 0.6]]],
+    p_expected_updated_at: memberApproval.updated_at,
+  }, managerHeaders)
+  assert.ok(crossIdentitySign.response.status >= 400, "a user signed another attendee's approval")
+
+  const memberSigned = await rest("rpc/sign_meeting_minutes_approval", "POST", {
+    p_approval_id: memberApproval.id,
+    p_signature_strokes: [[[0.2, 0.3], [0.5, 0.6], [0.7, 0.2]]],
+    p_expected_updated_at: memberApproval.updated_at,
+  }, memberHeaders)
+  assert.equal(memberSigned.response.status, 200, JSON.stringify(memberSigned.body))
+  assert.equal(memberSigned.body.meeting_closed, true)
+
+  const finalMinutes = await rest("rpc/get_meeting_minutes", "POST", {
+    p_meeting_id: meeting.id,
+  }, memberHeaders)
+  assert.equal(finalMinutes.response.status, 200, JSON.stringify(finalMinutes.body))
+  assert.equal(finalMinutes.body.status, "approved")
+  assert.equal(finalMinutes.body.approvals.filter((approval) => approval.approval_status === "approved").length, 2)
+
   console.log("ok - HTTP meeting session and short-lived check-in token were created")
   console.log("ok - HTTP member self check-in was independently verified and the roster was locked")
   console.log("ok - HTTP governed attendance recalculated and persisted quorum")
   console.log("ok - HTTP eligible voting, direct-write denial, and frozen result completed end to end")
+  console.log("ok - partial vote closure was rejected until every eligible attendee voted")
+  console.log("ok - decision, minutes generation, submission, identity-bound signatures, and meeting closure completed")
 } finally {
   await cleanup()
 }

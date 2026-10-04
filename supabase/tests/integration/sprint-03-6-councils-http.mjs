@@ -2,7 +2,12 @@ import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
 import { readFile } from "node:fs/promises"
 
-const envText = await readFile(new URL("../../docker/.env", import.meta.url), "utf8")
+const envUrl = new URL("../../docker/.env", import.meta.url)
+const exampleEnvUrl = new URL("../../docker/.env.example", import.meta.url)
+const envText = await readFile(envUrl, "utf8").catch((error) => {
+  if (error?.code !== "ENOENT") throw error
+  return readFile(exampleEnvUrl, "utf8")
+})
 const env = Object.fromEntries(envText.split(/\r?\n/).filter((line) =>
   line && !line.startsWith("#") && line.includes("=")
 ).map((line) => {
