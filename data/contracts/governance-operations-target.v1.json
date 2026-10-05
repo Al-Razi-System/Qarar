@@ -1,0 +1,101 @@
+{
+  "contract_version": "qarar.governance_operations_target.v1",
+  "status": "design_only",
+  "common_mutation_contract": {
+    "client_request_id_required": true,
+    "atomic": true,
+    "audit_event_required": true,
+    "safe_arabic_error_required": true,
+    "internal_cause_trace_required": true,
+    "conflict_detection_required": true,
+    "double_submit_prevention_required": true
+  },
+  "operations": {
+    "create_topic": {
+      "actor": "topic_submitter",
+      "context": "origin_governance_unit",
+      "preconditions": ["effective_topic_type_version", "effective_workflow_binding", "valid_schedule_window"],
+      "effects": ["create_topic", "snapshot_type_workflow_authorities_schedule", "open_first_step"],
+      "failure_codes": ["TOPIC_TYPE_NOT_EFFECTIVE", "WORKFLOW_BINDING_MISSING", "TOPIC_WINDOW_CLOSED"]
+    },
+    "submit_prior_stage_claim": {
+      "actor": "topic_submitter",
+      "context": "topic",
+      "preconditions": ["claim_is_draft", "evidence_for_each_claimed_step"],
+      "effects": ["mark_submitted", "notify_current_destination_chair"],
+      "failure_codes": ["CLAIM_NOT_DRAFT", "CLAIM_EVIDENCE_INCOMPLETE"]
+    },
+    "review_prior_stage_claim": {
+      "actor": "current_destination_council_chair",
+      "context": "destination_council",
+      "oversight_actors": ["governance_admin", "system_admin"],
+      "preconditions": ["claim_is_submitted", "actor_is_not_requester", "destination_matches_active_step"],
+      "effects": ["record_review", "complete_claimed_steps_atomically", "open_first_remaining_step"],
+      "failure_codes": ["CLAIM_NOT_AWAITING_REVIEW", "SELF_APPROVAL_FORBIDDEN", "NOT_DESTINATION_CHAIR", "ROUTE_CHANGED"]
+    },
+    "create_governed_meeting": {
+      "actor": "council_manager",
+      "context": "council",
+      "preconditions": ["effective_meeting_policy", "scheduled_window_valid"],
+      "effects": ["create_scheduled_meeting"],
+      "failure_codes": ["MEETING_POLICY_MISSING", "MEETING_WINDOW_INVALID"]
+    },
+    "create_custom_meeting": {
+      "actor": "authorized_meeting_creator",
+      "context": "organization_or_owned_unit",
+      "preconditions": ["participants_valid"],
+      "effects": ["create_custom_scheduled_meeting"],
+      "failure_codes": ["CUSTOM_MEETING_NOT_ALLOWED", "PARTICIPANT_OUT_OF_SCOPE"]
+    },
+    "attach_agenda_item": {
+      "actor": "meeting_agenda_manager",
+      "context": "meeting",
+      "preconditions": ["meeting_is_editable", "topic_is_eligible_for_this_exact_meeting", "not_already_attached"],
+      "effects": ["attach_to_exact_meeting_only"],
+      "failure_codes": ["MEETING_NOT_EDITABLE", "TOPIC_NOT_ELIGIBLE", "AGENDA_ITEM_ALREADY_ATTACHED"]
+    },
+    "start_meeting": {
+      "actor": "council_chair_or_authorized_custom_host",
+      "context": "meeting",
+      "preconditions": ["meeting_is_scheduled_or_ready", "quorum_or_explicit_policy_override", "actor_controls_meeting"],
+      "effects": ["mark_in_progress", "record_started_at"],
+      "failure_codes": ["MEETING_NOT_STARTABLE", "QUORUM_NOT_MET", "NOT_MEETING_CONTROLLER"]
+    },
+    "issue_execution_assignment": {
+      "actor": "issuing_council_chair_or_decision_authority",
+      "context": "decision",
+      "preconditions": ["decision_is_approved", "assignee_exists", "verifier_exists", "due_date_valid"],
+      "effects": ["issue_assignment", "notify_assignee_and_verifier"],
+      "failure_codes": ["DECISION_NOT_APPROVED", "ASSIGNEE_INVALID", "VERIFIER_INVALID", "DUE_DATE_INVALID"]
+    },
+    "accept_execution_assignment": {
+      "actor": "assignee_representative",
+      "context": "assignment",
+      "preconditions": ["assignment_is_issued", "actor_represents_assignee"],
+      "effects": ["mark_accepted", "record_acknowledgement"],
+      "failure_codes": ["ASSIGNMENT_NOT_AWAITING_ACCEPTANCE", "NOT_ASSIGNEE_REPRESENTATIVE"]
+    },
+    "submit_execution_completion": {
+      "actor": "assignee_representative",
+      "context": "assignment",
+      "preconditions": ["assignment_is_accepted_or_in_progress", "completion_report_present", "required_evidence_present"],
+      "effects": ["mark_submitted_for_verification", "notify_verifier"],
+      "failure_codes": ["ASSIGNMENT_NOT_SUBMITTABLE", "COMPLETION_REPORT_REQUIRED", "ASSIGNMENT_EVIDENCE_INCOMPLETE"]
+    },
+    "verify_execution_completion": {
+      "actor": "configured_verifier",
+      "context": "assignment",
+      "oversight_actors": ["issuing_council_chair", "governance_admin", "system_admin"],
+      "preconditions": ["assignment_is_submitted_for_verification", "actor_is_configured_verifier"],
+      "effects": ["mark_verified_complete_or_needs_revision", "record_verification"],
+      "failure_codes": ["ASSIGNMENT_NOT_AWAITING_VERIFICATION", "NOT_CONFIGURED_VERIFIER"]
+    }
+  },
+  "ui_error_contract": {
+    "display_at_action_location": true,
+    "modal_errors_stay_inside_modal": true,
+    "disabled_action_explains_unmet_requirements": true,
+    "raw_enum_or_sql_forbidden": true,
+    "unknown_generic_error_only_as_last_resort": true
+  }
+}

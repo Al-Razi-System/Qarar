@@ -28,7 +28,7 @@
     "replace:local-regulations": "python scripts/replace-local-regulations.py --confirm-local-replace",
     "test:docs-encoding": "node scripts/verify-documentation-encoding.mjs",
     "test:development-governance": "node scripts/verify-development-governance.mjs && npm run test:docs-encoding",
-    "test:governance-v11-contracts": "node --test scripts/governance-v11-contracts.test.mjs scripts/governance-domain-target.test.mjs",
+    "test:governance-v11-contracts": "node --test scripts/governance-v11-contracts.test.mjs scripts/governance-domain-target.test.mjs scripts/governance-operations-target.test.mjs",
     "test:bootstrap-admin": "node --test scripts/bootstrap-initial-admin.test.mjs",
     "test:auth-redirect-production": "node --test scripts/auth-redirect-production-config.test.mjs",
     "test:upload-scanner-production": "node --test scripts/upload-malware-scan-production-config.test.mjs",
