@@ -21,9 +21,14 @@
 
 عمليات القراءة:
 
-1. `get_governance_bundle_v2`
-2. `list_effective_topic_types_v2`
-3. `preview_topic_route_v2`
+1. `get_governance_authoring_options_v2`
+2. `get_governance_bundle_v2`
+3. `list_effective_topic_types_v2`
+4. `preview_topic_route_v2`
+
+تعيد `get_governance_authoring_options_v2` التصنيفات غير المتقاعدة ونسخ المسارات
+الفعالة والمتحقق منها فقط، مع خطواتها مرتبة. لا يجوز للواجهة اختراع معرف مسار أو
+حفظ اسم عرض بدلاً من معرف نسخة المسار.
 
 ## قواعد الأوامر
 
