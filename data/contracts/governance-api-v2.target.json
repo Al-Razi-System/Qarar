@@ -1,0 +1,67 @@
+{
+  "contract_version": "qarar.governance_api_v2.target",
+  "implementation_status": "not_implemented",
+  "public_exposure_allowed": false,
+  "commands": {
+    "save_governance_bundle_draft_v2": {
+      "permission": "governance.model.edit",
+      "context": "organization",
+      "required_inputs": ["client_request_id", "bundle"],
+      "forbidden_inputs": ["id", "reference_number", "status", "activation_allowed"],
+      "result": ["bundle_id", "reference_numbers", "validation_summary", "trace_id"]
+    },
+    "validate_governance_bundle_v2": {
+      "permission": "governance.model.review",
+      "context": "organization",
+      "required_inputs": ["bundle_id"],
+      "result": ["is_valid", "blocking_issues", "warnings", "trace_id"]
+    },
+    "submit_governance_bundle_v2": {
+      "permission": "governance.model.edit",
+      "context": "organization",
+      "required_inputs": ["bundle_id", "client_request_id"],
+      "result": ["status", "submitted_at", "trace_id"]
+    },
+    "approve_governance_bundle_v2": {
+      "permission": "governance.model.approve",
+      "context": "organization",
+      "required_inputs": ["bundle_id", "review_comment", "client_request_id"],
+      "result": ["status", "approved_at", "trace_id"]
+    },
+    "activate_governance_bundle_v2": {
+      "permission": "governance.model.activate",
+      "context": "organization",
+      "required_inputs": ["bundle_id", "effective_from", "client_request_id"],
+      "result": ["status", "activated_at", "effective_from", "trace_id"]
+    }
+  },
+  "queries": {
+    "get_governance_bundle_v2": {
+      "permission": "governance.model.read",
+      "context": "organization"
+    },
+    "list_effective_topic_types_v2": {
+      "permission": "topics.create",
+      "context": "origin_governance_unit"
+    },
+    "preview_topic_route_v2": {
+      "permission": "topics.create",
+      "context": "origin_governance_unit"
+    }
+  },
+  "error_catalog": {
+    "MODEL_BUNDLE_NOT_FOUND": { "http": 404, "ar": "تعذر العثور على حزمة الحوكمة المطلوبة." },
+    "MODEL_BUNDLE_NOT_EDITABLE": { "http": 409, "ar": "لا يمكن تعديل الحزمة بعد إرسالها للمراجعة." },
+    "MODEL_VALIDATION_FAILED": { "http": 422, "ar": "أكمل المتطلبات الموضحة قبل إرسال الحزمة." },
+    "MODEL_REVIEW_SEPARATION_REQUIRED": { "http": 403, "ar": "لا يجوز لمن أعد الحزمة اعتمادها بنفسه." },
+    "MODEL_VERSION_CONFLICT": { "http": 409, "ar": "تم تعديل الحزمة في جلسة أخرى. حدّث البيانات ثم أعد المحاولة." },
+    "MODEL_EFFECTIVE_OVERLAP": { "http": 409, "ar": "توجد نسخة فعالة متداخلة للفترة المحددة." },
+    "MODEL_ACTIVATION_BLOCKED": { "http": 422, "ar": "لا يمكن التفعيل قبل معالجة جميع الموانع." },
+    "MODEL_PERMISSION_DENIED": { "http": 403, "ar": "لا تملك الصلاحية المطلوبة لهذه العملية في هذا النطاق." },
+    "MODEL_SERVER_FAILURE": { "http": 500, "ar": "تعذر إتمام العملية حالياً. استخدم رقم التتبع عند التواصل مع الدعم." }
+  },
+  "response_envelope": {
+    "success": ["ok", "data", "trace_id"],
+    "failure": ["ok", "error_code", "message_ar", "field_errors", "trace_id"]
+  }
+}
