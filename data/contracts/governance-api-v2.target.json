@@ -7,6 +7,12 @@
       "permission": "governance.model.edit",
       "context": "organization",
       "required_inputs": ["client_request_id", "bundle"],
+      "optional_inputs": ["bundle_id", "expected_lock_version"],
+      "input_semantics": {
+        "bundle_id": "null_creates_new_existing_updates_owned_editable_draft",
+        "expected_lock_version": "required_when_bundle_id_is_present",
+        "forbidden_inputs_scope": "bundle_payload"
+      },
       "forbidden_inputs": ["id", "reference_number", "status", "activation_allowed"],
       "result": ["bundle_id", "reference_numbers", "validation_summary", "trace_id"]
     },

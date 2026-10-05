@@ -22,6 +22,13 @@ test("write commands never accept generated identity or lifecycle fields", () =>
   }
 });
 
+test("draft save distinguishes create from conflict-safe update", () => {
+  const save = contract.commands.save_governance_bundle_draft_v2;
+  assert.deepEqual(save.optional_inputs, ["bundle_id", "expected_lock_version"]);
+  assert.equal(save.input_semantics.expected_lock_version, "required_when_bundle_id_is_present");
+  assert.equal(save.input_semantics.forbidden_inputs_scope, "bundle_payload");
+});
+
 test("review and activation permissions remain separated", () => {
   assert.equal(contract.commands.save_governance_bundle_draft_v2.permission, "governance.model.edit");
   assert.equal(contract.commands.approve_governance_bundle_v2.permission, "governance.model.approve");
