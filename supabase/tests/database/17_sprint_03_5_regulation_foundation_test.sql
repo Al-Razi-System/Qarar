@@ -190,7 +190,7 @@ select is(
   (select count(*)::integer
    from qarar_architecture.module_table_read_allowlist
    where source_module='governance'),
-  7,
+  8,
   'governance cross-module reads are explicitly allowlisted'
 );
 set local role qarar_iam_executor;

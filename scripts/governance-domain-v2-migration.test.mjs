@@ -10,6 +10,7 @@ const migrationUrl = new URL(
 const sql = await readFile(migrationUrl, "utf8");
 
 const requiredTables = [
+  "reference_counters_v2",
   "topic_classifications_v2",
   "topic_types_v2",
   "topic_type_versions_v2",

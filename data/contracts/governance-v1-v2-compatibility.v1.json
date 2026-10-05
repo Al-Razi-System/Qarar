@@ -1,0 +1,87 @@
+{
+  "contract_version": "qarar.governance_v1_v2_compatibility.v1",
+  "generated_from_inventory_on": "2026-10-06",
+  "migration_mode": "additive_then_shadow_then_cutover",
+  "legacy_removal_allowed": false,
+  "inventory": {
+    "dashboard_source_files": 14,
+    "dashboard_e2e_files": 2,
+    "database_and_integration_test_files": 14,
+    "api_documentation_files": 6
+  },
+  "boundaries": [
+    {
+      "legacy_boundary": "topic_categories",
+      "current_responsibilities": ["display_classification", "route_selection_input", "policy_item_binding"],
+      "target_boundaries": ["topic_classifications_v2", "topic_types_v2", "topic_type_versions_v2"],
+      "strategy": "retain_then_adapter",
+      "removal_status": "blocked",
+      "live_consumers": ["admin_list_topic_categories", "get_topic_categories_for_unit", "topic-regulation-creator"],
+      "required_tests": ["topic-create-v1-regression", "topic-type-options-v2", "classification-does-not-select-route"]
+    },
+    {
+      "legacy_boundary": "policy_items.topic_category_id",
+      "current_responsibilities": ["legal_content", "category_binding"],
+      "target_boundaries": ["legal_authorities_v2", "topic_type_authorities_v2"],
+      "strategy": "retain_legal_content_then_map",
+      "removal_status": "blocked",
+      "live_consumers": ["admin_add_policy_item", "admin_update_policy_item", "policy-content-editor", "regulations-workspace"],
+      "required_tests": ["policy-version-inheritance", "authority-fingerprint", "authority-topic-type-mapping"]
+    },
+    {
+      "legacy_boundary": "policy_items.workflow_template_version_id",
+      "current_responsibilities": ["route_binding"],
+      "target_boundaries": ["topic_type_workflow_bindings_v2"],
+      "strategy": "dual_read_shadow_compare",
+      "removal_status": "blocked",
+      "live_consumers": ["admin_add_policy_item", "admin_update_policy_item", "create_topic_with_selected_regulation", "topic-regulation-full-flow"],
+      "required_tests": ["same-route-preview", "same-first-step", "same-allowed-outcomes", "in-flight-topic-snapshot-stability"]
+    },
+    {
+      "legacy_boundary": "workflow_template_versions",
+      "current_responsibilities": ["workflow_definition", "runtime_instantiation"],
+      "target_boundaries": ["workflow_template_versions", "topic_type_workflow_bindings_v2"],
+      "strategy": "reuse_not_replace",
+      "removal_status": "retained",
+      "live_consumers": ["admin_list_workflow_templates", "act_topic_workflow_step", "meeting-lifecycle"],
+      "required_tests": ["workflow-version-immutability", "transition-completeness", "runtime-snapshot-stability"]
+    },
+    {
+      "legacy_boundary": "topic_prior_route_requests",
+      "current_responsibilities": ["external-stage-evidence", "governance-admin-review"],
+      "target_boundaries": ["topic_prior_stage_claim", "destination-chair-review"],
+      "strategy": "behavioral_v2_then_in_place_data_bridge",
+      "removal_status": "blocked",
+      "live_consumers": ["create_topic_prior_route_request", "admin_list_topic_prior_route_requests", "review_topic_prior_route_request"],
+      "required_tests": ["destination-chair-allowed", "other-chair-denied", "self-approval-denied", "route-changed-conflict", "atomic-step-completion"]
+    },
+    {
+      "legacy_boundary": "meeting_series",
+      "current_responsibilities": ["recurrence_rule", "eager_meeting_creation", "series_display"],
+      "target_boundaries": ["meeting_policies_v2", "meeting_recurrence_rule", "meeting_occurrence"],
+      "strategy": "retain_until_lazy_occurrence_engine",
+      "removal_status": "blocked",
+      "live_consumers": ["create_meeting_series", "create_meeting_series_from_existing", "list_meeting_series", "update_meeting_series_recurrence", "meetings-workspace"],
+      "required_tests": ["due-is-not-in-progress", "explicit-start-required", "agenda-attaches-to-one-meeting", "recurrence-idempotency"]
+    },
+    {
+      "legacy_boundary": "action_items.assigned_unit_id_and_assigned_user_id",
+      "current_responsibilities": ["single_assignee", "single_follower", "execution_progress"],
+      "target_boundaries": ["execution_assignment", "assignment_assignee", "assignment_verifier", "assignment_evidence"],
+      "strategy": "retain_until_execution_v2_runtime",
+      "removal_status": "blocked",
+      "live_consumers": ["execution-database-tests", "dual-approval-offboarding"],
+      "required_tests": ["multi-target-assignee", "assignee-acknowledgement", "completion-report-and-evidence", "configured-verifier", "legacy-open-task-continuity"]
+    }
+  ],
+  "cutover_gates": [
+    "all_live_consumers_registered",
+    "legacy_contract_tests_green",
+    "v2_contract_and_integration_tests_green",
+    "shadow_comparison_has_no_unresolved_difference",
+    "in_flight_records_have_explicit_owner",
+    "rollback_switch_tested",
+    "staging_journey_approved",
+    "production_migration_separately_authorized"
+  ]
+}
