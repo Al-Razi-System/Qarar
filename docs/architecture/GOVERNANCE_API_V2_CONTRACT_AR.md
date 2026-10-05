@@ -15,8 +15,9 @@
 1. `save_governance_bundle_draft_v2`
 2. `validate_governance_bundle_v2`
 3. `submit_governance_bundle_v2`
-4. `approve_governance_bundle_v2`
-5. `activate_governance_bundle_v2`
+4. `request_governance_bundle_changes_v2`
+5. `approve_governance_bundle_v2`
+6. `activate_governance_bundle_v2`
 
 عمليات القراءة:
 

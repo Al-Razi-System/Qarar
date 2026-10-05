@@ -28,6 +28,12 @@
       "required_inputs": ["bundle_id", "client_request_id"],
       "result": ["status", "submitted_at", "trace_id"]
     },
+    "request_governance_bundle_changes_v2": {
+      "permission": "governance.model.review",
+      "context": "organization",
+      "required_inputs": ["bundle_id", "expected_lock_version", "review_comment", "client_request_id"],
+      "result": ["status", "lock_version", "trace_id"]
+    },
     "approve_governance_bundle_v2": {
       "permission": "governance.model.approve",
       "context": "organization",

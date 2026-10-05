@@ -33,6 +33,7 @@ test("review and activation permissions remain separated", () => {
   assert.equal(contract.commands.save_governance_bundle_draft_v2.permission, "governance.model.edit");
   assert.equal(contract.commands.approve_governance_bundle_v2.permission, "governance.model.approve");
   assert.equal(contract.commands.activate_governance_bundle_v2.permission, "governance.model.activate");
+  assert.equal(contract.commands.request_governance_bundle_changes_v2.permission, "governance.model.review");
 });
 
 test("every public failure has safe Arabic copy and a traceable envelope", () => {
