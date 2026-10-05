@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { assertIsolatedE2ETarget } from "../src/lib/e2e-target-guard";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dockerEnv, fixturePath } from "./fixture";
@@ -37,6 +38,7 @@ async function createIdentity(label: string, password: string) {
 test.beforeAll(async ({}, testInfo) => {
   const base = JSON.parse(await readFile(fixturePath, "utf8")) as Fixture;
   const env = await dockerEnv();
+  const databaseTarget = assertIsolatedE2ETarget({ ...process.env, ...env });
   serviceBase = env.SUPABASE_PUBLIC_URL || "http://127.0.0.1:54321";
   serviceHeaders = {
     apikey: env.SERVICE_ROLE_KEY,
@@ -146,7 +148,7 @@ test.beforeAll(async ({}, testInfo) => {
       (id,organization_id,meeting_id,topic_id,agenda_order)
       values ('${ids.agenda}','${base.organizationId}','${ids.meeting}','${ids.topic}',1);
   `;
-  execFileSync("docker", ["exec", "qarar-supabase-db", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "supabase_admin", "-d", "postgres", "-c", sql]);
+  execFileSync("docker", ["exec", databaseTarget.container, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "supabase_admin", "-d", databaseTarget.database, "-c", sql]);
   lifecycle = {
     ...base, meetingId: ids.meeting, unitId: ids.unit,
     rapporteur: { ...rapporteurIdentity, name: "مقرر اختبار الاجتماع" },

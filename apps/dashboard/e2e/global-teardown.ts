@@ -1,8 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { readFile, rm } from "node:fs/promises";
 import { dockerEnv, fixturePath } from "./fixture";
+import { assertIsolatedE2ETarget } from "../src/lib/e2e-target-guard";
 
 export default async function globalTeardown() {
+  const env = await dockerEnv();
+  const databaseTarget = assertIsolatedE2ETarget({ ...process.env, ...env });
   let fixture: { userId: string; organizationId: string; extraUserIds?: string[] };
   try {
     fixture = JSON.parse(await readFile(fixturePath, "utf8"));
@@ -11,12 +14,18 @@ export default async function globalTeardown() {
     throw error;
   }
   execFileSync("docker", [
-    "exec", "qarar-supabase-db", "psql", "-X", "-v", "ON_ERROR_STOP=1",
-    "-U", "supabase_admin", "-d", "postgres", "-Atqc", `
+    "exec", databaseTarget.container, "psql", "-X", "-v", "ON_ERROR_STOP=1",
+    "-U", "supabase_admin", "-d", databaseTarget.database, "-Atqc", `
       set session_replication_role=replica;
       do $cleanup$
       declare r record;
       begin
+        if not exists (
+          select 1 from qarar_core.organizations
+          where id='${fixture.organizationId}' and code like 'e2e-%'
+        ) then
+          raise exception 'رفض تنظيف مؤسسة غير مخصصة لاختبار E2E';
+        end if;
         for r in select n.nspname s,c.relname t from pg_class c
           join pg_namespace n on n.oid=c.relnamespace
           join pg_attribute a on a.attrelid=c.oid
@@ -28,7 +37,6 @@ export default async function globalTeardown() {
       end $cleanup$;
       set session_replication_role=origin;`,
   ]);
-  const env = await dockerEnv();
   const base = env.SUPABASE_PUBLIC_URL || "http://127.0.0.1:54321";
   for (const userId of [fixture.userId, ...(fixture.extraUserIds ?? [])]) {
     await fetch(`${base}/auth/v1/admin/users/${userId}`, {

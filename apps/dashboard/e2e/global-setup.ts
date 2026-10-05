@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { dockerEnv, saveFixture } from "./fixture";
+import { assertIsolatedE2ETarget } from "../src/lib/e2e-target-guard";
 
 export default async function globalSetup() {
   const env = await dockerEnv();
+  const databaseTarget = assertIsolatedE2ETarget({ ...process.env, ...env });
   const base = env.SUPABASE_PUBLIC_URL || "http://127.0.0.1:54321";
   const headers = {
     apikey: env.SERVICE_ROLE_KEY,
@@ -116,8 +118,8 @@ export default async function globalSetup() {
   const unitTypeId = randomUUID();
   const unitId = randomUUID();
   execFileSync("docker", [
-    "exec", "qarar-supabase-db", "psql", "-X", "-v", "ON_ERROR_STOP=1",
-    "-U", "supabase_admin", "-d", "postgres", "-c", `
+    "exec", databaseTarget.container, "psql", "-X", "-v", "ON_ERROR_STOP=1",
+    "-U", "supabase_admin", "-d", databaseTarget.database, "-c", `
       insert into qarar_core.governance_unit_types
         (id, organization_id, code, name_ar, is_council_type)
       values ('${unitTypeId}', '${organizationId}', 'e2e_council', 'مجلس اختبار الواجهة', true);
