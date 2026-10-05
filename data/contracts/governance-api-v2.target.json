@@ -50,15 +50,18 @@
   "queries": {
     "get_governance_bundle_v2": {
       "permission": "governance.model.read",
-      "context": "organization"
+      "context": "organization",
+      "required_inputs": ["bundle_id"]
     },
     "list_effective_topic_types_v2": {
       "permission": "topics.create",
-      "context": "origin_governance_unit"
+      "context": "origin_governance_unit",
+      "required_inputs": ["origin_governance_unit_id", "effective_on"]
     },
     "preview_topic_route_v2": {
       "permission": "topics.create",
-      "context": "origin_governance_unit"
+      "context": "origin_governance_unit",
+      "required_inputs": ["topic_type_version_id", "origin_governance_unit_id", "effective_on"]
     }
   },
   "error_catalog": {
