@@ -1,0 +1,153 @@
+{
+  "schema_version": "qarar.governance_foundation.v1",
+  "source": {
+    "file_name": "مصفوفة_حوكمة_المجالس_الإصدار_الحادي_عشر_مصحح_الربط.xlsx",
+    "sha256": "5cc8488b3858bfa286e77740322b09de17ad627c0bf617c99c12886c5ff3184a",
+    "reviewed_on": "2026-10-05"
+  },
+  "authority_review": {
+    "accepted_status": "accepted_as_authority_source",
+    "accepted_topic_ids": [
+      "NEW-0001",
+      "NEW-0002",
+      "NEW-0003",
+      "NEW-0004",
+      "NEW-0005",
+      "NEW-0006",
+      "NEW-0007",
+      "NEW-0008",
+      "NEW-0009",
+      "NEW-0011",
+      "NEW-0012",
+      "NEW-0013",
+      "NEW-0014",
+      "NEW-0015",
+      "NEW-0016",
+      "NEW-0017",
+      "NEW-0020",
+      "NEW-0021",
+      "NEW-0022",
+      "NEW-0023",
+      "NEW-0024",
+      "NEW-0025",
+      "NEW-0026",
+      "NEW-0027",
+      "NEW-0028",
+      "NEW-0029",
+      "NEW-0030",
+      "NEW-0031",
+      "NEW-0032",
+      "NEW-0033",
+      "NEW-0034",
+      "NEW-0035",
+      "NEW-0036",
+      "NEW-0037",
+      "NEW-0038",
+      "NEW-0039",
+      "NEW-0040",
+      "NEW-0041",
+      "NEW-0042"
+    ],
+    "activation_allowed": false
+  },
+  "topic_workflows": [
+    {
+      "workflow_code": "WFL-PG-CREATE-PROGRAM",
+      "status": "blocked",
+      "source_step_ids": ["R-PG-01", "R-PG-02"],
+      "topic_type_code": null,
+      "missing_requirements": ["topic_type_code", "step_authority_id", "outcome_transitions"]
+    },
+    {
+      "workflow_code": "WFL-PG-SUPERVISORS",
+      "status": "blocked",
+      "source_step_ids": ["R-PG-03", "R-PG-04"],
+      "topic_type_code": null,
+      "missing_requirements": ["topic_type_code", "outcome_transitions"]
+    },
+    {
+      "workflow_code": "WFL-PG-DEFENSE-COMMITTEE",
+      "status": "blocked",
+      "source_step_ids": ["R-PG-05", "R-PG-06", "R-PG-07"],
+      "topic_type_code": null,
+      "missing_requirements": ["topic_type_code", "outcome_transitions"]
+    },
+    {
+      "workflow_code": "WFL-COL-STUDENT-OUT-OF-SCOPE",
+      "status": "blocked",
+      "source_step_ids": ["R-COL-01"],
+      "topic_type_code": null,
+      "missing_requirements": ["topic_type_code", "outcome_transitions"]
+    }
+  ],
+  "operational_policies": [
+    {
+      "policy_code": "WFL-DEAN-DEPT-MINUTES",
+      "policy_kind": "minutes_review",
+      "source_step_ids": ["R-DEAN-01"],
+      "status": "draft_model_ready"
+    },
+    {
+      "policy_code": "WFL-MTG-DEPT-MEETING",
+      "policy_kind": "recurrence",
+      "source_step_ids": ["R-MTG-01"],
+      "status": "draft_model_ready"
+    },
+    {
+      "policy_code": "WFL-MTG-COLLEGE-MEETING",
+      "policy_kind": "recurrence",
+      "source_step_ids": ["R-MTG-02"],
+      "status": "draft_model_ready"
+    },
+    {
+      "policy_code": "WFL-MTG-PG-MEETING",
+      "policy_kind": "recurrence",
+      "source_step_ids": ["R-MTG-03"],
+      "status": "draft_model_ready"
+    },
+    {
+      "policy_code": "WFL-MTG-UNIV-MEETING",
+      "policy_kind": "recurrence",
+      "source_step_ids": ["R-MTG-04"],
+      "status": "draft_model_ready"
+    },
+    {
+      "policy_code": "WFL-MTG-OBJECTION",
+      "policy_kind": "objection",
+      "source_step_ids": ["R-MTG-05", "R-MTG-06"],
+      "status": "draft_model_ready"
+    },
+    {
+      "policy_code": "WFL-MTG-EXECUTION",
+      "policy_kind": "execution",
+      "source_step_ids": ["R-MTG-07"],
+      "status": "draft_model_ready"
+    }
+  ],
+  "blocked_records": [
+    {
+      "record_id": "NEW-0010",
+      "record_kind": "authority",
+      "reason_code": "duplicate_topic_requires_merge",
+      "source_location": "المصفوفة_النهائية_2026!A213; يتعارض مع TOP-0025 في الصف 26"
+    },
+    {
+      "record_id": "NEW-0018",
+      "record_kind": "authority",
+      "reason_code": "missing_clause",
+      "source_location": "المصفوفة_النهائية_2026!K221"
+    },
+    {
+      "record_id": "NEW-0019",
+      "record_kind": "authority",
+      "reason_code": "missing_clause",
+      "source_location": "المصفوفة_النهائية_2026!K222"
+    },
+    {
+      "record_id": "R-PG-02",
+      "record_kind": "workflow_step",
+      "reason_code": "missing_authority_link",
+      "source_location": "المسارات_المحدثة_2026!O3"
+    }
+  ]
+}
