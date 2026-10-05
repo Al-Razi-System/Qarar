@@ -34,8 +34,31 @@ describe("TopicTypesWorkspace", () => {
     await user.click(screen.getByRole("button", { name: /^التالي/ }));
     await user.click(screen.getByRole("button", { name: /^التالي/ }));
     await user.click(screen.getByRole("button", { name: /^التالي/ }));
+    await user.click(screen.getByRole("button", { name: /^التالي/ }));
 
     expect(screen.getByText(/المعاينة غير متصلة بالحفظ بعد/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /حفظ المسودة/ })).toBeDisabled();
+  });
+
+  it("uses a compact mobile progress indicator and renders the route without a fixed-width step rail", async () => {
+    const user = userEvent.setup();
+    render(<TopicTypesWorkspace />);
+    await user.click(screen.getAllByRole("button", { name: /إنشاء نوع موضوع/ })[0]);
+
+    expect(screen.getByText("الخطوة 1 من 5")).toBeInTheDocument();
+    const navigation = screen.getByRole("navigation", { name: "خطوات إعداد نوع الموضوع" });
+    expect(screen.getByText("الخطوة 1 من 5").closest("div.rounded-2xl")).toHaveClass("sm:hidden");
+    expect(navigation.querySelector("ol")).toHaveClass("hidden", "sm:grid", "sm:grid-cols-5");
+    expect(navigation.querySelector("ol")).not.toHaveClass("min-w-[720px]");
+
+    await user.click(screen.getByRole("button", { name: "أكاديمي" }));
+    await user.type(screen.getByPlaceholderText("مثال: اعتماد برنامج أكاديمي"), "اعتماد برنامج أكاديمي");
+    await user.type(screen.getByPlaceholderText("academic.program"), "academic.program");
+    await user.click(screen.getByRole("button", { name: /^التالي/ }));
+    await user.click(screen.getByRole("button", { name: /^التالي/ }));
+
+    expect(screen.getByRole("heading", { name: "ما مسار الحوكمة؟" })).toBeInTheDocument();
+    expect(screen.getByLabelText("معاينة مسار الحوكمة")).toHaveTextContent("مجلس القسم");
+    expect(screen.getByLabelText("معاينة مسار الحوكمة")).toHaveTextContent("مجلس الجامعة");
   });
 });
