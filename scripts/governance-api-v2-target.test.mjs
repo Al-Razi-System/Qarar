@@ -6,8 +6,8 @@ const contract = JSON.parse(
   await readFile(new URL("../data/contracts/governance-api-v2.target.json", import.meta.url), "utf8"),
 );
 
-test("API v2 remains unimplemented and unexposed", () => {
-  assert.equal(contract.implementation_status, "not_implemented");
+test("API v2 remains an internal preview and unexposed", () => {
+  assert.equal(contract.implementation_status, "internal_preview");
   assert.equal(contract.public_exposure_allowed, false);
 });
 

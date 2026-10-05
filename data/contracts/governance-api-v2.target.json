@@ -1,6 +1,6 @@
 {
   "contract_version": "qarar.governance_api_v2.target",
-  "implementation_status": "not_implemented",
+  "implementation_status": "internal_preview",
   "public_exposure_allowed": false,
   "commands": {
     "save_governance_bundle_draft_v2": {
