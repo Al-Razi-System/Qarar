@@ -54,8 +54,8 @@ select col_default_is(
 select ok(
   exists(select 1 from pg_constraint
          where conrelid='qarar_governance.governance_bundles_v2'::regclass
-           and conname='governance_bundles_v2_activation_blocked'),
-  'foundation explicitly blocks activation'
+           and conname in ('governance_bundles_v2_activation_blocked','governance_bundles_v2_activation_state_check')),
+  'bundle activation is protected by the current lifecycle guard'
 );
 
 select ok(

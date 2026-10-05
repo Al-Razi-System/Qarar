@@ -43,7 +43,7 @@
     "activate_governance_bundle_v2": {
       "permission": "governance.model.activate",
       "context": "organization",
-      "required_inputs": ["bundle_id", "effective_from", "client_request_id"],
+      "required_inputs": ["bundle_id", "expected_lock_version", "effective_from", "client_request_id"],
       "result": ["status", "activated_at", "effective_from", "trace_id"]
     }
   },
