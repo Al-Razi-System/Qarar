@@ -1,0 +1,129 @@
+{
+  "contract_version": "qarar.governance_domain_target.v1",
+  "status": "design_only",
+  "activation_allowed": false,
+  "migration_allowed": false,
+  "identity": {
+    "internal_key": "uuid",
+    "human_reference": "server_generated_contextual",
+    "user_supplied_reference_forbidden": true,
+    "reference_segments": ["entity", "organization", "context", "year", "sequence"],
+    "examples": {
+      "topic": "TOP-ORG01-AI-2026-000123",
+      "topic_attachment": "ATT-TOP-ORG01-AI-2026-000123-003",
+      "meeting": "MTG-ORG01-AI-2026-000045",
+      "decision": "DEC-ORG01-AI-2026-000091",
+      "execution_assignment": "TSK-ORG01-AI-2026-000070"
+    },
+    "invariants": [
+      "human_reference_is_not_a_foreign_key",
+      "context_code_is_snapshotted_at_creation",
+      "renaming_context_does_not_change_existing_references",
+      "sequence_is_generated_atomically_per_namespace"
+    ]
+  },
+  "aggregates": {
+    "topic_governance": {
+      "root": "topic",
+      "entities": [
+        "topic_classification",
+        "topic_type",
+        "legal_authority",
+        "topic_type_authority",
+        "workflow_version",
+        "workflow_step",
+        "workflow_transition",
+        "topic_type_workflow_binding",
+        "topic_schedule_policy",
+        "topic_prior_stage_claim"
+      ]
+    },
+    "meeting_governance": {
+      "root": "meeting",
+      "entities": ["meeting_policy", "meeting_recurrence_rule", "meeting_occurrence", "agenda_item"],
+      "meeting_kinds": ["governed", "custom"]
+    },
+    "decision_execution": {
+      "root": "decision",
+      "entities": ["execution_assignment", "assignment_assignee", "assignment_verifier", "assignment_update", "assignment_evidence"],
+      "assignee_target_types": ["user", "council", "administrative_unit", "department", "faculty"]
+    }
+  },
+  "topic_type": {
+    "selected_by_submitter": true,
+    "determines_workflow": true,
+    "classification_only_determines_workflow": false,
+    "effective_versions_are_immutable": true,
+    "required_activation_dependencies": [
+      "approved_classification",
+      "approved_jurisdiction_authority",
+      "valid_workflow_version",
+      "complete_outcome_transitions",
+      "effective_schedule_policy_or_explicit_none"
+    ]
+  },
+  "workflow": {
+    "belongs_to": "topic_type_version",
+    "forward_outcomes": ["advance", "complete_accepted", "complete_rejected"],
+    "reverse_outcomes": ["return_previous_step", "refer_to_lower_council"],
+    "conditional_outcomes": ["escalate", "request_completion", "pause"],
+    "topic_creation_requires_finality_rule": true
+  },
+  "prior_stage_claim": {
+    "states": ["draft", "submitted", "needs_completion", "approved", "rejected", "cancelled"],
+    "primary_reviewer": "current_destination_council_chair",
+    "oversight_roles": ["governance_admin", "system_admin"],
+    "self_approval_forbidden": true,
+    "approval_effect": "atomically_complete_claimed_steps_and_open_first_remaining_step"
+  },
+  "meeting": {
+    "governed": {
+      "requires_council": true,
+      "accepts_governed_topics": true,
+      "applies_meeting_policy": true
+    },
+    "custom": {
+      "requires_council": false,
+      "accepts_governed_topics": false,
+      "supports_custom_agenda_participants_decisions_assignments": true
+    },
+    "recurrence": {
+      "rule_is_not_a_meeting": true,
+      "due_occurrence_is_not_in_progress": true,
+      "in_progress_requires_explicit_start": true,
+      "agenda_item_belongs_to_exactly_one_meeting": true
+    },
+    "attachment_visibility": {
+      "configured_by": "council_chair",
+      "scope": "meeting_or_agenda_item",
+      "default": "least_privilege"
+    }
+  },
+  "scheduling": {
+    "meeting_rule_types": ["weekly", "monthly_week", "fixed_dates", "custom_rrule"],
+    "topic_rule_types": ["none", "fixed_date", "monthly_week", "seasonal", "bounded_recurrence"],
+    "window_fields": ["available_from", "target_at", "postpone_until", "maximum_postponements"],
+    "duplicate_due_item_prevention_key": ["topic_schedule_policy_version_id", "period_key"]
+  },
+  "execution_assignment": {
+    "states": ["draft", "issued", "accepted", "in_progress", "submitted_for_verification", "needs_revision", "verified_complete", "cancelled", "overdue"],
+    "assignee_acknowledgement_required": true,
+    "completion_requires_report": true,
+    "evidence_policy": "configured_per_assignment",
+    "verifier_selected_at_issue_time": true,
+    "issuing_council_chair_has_oversight": true,
+    "governance_and_system_admin_have_oversight": true,
+    "topic_submitter_can_read_status": true
+  },
+  "compatibility": {
+    "replace_in_place": false,
+    "initial_mode": "parallel_draft_tables",
+    "legacy_fields_to_deprecate_later": [
+      "policy_items.topic_category_id",
+      "policy_items.workflow_template_version_id",
+      "action_items.assigned_unit_id",
+      "action_items.assigned_user_id"
+    ],
+    "production_data_write": false
+  }
+}
