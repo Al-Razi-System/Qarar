@@ -102,6 +102,33 @@ export async function qararRpc<T>(
   return response.json() as Promise<T>;
 }
 
+export async function qararRpcV2<T>(
+  name: string,
+  body: Record<string, unknown>,
+): Promise<T> {
+  const accessToken = await getQararAccessToken();
+  await assertSensitiveMfaOnce(accessToken);
+  const localEnv = await getQararEnv();
+  const response = await fetch(`${localEnv.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: {
+      apikey: localEnv.ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "Accept-Profile": "api_v2",
+      "Content-Profile": "api_v2",
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  if (response.status === 401) throw new Error("UNAUTHENTICATED");
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({})) as { code?: string; message?: string; details?: string; hint?: string };
+    throw new QararApiError(payload.message ?? `QARAR_API_${response.status}`, response.status, payload.code, payload.details, payload.hint);
+  }
+  return response.json() as Promise<T>;
+}
+
 export class QararApiError extends Error {
   constructor(
     message: string,
