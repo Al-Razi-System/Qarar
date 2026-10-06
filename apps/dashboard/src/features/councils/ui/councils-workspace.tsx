@@ -110,12 +110,14 @@ export function CouncilsWorkspace({ initialSearch, initialTree, options, roles, 
   }
 
   async function createCouncil(values: CouncilFormValues) {
-    const created = await councilRpc<{ id: string }>("admin_create_council", {
-      p_code: values.code, p_name_ar: values.nameAr, p_name_en: values.nameEn || null, p_description: values.description || null,
-      p_unit_type_id: values.unitTypeId, p_parent_unit_id: values.parentUnitId || null, p_governance_class_id: values.governanceClassId || null,
-      p_minimum_active_members: values.minimumActiveMembers, p_allow_dual_leadership: values.allowDualLeadership, p_client_request_id: crypto.randomUUID(),
+    const created = await councilRpc<{ id: string; reference_number: string }>("admin_create_council_v2", {
+      p_name_ar: values.nameAr, p_name_en: values.nameEn || null, p_description: values.description || null,
+      p_unit_type_id: values.unitTypeId, p_scope_unit_id: values.scopeUnitId || null, p_parent_council_id: values.parentCouncilId || null, p_governance_class_id: values.governanceClassId || null,
+      p_minimum_active_members: values.minimumActiveMembers, p_allow_dual_leadership: values.allowDualLeadership,
+      p_meeting_plan: values.createMeetingPlan ? { meeting_type_id: values.meetingTypeId, recurrence: values.recurrence, first_meeting_date: values.firstMeetingDate, start_time: values.startTime, end_time: values.endTime, ends_on: values.planEndsOn || null, missed_after_days: values.missedAfterDays } : null,
+      p_client_request_id: crypto.randomUUID(),
     });
-    await loadList(); setDetail(null); setMembers([]); setReadiness(null); setLoadingDetail(true); setSelectedId(created.id); setTab("members"); showSuccess("تم إنشاء المجلس. أضف الأعضاء والقيادة لاستكمال الجاهزية.");
+    await loadList(); setDetail(null); setMembers([]); setReadiness(null); setLoadingDetail(true); setSelectedId(created.id); setTab("members"); showSuccess(`تم إنشاء المجلس بالمعرف ${created.reference_number}. أضف الأعضاء والقيادة لاستكمال الجاهزية.`);
   }
 
   async function updateCouncil(values: CouncilFormValues) {
@@ -243,5 +245,5 @@ function formatDate(value: string) { return new Intl.DateTimeFormat("ar-SA-u-ca-
 function lifecycleTitle(action: Exclude<LifecycleDialog, null>) { return action === "activate" ? "تفعيل المجلس" : action === "deactivate" ? "تعطيل المجلس" : "أرشفة المجلس نهائياً"; }
 function lifecycleDescription(action: Exclude<LifecycleDialog, null>) { return action === "activate" ? "سيصبح المجلس متاحاً للعمليات بعد التحقق النهائي من الجاهزية." : action === "deactivate" ? "سيتم إيقاف العمليات الجديدة مع إبقاء السجل محفوظاً." : "الأرشفة انتقال نهائي ولا تنجح إذا وُجدت مجالس تابعة غير مؤرشفة."; }
 function isLeadershipRole(roleCode: string) { return roleCode === "council_chair" || roleCode === "council_rapporteur"; }
-function toFormValues(detail: CouncilDetail): CouncilFormValues { return { code: detail.code, nameAr: detail.name_ar, nameEn: detail.name_en ?? "", description: detail.description ?? "", unitTypeId: detail.unit_type_id, parentUnitId: detail.parent_unit_id ?? "", governanceClassId: detail.governance_class_id ?? "", minimumActiveMembers: detail.minimum_active_members, allowDualLeadership: detail.allow_dual_leadership }; }
+function toFormValues(detail: CouncilDetail): CouncilFormValues { return { nameAr: detail.name_ar, nameEn: detail.name_en ?? "", description: detail.description ?? "", unitTypeId: detail.unit_type_id, scopeUnitId: "", parentCouncilId: detail.parent_unit_id ?? "", governanceClassId: detail.governance_class_id ?? "", minimumActiveMembers: detail.minimum_active_members, allowDualLeadership: detail.allow_dual_leadership, createMeetingPlan: false, meetingTypeId: "", recurrence: "monthly", firstMeetingDate: "", startTime: "09:00", endTime: "11:00", planEndsOn: "", missedAfterDays: 7 }; }
 function fetchCouncilState(query: string, status: string) { return Promise.all([councilRpc<CouncilSearchResult>("admin_search_councils", { p_query: query || null, p_status: status || null, p_unit_type_id: null, p_governance_class_id: null, p_parent_unit_id: null, p_limit: 100, p_offset: 0 }), councilRpc<CouncilTreeNode[]>("admin_get_councils_tree")]); }

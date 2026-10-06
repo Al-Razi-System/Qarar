@@ -39,8 +39,10 @@ export type CouncilTreeNode = Pick<CouncilSummary, "id" | "code" | "name_ar" | "
 export type CouncilFormOptions = {
   council_types: ReferenceOption[];
   parent_units: ReferenceOption[];
+  scope_units?: ReferenceOption[];
   governance_classes: ReferenceOption[];
   leadership_roles: string[];
+  meeting_types?: ReferenceOption[];
 };
 
 export type UserOption = { id: string; full_name_ar: string; email: string; status?: string };
@@ -68,13 +70,21 @@ export type CouncilSearchResult = {
 };
 
 export type CouncilFormValues = {
-  code: string;
   nameAr: string;
   nameEn: string;
   description: string;
   unitTypeId: string;
-  parentUnitId: string;
+  scopeUnitId: string;
+  parentCouncilId: string;
   governanceClassId: string;
   minimumActiveMembers: number;
   allowDualLeadership: boolean;
+  createMeetingPlan: boolean;
+  meetingTypeId: string;
+  recurrence: "weekly" | "monthly" | "quarterly" | "semiannual" | "annual";
+  firstMeetingDate: string;
+  startTime: string;
+  endTime: string;
+  planEndsOn: string;
+  missedAfterDays: number;
 };

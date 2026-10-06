@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { qararRpc } = vi.hoisted(() => ({ qararRpc: vi.fn() }));
+const { qararRpc, qararRpcV2 } = vi.hoisted(() => ({ qararRpc: vi.fn(), qararRpcV2: vi.fn() }));
 
 vi.mock("@/shared/api/qarar-server", () => ({
   qararRpc,
+  qararRpcV2,
   QararApiError: class QararApiError extends Error {},
 }));
 
@@ -34,6 +35,14 @@ describe("POST /api/admin/councils", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ error: { code: "INVALID_CONTRACT" } });
+    expect(qararRpc).not.toHaveBeenCalled();
+  });
+
+  it("يعزل عقد إنشاء المجلس الجديد داخل واجهة api_v2", async () => {
+    qararRpcV2.mockResolvedValue({ id: "council-2" });
+    const response = await POST(request({ contract: "admin_create_council_v2", params: { p_name_ar: "مجلس الكلية" } }));
+    expect(response.status).toBe(200);
+    expect(qararRpcV2).toHaveBeenCalledWith("admin_create_council_v2", { p_name_ar: "مجلس الكلية" });
     expect(qararRpc).not.toHaveBeenCalled();
   });
 

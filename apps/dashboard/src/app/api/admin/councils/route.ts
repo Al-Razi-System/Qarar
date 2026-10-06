@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { qararRpc, QararApiError } from "@/shared/api/qarar-server";
+import { qararRpc, qararRpcV2, QararApiError } from "@/shared/api/qarar-server";
 import { apiError, apiSuccess, requestId } from "@/shared/api/response";
 import { readJsonObject } from "@/shared/security/json-body";
 import { safeAdminError } from "@/shared/security/admin-error";
@@ -11,6 +11,7 @@ const contracts = new Set([
   "admin_get_council_detail",
   "admin_get_councils_tree",
   "admin_create_council",
+  "admin_create_council_v2",
   "admin_update_council",
   "admin_move_council",
   "admin_validate_council_administrative_readiness",
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
     const params = body.params && typeof body.params === "object" && !Array.isArray(body.params)
       ? body.params as Record<string, unknown>
       : {};
-    return apiSuccess(await qararRpc<unknown>(contract, params), id);
+    return apiSuccess(await (contract === "admin_create_council_v2" ? qararRpcV2<unknown>(contract, params) : qararRpc<unknown>(contract, params)), id);
   } catch (error) {
     if (error instanceof QararApiError) {
       const safe = safeAdminError(error, "تعذر تنفيذ عملية المجلس.");
