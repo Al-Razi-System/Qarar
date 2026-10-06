@@ -184,6 +184,7 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGPORT: ${POSTGRES_PORT}
       PGUSER: supabase_admin
+      QARAR_APPLY_SEED: ${QARAR_APPLY_SEED:-true}
     image: public.ecr.aws/supabase/postgres:17.6.1.139
     restart: "no"
     volumes:
