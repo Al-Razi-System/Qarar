@@ -25,6 +25,7 @@ services:
       QARAR_UPLOAD_SCAN_PORT: 3310
       QARAR_UPLOAD_SCAN_REQUIRED: "true"
       QARAR_UPLOAD_SCAN_TIMEOUT_MS: 30000
+      GOVERNANCE_V2_UI_ENABLED: "true"
     networks:
       - fateen_net
       - qarar_upload_scanner
