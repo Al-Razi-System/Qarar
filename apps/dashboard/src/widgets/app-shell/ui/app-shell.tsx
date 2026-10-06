@@ -12,6 +12,7 @@ const navGroups = [
   { label: "الحوكمة والمعاملات", items: [
     { href: "/admin/councils", label: "المجالس والوحدات", icon: Building2, requiredAny: ["governance.units.read"] },
     { href: "/admin/regulations", label: "اللوائح ومسارات الاعتماد", icon: BookOpenCheck, requiredAny: ["governance.policies.read"] },
+    { href: "/admin/governance-model", label: "نموذج الحوكمة الجديد", icon: Workflow, requiredAny: ["governance.regulations.manage"] },
     { href: "/admin/topics", label: "المعاملات والموضوعات", icon: FileText, requiredAny: ["topics.read", "topics.create"] },
     { href: "/admin/meetings", label: "الاجتماعات والقرارات", icon: Calendar, requiredAny: ["meetings.read"] },
   ]},
