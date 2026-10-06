@@ -693,6 +693,8 @@ services:
 volumes:
   db-config: null
   deno-cache: null
-  qarar-db-data: null
+  qarar-db-data:
+    name: ${QARAR_DB_DATA_VOLUME:-supabase_qarar-db-data}
   qarar-login-rate-limit-redis-data: null
-  qarar-storage-data: null
+  qarar-storage-data:
+    name: ${QARAR_STORAGE_DATA_VOLUME:-supabase_qarar-storage-data}
