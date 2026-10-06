@@ -1,0 +1,42 @@
+name: qarar-dashboard-dev
+
+services:
+  dashboard-dev:
+    image: node:22-alpine
+    container_name: qarar-dashboard-dev
+    working_dir: /workspace/apps/dashboard
+    command: npm run dev -- --hostname 0.0.0.0 --port 3000
+    environment:
+      APP_ORIGIN: https://devqarar.prideidea.com
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: development
+      PORT: 3000
+      QARAR_SUPABASE_ANON_KEY: ${ANON_KEY}
+      QARAR_SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      QARAR_SUPABASE_URL: http://qarar-dev-supabase-kong:8000
+      QARAR_ACTIVATION_TOKEN_SECRET: ${QARAR_ACTIVATION_TOKEN_SECRET:-${SERVICE_ROLE_KEY}}
+      QARAR_LOGIN_RATE_LIMIT_CLIENT_IP_HEADER: x-qarar-client-ip
+      QARAR_LOGIN_RATE_LIMIT_HMAC_SECRET: ${QARAR_LOGIN_RATE_LIMIT_HMAC_SECRET}
+      QARAR_LOGIN_RATE_LIMIT_REDIS_HOST: qarar-dev-login-rate-limit-redis
+      QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD: ${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}
+      QARAR_LOGIN_RATE_LIMIT_REDIS_PORT: 6379
+      GOVERNANCE_V2_UI_ENABLED: "true"
+      WATCHPACK_POLLING: "true"
+    networks:
+      - fateen_net
+      - qarar_dev
+    restart: unless-stopped
+    volumes:
+      - .:/workspace
+      - dashboard-dev-next:/workspace/apps/dashboard/.next
+
+networks:
+  fateen_net:
+    external: true
+  qarar_dev:
+    external: true
+    name: qarar-dev_default
+
+volumes:
+  dashboard-dev-next:
+

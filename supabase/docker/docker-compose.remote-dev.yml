@@ -1,0 +1,55 @@
+name: qarar-dev
+
+services:
+  analytics:
+    container_name: qarar-dev-supabase-analytics
+  auth:
+    container_name: qarar-dev-supabase-auth
+  db:
+    container_name: qarar-dev-supabase-db
+    ports: !override
+      - ${QARAR_DB_DIRECT_PORT:-55427}:5432
+  db-migrate:
+    container_name: qarar-dev-supabase-migrations
+  functions:
+    container_name: qarar-dev-supabase-functions
+  imgproxy:
+    container_name: qarar-dev-supabase-imgproxy
+  kong:
+    container_name: qarar-dev-supabase-kong
+    ports: !override
+      - ${QARAR_API_PORT:-55421}:8000
+      - ${QARAR_API_HTTPS_PORT:-55426}:8443
+  login-rate-limit-redis:
+    container_name: qarar-dev-login-rate-limit-redis
+  mail:
+    container_name: qarar-dev-supabase-mail
+    ports: !override
+      - ${QARAR_SMTP_PORT:-11025}:1025
+      - ${QARAR_MAIL_UI_PORT:-58025}:8025
+  meta:
+    container_name: qarar-dev-supabase-meta
+  realtime:
+    container_name: qarar-dev-supabase-realtime
+  rest:
+    container_name: qarar-dev-supabase-rest
+  storage:
+    container_name: qarar-dev-supabase-storage
+  studio:
+    container_name: qarar-dev-supabase-studio
+    ports: !override
+      - ${QARAR_STUDIO_PORT:-55423}:3000
+  supavisor:
+    container_name: qarar-dev-supabase-pooler
+    ports: !override
+      - ${QARAR_DB_PORT:-55422}:5432
+      - ${QARAR_POOLER_PORT:-55429}:6543
+  vector:
+    container_name: qarar-dev-supabase-vector
+
+volumes:
+  qarar-db-data:
+    name: qarar-dev-db-data
+  qarar-storage-data:
+    name: qarar-dev-storage-data
+
