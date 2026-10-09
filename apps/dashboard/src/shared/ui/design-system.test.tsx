@@ -101,6 +101,12 @@ describe("MemberSeat", () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
+  it("says so when attendance is not confirmed yet, whatever the role", () => {
+    render(<MemberSeat name="د. ريم" status="pending" roleLabel="عضو" />);
+    expect(screen.getByText("لم يثبت حضوره")).toBeInTheDocument();
+    expect(screen.queryByText("عضو")).not.toBeInTheDocument();
+  });
+
   it("states absence in words and dims the seat", () => {
     render(<MemberSeat name="د. طارق" status="absent" roleLabel="عضو" />);
     expect(screen.getByText("غائب")).toBeInTheDocument();

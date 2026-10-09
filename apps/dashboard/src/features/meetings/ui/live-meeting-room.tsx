@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Check, ClipboardPenLine, Crown, FileText, LoaderCircle, ShieldCheck, Users, Vote, X } from "lucide-react";
+import { AlertCircle, Check, FileText, LoaderCircle, ShieldCheck, Users, Vote, X } from "lucide-react";
 import { liveMeetingRpc } from "../api/live-meeting-client";
 import { topicsRpc } from "@/features/topics/api/topics-client";
 import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
@@ -13,6 +13,7 @@ import { DecisionComposerDialog } from "./decision-composer-dialog";
 import { LiveAgendaConsole } from "./live-agenda-console";
 import { MemberCheckInCard } from "./member-check-in-card";
 import type { VoteValue } from "./open-vote-card";
+import { RoomStage } from "./stage/room-stage";
 
 type MeetingDetail = { agenda_items?: AgendaDiscussionItem[] };
 type CheckInToken = { token: string; expires_at: string };
@@ -161,17 +162,12 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   if (loading) return <div className="grid min-h-[520px] place-items-center"><div className="text-center"><LoaderCircle className="mx-auto animate-spin text-[#0877d6]" size={34} /><p className="mt-3 text-xs font-bold text-[#718399]">جارٍ تجهيز غرفة الاجتماع...</p></div></div>;
   if (!session) return <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-bold text-red-800">{loadError ?? "تعذر تحميل بيانات الجلسة. أعد المحاولة من صفحة الاجتماعات."}</div>;
 
-  const quorum = session.quorum;
-  const quorumOk = quorum?.quorum_status === "met" || (quorum?.actual_percentage ?? 0) >= (quorum?.required_percentage ?? 100);
-  const manager = session.viewer.can_manage_session;
   const operator = session.viewer.can_operate_attendance;
   const rapporteur = session.viewer.mode === "rapporteur";
-  const roleLabel = manager ? "لوحة رئيس المجلس" : rapporteur ? "لوحة مقرر المجلس" : "بوابة عضو المجلس";
-  const roleDescription = manager ? "أدر الحضور والنصاب وجدول الأعمال من مساحة قيادة واحدة." : rapporteur ? "شغّل الحضور ووثّق سير المناقشات، بينما تبقى الاعتمادات النهائية للرئيس." : `مرحباً ${session.viewer.full_name_ar}، تابع الجلسة وصوّت عند فتح الجولة.`;
 
   return <div className="space-y-5">
     {notice && <div className={`flex items-center gap-2 rounded-xl border p-3 text-xs font-bold ${notice.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>{notice.kind === "success" ? <Check size={15} /> : <AlertCircle size={15} />}{notice.text}</div>}
-    <section className="relative overflow-hidden rounded-[1.8rem] bg-gradient-to-l from-[#087ee5] via-[#0869bd] to-[#092b58] p-6 text-white shadow-[0_18px_55px_rgba(6,54,104,.18)] sm:p-7"><div className="absolute -left-16 -top-20 h-56 w-56 rounded-full border border-white/10" /><div className="relative flex flex-wrap items-center justify-between gap-5"><div className="flex items-center gap-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/12 backdrop-blur">{manager ? <Crown size={26} /> : rapporteur ? <ClipboardPenLine size={25} /> : <Users size={25} />}</span><div><div className="mb-1 flex flex-wrap items-center gap-2"><span className="rounded-full bg-white/12 px-2.5 py-1 text-[9px] font-black">{roleLabel}</span><span className="rounded-full bg-emerald-400/15 px-2.5 py-1 text-[9px] font-black text-emerald-100"><span className="ml-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />جلسة حية</span></div><h1 className="text-xl font-black sm:text-2xl">{session.meeting.title_ar}</h1><p className="mt-1 text-xs text-blue-100">{roleDescription}</p></div></div><div className={`min-w-56 rounded-2xl border p-4 backdrop-blur ${quorumOk ? "border-emerald-300/30 bg-emerald-300/10" : "border-amber-300/30 bg-amber-300/10"}`}><div className="flex items-center justify-between"><span className="text-[10px] font-black text-blue-100">النصاب الحالي</span><ShieldCheck size={18} className={quorumOk ? "text-emerald-300" : "text-amber-300"} /></div><div className="mt-2 flex items-end gap-2"><strong className="text-3xl font-black">{quorum?.actual_percentage ?? 0}%</strong><span className="pb-1 text-[10px] text-blue-100">{quorum?.present_members ?? 0} من {quorum?.eligible_members ?? 0}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15"><div className={`h-full rounded-full ${quorumOk ? "bg-emerald-300" : "bg-amber-300"}`} style={{ width: `${Math.min(100, quorum?.actual_percentage ?? 0)}%` }} /></div></div></div></section>
+    <RoomStage session={session} agenda={agenda} rounds={rounds} decisions={decisions} />
     <nav className="flex gap-2 rounded-2xl border border-[#dfe8f0] bg-white p-1.5 shadow-sm" aria-label="أقسام غرفة الاجتماع">
       {session.viewer.is_roster_member && <button onClick={() => setTab("my-attendance")} className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-black transition ${tab === "my-attendance" ? "bg-[#0877d6] text-white shadow-md" : "text-[#5b7187] hover:bg-[#f2f7fb]"}`}><ShieldCheck size={16} />حضوري الشخصي</button>}
       {operator && <button onClick={() => setTab("attendance")} className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-black transition ${tab === "attendance" ? "bg-[#0877d6] text-white shadow-md" : "text-[#5b7187] hover:bg-[#f2f7fb]"}`}><Users size={16} />إدارة الحضور</button>}

@@ -73,6 +73,11 @@
   --q-stage-from: #1e88e5;
   --q-stage-to: #0057c8;
   --q-on-stage: #ffffff;
+  --q-stage-glow: rgba(0, 102, 204, 0.3);
+  /* Vote result colours that stay legible on the blue table. */
+  --q-stage-yes: #8ff2cb;
+  --q-stage-no: #ffb8b2;
+  --q-stage-abstain: #c9d9ee;
   --q-focus: rgba(0, 102, 204, 0.32);
 
   --q-radius-control: 8px;
@@ -117,6 +122,10 @@
   --q-stage-from: #17357a;
   --q-stage-to: #0b1740;
   --q-on-stage: #f3f6fb;
+  --q-stage-glow: rgba(0, 102, 204, 0.45);
+  --q-stage-yes: #3ecf98;
+  --q-stage-no: #ff7b72;
+  --q-stage-abstain: #7f8ea6;
   --q-focus: rgba(77, 163, 255, 0.5);
 
   color: var(--q-text);
@@ -151,6 +160,9 @@
   --color-q-header: var(--q-header);
   --color-q-on-header: var(--q-on-header);
   --color-q-on-stage: var(--q-on-stage);
+  --color-q-stage-yes: var(--q-stage-yes);
+  --color-q-stage-no: var(--q-stage-no);
+  --color-q-stage-abstain: var(--q-stage-abstain);
   --color-q-focus: var(--q-focus);
 
   /* Type scale. 13px is the smallest size allowed anywhere in the product. */
@@ -236,4 +248,35 @@ button:disabled {
 .thin-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #c9d8e8 transparent;
+}
+
+/* The council table surface in the live meeting room. */
+.q-stage {
+  background: radial-gradient(ellipse at center, var(--q-stage-from) 0%, var(--q-stage-to) 72%);
+  color: var(--q-on-stage);
+  border: 1px solid var(--q-border-strong);
+  box-shadow: 0 0 80px var(--q-stage-glow);
+}
+
+@keyframes q-seat-wait {
+  from { box-shadow: 0 0 0 0 var(--q-focus); }
+  to { box-shadow: 0 0 0 12px transparent; }
+}
+
+.q-seat-waiting {
+  animation: q-seat-wait 1.6s ease-out infinite;
+}
+
+.q-ring-progress {
+  transition: stroke-dasharray 0.7s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .q-seat-waiting {
+    animation: none;
+  }
+
+  .q-ring-progress {
+    transition: none;
+  }
 }
