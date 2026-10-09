@@ -17,6 +17,11 @@ Before editing a business process, read:
 For dashboard work, also obey `apps/dashboard/AGENTS.md` and read the relevant
 Next.js documentation shipped in `apps/dashboard/node_modules/next/dist/docs/`.
 
+Before building or changing any screen, read `docs/design/DESIGN_STANDARDS_AR.md`.
+Colours, type sizes and radii come from the tokens in `apps/dashboard/src/app/globals.css`
+and screens are composed from `apps/dashboard/src/shared/ui`; never hand-write a colour
+or a font size inside a screen.
+
 ## Non-negotiable change protocol
 
 No behavior change may start with code. First record an impact map in the task notes,
