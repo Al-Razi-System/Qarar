@@ -34,7 +34,7 @@ export function TemporaryPasswordForm() {
     <h1 className="text-2xl font-black text-[#0a1330]">كلمة مرور خاصة بك</h1>
     <p className="mt-3 text-sm leading-7 text-[#52647a]">استبدل كلمة المرور المؤقتة قبل استخدام قرار. بعد الحفظ، ستُلغى الجلسات المؤقتة وتدخل بالكلمة الجديدة.</p>
     {success ? <div className="mt-6"><p role="status" className="rounded-xl bg-[#edf6ff] p-4 text-sm leading-7 text-[#315b80]">{success}</p><Link href="/login" className="mt-5 block rounded-xl bg-[#0066cc] px-5 py-3 text-center font-bold text-white">تسجيل الدخول بالكلمة الجديدة</Link></div> : <form method="post" onSubmit={submit} className="mt-6 space-y-5">
-      <fieldset disabled={pending || uncertain} className="space-y-5">
+      <fieldset disabled={pending || uncertain} className="min-w-0 space-y-5">
         <FormField label="كلمة المرور الحالية" type="password" autoComplete="current-password" value={currentPassword} onChange={e => setCurrent(e.target.value)} required />
         <div><FormField label="كلمة المرور الجديدة" type="password" autoComplete="new-password" aria-describedby="new-password-policy" value={password} onChange={e => setPassword(e.target.value)} minLength={12} maxLength={128} required /><p id="new-password-policy" className="mt-2 text-xs leading-6 text-[#718096]">12 حرفًا على الأقل، تشمل حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.</p></div>
         <FormField label="تأكيد كلمة المرور الجديدة" type="password" autoComplete="new-password" value={confirmation} onChange={e => setConfirmation(e.target.value)} required />

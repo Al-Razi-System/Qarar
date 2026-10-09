@@ -204,3 +204,33 @@ Before creating a governed topic, the frontend calls `get_topic_categories_for_u
 governance unit and optional effective date. The response contains only active categories backed by an
 effective, automation-ready policy item in scope for that unit, plus each category's executable item
 count. The caller must hold `topics.create` for the selected unit.
+# Existing custom and prior-route RPCs
+
+These `api_v1` compatibility contracts remain available for existing journeys;
+they do not replace classification-based V2 submission. Use the exact argument
+names in `12-contract-reference.md`, not direct table access. Server-side contextual
+permissions and organization checks remain authoritative. Display Arabic labels,
+not machine statuses, and retain evidence/input on rejection.
+
+- `create_topic_custom_route_draft` creates a topic and submitted custom-route
+  draft together; it does not activate an executable route.
+- `admin_list_topic_custom_route_drafts` returns a filtered, paginated review list.
+- `approve_topic_custom_route_draft` reviews that draft; approval creates its
+  executable workflow, while rejection leaves the route blocked.
+- `create_topic_governance_exception_request` creates the topic and pending
+  request with the alternative route; request creation is not approval.
+- `get_topic_prior_route_candidate_steps` reads eligible ordered steps from the
+  selected legal route before evidence entry.
+- `create_topic_prior_route_request` creates a draft and ordered step evidence.
+- `add_prior_route_evidence_attachment` links an existing attachment of the same
+  topic to one evidence step while the request remains editable.
+- `submit_topic_prior_route_request` requires evidence for every previous council
+  and sends the creator's draft for review; repeated submission can replay safely.
+- `admin_list_topic_prior_route_requests` returns requests and their evidence
+  for the authorized review journey.
+- `review_topic_prior_route_request` accepts `approve` or `reject` with a comment;
+  approval records completed prior steps and advances to the remaining route.
+- `get_topic_prior_route_request` reads one topic's evidence request, or returns
+  JSON null when none exists; it includes requester and review information.
+- `get_topic_prior_route_summaries` returns visible summaries for at most 100
+  supplied topic IDs. Missing or inaccessible topics do not gain visibility.

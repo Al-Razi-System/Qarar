@@ -11,6 +11,8 @@ it("prevents credentials from submitting as GET before hydration", () => {
   const html = renderToString(<LoginForm />);
   expect(html).toContain('method="post"');
   expect(html).toContain('<fieldset disabled=""');
+  // UA fieldset min-inline-size must not widen the single mobile grid track.
+  expect(html).toContain('class="min-w-0 space-y-5"');
 });
 
 it("submits credentials by JSON POST and continues to MFA", async () => {

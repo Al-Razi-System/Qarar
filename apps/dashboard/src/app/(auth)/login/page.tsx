@@ -57,7 +57,7 @@ export default async function LoginPage() {
       </section>
 
       <section className="soft-grid flex min-h-screen items-center justify-center px-6 py-10">
-        <div className="w-full max-w-[430px]">
+        <div className="min-w-0 w-full max-w-[430px]">
           <FullLogo />
           <div className="mt-10">
             <p className="mb-2 text-xs font-bold text-[#ff7a00]">مرحبًا بعودتك</p>

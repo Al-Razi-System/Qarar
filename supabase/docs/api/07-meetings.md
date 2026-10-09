@@ -115,3 +115,15 @@ leaves `draft` or `scheduled`. Reorder must send every current item exactly once
 
 Live-session attendance, quorum, and voting are documented in
 [07-session-attendance-voting.md](./07-session-attendance-voting.md).
+# Existing recurrence maintenance RPCs
+
+The compatibility `api_v1` contracts below remain subject to `meetings.manage`
+in the meeting's council and organization. Their exact parameter signatures are
+in `12-contract-reference.md`. They do not start a meeting or send invitations.
+
+- `create_meeting_series_from_existing`: adopts an existing draft/scheduled
+  meeting as the first occurrence, then creates the remaining occurrences
+  atomically. Rejects an already-linked meeting and counts outside 2–36.
+- `update_meeting_series_recurrence`: changes the recurrence from an editable
+  anchor occurrence and updates later draft/scheduled dates. Started/completed
+  occurrences are not rescheduled. Returns the number changed.

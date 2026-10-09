@@ -451,3 +451,24 @@ Approval of a request whose validity window has elapsed fails without creating a
   `topic_release`.
 - `get_topic_categories_for_unit` returns `governance_unit_id`, `effective_on`, and `categories`; each
   category includes `id`, `code`, Arabic/English names, and `executable_item_count`.
+# Existing custom-route, prior-evidence and recurrence responses
+
+These are technical response fields, not end-user labels. Exact argument names
+and result types remain in the generated contract reference.
+
+| RPC | JSON response |
+|---|---|
+| `create_topic_custom_route_draft` | `topic_id`, `custom_route_draft_id`, `status`, `routing_status`, `governance_source`, `step_count` |
+| `admin_list_topic_custom_route_drafts` | `items`, `total`; items contain topic/draft identity, status, rationale, review metadata and ordered `steps` |
+| `approve_topic_custom_route_draft` | `id`, `topic_id`, `status`; approval also returns `workflow_template_version_id`, `workflow_instance_id` |
+| `create_topic_governance_exception_request` | topic and matching-result fields plus `topic_id`, `exception_id`, `status`, `governance_source`, `routing_status` |
+| `get_topic_prior_route_candidate_steps` | `workflow_template_version_id`, ordered `steps` with template step identity, sequence, title, responsibility, resolved unit and terminal flag |
+| `create_topic_prior_route_request` | `topic_id`, `request_id`, `status`, `evidence` with IDs, template steps and sequence numbers |
+| `add_prior_route_evidence_attachment` | `id`, `step_evidence_id`, `attachment_id` |
+| `submit_topic_prior_route_request` | `request_id`, `topic_id`, `status`; a repeated submission can include `idempotent_replay` |
+| `admin_list_topic_prior_route_requests` | `items`; each has request/topic identity, status, requester, submitted time and ordered evidence `steps` with `attachments` |
+| `review_topic_prior_route_request` | `request_id`, `topic_id`, `status`, `current_workflow_step_id` |
+| `get_topic_prior_route_request` | JSON null or request `id`, `topic_id`, `status`, requester, `is_requester`, submission/review metadata and ordered evidence `steps` with attachment metadata |
+| `get_topic_prior_route_summaries` | array of `topic_id`, `status`, `missing_evidence_count` for visible matching topics |
+| `create_meeting_series_from_existing` | series `id`, `frequency`, `occurrences` with meeting identity, number, sequence and scheduled date |
+| `update_meeting_series_recurrence` | series `id`, `frequency`, `updated_occurrences` |

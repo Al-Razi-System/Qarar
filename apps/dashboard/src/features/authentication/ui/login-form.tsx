@@ -60,7 +60,7 @@ export function LoginForm() {
 
   return (
     <form className="mt-8" method="post" onSubmit={handleSubmit}>
-      <fieldset disabled={!ready || isSubmitting} className="space-y-5">
+      <fieldset disabled={!ready || isSubmitting} className="min-w-0 space-y-5">
       <FormField
         label="البريد الإلكتروني"
         name="email"
