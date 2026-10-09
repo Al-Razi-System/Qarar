@@ -29,6 +29,7 @@ async function loadUsersPageData() {
         p_active_only: true,
       }),
       qararRpc<{ governance_units: UnitOption[] }>("get_topic_form_options", {}),
+      qararRpc<{ is_system_admin: boolean }>("get_current_user_access_context", {}),
     ]);
 
   } catch (error) {
@@ -40,7 +41,7 @@ async function loadUsersPageData() {
 }
 
 export default async function UsersPage() {
-  const [result, roles, formOptions] = await loadUsersPageData();
+  const [result, roles, formOptions, access] = await loadUsersPageData();
 
   return (
     <div className="mx-auto max-w-[1480px]">
@@ -49,6 +50,7 @@ export default async function UsersPage() {
         total={result.total}
         roles={roles}
         units={formOptions.governance_units}
+        canManageSubmissionScopes={access.is_system_admin === true}
       />
     </div>
   );

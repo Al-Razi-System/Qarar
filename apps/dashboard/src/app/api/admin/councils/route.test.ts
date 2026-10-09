@@ -21,6 +21,26 @@ function request(body: unknown) {
 afterEach(() => vi.clearAllMocks());
 
 describe("POST /api/admin/councils", () => {
+  it("يوجه قراءة الهيكل التنظيمي إلى العقد الجديد", async () => {
+    qararRpcV2.mockResolvedValue({ units: [], councils: [] });
+    expect((await POST(request({ contract: "admin_get_council_organizational_tree_v2", params: {} }))).status).toBe(200);
+    expect(qararRpcV2).toHaveBeenCalledWith("admin_get_council_organizational_tree_v2", {});
+    expect(qararRpc).not.toHaveBeenCalled();
+  });
+  it("يوجه تعديل حالة الوحدة إلى عقد V2", async () => {
+    qararRpcV2.mockResolvedValue({ id: "unit-1", status: "archived" });
+    const params = { p_unit_id: "unit-1", p_status: "archived", p_expected_updated_at: "2026-10-07T00:00:00Z" };
+    expect((await POST(request({ contract: "admin_update_organizational_unit_v2", params }))).status).toBe(200);
+    expect(qararRpcV2).toHaveBeenCalledWith("admin_update_organizational_unit_v2", params);
+    expect(qararRpc).not.toHaveBeenCalled();
+  });
+  it("يوجه إنشاء الوحدة التنظيمية إلى عقد V2 دون رمز يدوي", async () => {
+    qararRpcV2.mockResolvedValue({ id: "unit-1" });
+    const params = { p_name_ar: "كلية العلوم", p_unit_type_id: "type-1", p_parent_unit_id: null, p_client_request_id: "request-1" };
+    const response = await POST(request({ contract: "admin_create_organizational_unit_v2", params }));
+    expect(response.status).toBe(200);
+    expect(qararRpcV2).toHaveBeenCalledWith("admin_create_organizational_unit_v2", params);
+  });
   it("يمرر عقد المجلس المسموح ومعاملاته فقط", async () => {
     qararRpc.mockResolvedValue({ id: "council-1" });
 

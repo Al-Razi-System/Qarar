@@ -1,0 +1,6 @@
+.panel { margin-block: 16px; padding: 18px 20px; border: 1px solid var(--color-border, #dce8f2); border-inline-start: 3px solid var(--color-primary, #0877d6); border-radius: 14px; background: var(--color-surface, #f8fbfe); color: var(--color-text, #173652); min-width: 0; }
+.heading { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--color-primary, #0877d6); }
+.heading h3 { margin: 0; font-size: 14px; font-weight: 700; }
+.heading span { margin-inline-start: auto; font-size: 11px; color: var(--color-text-muted, #64748b); }
+.panel>div:last-child { margin-top:12px; }
+@media (max-width: 640px) { .panel { padding: 14px; } }

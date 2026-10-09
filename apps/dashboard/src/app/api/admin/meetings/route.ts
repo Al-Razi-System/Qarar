@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { qararRpc } from "@/shared/api/qarar-server";
+import { qararRpc, qararRpcV2 } from "@/shared/api/qarar-server";
 import { safeAdminError } from "@/shared/security/admin-error";
 import { isJsonObject, readJsonObject } from "@/shared/security/json-body";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
+import { apiError, apiSuccess, requestId } from "@/shared/api/response";
+import { logEvent } from "@/shared/observability/logger";
 
 const contracts = new Set([
   "search_meetings", "create_meeting", "create_meeting_series", "create_meeting_series_from_existing", "list_meeting_series", "update_meeting_series_recurrence", "get_meeting_detail", "get_completed_meeting_record", "list_meeting_topic_attachments", "update_meeting",
@@ -18,6 +20,7 @@ const contracts = new Set([
   "create_decision_from_voting_round", "list_meeting_decisions", "list_meeting_voting_rounds",
   "update_agenda_discussion", "complete_meeting_session",
   "send_meeting_invitations",
+  "send_meeting_invitations_v2",
   "get_meeting_readiness",
   "get_meeting_minutes", "save_meeting_minutes_draft", "submit_meeting_minutes",
   "respond_meeting_minutes_approval", "generate_meeting_minutes_draft",
@@ -25,6 +28,7 @@ const contracts = new Set([
 ]);
 
 export async function POST(request: Request) {
+  const id = requestId(request);
   const originError = rejectUntrustedMutation(request);
   if (originError) return originError;
 
@@ -39,17 +43,18 @@ export async function POST(request: Request) {
     if (params !== undefined && !isJsonObject(params)) {
       return NextResponse.json({ error: { message: "معاملات العملية غير صالحة." } }, { status: 400 });
     }
-    const data = await qararRpc<unknown>(contract, params ?? {});
-    return NextResponse.json({ data });
+    const data = await (contract.endsWith("_v2") ? qararRpcV2<unknown>(contract, params ?? {}) : qararRpc<unknown>(contract, params ?? {}));
+    return apiSuccess(data, id);
   } catch (error) {
     const safeError = safeAdminError(error, "تعذر تنفيذ العملية.", 500);
-    console.error("[meetings-api] operation failed", {
+    logEvent(safeError.status < 500 ? "warn" : "error", "meeting.operation.failed", {
+      request_id: id,
       contract: typeof parsedBody.value.contract === "string" ? parsedBody.value.contract : "unknown",
       status: safeError.status,
       code: safeError.code,
       upstreamCode: typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined,
       message: error instanceof Error ? error.message : String(error),
     });
-    return NextResponse.json({ error: { code: safeError.code, message: safeError.message } }, { status: safeError.status });
+    return apiError(safeError.message, safeError.status, safeError.code, id);
   }
 }

@@ -83,7 +83,7 @@ select
   values_to_insert.name_ar,
   values_to_insert.name_en,
   1,
-  'active'
+  case when unit_type.is_council_type then 'inactive' else 'active' end
 from (
   values
     (
@@ -124,8 +124,7 @@ join public.governance_unit_types unit_type
  and unit_type.code = values_to_insert.unit_type_code
 on conflict (organization_id, code) do update
 set name_ar = excluded.name_ar,
-    name_en = excluded.name_en,
-    status = excluded.status;
+    name_en = excluded.name_en;
 
 update qarar_core.governance_units
 set governance_class_id = '10000000-0000-0000-0000-000000000101',

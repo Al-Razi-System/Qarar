@@ -1,0 +1,126 @@
+// Isolated development tenant; never changes existing university data or production.
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import {createRequire} from 'node:module';
+const require=createRequire(new URL('../apps/dashboard/package.json',import.meta.url));
+const {chromium,expect:baseExpect}=require('@playwright/test');
+const expect=baseExpect.configure({timeout:60000});
+const env=Object.fromEntries(fs.readFileSync(new URL('../supabase/docker/.env.remote-dev',import.meta.url),'utf8').split(/\r?\n/).filter(l=>l&&!l.startsWith('#')&&l.includes('=')).map(l=>{const i=l.indexOf('=');return[l.slice(0,i),l.slice(i+1).replace(/^"|"$/g,'')]}));
+const base='http://127.0.0.1:55421',domain='https://devqarar.prideidea.com',db='qarar-dev-supabase-db';
+const org=crypto.randomUUID(),type=crypto.randomUUID(),unitType=crypto.randomUUID(),u1=crypto.randomUUID(),u2=crypto.randomUUID(),c1=crypto.randomUUID(),c2=crypto.randomUUID(),c3=crypto.randomUUID(),suffix=Date.now();
+const email=`scope-browser-${suffix}@example.test`,password=crypto.randomBytes(24).toString('hex')+'!Aa';
+let browser,userId,employeeId,invitedId,page;
+async function api(path,body,key=env.SERVICE_ROLE_KEY,extra={}) {
+ const response=await fetch(base+path,{method:'POST',headers:{apikey:env.ANON_KEY,Authorization:`Bearer ${key}`,'Content-Type':'application/json',...extra},body:JSON.stringify(body),signal:AbortSignal.timeout(60000)});
+ const data=await response.json();if(!response.ok)throw Error(`${path}: ${response.status} ${data.message||data.msg||''}`);return data;
+}
+function sql(body){return execFileSync('docker',['exec',db,'psql','-X','-v','ON_ERROR_STOP=1','-U','supabase_admin','-d','postgres','-c',body],{encoding:'utf8'});}
+function totp(secret){let bits='';for(const c of secret.toUpperCase().replace(/=+$/,''))bits+='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.indexOf(c).toString(2).padStart(5,'0');const bytes=[];for(let i=0;i+8<=bits.length;i+=8)bytes.push(parseInt(bits.slice(i,i+8),2));const counter=Buffer.alloc(8);counter.writeBigUInt64BE(BigInt(Math.floor(Date.now()/30000)));const digest=crypto.createHmac('sha1',Buffer.from(bytes)).update(counter).digest();return String((digest.readUInt32BE(digest[19]&15)&0x7fffffff)%1000000).padStart(6,'0');}
+try {
+ userId=(await api('/auth/v1/admin/users',{email,password,email_confirm:true})).id;
+ employeeId=(await api('/auth/v1/admin/users',{email:'employee-'+email,password,email_confirm:true})).id;
+ sql(`insert into qarar_core.organizations(id,code,name_ar) values('${org}','scope-browser-${suffix}','اختبار نطاق التقديم المعزول');`);
+ await api('/rest/v1/rpc/service_bootstrap_organization_admin',{p_auth_user_id:userId,p_organization_code:'scope-browser-'+suffix,p_email:email,p_full_name_ar:'مدير اختبار النطاق',p_full_name_en:null,p_employee_no:null,p_mobile:null,p_job_title:null,p_approval_reference:'DEV-SCOPE-'+suffix},env.SERVICE_ROLE_KEY,{'Content-Profile':'api_v1'});
+ sql(`
+ insert into qarar_iam.users(id,organization_id,email,full_name_ar) values('${employeeId}','${org}','employee-${email}','موظف اختبار النطاق');
+ insert into qarar_core.governance_unit_types(id,organization_id,code,name_ar,is_council_type) values('${type}','${org}','council','مجلس',true),('${unitType}','${org}','unit','وحدة',false);
+ insert into qarar_core.governance_units(id,organization_id,unit_type_id,code,name_ar,status,parent_unit_id) values('${u1}','${org}','${unitType}','faculty','كلية الاختبار','active',null),('${u2}','${org}','${unitType}','department','قسم الاختبار','active','${u1}');
+ insert into qarar_core.governance_units(id,organization_id,unit_type_id,code,name_ar,status,scope_unit_id) values('${c1}','${org}','${type}','faculty_council','مجلس الكلية التجريبية','active','${u1}'),('${c2}','${org}','${type}','department_council','مجلس القسم التجريبي','active','${u2}'),('${c3}','${org}','${type}','independent','مجلس مستقل','active',null);
+ `);
+ const session=await api('/auth/v1/token?grant_type=password',{email,password},env.ANON_KEY);
+ const factor=await api('/auth/v1/factors',{factor_type:'totp',friendly_name:'Scope isolated UI test'},session.access_token);
+ const challenge=await api('/auth/v1/factors/'+factor.id+'/challenge',{},session.access_token);
+ const verified=await api('/auth/v1/factors/'+factor.id+'/verify',{challenge_id:challenge.id,code:totp(factor.totp.secret)},session.access_token);
+ browser=await chromium.launch({headless:true});
+ const context=await browser.newContext({viewport:{width:1440,height:1000}});
+ await context.addCookies([{name:'qarar_access_token',value:verified.access_token,url:domain,httpOnly:true,sameSite:'Lax'},{name:'qarar_refresh_token',value:verified.refresh_token,url:domain,httpOnly:true,sameSite:'Lax'}]);
+ page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(domain+'/admin/users',{waitUntil:'domcontentloaded',timeout:90000});
+ let creationCount=0;
+ page.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/api/admin/users'))creationCount++;});
+ await page.getByRole('button',{name:'إنشاء حساب جديد',exact:true}).click();
+ const dialog=page.getByRole('dialog');
+ await expect(dialog.getByLabel('الاسم الكامل بالعربية')).toBeVisible();
+ await expect(dialog.getByLabel('الاسم الكامل بالإنجليزية')).toHaveCount(0);
+ await page.screenshot({path:'/tmp/qarar-create-user-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({path:'/tmp/qarar-create-user-mobile.png',fullPage:true});
+ if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Creation mobile overflow');
+ await page.setViewportSize({width:1440,height:1000});
+ await dialog.getByLabel('الاسم الكامل بالعربية').fill('موظف الدعوة التجريبية');
+ await dialog.getByLabel('البريد الإلكتروني المؤسسي').fill('invited-'+email);
+ await dialog.getByRole('button',{name:'التالي',exact:true}).click();
+ await dialog.getByRole('button',{name:'التالي',exact:true}).click();
+ await dialog.getByRole('checkbox',{name:/أؤكد/}).check();
+ const creationResponse=page.waitForResponse(r=>r.url().endsWith('/api/admin/users')&&r.request().method()==='POST');
+ await dialog.getByRole('button',{name:'إنشاء الحساب',exact:true}).click();
+ const createdResponse=await creationResponse;
+ const created=await createdResponse.json();
+ if(!createdResponse.ok()||!created.account_created||!created.invitation_sent)throw Error('Isolated account creation failed: '+createdResponse.status());
+ invitedId=created.user_id;
+ await expect(dialog.getByRole('status').filter({hasText:'تم إنشاء الحساب'})).toBeVisible();
+ await expect(dialog.getByLabel('الوحدة أو الإدارة',{exact:true})).toBeVisible();
+ await dialog.getByLabel('الوحدة أو الإدارة',{exact:true}).selectOption(u1);
+ await dialog.getByRole('checkbox',{name:'مجلس الكلية التجريبية',exact:true}).check();
+ await dialog.getByRole('checkbox',{name:'شمول المجالس التابعة عبر الهيكل التنظيمي',exact:true}).check();
+ await page.route('**/submission-scope',async route=>{
+   if(route.request().method()!=='PUT')return route.continue();
+   await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'تعذر حفظ نطاق الحساب الجديد مؤقتًا.'})});
+ });
+ await dialog.getByRole('button',{name:'حفظ جهة العمل والنطاق',exact:true}).click();
+ await expect(dialog.locator('p[role="alert"]')).toContainText('تعذر حفظ نطاق');
+ await expect(dialog.getByRole('button',{name:'إنشاء الحساب',exact:true})).toHaveCount(0);
+ await page.unroute('**/submission-scope');
+ await dialog.getByRole('button',{name:'حفظ جهة العمل والنطاق',exact:true}).click();
+ await expect(dialog).toHaveCount(0);
+ await expect(page.getByText('موظف الدعوة التجريبية',{exact:true})).toBeVisible();
+ if(creationCount!==1)throw Error('Scope retry recreated account');
+ const saved=sql(`select count(*) from qarar_iam.user_submission_profiles_v2 p join qarar_iam.users u on u.id=p.user_id where u.id='${invitedId}' and u.organization_id='${org}' and u.status='inactive' and p.revision=1 and p.home_unit_id='${u1}';`);
+ if(!/\b1\b/.test(saved))throw Error('Created scope did not preserve inactive account');
+ await page.getByRole('button',{name:'عمليات موظف اختبار النطاق',exact:true}).click();
+ await page.getByRole('link',{name:'جهة العمل وصلاحيات التقديم',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'جهة العمل ونطاق التقديم',exact:true})).toBeVisible();
+ await expect(page.getByLabel('الوحدة أو الإدارة',{exact:true})).toBeVisible();
+ await page.getByLabel('الوحدة أو الإدارة',{exact:true}).selectOption(u1);
+ await page.getByRole('checkbox',{name:'مجلس الكلية التجريبية',exact:true}).check();
+ await page.getByRole('checkbox',{name:'شمول المجالس التابعة عبر الهيكل التنظيمي',exact:true}).check();
+ await expect(page.getByRole('complementary',{name:'معاينة نطاق التقديم'}).getByRole('listitem').filter({hasText:'مجلس القسم التجريبي'})).toBeVisible();
+ await expect(page.getByRole('complementary',{name:'معاينة نطاق التقديم'}).getByRole('listitem').filter({hasText:'مجلس مستقل'})).toHaveCount(0);
+ let failedKey,successKey;
+ await page.route('**/submission-scope',async route=>{
+  if(route.request().method()!=='PUT')return route.continue();
+  failedKey=route.request().postDataJSON().requestId;
+  await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'تعذر الحفظ مؤقتًا.'})});
+ });
+ await page.getByRole('button',{name:'حفظ جهة العمل والنطاق',exact:true}).click();
+ await expect(page.locator('p[role="alert"]')).toContainText('تعذر الحفظ');
+ await expect(page.getByRole('checkbox',{name:'مجلس الكلية التجريبية',exact:true})).toBeChecked();
+ await page.unroute('**/submission-scope');
+ page.on('request',r=>{if(r.method()==='PUT'&&r.url().endsWith('/submission-scope'))successKey=r.postDataJSON().requestId;});
+ await page.getByRole('button',{name:'حفظ جهة العمل والنطاق',exact:true}).click();
+ await expect(page.getByRole('status')).toContainText('حُفظت');
+ if(failedKey!==successKey)throw Error('Retry lost receipt');
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.getByRole('checkbox',{name:'مجلس الكلية التجريبية',exact:true})).toBeChecked();
+ await expect(page.getByLabel('الوحدة أو الإدارة',{exact:true})).toHaveValue(u1);
+ await page.screenshot({path:'/tmp/qarar-user-scope-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({path:'/tmp/qarar-user-scope-mobile.png',fullPage:true});
+ if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile overflow');
+ const employee=await api('/auth/v1/token?grant_type=password',{email:'employee-'+email,password},env.ANON_KEY);
+ const options=await api('/rest/v1/rpc/get_topic_form_options',{},employee.access_token,{'Content-Profile':'api_v1'});
+ const allowed=options.governance_units.map(u=>u.id);
+ if(!allowed.includes(c1)||!allowed.includes(c2)||allowed.includes(c3))throw Error('Submission options violate scope');
+ const denied=await fetch(base+'/rest/v1/rpc/save_user_submission_scope_v2',{method:'POST',headers:{apikey:env.ANON_KEY,Authorization:'Bearer '+employee.access_token,'Content-Type':'application/json','Content-Profile':'api_v2'},body:JSON.stringify({p_user_id:employeeId,p_expected_revision:1,p_home_unit_id:null,p_rules:[],p_request_id:crypto.randomUUID()})});
+ if(denied.ok)throw Error('Employee changed own scope');
+ if(errors.length)throw Error('Browser errors: '+errors.join('; '));
+ console.log(JSON.stringify({ok:true,checks:['real account creation and invitation','optional fields collapsed','creation scope step','scope failure never recreates account','successful save closes creation dialog','created account stays inactive','menu entry','home unit','council and descendants','server failure retains selections','retry same receipt','save and reload','desktop/mobile','real employee submission options','self elevation denied']}));
+} catch(error) {
+ if(page){await page.screenshot({path:'/tmp/qarar-user-scope-failure.png',fullPage:true}).catch(()=>{});console.error((await page.locator('body').innerText()).slice(-3000));}
+ throw error;
+} finally {
+ await browser?.close();
+ if(!invitedId&&userId)invitedId=sql(`select id from qarar_iam.users where organization_id='${org}' and email='invited-${email}';`).match(/[0-9a-f]{8}-[0-9a-f-]{27}/)?.[0];
+ for(const id of [userId,employeeId,invitedId].filter(Boolean))await fetch(base+'/auth/v1/admin/users/'+id,{method:'PUT',headers:{apikey:env.ANON_KEY,Authorization:'Bearer '+env.SERVICE_ROLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({ban_duration:'876000h'})});
+}

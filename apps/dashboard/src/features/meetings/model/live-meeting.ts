@@ -17,6 +17,7 @@ export type AgendaDiscussionItem = {
   agenda_order: number;
   agenda_status?: string;
   discussion_notes?: string | null;
+  discussion_instructions?: string | null;
   updated_at?: string;
   workflow_step_type?: string | null;
   workflow_responsibility?: string | null;

@@ -8,6 +8,7 @@ services:
     command: npm run dev -- --hostname 0.0.0.0 --port 3000
     environment:
       APP_ORIGIN: https://devqarar.prideidea.com
+      QARAR_ALLOWED_DEV_ORIGINS: devqarar.prideidea.com
       HOSTNAME: 0.0.0.0
       NODE_ENV: development
       PORT: 3000

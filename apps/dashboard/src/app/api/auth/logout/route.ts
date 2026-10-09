@@ -31,10 +31,10 @@ export async function POST(request: Request) {
   if (originError) return originError;
 
   const cookieStore = await cookies();
-  const accessToken = cookieStore.get("qarar_access_token")?.value;
+  const accessToken = cookieStore.get("qarar_access_token")?.value ?? cookieStore.get("qarar_temporary_access_token")?.value ?? cookieStore.get("qarar_mfa_access_token")?.value;
   if (accessToken) await revokeRemoteSession(accessToken);
 
-  ["qarar_access_token", "qarar_refresh_token"].forEach((name) => {
+  ["qarar_access_token", "qarar_refresh_token", "qarar_temporary_access_token", "qarar_mfa_access_token", "qarar_mfa_refresh_token"].forEach((name) => {
     cookieStore.set({
       name,
       value: "",

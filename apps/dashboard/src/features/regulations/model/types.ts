@@ -42,6 +42,8 @@ export type PolicyScope = {
   is_active: boolean;
 };
 export type PolicyVersion = {
+  library_mode?: boolean;
+  reference_number?: string | null;
   id: string;
   version_no: number;
   version_label?: string | null;

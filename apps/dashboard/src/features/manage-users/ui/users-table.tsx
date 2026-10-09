@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Ellipsis,
   KeyRound,
@@ -88,9 +89,11 @@ type UsersPage = { items: ManagedUser[]; total: number };
 export function UsersTable({
   users,
   total,
+  canManageSubmissionScopes = false,
 }: {
   users: ManagedUser[];
   total: number;
+  canManageSubmissionScopes?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -424,6 +427,10 @@ export function UsersTable({
               <Pencil size={16} />
               تعديل بيانات المستخدم
             </button>
+            {canManageSubmissionScopes && <Link
+              href={`/admin/users/${openMenu.user.id}/submission-scope`}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-[11px] font-bold text-[#0066cc] hover:bg-[#edf6ff]"
+            ><UsersRound size={16} />جهة العمل وصلاحيات التقديم</Link>}
             {(
               (openMenu.user.status === "active"
                 ? ["lock_user", "update_user_status"]

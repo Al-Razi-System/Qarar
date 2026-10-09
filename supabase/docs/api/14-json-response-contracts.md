@@ -98,6 +98,11 @@ unknown fields.
 | `admin_export_permission_matrix` | `{schema_version:1,exported_at,organization_id,permissions:object[],roles:object[],assignments:object[]}` |
 | `list_my_sessions` | `SessionSummary[]`; ordered by last activity, with session/device/platform/app/status/activity/revocation fields |
 | `request_session_revocation` | `{revoked:bool,session_id:uuid}`; application-level record only |
+| `service_finalize_temporary_user` | Internal `{user_id,membership_id?,must_change_password:true,status:"active"}`; never contains a password/hash |
+| `service_get_temporary_password_state` | Internal `{user_id,must_change_password:bool,expires_at}`; active account only |
+| `service_claim_temporary_password` | Internal `{claimed:true}`; competing attempt raises conflict |
+| `service_finish_temporary_password` | Internal `{completed:true,replay:bool}`; matching completion receipt replays safely |
+| `service_release_temporary_password` | Internal void; release only the same pending claim |
 
 `UserRoleSummary` contains `membership_id`, `role_id`, `role_code`, `role_name_ar`,
 `governance_unit_id`, `governance_unit_name_ar`, and `membership_status`.

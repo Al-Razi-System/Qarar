@@ -55,6 +55,7 @@ Returns HTTP `404` semantics through an RPC error when the user is absent or bel
 ```json
 {
   "action": "create_user",
+  "creation_mode": "temporary_password",
   "email": "member@example.edu.sa",
   "full_name_ar": "عضو جديد",
   "temporary_password": "Qarar-Strong!2026",
@@ -73,14 +74,46 @@ Success (`201`):
 {
   "user_id": "<uuid>",
   "membership_id": "<uuid-or-null>",
-  "account_created": true
+  "account_created": true,
+  "invitation_sent": false,
+  "must_change_password": true
 }
 ```
 
-The function validates the caller, enforces a strong temporary password, limits creation to 10
-attempts per 10 minutes, creates a confirmed Auth identity and application profile, and assigns the
-optional initial role. No invitation email is sent. If profile or
-role creation fails, it deletes the newly created Auth user as compensation.
+The default `creation_mode` is `invitation`: an unconfirmed Auth identity and inactive
+profile receive a one-time activation invitation. The receipt includes `invitation_sent:true`.
+`temporary_password` mode is restricted to a system administrator (the sensitive
+dashboard gateway requires MFA). Passwords are 12–128 characters with uppercase,
+lowercase, digit and symbol. Both modes retain the 10-attempts/10-minutes rate limit.
+An optional initial role requires its validated resource context.
+
+Direct creation first creates unconfirmed Auth, then atomically finalizes the profile,
+initial membership and password-replacement gate through `service_finalize_temporary_user`;
+only then is email confirmed. No invitation is created or sent and no password appears
+in the receipt or audit. Failed/uncertain provisioning must be checked in the user list
+before attempting another creation. Compensation targets only the newly created identity.
+
+## Required first password replacement
+
+`POST /api/auth/login` checks the service-only `service_get_temporary_password_state`
+after successful Auth authentication. Pending users receive HTTP 202 with
+`{authenticated:false,password_change_required:true}` and a 15-minute HttpOnly strict
+temporary cookie, not application/refresh cookies. Replacement expires seven days
+after creation. Database organization and permission resolution are blocked while pending.
+
+`POST /api/auth/temporary-password` accepts `{currentPassword,password}`, derives the
+user identity from the temporary cookie verified by Auth and never from a client UUID.
+It rate-limits and verifies the current password, rejects equal plaintext passwords,
+acquires `service_claim_temporary_password`, changes the password with the user's
+Auth token, then calls `service_finish_temporary_password`. Completion verifies that
+Auth's stored hash differs from the initial baseline, revokes Auth sessions and clears
+the gate atomically. New sessions must exist in Auth; old temporary JWTs stay blocked.
+The response is `{changed:true,message}` and the user signs in again (including MFA
+if their roles require it). `service_release_temporary_password` only releases the
+same failed attempt. Claims expire in five minutes; simultaneous attempts are conflicts.
+Transport/uncertain update failures return `{uncertain:true,traceId,message}` and must
+lead to checking login with the new password, not a blind update retry.
+All five service contracts are inaccessible to browser/anonymous/authenticated RPC callers.
 
 The underlying `admin_create_user_profile(...)` RPC only finalizes an application profile for an
 already-created Auth user. It does not create an Auth identity or send email and is not the normal

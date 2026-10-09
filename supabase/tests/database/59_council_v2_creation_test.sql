@@ -63,7 +63,7 @@ select is((api_v2.admin_create_council_v2(
   true,'replaying the same request returns the original result');
 select is((select count(*)::integer from qarar_core.governance_units where created_by_user_id='59000000-0000-0000-0000-000000000010' and client_request_id='59000000-0000-0000-0000-000000000050'),
   1,'idempotent replay creates no duplicate council');
-select is((select count(*)::integer from qarar_meetings.council_meeting_plans_v2),
+select is((select count(*)::integer from qarar_meetings.council_meeting_plans_v2 where organization_id='59000000-0000-0000-0000-000000000001'),
   1,'idempotent replay creates no duplicate meeting plan');
 
 select throws_ok($$select api_v2.admin_create_council_v2(

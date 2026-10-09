@@ -50,6 +50,7 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `create_decision_from_voting_round` | `decisions` | `authenticated` | `p_voting_round_id uuid, p_decision_text text, p_requires_approval boolean` | `jsonb` |
 | `list_meeting_decisions` | `decisions` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `act_topic_workflow_step` | `governance` | `authenticated` | `p_topic_id uuid, p_outcome_code text, p_comment text, p_idempotency_key uuid, p_expected_version integer` | `jsonb` |
+| `add_prior_route_evidence_attachment` | `governance` | `authenticated` | `p_step_evidence_id uuid, p_topic_attachment_id uuid` | `jsonb` |
 | `admin_activate_policy_version` | `governance` | `authenticated` | `p_policy_version_id uuid, p_effective_from date, p_effective_to date` | `jsonb` |
 | `admin_activate_workflow_template_version` | `governance` | `authenticated` | `p_workflow_template_version_id uuid` | `jsonb` |
 | `admin_add_policy_attachment` | `governance` | `authenticated` | `p_policy_id uuid, p_policy_version_id uuid, p_policy_item_id uuid, p_file_name text, p_file_url text, p_mime_type text, p_file_size_bytes bigint, p_description text` | `jsonb` |
@@ -70,6 +71,8 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `admin_import_policy_bundle_v4` | `governance` | `authenticated` | `p_bundle jsonb, p_client_request_id uuid` | `jsonb` |
 | `admin_list_governance_exceptions` | `governance` | `authenticated` | `p_status text, p_limit integer, p_offset integer` | `jsonb` |
 | `admin_list_governance_unit_classes` | `governance` | `authenticated` | `p_query text, p_is_active boolean, p_limit integer, p_offset integer` | `jsonb` |
+| `admin_list_topic_custom_route_drafts` | `governance` | `authenticated` | `p_status text, p_limit integer, p_offset integer` | `jsonb` |
+| `admin_list_topic_prior_route_requests` | `governance` | `authenticated` | `p_status text` | `jsonb` |
 | `admin_list_workflow_templates` | `governance` | `authenticated` | `-` | `jsonb` |
 | `admin_move_policy_item` | `governance` | `authenticated` | `p_policy_item_id uuid, p_parent_item_id uuid, p_sort_order integer` | `jsonb` |
 | `admin_remove_empty_policy_version` | `governance` | `authenticated` | `p_policy_version_id uuid` | `jsonb` |
@@ -94,12 +97,19 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `admin_update_workflow_step` | `governance` | `authenticated` | `p_step_id uuid, p_name_ar text, p_sequence_no integer, p_responsibility text, p_governance_unit_id uuid, p_governance_class_id uuid, p_required_permission_code text, p_is_initial boolean, p_is_terminal boolean, p_entry_conditions jsonb, p_exit_conditions jsonb, p_allowed_outcomes text[]` | `jsonb` |
 | `admin_validate_policy_version_readiness` | `governance` | `authenticated` | `p_policy_version_id uuid` | `jsonb` |
 | `approve_custom_workflow` | `governance` | `authenticated` | `p_exception_id uuid, p_approve boolean, p_review_comment text` | `jsonb` |
+| `approve_topic_custom_route_draft` | `governance` | `authenticated` | `p_custom_route_draft_id uuid, p_approve boolean, p_review_comment text` | `jsonb` |
 | `approve_workflow_exception` | `governance` | `authenticated` | `p_exception_id uuid, p_approve boolean, p_review_comment text` | `jsonb` |
+| `create_topic_custom_route_draft` | `governance` | `authenticated` | `p_title_ar text, p_description text, p_category_id uuid, p_current_unit_id uuid, p_route_name_ar text, p_rationale text, p_steps jsonb, p_priority text, p_source_type text, p_title_en text, p_client_request_id uuid` | `jsonb` |
 | `create_topic_exception_request` | `governance` | `authenticated` | `p_title_ar text, p_description text, p_category_id uuid, p_current_unit_id uuid, p_workflow_template_version_id uuid, p_reason text, p_valid_until timestamp with time zone, p_priority text, p_source_type text, p_title_en text, p_client_request_id uuid` | `jsonb` |
+| `create_topic_governance_exception_request` | `governance` | `authenticated` | `p_title_ar text, p_description text, p_category_id uuid, p_current_unit_id uuid, p_workflow_template_version_id uuid, p_reason text, p_valid_until timestamp with time zone, p_priority text, p_source_type text, p_title_en text, p_client_request_id uuid, p_effective_on date` | `jsonb` |
+| `create_topic_prior_route_request` | `governance` | `authenticated` | `p_title_ar text, p_description text, p_category_id uuid, p_current_unit_id uuid, p_policy_id uuid, p_policy_version_id uuid, p_policy_item_id uuid, p_scope_assignment_id uuid, p_evidence jsonb, p_priority text, p_source_type text, p_title_en text, p_client_request_id uuid` | `jsonb` |
 | `get_policy_form_options` | `governance` | `authenticated` | `-` | `jsonb` |
 | `get_topic_exception_workflow_options` | `governance` | `authenticated` | `p_governance_unit_id uuid` | `jsonb` |
 | `get_topic_governance` | `governance` | `authenticated` | `p_topic_id uuid` | `jsonb` |
 | `get_topic_governance_summary` | `governance` | `authenticated` | `p_topic_id uuid` | `jsonb` |
+| `get_topic_prior_route_candidate_steps` | `governance` | `authenticated` | `p_governance_unit_id uuid, p_topic_category_id uuid, p_priority text, p_source_type text, p_effective_on date, p_policy_id uuid, p_policy_version_id uuid, p_policy_item_id uuid, p_scope_assignment_id uuid` | `jsonb` |
+| `get_topic_prior_route_request` | `governance` | `authenticated` | `p_topic_id uuid` | `jsonb` |
+| `get_topic_prior_route_summaries` | `governance` | `authenticated` | `p_topic_ids uuid[]` | `jsonb` |
 | `get_topic_regulation_options` | `governance` | `authenticated` | `p_governance_unit_id uuid, p_topic_category_id uuid, p_priority text, p_source_type text, p_effective_on date` | `jsonb` |
 | `get_topic_regulation_preview` | `governance` | `authenticated` | `p_governance_unit_id uuid, p_topic_category_id uuid, p_priority text, p_source_type text, p_effective_on date, p_policy_id uuid, p_policy_version_id uuid, p_policy_item_id uuid, p_scope_assignment_id uuid` | `jsonb` |
 | `get_topic_regulation_route_preview` | `governance` | `authenticated` | `p_governance_unit_id uuid, p_topic_category_id uuid, p_priority text, p_source_type text, p_effective_on date, p_policy_id uuid, p_policy_version_id uuid, p_policy_item_id uuid, p_scope_assignment_id uuid` | `jsonb` |
@@ -108,9 +118,11 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `preview_policy_conditions` | `governance` | `authenticated` | `p_conditions jsonb, p_context jsonb` | `jsonb` |
 | `request_custom_workflow` | `governance` | `authenticated` | `p_topic_id uuid, p_workflow_template_version_id uuid, p_reason text, p_valid_until timestamp with time zone` | `jsonb` |
 | `request_workflow_exception` | `governance` | `authenticated` | `p_topic_id uuid, p_workflow_template_version_id uuid, p_reason text, p_valid_until timestamp with time zone` | `jsonb` |
+| `review_topic_prior_route_request` | `governance` | `authenticated` | `p_request_id uuid, p_action text, p_comment text` | `jsonb` |
 | `service_acknowledge_notification_outbox` | `governance` | `service_role` | `p_event_id uuid, p_lock_token uuid` | `jsonb` |
 | `service_claim_notification_outbox` | `governance` | `service_role` | `p_worker_id uuid, p_lock_token uuid, p_limit integer, p_lease_seconds integer` | `TABLE(id uuid, organization_id uuid, aggregate_type text, aggregate_id uuid, event_type text, payload jsonb, deduplication_key text, attempts integer, lock_token uuid, lease_expires_at timestamp with time zone)` |
 | `service_fail_notification_outbox` | `governance` | `service_role` | `p_event_id uuid, p_lock_token uuid, p_error text` | `jsonb` |
+| `submit_topic_prior_route_request` | `governance` | `authenticated` | `p_request_id uuid` | `jsonb` |
 | `admin_add_council_member` | `iam` | `authenticated` | `p_council_id uuid, p_user_id uuid, p_role_id uuid, p_membership_title text, p_start_date date, p_end_date date` | `jsonb` |
 | `admin_assign_council_leadership` | `iam` | `authenticated` | `p_council_id uuid, p_chair_user_id uuid, p_rapporteur_user_id uuid, p_effective_date date, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `admin_assign_role` | `iam` | `authenticated` | `p_user_id uuid, p_role_id uuid, p_governance_unit_id uuid, p_membership_title text, p_start_date date, p_end_date date` | `uuid` |
@@ -153,12 +165,17 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `service_apply_user_status` | `iam` | `service_role` | `p_actor_user_id uuid, p_user_id uuid, p_status text, p_reason text` | `jsonb` |
 | `service_bootstrap_organization_admin` | `iam` | `service_role` | `p_auth_user_id uuid, p_organization_code text, p_email text, p_full_name_ar text, p_full_name_en text, p_employee_no text, p_mobile text, p_job_title text, p_approval_reference text` | `jsonb` |
 | `service_claim_activation` | `iam` | `service_role` | `p_token_hash text, p_claim_hash text` | `jsonb` |
+| `service_claim_temporary_password` | `iam` | `service_role` | `p_user_id uuid, p_request_id uuid` | `jsonb` |
 | `service_consume_iam_rate_limit` | `iam` | `service_role` | `p_actor_user_id uuid, p_operation text, p_limit integer, p_window_seconds integer` | `integer` |
 | `service_finalize_invited_user` | `iam` | `service_role` | `p_actor_user_id uuid, p_auth_user_id uuid, p_email text, p_full_name_ar text, p_employee_no text, p_mobile text, p_job_title text, p_role_id uuid, p_governance_unit_id uuid, p_membership_title text` | `jsonb` |
+| `service_finalize_temporary_user` | `iam` | `service_role` | `p_actor_user_id uuid, p_auth_user_id uuid, p_email text, p_full_name_ar text, p_employee_no text, p_mobile text, p_job_title text, p_role_id uuid, p_governance_unit_id uuid, p_membership_title text` | `jsonb` |
 | `service_finish_activation` | `iam` | `service_role` | `p_invitation_id uuid, p_auth_user_id uuid, p_claim_hash text, p_success boolean` | `jsonb` |
+| `service_finish_temporary_password` | `iam` | `service_role` | `p_user_id uuid, p_request_id uuid` | `jsonb` |
+| `service_get_temporary_password_state` | `iam` | `service_role` | `p_user_id uuid` | `jsonb` |
 | `service_issue_activation_invitation` | `iam` | `service_role` | `p_actor_user_id uuid, p_auth_user_id uuid, p_email text, p_full_name_ar text, p_role_id uuid, p_governance_unit_id uuid, p_token_hash text, p_expires_at timestamp with time zone` | `jsonb` |
 | `service_preview_activation` | `iam` | `service_role` | `p_token_hash text` | `jsonb` |
 | `service_record_iam_event` | `iam` | `service_role` | `p_actor_user_id uuid, p_target_user_id uuid, p_action text, p_metadata jsonb` | `uuid` |
+| `service_release_temporary_password` | `iam` | `service_role` | `p_user_id uuid, p_request_id uuid` | `void` |
 | `service_revoke_auth_sessions` | `iam` | `service_role` | `p_actor_user_id uuid, p_user_id uuid, p_auth_session_id uuid, p_reason text` | `integer` |
 | `sync_current_sso_groups` | `iam` | `service_role` | `p_external_groups text[]` | `integer` |
 | `update_my_preferences` | `iam` | `authenticated` | `p_locale text, p_timezone text, p_notification_settings jsonb, p_ui_settings jsonb` | `jsonb` |
@@ -170,6 +187,7 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `complete_meeting_session` | `meetings` | `authenticated` | `p_meeting_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `create_meeting` | `meetings` | `authenticated` | `p_governance_unit_id uuid, p_meeting_type_id uuid, p_title_ar text, p_scheduled_date date, p_start_time time without time zone, p_end_time time without time zone, p_location_type text, p_location_details text, p_title_en text, p_client_request_id uuid` | `jsonb` |
 | `create_meeting_series` | `meetings` | `authenticated` | `p_governance_unit_id uuid, p_meeting_type_id uuid, p_title_ar text, p_first_date date, p_start_time time without time zone, p_end_time time without time zone, p_location_type text, p_location_details text, p_frequency text, p_interval_count integer, p_occurrence_count integer` | `jsonb` |
+| `create_meeting_series_from_existing` | `meetings` | `authenticated` | `p_meeting_id uuid, p_frequency text, p_interval_count integer, p_occurrence_count integer` | `jsonb` |
 | `get_completed_meeting_record` | `meetings` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `get_meeting_detail` | `meetings` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `get_meeting_readiness` | `meetings` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
@@ -184,6 +202,7 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `transition_meeting` | `meetings` | `authenticated` | `p_meeting_id uuid, p_to_status text, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `update_agenda_discussion` | `meetings` | `authenticated` | `p_agenda_item_id uuid, p_status text, p_discussion_notes text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `update_meeting` | `meetings` | `authenticated` | `p_meeting_id uuid, p_title_ar text, p_scheduled_date date, p_start_time time without time zone, p_end_time time without time zone, p_location_type text, p_location_details text, p_title_en text, p_meeting_type_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `update_meeting_series_recurrence` | `meetings` | `authenticated` | `p_series_id uuid, p_anchor_meeting_id uuid, p_frequency text, p_interval_count integer, p_anchor_date date` | `jsonb` |
 | `generate_meeting_minutes_draft` | `minutes` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `get_meeting_minutes` | `minutes` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `respond_meeting_minutes_approval` | `minutes` | `authenticated` | `p_approval_id uuid, p_decision text, p_notes text, p_expected_updated_at timestamp with time zone` | `jsonb` |

@@ -1,22 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Plus, Users, X } from "lucide-react";
 import { CreateUserForm, type RoleOption, type UnitOption } from "./create-user-form";
 import { UsersTable, type ManagedUser } from "./users-table";
+const subscribeToHydration = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
 
 export function UsersWorkspace({
   users,
   total,
   roles,
   units,
+  canManageSubmissionScopes,
 }: {
   users: ManagedUser[];
   total: number;
   roles: RoleOption[];
   units: UnitOption[];
+  canManageSubmissionScopes: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const ready = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -40,15 +46,17 @@ export function UsersWorkspace({
         </div>
         <button
           type="button"
+          disabled={!ready}
+          title={!ready ? "جارٍ تجهيز إنشاء الحساب…" : undefined}
           onClick={() => setIsOpen(true)}
-          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#0066cc] px-5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(0,102,204,.18)] transition hover:bg-[#005bb7] sm:mr-auto"
+          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#0066cc] px-5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(0,102,204,.18)] transition hover:bg-[#005bb7] disabled:cursor-wait disabled:opacity-60 sm:mr-auto"
         >
           <Plus size={17} />
           إنشاء حساب جديد
         </button>
       </div>
 
-      <UsersTable users={users} total={total} />
+      <UsersTable users={users} total={total} canManageSubmissionScopes={canManageSubmissionScopes} />
 
       {isOpen && (
         <div
@@ -80,7 +88,7 @@ export function UsersWorkspace({
                 <X size={19} />
               </button>
             </div>
-            <CreateUserForm roles={roles} units={units} />
+            <CreateUserForm roles={roles} units={units} canManageSubmissionScopes={canManageSubmissionScopes} onComplete={() => setIsOpen(false)} />
           </div>
         </div>
       )}

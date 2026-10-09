@@ -19,6 +19,7 @@ const build = (options: {
   allowedOrigins?: readonly string[]
   originConfigurationValid?: boolean
   isProduction?: boolean
+  systemAdmin?: boolean
 } = {}) => {
   const calls: Array<{ name: string; args?: any }> = []
   const caller = {
@@ -26,6 +27,7 @@ const build = (options: {
     rpc: async (name: string, args: any) => {
       calls.push({ name, args })
       if (name === "has_permission") return { data: true, error: null }
+      if (name === "get_current_user_access_context") return { data: { is_system_admin: options.systemAdmin ?? true }, error: null }
       if (name === "request_session_revocation") return { data: { user_id: "target-id", auth_session_id: "auth-session-id" }, error: null }
       if (name === "admin_get_user_detail") return { data: { id: args.p_user_id, email: "target@example.test" }, error: null }
       return { data: null, error: null }
@@ -50,6 +52,9 @@ const build = (options: {
       if (name === "service_finalize_invited_user") return options.finalizeError
         ? { data: null, error: { message: options.finalizeError } }
         : { data: { user_id: "new-user", membership_id: "membership-id" }, error: null }
+      if (name === "service_finalize_temporary_user") return options.finalizeError
+        ? { data: null, error: { message: options.finalizeError } }
+        : { data: { user_id: "new-user", must_change_password: true }, error: null }
       if (name === "service_issue_activation_invitation") return { data: { invitation_id: "invitation-id" }, error: null }
       if (name === "service_apply_user_status") return { data: { user_id: args.p_user_id, status: args.p_status, auth_sessions_revoked: 2 }, error: null }
       if (name === "service_revoke_auth_sessions") return { data: 1, error: null }
@@ -72,6 +77,29 @@ const build = (options: {
     calls,
   }
 }
+
+test("system admin creates a temporary-password account without sending an invitation", async () => {
+  const { handler, calls } = build()
+  const response = await handler(request({ action: "create_user", creation_mode: "temporary_password", temporary_password: "TemporaryPassword42!", email: "new@example.test", full_name_ar: "مستخدم جديد" }))
+  assert.equal(response.status, 201)
+  const result = await response.json()
+  assert.equal(result.account_created, true)
+  assert.equal(result.must_change_password, true)
+  assert.equal(result.invitation_sent, false)
+  assert.ok(calls.some(c => c.name === "service_finalize_temporary_user"))
+  assert.ok(!calls.some(c => c.name === "sendEmail" || c.name === "service_issue_activation_invitation"))
+  assert.ok(!JSON.stringify(result).includes("TemporaryPassword42!"))
+})
+test("temporary creation rejects delegated managers before creating Auth", async () => {
+  const { handler, calls } = build({ systemAdmin: false })
+  assert.equal((await handler(request({ action: "create_user", creation_mode: "temporary_password", temporary_password: "TemporaryPassword42!", email: "new@example.test", full_name_ar: "مستخدم جديد" }))).status, 403)
+  assert.ok(!calls.some(c => c.name === "createUser"))
+})
+test("temporary creation validates password before creating Auth", async () => {
+  const { handler, calls } = build()
+  assert.equal((await handler(request({ action: "create_user", creation_mode: "temporary_password", temporary_password: "weak", email: "new@example.test", full_name_ar: "مستخدم جديد" }))).status, 400)
+  assert.ok(!calls.some(c => c.name === "createUser"))
+})
 
 test("parses only canonical exact origins from ALLOWED_ORIGINS", () => {
   assert.deepEqual(parseAllowedOrigins("https://app.test, http://localhost:3000"), {

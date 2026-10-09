@@ -39,7 +39,7 @@ describe("POST /api/auth/logout", () => {
         headers: expect.objectContaining({ Authorization: "Bearer access-token", apikey: "anon-key" }),
       }),
     );
-    expect(cookieSet).toHaveBeenCalledTimes(2);
+    expect(cookieSet).toHaveBeenCalledTimes(5);
   });
 
   it("يمحو الكوكيز حتى إن كانت خدمة الإلغاء غير متاحة", async () => {
@@ -50,6 +50,6 @@ describe("POST /api/auth/logout", () => {
     const response = await POST(new Request("http://localhost/api/auth/logout", { method: "POST" }));
 
     expect(response.status).toBe(200);
-    expect(cookieSet).toHaveBeenCalledTimes(2);
+    expect(cookieSet).toHaveBeenCalledTimes(5);
   });
 });

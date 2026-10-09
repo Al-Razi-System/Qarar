@@ -14,8 +14,10 @@ import {
 } from "../model/meeting";
 import { localDateKey, meetingOperationalGroup } from "../model/meeting-operational-state";
 import { MeetingAgendaPanel } from "./meeting-agenda-panel";
+import { ScheduledAgendaSuggestions } from "./scheduled-agenda-suggestions";
 import { CompletedMeetingSummary } from "./completed-meeting-summary";
 import { MeetingMinutesWorkspace } from "./meeting-minutes-workspace";
+import { InvitationTimingDialog } from "./invitation-timing-dialog";
 
 type Notice = { kind: "success" | "error"; text: string };
 type MeetingSeries = {
@@ -94,6 +96,7 @@ export function MeetingsWorkspace() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [createModal, setCreateModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
+  const [invitationModal, setInvitationModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [recurring, setRecurring] = useState(false);
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<MeetingSeries["frequency"]>("monthly");
@@ -293,8 +296,8 @@ export function MeetingsWorkspace() {
         p_meeting_id: selected.id,
         p_title_ar: fd.get("title_ar"),
         p_scheduled_date: fd.get("scheduled_date"),
-        p_start_time: fd.get("start_time"),
-        p_end_time: fd.get("end_time"),
+        p_start_time: selected.start_time ?? null,
+        p_end_time: selected.end_time ?? null,
         p_location_type: fd.get("location_type"),
         p_location_details: fd.get("location_details") || null,
         p_title_en: selected.title_en ?? null,
@@ -347,17 +350,6 @@ export function MeetingsWorkspace() {
     } finally {
       setDetailLoading(false);
     }
-  }
-
-  async function sendInvitations() {
-    if (!selected) return;
-    setDetailLoading(true); setNotice(null);
-    try {
-      const result = await rpc<{ queued: number }>("send_meeting_invitations", { p_meeting_id: selected.id, p_expected_updated_at: selected.updated_at });
-      setNotice({ kind: "success", text: `جُهزت دعوات الاجتماع للأعضاء (${result.queued} دعوة جديدة) وسُجلت في قائمة الإرسال.` });
-      await openDetail(selected.id);
-    } catch (err) { setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر تجهيز الدعوات." }); }
-    finally { setDetailLoading(false); }
   }
 
   async function moveAgendaItem(index: number, direction: -1 | 1) {
@@ -455,8 +447,8 @@ export function MeetingsWorkspace() {
         p_governance_unit_id: String(fd.get("governance_unit_id") ?? ""),
         p_meeting_type_id: String(fd.get("meeting_type_id") ?? ""),
         p_title_ar: fd.get("title_ar"),
-        p_start_time: fd.get("start_time"),
-        p_end_time: fd.get("end_time"),
+        p_start_time: null,
+        p_end_time: null,
         p_location_type: fd.get("location_type") || "onsite",
         p_location_details: fd.get("location_details") || null,
       };
@@ -610,6 +602,7 @@ export function MeetingsWorkspace() {
                 </div>
               </div>
 
+              {selected.capabilities?.can_manage_agenda && <ScheduledAgendaSuggestions items={selected.scheduled_suggestions ?? []}/>}
               {["closed", "archived"].includes(selected.status) ? <CompletedMeetingSummary meeting={selected} attachments={topicAttachments} /> : <MeetingAgendaPanel
                 meetingId={selected.id}
                 items={selected.agenda_items ?? []}
@@ -633,7 +626,7 @@ export function MeetingsWorkspace() {
                 {["draft", "scheduled"].includes(selected.status) && selected.capabilities?.can_manage && <button onClick={() => void openEditModal()} className="flex items-center gap-1.5 rounded-xl border border-[#9bc9f1] bg-white px-3 py-2 text-[11px] font-bold text-[#0066cc]"><Pencil size={14} /> تعديل إعدادات الاجتماع</button>}
                 {(["waiting_for_minutes", "waiting_for_approval", "closed", "archived"].includes(selected.status)) && <Link href={`/admin/meetings/${selected.id}/minutes`} className="flex items-center gap-1.5 rounded-xl bg-[#0877d6] px-4 py-2.5 text-[11px] font-black text-white shadow-[0_7px_18px_rgba(8,119,214,.2)]"><FileText size={14} />{["closed", "archived"].includes(selected.status) ? "عرض المحضر النهائي والتواقيع" : "فتح مساحة المحضر والمصادقات"}</Link>}
                 {selected.capabilities?.can_schedule && <button onClick={() => transitionMeeting("scheduled")} className="flex items-center gap-1.5 rounded-xl bg-[#0066cc] px-3 py-2 text-[11px] font-bold text-white"><Play size={14} /> جدولة</button>}
-                {selected.status === "scheduled" && <>{selected.capabilities?.can_send_invitations && <button onClick={() => void sendInvitations()} disabled={!readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "تجهيز دعوات أعضاء المجلس"} className="flex items-center gap-1.5 rounded-xl border border-[#bfd5e8] px-3 py-2 text-[11px] font-bold text-[#0066cc] disabled:opacity-40"><Users size={14} /> تجهيز الدعوات</button>}{selected.capabilities?.can_prepare_session && <button onClick={() => transitionMeeting("ready_to_start")} disabled={!readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "قفل التحضير وتجهيز الجلسة"} className="flex items-center gap-1.5 rounded-xl bg-[#f28c28] px-3 py-2 text-[11px] font-bold text-white disabled:bg-[#a9b6c5]"><Users size={14} /> تجهيز الجلسة</button>}</>}
+                {selected.status === "scheduled" && <>{selected.capabilities?.can_send_invitations && <button onClick={() => setInvitationModal(true)} disabled={detailLoading || !readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "تجهيز دعوات أعضاء المجلس"} className="flex items-center gap-1.5 rounded-xl border border-[#bfd5e8] px-3 py-2 text-[11px] font-bold text-[#0066cc] disabled:opacity-40"><Users size={14} /> تجهيز الدعوات</button>}{selected.capabilities?.can_prepare_session && <button onClick={() => transitionMeeting("ready_to_start")} disabled={!readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "قفل التحضير وتجهيز الجلسة"} className="flex items-center gap-1.5 rounded-xl bg-[#f28c28] px-3 py-2 text-[11px] font-bold text-white disabled:bg-[#a9b6c5]"><Users size={14} /> تجهيز الجلسة</button>}</>}
                 {selected.capabilities?.can_start_session && <button onClick={() => void openLiveSession()} className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white"><Play size={14} /> فتح الجلسة الحية</button>}
                 {selected.status === "in_progress" && <Link href={`/admin/meetings/${selected.id}/live`} className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white"><Play size={14} /> متابعة الجلسة الحية</Link>}
                 {selected.status === "waiting_for_minutes" && <span className="rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-bold text-amber-800">أكمل المحضر وأرسله للمصادقة من القسم أعلاه.</span>}
@@ -689,8 +682,9 @@ export function MeetingsWorkspace() {
       )}
 
       {/* Create Meeting Modal */}
+      {invitationModal && selected && selected.updated_at && <InvitationTimingDialog key={selected.id} meetingId={selected.id} expectedUpdatedAt={selected.updated_at} startTime={selected.start_time} endTime={selected.end_time} onClose={() => setInvitationModal(false)} onSent={() => { void openDetail(selected.id); }} />}
       {createModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#081630]/55 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#081630]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="إنشاء اجتماع جديد">
           <form onSubmit={handleCreate} className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#e7edf3] px-6 py-5">
               <div className="flex items-center gap-3">
@@ -700,6 +694,8 @@ export function MeetingsWorkspace() {
               <button type="button" onClick={() => setCreateModal(false)} className="text-[#73849a] hover:text-[#0a1330]"><X size={20} /></button>
             </div>
             <div className="grid overflow-y-auto gap-4 p-6">
+              {notice?.kind === "error" && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{notice.text}</p>}
+              <p className="text-xs leading-6 text-slate-500">يُحدد وقت البداية والنهاية عند تجهيز الدعوات، وليس عند إنشاء الاجتماع.</p>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">المجلس أو الجهة *</span><select required name="governance_unit_id" disabled={meetingOptionsLoading || !(meetingOptions?.meeting_units?.length)} className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs outline-none focus:border-[#0066cc] disabled:cursor-not-allowed disabled:bg-[#f4f7fa]"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الجهات…" : meetingOptions?.meeting_units?.length ? "اختر المجلس أو الجهة" : "لا توجد جهة متاحة ضمن صلاحياتك"}</option>{meetingOptions?.meeting_units?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name_ar}</option>)}</select><small className="mt-1 block text-[10px] text-[#718196]">تظهر الجهات التي تملك صلاحية إنشاء اجتماع فيها فقط.</small></label>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">نوع الاجتماع *</span><select required name="meeting_type_id" value={selectedMeetingTypeId} onChange={(event) => { const meetingTypeId = event.target.value; setSelectedMeetingTypeId(meetingTypeId); const meetingType = meetingOptions?.meeting_types?.find((type) => type.id === meetingTypeId); if (meetingType?.name_ar.includes("دوري")) setRecurring(true); }} disabled={meetingOptionsLoading || !(meetingOptions?.meeting_types?.length)} className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs outline-none focus:border-[#0066cc] disabled:cursor-not-allowed disabled:bg-[#f4f7fa]"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الأنواع…" : meetingOptions?.meeting_types?.length ? "اختر نوع الاجتماع" : "لا توجد أنواع اجتماعات نشطة"}</option>{meetingOptions?.meeting_types?.map((type) => <option key={type.id} value={type.id}>{type.name_ar}</option>)}</select><small className="mt-1 block text-[10px] text-[#718196]">عند اختيار «اجتماع دوري» ستظهر إعدادات دورة الانعقاد تلقائياً.</small></label>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">عنوان الاجتماع *</span><input required name="title_ar" placeholder="مثال: الاجتماع الثالث لمجلس القسم" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs outline-none focus:border-[#0066cc]" /></label>
@@ -707,8 +703,6 @@ export function MeetingsWorkspace() {
               {recurring && <div className="grid gap-3 rounded-2xl border border-blue-100 bg-blue-50/50 p-4 sm:grid-cols-3"><label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">دورة الاجتماع</span><select name="frequency" value={recurrenceFrequency} onChange={(event) => setRecurrenceFrequency(event.target.value as MeetingSeries["frequency"])} className="h-10 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs"><option value="weekly">أسبوعية</option><option value="monthly">شهرية</option><option value="quarterly">ربعية (كل 3 أشهر)</option><option value="semiannual">نصف سنوية (كل 6 أشهر)</option><option value="annual">سنوية</option><option value="custom">مخصصة</option></select></label>{recurrenceFrequency === "custom" ? <label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">التكرار كل كم يوم؟</span><input name="interval_count" type="number" min="1" max="365" defaultValue="14" className="h-10 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs" /></label> : <input type="hidden" name="interval_count" value="1"/>}<label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">عدد الاجتماعات</span><input name="occurrence_count" type="number" min="2" max="36" defaultValue="6" className="h-10 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs" /></label><p className="self-end text-[9px] leading-5 text-[#60748a]">سيبدأ التكرار من تاريخ أول اجتماع، ويمكن تعديل كل موعد لاحقاً قبل انعقاده.</p></div>}
               <div className="grid gap-4 sm:grid-cols-3">
                 <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">التاريخ *</span><input required type="date" name="scheduled_date" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs outline-none focus:border-[#0066cc]" /></label>
-                <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">بداية *</span><input required type="time" name="start_time" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs outline-none focus:border-[#0066cc]" /></label>
-                <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">نهاية *</span><input required type="time" name="end_time" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs outline-none focus:border-[#0066cc]" /></label>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">نوع المكان</span><select name="location_type" defaultValue="onsite" className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs outline-none focus:border-[#0066cc]"><option value="onsite">حضوري</option><option value="online">افتراضي</option><option value="hybrid">مختلط</option></select></label>
@@ -740,7 +734,7 @@ export function MeetingsWorkspace() {
                   <div className="grid gap-3 sm:grid-cols-2"><label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">نوع الدورة</span><select name="frequency" value={editRecurrenceFrequency} onChange={(event) => setEditRecurrenceFrequency(event.target.value as MeetingSeries["frequency"])} className="h-10 w-full rounded-xl border border-[#cbddeb] bg-white px-3 text-xs"><option value="weekly">أسبوعية</option><option value="monthly">شهرية</option><option value="quarterly">ربعية (كل 3 أشهر)</option><option value="semiannual">نصف سنوية (كل 6 أشهر)</option><option value="annual">سنوية</option><option value="custom">مخصصة</option></select></label>{editRecurrenceFrequency === "custom" ? <label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">التكرار كل كم يوم؟</span><input required name="interval_count" type="number" min="1" max="365" defaultValue={currentSeries?.frequency === "custom" ? currentSeries.interval_count : 14} className="h-10 w-full rounded-xl border border-[#cbddeb] bg-white px-3 text-xs"/></label> : <input type="hidden" name="interval_count" value="1"/>}{!currentSeries && <label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">إجمالي عدد الاجتماعات</span><input required name="occurrence_count" type="number" min="2" max="36" defaultValue="6" className="h-10 w-full rounded-xl border border-[#cbddeb] bg-white px-3 text-xs"/></label>}</div>
                 </div>;
               })()}
-              <div className="grid gap-3 sm:grid-cols-3"><label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">التاريخ *</span><input required type="date" name="scheduled_date" defaultValue={selected.scheduled_date} className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs"/></label><label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">البداية *</span><input required type="time" name="start_time" defaultValue={selected.start_time?.slice(0,5)} className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs"/></label><label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">النهاية *</span><input required type="time" name="end_time" defaultValue={selected.end_time?.slice(0,5)} className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs"/></label></div>
+              <div className="grid gap-3 sm:grid-cols-3"><label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">التاريخ *</span><input required type="date" name="scheduled_date" defaultValue={selected.scheduled_date} className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs"/></label></div>
               <div className="grid gap-3 sm:grid-cols-2"><label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">نوع المكان</span><select name="location_type" defaultValue={selected.location_type ?? "onsite"} className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs"><option value="onsite">حضوري</option><option value="online">افتراضي</option><option value="hybrid">مختلط</option></select></label><label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">تفاصيل المكان</span><input name="location_details" defaultValue={selected.location_details ?? ""} placeholder="القاعة أو رابط الاجتماع" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs"/></label></div>
             </div>
             <div className="flex justify-end gap-3 border-t border-[#e7edf3] bg-[#fbfcfe] px-6 py-4"><button type="button" onClick={() => setEditModal(false)} disabled={creating} className="h-10 rounded-xl border border-[#dbe5ef] px-4 text-xs font-bold text-[#52647a]">إلغاء</button><button disabled={creating} className="h-10 rounded-xl bg-[#0066cc] px-5 text-xs font-bold text-white disabled:opacity-50">{creating ? "جارٍ الحفظ…" : "حفظ التعديلات"}</button></div>

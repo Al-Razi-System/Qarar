@@ -1,5 +1,12 @@
 export type CouncilStatus = "inactive" | "active" | "archived";
 
+export type CouncilHierarchyUnit = {
+  id: string; parent_unit_id: string | null; name_ar: string; code: string;
+  status: CouncilStatus; type_name_ar: string;
+};
+export type CouncilHierarchyCouncil = CouncilSummary & { scope_unit_id: string | null };
+export type CouncilHierarchyData = { units: CouncilHierarchyUnit[]; councils: CouncilHierarchyCouncil[] };
+
 export type ReferenceOption = {
   id: string;
   code: string;
@@ -26,6 +33,8 @@ export type CouncilSummary = {
 };
 
 export type CouncilDetail = CouncilSummary & {
+  scope_unit_id?: string | null;
+  scope_unit?: Pick<ReferenceOption, "id" | "code" | "name_ar"> | null;
   unit_type: ReferenceOption;
   parent_unit?: Pick<ReferenceOption, "id" | "code" | "name_ar"> | null;
   governance_class?: ReferenceOption | null;
@@ -75,7 +84,6 @@ export type CouncilFormValues = {
   description: string;
   unitTypeId: string;
   scopeUnitId: string;
-  parentCouncilId: string;
   governanceClassId: string;
   minimumActiveMembers: number;
   allowDualLeadership: boolean;
@@ -83,8 +91,6 @@ export type CouncilFormValues = {
   meetingTypeId: string;
   recurrence: "weekly" | "monthly" | "quarterly" | "semiannual" | "annual";
   firstMeetingDate: string;
-  startTime: string;
-  endTime: string;
   planEndsOn: string;
   missedAfterDays: number;
 };

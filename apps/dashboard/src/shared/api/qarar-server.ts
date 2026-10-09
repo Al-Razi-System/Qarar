@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { cache } from "react";
+import { readEdgeResponse } from "./edge-response";
 
 function parseEnv(source: string) {
   return Object.fromEntries(
@@ -169,16 +170,7 @@ export async function qararEdge<T>(
     },
   );
 
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(
-      typeof result.message === "string"
-        ? result.message
-        : `QARAR_EDGE_${response.status}`,
-    );
-  }
-
-  return result as T;
+  return readEdgeResponse<T>(response);
 }
 
 export async function qararTable<T>(table: string, query: string): Promise<T> {

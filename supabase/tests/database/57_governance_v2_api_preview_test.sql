@@ -11,8 +11,9 @@ insert into qarar_iam.users(id,organization_id,email,full_name_ar,is_system_admi
 ('57000000-0000-0000-0000-000000000002','57000000-0000-0000-0000-000000000001','governance-v2-api-admin@example.test','مسؤول اختبار API',true),
 ('57000000-0000-0000-0000-000000000003','57000000-0000-0000-0000-000000000001','governance-v2-api-denied@example.test','مستخدم دون صلاحية',false);
 
-select ok(not has_schema_privilege('authenticated','api_v2','usage'),'authenticated cannot use preview API schema');
-select ok(not has_function_privilege('authenticated','api_v2.get_governance_bundle_v2(uuid)','execute'),'authenticated cannot execute preview API');
+-- The management release exposes the permission-checked details wrapper only.
+select ok(has_schema_privilege('authenticated','api_v2','usage'),'authenticated can use the published V2 schema');
+select ok(has_function_privilege('authenticated','api_v2.get_governance_bundle_v2(uuid)','execute'),'authenticated can execute permission-checked details API');
 select ok(not has_function_privilege('service_role','api_v2.get_governance_bundle_v2(uuid)','execute'),'service role cannot bypass preview boundary');
 
 set local "request.jwt.claims"='{"sub":"57000000-0000-0000-0000-000000000003","role":"authenticated"}';

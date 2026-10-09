@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { FormField } from "@/shared/ui/form-field";
 
+const subscribeToHydration = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
+
 export function LoginForm() {
+  const ready = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -16,6 +21,7 @@ export function LoginForm() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!ready || isSubmitting) return;
     setError("");
     setIsSubmitting(true);
 
@@ -32,6 +38,11 @@ export function LoginForm() {
         return;
       }
 
+      if (result.password_change_required === true) {
+        router.push("/change-password");
+        router.refresh();
+        return;
+      }
       if (result.mfa_required === true) {
         router.push("/mfa");
         router.refresh();
@@ -48,7 +59,8 @@ export function LoginForm() {
   }
 
   return (
-    <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+    <form className="mt-8" method="post" onSubmit={handleSubmit}>
+      <fieldset disabled={!ready || isSubmitting} className="space-y-5">
       <FormField
         label="البريد الإلكتروني"
         name="email"
@@ -103,11 +115,13 @@ export function LoginForm() {
       )}
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={!ready || isSubmitting}
         className="h-12 w-full rounded-xl bg-gradient-to-l from-[#0066cc] to-[#1e88e5] text-sm font-bold text-white shadow-[0_10px_25px_rgba(0,102,204,.2)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(0,102,204,.28)] disabled:cursor-wait disabled:opacity-70"
       >
-        {isSubmitting ? "جارٍ التحقق..." : "تسجيل الدخول"}
+        {!ready ? "جارٍ تجهيز تسجيل الدخول…" : isSubmitting ? "جارٍ التحقق..." : "تسجيل الدخول"}
       </button>
+      </fieldset>
+      <noscript><p role="alert" className="mt-3 text-sm text-red-700">فعّل JavaScript في المتصفح لتسجيل الدخول بأمان.</p></noscript>
     </form>
   );
 }

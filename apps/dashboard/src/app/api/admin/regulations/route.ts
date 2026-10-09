@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
-import { QararApiError, qararRpc, requireQararSession } from "@/shared/api/qarar-server";
+import { QararApiError, qararRpc, qararRpcV2, requireQararSession } from "@/shared/api/qarar-server";
+import { logEvent } from "@/shared/observability/logger";
 import { apiError, apiSuccess, requestId } from "@/shared/api/response";
 import { isJsonObject, readJsonObject } from "@/shared/security/json-body";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
 
 const contracts = new Set([
+  "admin_get_route_layouts_v2",
+  "admin_save_route_layout_v2",
+  "admin_get_route_designer_v2",
+  "admin_save_route_designer_v2",
+  "admin_search_regulation_library_v2",
+  "admin_get_regulation_library_v2",
+  "admin_save_regulation_library_v2",
   "admin_search_policies",
   "admin_get_policy_detail",
   "admin_create_policy",
@@ -128,7 +136,43 @@ function errorMessage(code?: string, fallback?: string, hint?: string) {
   return messages[code ?? ""] ?? "تعذر تنفيذ العملية.";
 }
 
+function libraryFailure(code?: string, cause = "") {
+  if (cause.includes("LIBRARY_PENDING_CHANGES")) return "توجد تعديلات غير منشورة. افتح مسودة التعديل لتغيير حالة البند قبل نشر النص.";
+  if (cause.includes("LIBRARY_PARENT_NOT_PUBLISHED")) return "نشّط البند الأب أولًا، ثم نشّط هذا البند.";
+  if (cause.includes("LIBRARY_ITEM_NOT_PUBLISHED")) return "هذا البند لم يُنشر بعد؛ يمكنك تنشيطه أولًا.";
+  if (cause.includes("LIBRARY_ITEM_PUBLISHED")) return "البند منشور؛ عطّله بدل حذف سجله وارتباطاته.";
+  if (cause.includes("LIBRARY_STRUCTURAL_ITEM")) return "الأبواب والفصول لتنظيم النص؛ التنشيط متاح للمواد والبنود.";
+  if (cause.includes("LIBRARY_HISTORICAL_SOURCE")) return "هذه نسخة محفوظة للقراءة. افتح النص الحالي لتغيير حالة البند.";
+  if (code === "40001" || code === "PT409") return "يوجد تعديل أحدث على اللائحة. احتفظ بنصك، وأعد تحميل اللائحة قبل الحفظ.";
+  if (code === "42501") return "ليست لديك صلاحية إدارة هذه اللائحة وتنفيذ هذه العملية.";
+  if (code === "23503") return "البند مرتبط ببنود أو مرفقات أو سجلات. عالج الارتباطات قبل الحذف.";
+  if (cause.includes("LIBRARY_CONTENT_REQUIRED")) return "أضف مادة أو بندًا بنصه النظامي، واستكمل النصوص الفارغة قبل التنشيط.";
+  if (cause.includes("LIBRARY_ARCHIVED")) return "أعد تفعيل اللائحة قبل تعديلها.";
+  if (cause.includes("LIBRARY_IN_REVIEW")) return "اللائحة قيد المراجعة. انتظر القرار أو اطلب إعادتها للتعديل.";
+  if (cause.includes("LIBRARY_LEGACY_REVIEW")) return "هذه نسخة قديمة مرتبطة بقواعد تشغيلية. ابدأ تعديلًا مرجعيًا جديدًا مع حفظ النسخة السابقة.";
+  if (cause.includes("LIBRARY_PARENT_INVALID")) return "اختر بندًا أبًا من نفس اللائحة، دون ربط دائري.";
+  if (cause.includes("LIBRARY_APPROVAL_REQUIRED")) return "يجب اعتماد النص قبل جعله نافذًا.";
+  if (code === "P0002") return "السجل غير متاح أو لم يعد موجودًا. أعد تحميل القائمة.";
+  if (["22023", "22P02", "23514", "23505", "55000"].includes(code ?? "")) return "تعذر حفظ هذه البيانات أو تنفيذ الانتقال. راجع الحقول وحالة اللائحة ثم أعد المحاولة.";
+  return "تعذر تنفيذ العملية. احتفظ ببياناتك وأعد المحاولة؛ يمكنك إرسال مرجع المتابعة للدعم.";
+}
+
+function routeFailure(code?: string, cause = "") {
+  if (["PT409", "40001"].includes(code ?? "")) return "يوجد تعديل أحدث أو طلب حفظ متعارض. احتفظ بمدخلاتك ثم حمّل النسخة الأحدث قبل الحفظ.";
+  if (code === "42501") return "ليست لديك صلاحية إدارة مسارات الموضوعات.";
+  if (cause.includes("ROUTE_COUNCIL_INACTIVE")) return "المسودة محفوظة. نشّط المجالس المحددة في المراحل قبل تنشيط المسار.";
+  if (cause.includes("ROUTE_CLASS_UNAVAILABLE")) return "لا يوجد مجلس نشط لأحد الأنواع المختارة. جهّز المجالس أولًا؛ يمكنك الاحتفاظ بالمسار كمسودة.";
+  if (cause.includes("ROUTE_LEGACY_READ_ONLY")) return "هذا مسار سابق بإعدادات متقدمة؛ لم نغيّر بياناته. أنشئ مسارًا جديدًا بالمحرر المبسّط.";
+  if (cause.includes("ROUTE_DESTINATION_INVALID")) return "راجع نتائج المراحل؛ إحدى الوجهات محذوفة أو غير محددة أو تشير إلى المرحلة نفسها.";
+  if (cause.includes("ROUTE_TARGET_INVALID")) return "إحدى جهات المسار لم تعد متاحة. حدّث قائمة الجهات ثم اختر جهة صالحة.";
+  if (code === "P0002") return "المسار غير موجود أو غير متاح لحسابك. أعد تحميل القائمة.";
+  if (["22023", "22P02", "23514", "55000"].includes(code ?? "")) return "المسار غير مكتمل. راجع الجهات ونتائج المراحل وملاحظات التحقق ثم أعد المحاولة.";
+  return "تعذر تنفيذ عملية المسار. مدخلاتك باقية؛ أعد المحاولة أو أرسل مرجع المتابعة للدعم.";
+}
+
 export async function POST(request: Request) {
+  let isLibrary = false;
+  let isRoute = false;
   const originError = rejectUntrustedMutation(request);
   if (originError) return originError;
 
@@ -187,13 +231,16 @@ export async function POST(request: Request) {
         id,
       );
     }
-    const data = await qararRpc<unknown>(contract, safeParams);
+    isLibrary = contract.endsWith("_v2");
+    isRoute = contract === "admin_get_route_designer_v2" || contract === "admin_save_route_designer_v2" || contract === "admin_get_route_layouts_v2" || contract === "admin_save_route_layout_v2";
+    const data = await (isLibrary ? qararRpcV2<unknown>(contract, safeParams) : qararRpc<unknown>(contract, safeParams));
     return apiSuccess(data, id);
   } catch (error) {
+    logEvent(error instanceof QararApiError && error.status < 500 ? "warn" : "error", "regulation.operation.failed", { request_id: id, cause: error instanceof Error ? error.message : "UNKNOWN_FAILURE", ...(error instanceof QararApiError ? { code: error.code, status: error.status } : {}) });
     if (error instanceof QararApiError) {
       return apiError(
-        errorMessage(error.code, error.message, error.hint),
-        error.status,
+        isRoute ? routeFailure(error.code, error.message) : isLibrary ? libraryFailure(error.code, error.message) : errorMessage(error.code, error.message, error.hint),
+        isLibrary && ["40001", "PT409"].includes(error.code ?? "") ? 409 : error.status,
         error.code ?? "API_ERROR",
         id,
       );

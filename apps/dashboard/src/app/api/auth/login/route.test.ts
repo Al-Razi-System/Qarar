@@ -4,6 +4,8 @@ const { cookieSet, cookies } = vi.hoisted(() => ({
   cookieSet: vi.fn(),
   cookies: vi.fn(),
 }));
+const { temporaryState, cookieDelete } = vi.hoisted(() => ({ temporaryState: vi.fn(), cookieDelete: vi.fn() }));
+vi.mock("@/shared/api/qarar-service", () => ({ qararServiceRpc: temporaryState }));
 const { enforceLoginRateLimit, getLoginRateLimitConfig, isProductionEnvironment } = vi.hoisted(() => ({
   enforceLoginRateLimit: vi.fn(),
   getLoginRateLimitConfig: vi.fn(),
@@ -31,21 +33,37 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  temporaryState.mockResolvedValue({ must_change_password: false });
   getLoginRateLimitConfig.mockReturnValue(null);
   isProductionEnvironment.mockReturnValue(false);
 });
 
 describe("POST /api/auth/login", () => {
+  it("يعطي جلسة استبدال فقط للحساب المؤقت ولا يستدعي MFA", async () => {
+    vi.stubEnv("QARAR_SUPABASE_URL", "http://kong:8000");
+    vi.stubEnv("QARAR_SUPABASE_ANON_KEY", "runtime-anon-key");
+    cookies.mockResolvedValue({ set: cookieSet, delete: cookieDelete });
+    temporaryState.mockResolvedValue({ must_change_password: true, expires_at: "2099-01-01T00:00:00Z" });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ access_token: "temporary", refresh_token: "refresh", expires_in: 3600, user: { id: "user-id" } })));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await POST(loginRequest());
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ password_change_required: true, authenticated: false });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(cookieSet).toHaveBeenCalledWith("qarar_temporary_access_token", "temporary", expect.objectContaining({ httpOnly: true, maxAge: 900 }));
+    expect(cookieSet).not.toHaveBeenCalledWith("qarar_access_token", expect.anything(), expect.anything());
+  });
   it("يفرض MFA ولا ينشئ جلسة تطبيق لحساب IAM عند مستوى aal1", async () => {
     vi.stubEnv("QARAR_SUPABASE_URL", "http://kong:8000");
     vi.stubEnv("QARAR_SUPABASE_ANON_KEY", "runtime-anon-key");
-    cookies.mockResolvedValue({ set: cookieSet });
+    cookies.mockResolvedValue({ set: cookieSet, delete: cookieDelete });
+    temporaryState.mockResolvedValue({ must_change_password: false });
     const payload = Buffer.from(JSON.stringify({ aal: "aal1" })).toString("base64url");
     const token = `x.${payload}.x`;
     const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve(
       new Response(JSON.stringify(String(input).includes("get_current_user_access_context")
         ? { is_system_admin: false, permissions: ["iam.users.manage"], roles: [] }
-        : { access_token: token, refresh_token: "refresh-token", expires_in: 3600 }), { status: 200 }),
+        : { access_token: token, refresh_token: "refresh-token", expires_in: 3600, user: { id: "user-id" } }), { status: 200 }),
     ));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -85,12 +103,12 @@ describe("POST /api/auth/login", () => {
   it("يستخدم عنوان ومفتاح Supabase المحقونين في وقت التشغيل", async () => {
     vi.stubEnv("QARAR_SUPABASE_URL", "http://kong:8000/");
     vi.stubEnv("QARAR_SUPABASE_ANON_KEY", "runtime-anon-key");
-    cookies.mockResolvedValue({ set: cookieSet });
+    cookies.mockResolvedValue({ set: cookieSet, delete: cookieDelete });
     const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) =>
       Promise.resolve(new Response(JSON.stringify(String(input).includes("get_current_user_access_context") ? {
         is_system_admin: false, permissions: [], roles: [],
       } : {
-        access_token: "access-token", refresh_token: "refresh-token", expires_in: 3_600,
+        access_token: "access-token", refresh_token: "refresh-token", expires_in: 3_600, user: { id: "user-id" },
       }), { status: 200 })),
     );
     vi.stubGlobal("fetch", fetchMock);
@@ -159,12 +177,12 @@ describe("POST /api/auth/login", () => {
     vi.stubEnv("QARAR_SUPABASE_ANON_KEY", "runtime-anon-key");
     getLoginRateLimitConfig.mockReturnValue({});
     enforceLoginRateLimit.mockResolvedValue({ state: "allowed", clientIp: "203.0.113.11" });
-    cookies.mockResolvedValue({ set: cookieSet });
+    cookies.mockResolvedValue({ set: cookieSet, delete: cookieDelete });
     const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) =>
       Promise.resolve(new Response(JSON.stringify(String(input).includes("get_current_user_access_context") ? {
         is_system_admin: false, permissions: [], roles: [],
       } : {
-        access_token: "access-token", refresh_token: "refresh-token", expires_in: 3_600,
+        access_token: "access-token", refresh_token: "refresh-token", expires_in: 3_600, user: { id: "user-id" },
       }), { status: 200 })),
     );
     vi.stubGlobal("fetch", fetchMock);

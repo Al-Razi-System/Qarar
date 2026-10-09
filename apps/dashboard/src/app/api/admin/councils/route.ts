@@ -4,14 +4,20 @@ import { apiError, apiSuccess, requestId } from "@/shared/api/response";
 import { readJsonObject } from "@/shared/security/json-body";
 import { safeAdminError } from "@/shared/security/admin-error";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
+import { logEvent } from "@/shared/observability/logger";
 
 const contracts = new Set([
+  "admin_get_council_organizational_tree_v2",
   "get_council_form_options",
   "admin_search_councils",
   "admin_get_council_detail",
   "admin_get_councils_tree",
   "admin_create_council",
   "admin_create_council_v2",
+  "admin_create_organizational_unit_v2",
+  "admin_list_organizational_units_v2",
+  "admin_create_organizational_unit_type_v2",
+  "admin_update_organizational_unit_v2",
   "admin_update_council",
   "admin_move_council",
   "admin_validate_council_administrative_readiness",
@@ -40,8 +46,13 @@ export async function POST(request: Request) {
     const params = body.params && typeof body.params === "object" && !Array.isArray(body.params)
       ? body.params as Record<string, unknown>
       : {};
-    return apiSuccess(await (contract === "admin_create_council_v2" ? qararRpcV2<unknown>(contract, params) : qararRpc<unknown>(contract, params)), id);
+    return apiSuccess(await (contract.endsWith("_v2") ? qararRpcV2<unknown>(contract, params) : qararRpc<unknown>(contract, params)), id);
   } catch (error) {
+    logEvent(error instanceof QararApiError && error.status < 500 ? "warn" : "error", "council.operation.failed", {
+      request_id: id,
+      cause: error instanceof Error ? error.message : "UNKNOWN_FAILURE",
+      ...(error instanceof QararApiError ? { code: error.code, status: error.status } : {}),
+    });
     if (error instanceof QararApiError) {
       const safe = safeAdminError(error, "تعذر تنفيذ عملية المجلس.");
       return apiError(safe.message, safe.status, safe.code, id);

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { TopicsWorkspace } from "@/features/topics/ui/topics-workspace";
 import { qararRpc } from "@/shared/api/qarar-server";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -16,6 +17,7 @@ export default async function TopicsPage({
   const initialTab = access.permissions?.includes("topics.review") ? "review" : "mine";
   return <div className="mx-auto max-w-[1480px]">
     <PageHeader eyebrow="الحوكمة والمعاملات" title="المعاملات والموضوعات" description="إدارة الطلبات من الإنشاء وتحديد المرجع النظامي، إلى المراجعة والإحالة والاعتماد." meta={<span className="inline-flex rounded-full bg-[#edf6ff] px-3 py-1.5 text-[10px] font-bold text-[#0066cc]">إنشاء ← مراجعة ← إحالة ← اعتماد</span>} />
+    {access.permissions?.includes("topics.create") && <div className="mb-4"><Link className="inline-flex rounded-xl bg-[#0066cc] px-5 py-3 text-sm font-bold text-white" href="/admin/topics/new">تقديم موضوع من تصنيف</Link></div>}
     <TopicsWorkspace key={`${initialTab}:${initialQuery}`} initialQuery={initialQuery} initialTab={initialTab} />
   </div>;
 }

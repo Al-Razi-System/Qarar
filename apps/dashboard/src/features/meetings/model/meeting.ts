@@ -53,6 +53,15 @@ export type MeetingDetail = Meeting & {
   governance_unit_id?: string;
   capabilities?: MeetingCapabilities;
   agenda_items?: AgendaItem[];
+  scheduled_suggestions?: ScheduledAgendaSuggestion[];
+};
+
+export type ScheduledAgendaSuggestion = {
+  topic_type_version_id: string;
+  title_ar: string;
+  available_from: string;
+  due_on: string;
+  required_attachment_count: number;
 };
 
 export type SignatureStrokes = Array<Array<[number, number]>>;

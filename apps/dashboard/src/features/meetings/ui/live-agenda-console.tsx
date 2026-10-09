@@ -7,6 +7,7 @@ import type { MeetingTopicAttachment } from "../model/meeting";
 import { OpenVoteCard, type VoteValue } from "./open-vote-card";
 import { TopicAttachmentsPanel } from "./topic-attachments-panel";
 import { VoteResultPanel } from "./vote-result-panel";
+import { TopicInstructions } from "@/features/governance-v2/ui/topic-instructions";
 
 type DiscussionStatus = "under_discussion" | "discussed" | "postponed";
 type UpdateDiscussion = (item: AgendaDiscussionItem, status: DiscussionStatus, notes: string | null) => Promise<boolean>;
@@ -107,6 +108,7 @@ function AgendaCard({ item, attachments, history, session, rounds, decisions, bu
         </button>
       </div>
     </div>
+    {expanded && item.discussion_instructions?.trim() && <div className="px-4 sm:px-5"><TopicInstructions title="تعليمات المناقشة" text={item.discussion_instructions}/></div>}
     {expanded && attachments.length > 0 && <div className="border-b border-[#e6edf4] bg-white p-4 sm:px-5"><TopicAttachmentsPanel meetingId={session.meeting.id} attachments={attachments} /></div>}
     {expanded && history && (history.meetings.length > 0 || (history.priorRoute?.steps.length ?? 0) > 0) && <TopicHistoryPanel history={history} />}
     {expanded && showSummary && (item.agenda_status === "under_discussion" || item.agenda_status === "discussed" || Boolean(item.discussion_notes)) && <div className="bg-white/80 p-4"><div className="mb-2 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><MessageSquareText size={16} className="text-[#0877d6]" /><div><h4 className="text-[11px] font-black text-[#172a42]">{votingFinished ? "ملخص النتائج والتوصيات النهائي" : "ملاحظات المناقشة الأولية"}</h4><p className="text-[9px] text-[#7a8da1]">{recorder ? votingFinished ? "أكمل النتيجة النهائية بعد التصويت لتغذية مسودة المحضر." : "يمكن حفظ ملاحظات أولية الآن، ولا تعيق فتح التصويت." : chair ? "نسخة متابعة للرئيس؛ التحرير من اختصاص مقرر المجلس." : "النتيجة النهائية المعتمدة لهذا البند."}</p></div></div>{recorder && changed && <span className="rounded-full bg-amber-50 px-2 py-1 text-[9px] font-black text-amber-700">غير محفوظ</span>}</div>

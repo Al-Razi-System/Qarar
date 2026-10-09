@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
+import { logEvent } from "@/shared/observability/logger";
 import { qararEdge, qararRpc, requireQararSession } from "@/shared/api/qarar-server";
 import { safeAdminError } from "@/shared/security/admin-error";
 import { readJsonObject } from "@/shared/security/json-body";
@@ -38,12 +40,14 @@ export async function POST(request: Request) {
     if (!parsedBody.ok) return parsedBody.response;
 
     const result = await qararEdge("iam-admin", {
-      action: "create_user",
       ...parsedBody.value,
+      action: "create_user",
     });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     const safeError = safeAdminError(error, "تعذر إنشاء الحساب.");
-    return NextResponse.json({ message: safeError.message }, { status: safeError.status });
+    const traceId = typeof error === "object" && error !== null && "traceId" in error && typeof error.traceId === "string" ? error.traceId : randomUUID();
+    logEvent("warn", "users.create.failed", { traceId, status: safeError.status, cause: error instanceof Error ? error.message : "unknown" });
+    return NextResponse.json({ message: safeError.message, traceId }, { status: safeError.status });
   }
 }

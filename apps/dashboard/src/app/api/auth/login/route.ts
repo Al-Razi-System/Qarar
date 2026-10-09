@@ -7,6 +7,7 @@ import {
   isProductionEnvironment,
 } from "@/shared/security/login-rate-limit";
 import { incrementMetric, logEvent } from "@/shared/observability/logger";
+import { qararServiceRpc } from "@/shared/api/qarar-service";
 
 const MAX_LOGIN_BODY_BYTES = 8 * 1024;
 
@@ -170,14 +171,15 @@ export async function POST(request: Request) {
     return jsonError("البريد الإلكتروني أو كلمة المرور غير صحيحة.", 401);
   }
 
-  let session: { access_token?: unknown; refresh_token?: unknown; expires_in?: unknown };
+  let session: { access_token?: unknown; refresh_token?: unknown; expires_in?: unknown; user?: { id?: string } };
   try {
-    session = await authResponse.json() as { access_token?: unknown; refresh_token?: unknown; expires_in?: unknown };
+    session = await authResponse.json() as typeof session;
   } catch {
     return jsonError("خدمة الدخول غير متاحة مؤقتًا.", 503);
   }
   const expiresIn = session.expires_in;
   if (
+    typeof session.user?.id !== "string" || !session.user.id ||
     typeof session.access_token !== "string" ||
     !session.access_token ||
     typeof session.refresh_token !== "string" ||
@@ -190,6 +192,19 @@ export async function POST(request: Request) {
     return jsonError("خدمة الدخول غير متاحة مؤقتًا.", 503);
   }
   const cookieStore = await cookies();
+  try {
+    const state = await qararServiceRpc<{ must_change_password: boolean; expires_at?: string }>("service_get_temporary_password_state", { p_user_id: session.user!.id });
+    if (!state || typeof state.must_change_password !== "boolean") throw new Error("INVALID_PASSWORD_STATE");
+    if (state.must_change_password) {
+      if (!state.expires_at || Date.parse(state.expires_at) <= Date.now() || !Number.isFinite(Date.parse(state.expires_at))) return jsonError("انتهت صلاحية كلمة المرور المؤقتة. تواصل مع مدير النظام.", 403);
+      for (const name of ["qarar_access_token", "qarar_refresh_token", "qarar_mfa_access_token", "qarar_mfa_refresh_token"]) cookieStore.delete(name);
+      cookieStore.set("qarar_temporary_access_token", session.access_token, { httpOnly: true, sameSite: "strict", secure: process.env.NODE_ENV === "production", maxAge: Math.min(900, expiresIn), path: "/" });
+      return NextResponse.json({ authenticated: false, password_change_required: true }, { status: 202, headers: { "Cache-Control": "no-store" } });
+    }
+    cookieStore.delete("qarar_temporary_access_token");
+  } catch {
+    return jsonError("تعذر التحقق من جاهزية الحساب للدخول.", 503);
+  }
   let mfaRequired: boolean;
   try {
     mfaRequired = await requiresMfa(runtimeConfig.apiUrl, runtimeConfig.anonKey, session.access_token);

@@ -152,6 +152,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
   const { data: callerData, error: callerError } = await caller.auth.getUser()
   if (callerError || !callerData?.user) return json(request, dependencies, { error: "invalid_token" }, 401)
   const actorUserId = callerData.user.id
+  const traceId = crypto.randomUUID()
 
   try {
     const parsedPayload = await readJsonPayload(request)
@@ -169,18 +170,30 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
         return json(request, dependencies, { error: "role_is_required_when_governance_unit_is_provided" }, 400)
       }
 
+      const mode = payload.creation_mode ?? "invitation"
+      if (!["invitation", "temporary_password"].includes(mode)) return json(request, dependencies, { error: "invalid_creation_mode" }, 400)
+      const direct = mode === "temporary_password"
+      if (direct) {
+        const { data: context, error } = await api(caller).rpc("get_current_user_access_context", {})
+        if (error || context?.is_system_admin !== true) return json(request, dependencies, { error: "temporary_creation_forbidden" }, 403)
+        const password = payload.temporary_password
+        if (typeof password !== "string" || password.length < 12 || password.length > 128 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+          return json(request, dependencies, { error: "temporary_password_invalid" }, 400)
+        }
+      }
+
       // Validate every deployment dependency before creating either the Auth
       // identity or the application profile. A missing signing secret/origin
       // must never leave a partially provisioned account behind.
       const appOrigin = dependencies.allowedOrigins?.[0]
-      if (!appOrigin) throw new Error("activation application origin is not configured")
+      if (!direct && !appOrigin) throw new Error("activation application origin is not configured")
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      const token = await issueActivationToken(dependencies.activationTokenSecret ?? "", expiresAt)
+      const token = direct ? "" : await issueActivationToken(dependencies.activationTokenSecret ?? "", expiresAt)
 
       const bootstrapPassword = `${base64Url(crypto.getRandomValues(new Uint8Array(32)))}aA1!`
       const { data: created, error: createError } = await dependencies.admin.auth.admin.createUser({
         email,
-        password: bootstrapPassword,
+        password: direct ? payload.temporary_password : bootstrapPassword,
         email_confirm: false,
         user_metadata: { full_name_ar: payload.full_name_ar.trim() },
       })
@@ -189,7 +202,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
       if (createError || !created?.user) return json(request, dependencies, { error: "auth_user_creation_failed" }, 409)
 
       const userId = created.user.id
-      const { data: finalized, error: finalizeError } = await api(dependencies.admin).rpc("service_finalize_invited_user", {
+      const { data: finalized, error: finalizeError } = await api(dependencies.admin).rpc(direct ? "service_finalize_temporary_user" : "service_finalize_invited_user", {
         p_actor_user_id: actorUserId,
         p_auth_user_id: userId,
         p_email: email,
@@ -203,7 +216,15 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
       })
       if (finalizeError) {
         await dependencies.admin.auth.admin.deleteUser(userId, false)
-        throw new Error(`application provisioning failed: ${finalizeError.message}`)
+        throw Object.assign(new Error(`application provisioning failed: ${finalizeError.message}`), direct ? { status: 503 } : {})
+      }
+      if (direct) {
+        if (finalized?.user_id !== userId || finalized.must_change_password !== true) throw Object.assign(new Error("temporary provisioning receipt unconfirmed"), { status: 503 })
+        // Confirm only after the database gate is committed. An Auth identity
+        // without an application receipt remains unable to sign in.
+        const { error: confirmError } = await dependencies.admin.auth.admin.updateUserById(userId, { email_confirm: true })
+        if (confirmError) throw Object.assign(new Error("temporary account confirmation failed"), { status: 503 })
+        return json(request, dependencies, { ...finalized, account_created: true, invitation_sent: false, must_change_password: true }, 201)
       }
       const { data: invitation, error: invitationError } = await api(dependencies.admin).rpc("service_issue_activation_invitation", {
         p_actor_user_id: actorUserId,
@@ -325,11 +346,11 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
     return json(request, dependencies, { error: "unsupported_action" }, 400)
   } catch (error) {
     const logError = dependencies.logError ?? console.error
-    logError("iam-admin", error)
+    logError(`iam-admin:${traceId}`, error)
     const status = typeof (error as any)?.status === "number" ? (error as any).status : 400
     // Errors from Auth/RPC providers are intentionally never reflected. They
     // may include SQL, account, or transport details that belong only in the
     // protected server log above.
-    return json(request, dependencies, { error: "operation_failed" }, status)
+    return json(request, dependencies, { error: "operation_failed", traceId }, status)
   }
 }
