@@ -1,9 +1,16 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgendaDiscussionItem, Attendance, LiveMeetingSession, VotingRound } from "../../model/live-meeting";
 import { MAX_ORBIT_SEATS } from "./council-table";
-import { RoomStage } from "./room-stage";
+import { RoomStage as ControlledRoomStage } from "./room-stage";
+import { useRoomTheme } from "./use-room-theme";
+
+type StageProps = Omit<Parameters<typeof ControlledRoomStage>[0], "dark" | "onToggleTheme">;
+function RoomStage(props: StageProps) {
+  const theme = useRoomTheme();
+  return <div data-testid="room" data-theme={theme.dark ? "dark" : undefined}><ControlledRoomStage {...props} dark={theme.dark} onToggleTheme={theme.toggle} /></div>;
+}
 
 function member(index: number, status = "present", verification = "verified"): Attendance {
   return { id: `att-${index}`, user_id: `u${index}`, full_name_ar: `عضو ${index}`, status, verification_status: verification, updated_at: "2026-10-10T08:00:00Z" };
@@ -99,15 +106,26 @@ describe("RoomStage", () => {
     expect(seats[0].style.left).toBe("");
   });
 
-  it("switches the scene to night mode and remembers the choice", async () => {
+  it("switches the room to night mode and remembers the choice", async () => {
     const view = render(<RoomStage session={sessionOf("member", three)} agenda={agenda} rounds={[]} decisions={[]} />);
-    const scene = screen.getByRole("region", { name: "مشهد الاجتماع" });
+    const scene = screen.getByTestId("room");
     expect(scene).not.toHaveAttribute("data-theme");
     await userEvent.click(screen.getByRole("button", { name: "الوضع الليلي" }));
     expect(scene).toHaveAttribute("data-theme", "dark");
     expect(screen.getByRole("button", { name: "الوضع الفاتح" })).toHaveAttribute("aria-pressed", "true");
     view.unmount();
     render(<RoomStage session={sessionOf("member", three)} agenda={agenda} rounds={[]} decisions={[]} />);
-    expect(screen.getByRole("region", { name: "مشهد الاجتماع" })).toHaveAttribute("data-theme", "dark");
+    expect(screen.getByTestId("room")).toHaveAttribute("data-theme", "dark");
+  });
+
+  it("offers presentation mode only to whoever is given it", async () => {
+    const onToggle = vi.fn();
+    const { rerender } = render(<RoomStage session={sessionOf("member", three)} agenda={agenda} rounds={[]} decisions={[]} />);
+    expect(screen.queryByRole("button", { name: "وضع العرض على الشاشة" })).not.toBeInTheDocument();
+    rerender(<RoomStage session={sessionOf("chair", three)} agenda={agenda} rounds={[]} decisions={[]} presentation={{ active: false, onToggle }} />);
+    await userEvent.click(screen.getByRole("button", { name: "وضع العرض على الشاشة" }));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    rerender(<RoomStage session={sessionOf("chair", three)} agenda={agenda} rounds={[]} decisions={[]} presentation={{ active: true, onToggle }} />);
+    expect(screen.getByRole("button", { name: "إنهاء وضع العرض" })).toHaveAttribute("aria-pressed", "true");
   });
 });

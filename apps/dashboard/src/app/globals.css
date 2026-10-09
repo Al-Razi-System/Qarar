@@ -61,6 +61,7 @@
 
   --q-success: #0f7a55;
   --q-success-soft: #e3f5ed;
+  --q-on-success: #ffffff;
   --q-warning: #7a4e00;
   --q-warning-soft: #fff3d6;
   --q-danger: #b3261e;
@@ -79,6 +80,8 @@
   --q-stage-no: #ffb8b2;
   --q-stage-abstain: #c9d9ee;
   --q-focus: rgba(0, 102, 204, 0.32);
+  /* Backdrop behind dialogs. */
+  --q-scrim: rgba(10, 19, 48, 0.62);
 
   --q-radius-control: 8px;
   --q-radius-card: 12px;
@@ -110,6 +113,7 @@
 
   --q-success: #3ecf98;
   --q-success-soft: #0f2f27;
+  --q-on-success: #04261b;
   --q-warning: #f2c14e;
   --q-warning-soft: #33290f;
   --q-danger: #ff7b72;
@@ -127,6 +131,7 @@
   --q-stage-no: #ff7b72;
   --q-stage-abstain: #7f8ea6;
   --q-focus: rgba(77, 163, 255, 0.5);
+  --q-scrim: rgba(2, 5, 16, 0.74);
 
   color: var(--q-text);
 }
@@ -151,6 +156,7 @@
   --color-q-live-soft: var(--q-live-soft);
   --color-q-success: var(--q-success);
   --color-q-success-soft: var(--q-success-soft);
+  --color-q-on-success: var(--q-on-success);
   --color-q-warning: var(--q-warning);
   --color-q-warning-soft: var(--q-warning-soft);
   --color-q-danger: var(--q-danger);
@@ -164,6 +170,7 @@
   --color-q-stage-no: var(--q-stage-no);
   --color-q-stage-abstain: var(--q-stage-abstain);
   --color-q-focus: var(--q-focus);
+  --color-q-scrim: var(--q-scrim);
 
   /* Type scale. 13px is the smallest size allowed anywhere in the product. */
   --text-q-caption: 0.8125rem;
@@ -279,4 +286,11 @@ button:disabled {
   .q-ring-progress {
     transition: none;
   }
+}
+
+/* Lets topic instructions follow the room theme: their stylesheet reads the legacy names. */
+.q-instructions {
+  --qarar-navy: var(--q-text);
+  --qarar-snow: var(--q-surface-2);
+  --qarar-primary: var(--q-link);
 }

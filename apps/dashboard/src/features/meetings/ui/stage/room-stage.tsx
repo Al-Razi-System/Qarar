@@ -1,19 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { Badge } from "@/shared/ui/badge";
 import { Card } from "@/shared/ui/card";
 import type { AgendaDiscussionItem, Decision, LiveMeetingSession, VotingRound } from "../../model/live-meeting";
 import { deriveMeetingStage, type StagePhase } from "../../model/meeting-stage";
 import { CouncilTable } from "./council-table";
 import { StageCenter } from "./stage-center";
-
-const THEME_KEY = "qarar.meeting-room.theme";
-
-function readStoredTheme() {
-  if (typeof window === "undefined") return false;
-  try { return window.localStorage.getItem(THEME_KEY) === "dark"; } catch { return false; }
-}
 
 function phaseBadge(phase: StagePhase): { tone: "live" | "info" | "success" | "neutral"; label: string } {
   if (phase.kind === "discussion") return { tone: "live", label: "قيد المناقشة" };
@@ -22,15 +14,28 @@ function phaseBadge(phase: StagePhase): { tone: "live" | "info" | "success" | "n
   return { tone: "neutral", label: "بانتظار البدء" };
 }
 
-type Props = { session: LiveMeetingSession; agenda: AgendaDiscussionItem[]; rounds: VotingRound[]; decisions: Decision[] };
+const headerButton = "min-h-11 rounded-q-control border border-q-on-header/40 bg-transparent px-4 font-sans text-q-ui font-bold text-q-on-header";
+
+type Props = {
+  session: LiveMeetingSession;
+  agenda: AgendaDiscussionItem[];
+  rounds: VotingRound[];
+  decisions: Decision[];
+  /** The room owns the theme so the whole room, not only the scene, follows it. */
+  dark: boolean;
+  onToggleTheme: () => void;
+  /** Given to whoever runs the session: shows the room on the hall screen without controls. */
+  presentation?: { active: boolean; onToggle: () => void };
+  /** Hides the current-item strip when the full topic card is shown right under the scene. */
+  hideCurrentItem?: boolean;
+};
 
 /**
  * The shared scene at the top of the live meeting room: who is at the table,
  * the quorum, and what the council is doing right now. It is read-only and is
  * derived on every refresh from the data the room already loads.
  */
-export function RoomStage({ session, agenda, rounds, decisions }: Props) {
-  const [dark, setDark] = useState(readStoredTheme);
+export function RoomStage({ session, agenda, rounds, decisions, dark, onToggleTheme, presentation, hideCurrentItem = false }: Props) {
   const { seats, phase } = deriveMeetingStage(session, agenda, rounds, decisions);
 
   const manager = session.viewer.can_manage_session;
@@ -47,14 +52,8 @@ export function RoomStage({ session, agenda, rounds, decisions }: Props) {
   const currentItem = "item" in phase ? phase.item : null;
   const badge = phaseBadge(phase);
 
-  function toggleTheme() {
-    const next = !dark;
-    setDark(next);
-    try { window.localStorage.setItem(THEME_KEY, next ? "dark" : "light"); } catch { /* The choice still applies for this visit. */ }
-  }
-
   return (
-    <section data-theme={dark ? "dark" : undefined} aria-label="مشهد الاجتماع" className="overflow-hidden rounded-q-card border border-q-border bg-q-bg font-sans text-q-text">
+    <section aria-label="مشهد الاجتماع" className="overflow-hidden rounded-q-card border border-q-border bg-q-bg font-sans text-q-text">
       <header className="flex flex-wrap items-center justify-between gap-4 bg-q-header p-5 text-q-on-header">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -71,21 +70,21 @@ export function RoomStage({ session, agenda, rounds, decisions }: Props) {
               {quorumOk ? "مكتمل" : "غير مكتمل"} · {quorum?.present_members ?? 0} من {quorum?.eligible_members ?? 0} ({quorum?.actual_percentage ?? 0}%)
             </Badge>
           </div>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-pressed={dark}
-            className="min-h-11 rounded-q-control border border-q-on-header/40 bg-transparent px-4 text-q-ui font-bold text-q-on-header"
-          >
+          <button type="button" onClick={onToggleTheme} aria-pressed={dark} className={headerButton}>
             {dark ? "الوضع الفاتح" : "الوضع الليلي"}
           </button>
+          {presentation && (
+            <button type="button" onClick={presentation.onToggle} aria-pressed={presentation.active} className={headerButton}>
+              {presentation.active ? "إنهاء وضع العرض" : "وضع العرض على الشاشة"}
+            </button>
+          )}
         </div>
       </header>
 
       <div className="flex flex-col gap-4 p-4 sm:p-6">
         <CouncilTable seats={seats}><StageCenter phase={phase} /></CouncilTable>
 
-        {currentItem && (
+        {currentItem && !hideCurrentItem && (
           <Card live={phase.kind === "discussion"} className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="m-0 text-q-caption font-bold text-q-text-2">البند {currentItem.agenda_order} من {agenda.length}{currentItem.workflow_step_name_ar ? ` · ${currentItem.workflow_step_name_ar}` : ""}</p>
