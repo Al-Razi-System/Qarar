@@ -2,9 +2,10 @@
 
 import { cn } from "@/shared/lib/utils";
 
-export type SeatStatus = "present" | "voted" | "waiting" | "excused" | "absent";
+export type SeatStatus = "pending" | "present" | "voted" | "waiting" | "excused" | "absent";
 
 const statusLabel: Record<SeatStatus, string> = {
+  pending: "لم يثبت حضوره",
   present: "حاضر",
   voted: "صوّت",
   waiting: "لم يصوّت بعد",
@@ -13,6 +14,7 @@ const statusLabel: Record<SeatStatus, string> = {
 };
 
 const ringClass: Record<SeatStatus, string> = {
+  pending: "border-2 border-dashed border-q-border-strong",
   present: "border-2 border-q-border-strong",
   voted: "border-[3px] border-q-primary",
   waiting: "border-2 border-dashed border-q-primary",
@@ -44,10 +46,11 @@ function initialOf(name: string) {
  */
 export function MemberSeat({ name, status, roleLabel, chair = false, onOpen, className }: Props) {
   const away = status === "excused" || status === "absent";
-  const caption = status === "voted" || status === "waiting" || away ? statusLabel[status] : roleLabel ?? statusLabel[status];
+  const caption = status === "present" ? roleLabel ?? statusLabel.present : statusLabel[status];
   const avatarClass = cn(
     "relative grid h-14 w-14 place-items-center rounded-full bg-q-seat font-sans text-q-h3 font-bold text-q-text",
     chair && status === "present" ? "border-[3px] border-q-live" : ringClass[status],
+    status === "waiting" && "q-seat-waiting",
   );
   const avatar = (
     <>
@@ -61,13 +64,13 @@ export function MemberSeat({ name, status, roleLabel, chair = false, onOpen, cla
   );
 
   return (
-    <div className={cn("flex w-28 flex-col items-center gap-1 text-center", away && "opacity-50", className)}>
+    <div className={cn("flex w-24 flex-col items-center gap-1 text-center", away && "opacity-50", className)}>
       {onOpen ? (
         <button type="button" onClick={onOpen} aria-label={`بطاقة ${name}`} className={avatarClass}>{avatar}</button>
       ) : (
         <div className={avatarClass}>{avatar}</div>
       )}
-      <span className="font-sans text-q-caption font-bold text-q-text">{name}</span>
+      <span className="max-w-full truncate font-sans text-q-caption font-bold text-q-text" title={name}>{name}</span>
       <span className={cn("-mt-1 font-sans text-q-caption", status === "waiting" ? "text-q-link" : "text-q-text-2")}>{caption}</span>
     </div>
   );

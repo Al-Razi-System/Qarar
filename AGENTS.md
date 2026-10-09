@@ -22,6 +22,10 @@ Colours, type sizes and radii come from the tokens in `apps/dashboard/src/app/gl
 and screens are composed from `apps/dashboard/src/shared/ui`; never hand-write a colour
 or a font size inside a screen.
 
+The interface and live-meeting-room redesign is in progress. Its decisions, plan, current
+state and next step are in `docs/design/HANDOFF_AR.md`; read it before continuing that work
+and update it with every batch.
+
 ## Non-negotiable change protocol
 
 No behavior change may start with code. First record an impact map in the task notes,

@@ -10,6 +10,7 @@ const buttonStyles = cva(
         primary: "bg-q-primary text-q-on-primary hover:bg-q-primary-hover disabled:bg-q-neutral-soft disabled:text-q-text-3",
         secondary: "border border-q-primary bg-q-surface text-q-link hover:bg-q-surface-2 disabled:border-q-border disabled:bg-q-neutral-soft disabled:text-q-text-3",
         ghost: "bg-transparent text-q-link hover:bg-q-surface-2 disabled:text-q-text-3",
+        success: "bg-q-success text-q-on-success hover:opacity-90 disabled:bg-q-neutral-soft disabled:text-q-text-3",
         danger: "bg-q-danger text-q-on-danger hover:opacity-90 disabled:bg-q-neutral-soft disabled:text-q-text-3",
       },
       size: {

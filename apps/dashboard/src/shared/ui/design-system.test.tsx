@@ -5,9 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 import { Badge } from "./badge";
 import { Button } from "./button";
 import { Card } from "./card";
+import { Dialog } from "./dialog";
 import { InlineMessage } from "./inline-message";
 import { MemberSeat } from "./member-seat";
 import { SegmentedControl } from "./segmented-control";
+import { TextArea } from "./text-area";
 
 describe("Button", () => {
   it("is a real button that does not submit a form unless asked to", () => {
@@ -101,8 +103,45 @@ describe("MemberSeat", () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
+  it("says so when attendance is not confirmed yet, whatever the role", () => {
+    render(<MemberSeat name="د. ريم" status="pending" roleLabel="عضو" />);
+    expect(screen.getByText("لم يثبت حضوره")).toBeInTheDocument();
+    expect(screen.queryByText("عضو")).not.toBeInTheDocument();
+  });
+
   it("states absence in words and dims the seat", () => {
     render(<MemberSeat name="د. طارق" status="absent" roleLabel="عضو" />);
     expect(screen.getByText("غائب")).toBeInTheDocument();
+  });
+});
+
+describe("Dialog", () => {
+  it("is a named modal that closes with Escape and the close button", async () => {
+    const onClose = vi.fn();
+    render(<Dialog title="تأجيل البند" description="يُسجَّل السبب في المحضر." onClose={onClose}>محتوى</Dialog>);
+    const dialog = screen.getByRole("dialog", { name: "تأجيل البند" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toHaveAccessibleDescription("يُسجَّل السبب في المحضر.");
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", { name: "إغلاق" }));
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it("cannot be dismissed while its action is in flight", async () => {
+    const onClose = vi.fn();
+    render(<Dialog title="حفظ" onClose={onClose} closeDisabled>محتوى</Dialog>);
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: "إغلاق" })).toBeDisabled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("TextArea", () => {
+  it("ties the label and the announced error to the field", () => {
+    render(<TextArea label="سبب التأجيل" error="اكتب خمسة أحرف على الأقل." defaultValue="" />);
+    const field = screen.getByLabelText("سبب التأجيل");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription("اكتب خمسة أحرف على الأقل.");
+    expect(screen.getByRole("alert")).toHaveTextContent("اكتب خمسة أحرف على الأقل.");
   });
 });
