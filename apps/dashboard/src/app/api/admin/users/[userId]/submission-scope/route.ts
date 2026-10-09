@@ -29,3 +29,17 @@ export async function PUT(request: Request, context: Context) {
     return NextResponse.json(result);
   } catch (error) { return failure(error); }
 }
+export async function PATCH(request: Request, context: Context) {
+  const origin = rejectUntrustedMutation(request); if (origin) return origin;
+  try {
+    const { userId } = await context.params;
+    const parsed = await readJsonObject(request, { maxBytes: 2048 }); if (!parsed.ok) return parsed.response;
+    const { revision, enabled, requestId } = parsed.value;
+    if (!uuid(userId) || !uuid(requestId) || !Number.isSafeInteger(revision) || Number(revision) < 0 || typeof enabled !== "boolean") {
+      return NextResponse.json({ message: "طلب تغيير دور المقدم غير صالح." }, { status: 400 });
+    }
+    return NextResponse.json(await qararRpcV2("set_user_submission_enabled_v2", {
+      p_user_id: userId, p_expected_revision: revision, p_enabled: enabled, p_request_id: requestId,
+    }), { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return failure(error); }
+}

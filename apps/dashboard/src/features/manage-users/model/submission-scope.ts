@@ -1,7 +1,7 @@
 export type ScopeRule = { kind: "council" | "class"; target_id: string; include_descendants: boolean };
 export type ScopeCouncil = { id: string; name_ar: string; scope_unit_id: string | null; class_id: string | null; status: string };
 export type ScopeUnit = { id: string; name_ar: string; parent_unit_id: string | null; status: string };
-export type SubmissionScope = { user_name_ar?: string; revision: number; home_unit_id: string | null; rules: ScopeRule[]; councils: ScopeCouncil[]; units: ScopeUnit[]; classes: { id: string; name_ar: string }[] };
+export type SubmissionScope = { user_name_ar?: string; submission_enabled?: boolean; revision: number; home_unit_id: string | null; rules: ScopeRule[]; councils: ScopeCouncil[]; units: ScopeUnit[]; classes: { id: string; name_ar: string }[] };
 /** Preview only. The contextual database predicate remains authoritative. */
 export function previewSubmissionScope(rules: ScopeRule[], councils: ScopeCouncil[], units: ScopeUnit[]) {
   const unitMap = new Map(units.map(unit => [unit.id, unit]));

@@ -22,12 +22,14 @@ describe("AppShell governance navigation", () => {
   it("shows the governance model entry to an authorized manager", () => {
     render(<AppShell access={{ ...baseAccess, permissions: ["governance.regulations.manage"] }}><div>المحتوى</div></AppShell>);
 
-    expect(screen.getAllByRole("link", { name: /نموذج الحوكمة الجديد/ })).toHaveLength(2);
+    const entries = screen.getAllByRole("link", { name: /تصنيفات الموضوعات/ });
+    expect(entries).toHaveLength(2);
+    entries.forEach(entry => expect(entry).toHaveAttribute("href", "/admin/governance-model"));
   });
 
   it("does not expose the governance model entry to an unauthorized user", () => {
     render(<AppShell access={baseAccess}><div>المحتوى</div></AppShell>);
 
-    expect(screen.queryByRole("link", { name: /نموذج الحوكمة الجديد/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /تصنيفات الموضوعات/ })).not.toBeInTheDocument();
   });
 });

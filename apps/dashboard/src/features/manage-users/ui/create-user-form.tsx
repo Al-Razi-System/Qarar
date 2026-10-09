@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, Info, LockKeyhole, Mail, User } from "lucide-react";
 import { FormField } from "@/shared/ui/form-field";
 import { UserSubmissionScope } from "./user-submission-scope";
+import { UserRoles } from "./user-roles";
 
 export type RoleOption = {
   id: string;
@@ -53,6 +54,7 @@ export function CreateUserForm({
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdUserId, setCreatedUserId] = useState<string | null>(null);
+  const [rolesCompleted, setRolesCompleted] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const busy = useRef(false);
   function finish() {
@@ -155,10 +157,10 @@ export function CreateUserForm({
 
   if (createdUserId && canManageSubmissionScopes) return <div>
     <p role="status" className="mb-5 rounded-xl border border-[#cfe4f8] bg-[#f1f8ff] p-4 text-sm leading-7 text-[#315b80]">
-      {creationMode === "temporary_password" ? "تم إنشاء الحساب دون دعوة. سيُلزم المستخدم بتغيير كلمة المرور عند أول دخول." : "تم إنشاء الحساب وإرسال دعوة التفعيل."} أكمل جهة العمل ونطاق التقديم للحساب نفسه أدناه.
+      {creationMode === "temporary_password" ? "تم إنشاء الحساب دون دعوة. سيُلزم المستخدم بتغيير كلمة المرور عند أول دخول." : "تم إنشاء الحساب وإرسال دعوة التفعيل."} أكمل الأدوار الاختيارية ثم جهة العمل ونطاق التقديم للحساب نفسه أدناه.
       إذا أغلقت النافذة، يمكنك الاستكمال من عمليات المستخدم؛ لا حاجة لإعادة إنشاء الحساب.
     </p>
-    <UserSubmissionScope userId={createdUserId} onSaved={finish} />
+    {rolesCompleted ? <UserSubmissionScope userId={createdUserId} onSaved={finish} /> : <UserRoles userId={createdUserId} onContinue={() => setRolesCompleted(true)} />}
   </div>;
 
   return (

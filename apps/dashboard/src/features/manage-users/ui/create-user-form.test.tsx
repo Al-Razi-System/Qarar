@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { CreateUserForm } from "./create-user-form";
 const userId = "83000000-0000-0000-0000-000000000003";
 vi.mock("./user-submission-scope", () => ({ UserSubmissionScope: ({ userId, onSaved }: { userId: string; onSaved: () => void }) => <section aria-label="إعداد نطاق الحساب"><p>{userId}</p><button onClick={onSaved}>حفظ نطاق الاختبار</button></section> }));
+vi.mock("./user-roles", () => ({ UserRoles: ({ userId, onContinue }: { userId: string; onContinue: () => void }) => <section aria-label="أدوار الحساب الجديد"><p>{userId}</p><button onClick={onContinue}>متابعة الأدوار إلى النطاق</button></section> }));
 afterEach(() => { vi.restoreAllMocks(); });
 it("creates directly with a temporary password and accepts a no-invitation receipt", async () => {
   const request = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ account_created: true, invitation_sent: false, must_change_password: true, user_id: userId }), { status: 201 }));
@@ -12,6 +13,8 @@ it("creates directly with a temporary password and accepts a no-invitation recei
   await user.click(screen.getByLabelText("كلمة مرور مؤقتة — دون دعوة"));
   await user.type(screen.getByLabelText("كلمة المرور المؤقتة"), "TemporaryPassword42!");
   await completeBasicForm();
+  expect(await screen.findByRole("region", { name: "أدوار الحساب الجديد" })).toHaveTextContent(userId);
+  await user.click(screen.getByRole("button", { name: "متابعة الأدوار إلى النطاق" }));
   expect(await screen.findByRole("region", { name: "إعداد نطاق الحساب" })).toBeVisible();
   expect(JSON.parse(request.mock.calls[0][1]?.body as string)).toMatchObject({ creation_mode: "temporary_password", temporary_password: "TemporaryPassword42!" });
   expect(screen.getByRole("status")).toHaveTextContent("تغيير كلمة المرور");
@@ -31,6 +34,7 @@ it("continues to the same created account scope instead of recreating the identi
   const request = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ account_created: true, invitation_sent: true, user_id: userId }), { status: 201 }));
   render(<CreateUserForm roles={[]} units={[]} canManageSubmissionScopes onComplete={done} />);
   const user = await completeBasicForm();
+  await user.click(await screen.findByRole("button", { name: "متابعة الأدوار إلى النطاق" }));
   expect(await screen.findByRole("region", { name: "إعداد نطاق الحساب" })).toHaveTextContent(userId);
   expect(screen.queryByRole("button", { name: "إنشاء الحساب" })).not.toBeInTheDocument();
   expect(request).toHaveBeenCalledOnce();
@@ -69,6 +73,7 @@ it("keeps a known validation rejection retryable without discarding input", asyn
   const user = await completeBasicForm();
   expect(await screen.findByRole("alert")).toHaveTextContent("راجع الاسم والبريد");
   await user.click(screen.getByRole("button", { name: "إنشاء الحساب" }));
+  await user.click(await screen.findByRole("button", { name: "متابعة الأدوار إلى النطاق" }));
   expect(await screen.findByRole("region", { name: "إعداد نطاق الحساب" })).toBeVisible();
   expect(JSON.parse(request.mock.calls[1][1]?.body as string)).toMatchObject({ full_name_ar: "مستخدم الاختبار", email: "new@example.test" });
 });

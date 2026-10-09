@@ -428,6 +428,10 @@ export function UsersTable({
               تعديل بيانات المستخدم
             </button>
             {canManageSubmissionScopes && <Link
+              href={`/admin/users/${openMenu.user.id}/roles`}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-[11px] font-bold text-[#0066cc] hover:bg-[#edf6ff]"
+            ><UsersRound size={16} />إدارة أدوار المستخدم</Link>}
+            {canManageSubmissionScopes && <Link
               href={`/admin/users/${openMenu.user.id}/submission-scope`}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-[11px] font-bold text-[#0066cc] hover:bg-[#edf6ff]"
             ><UsersRound size={16} />جهة العمل وصلاحيات التقديم</Link>}

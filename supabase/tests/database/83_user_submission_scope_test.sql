@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(27);
+select plan(37);
 insert into qarar_core.organizations(id,code,name_ar) values('83000000-0000-0000-0000-000000000001','user-scope-ci','اختبار النطاق');
 insert into qarar_core.organizations(id,code,name_ar) values('83000000-0000-0000-0000-000000000060','scope-foreign','مؤسسة أخرى');
 insert into auth.users(id,email) values('83000000-0000-0000-0000-000000000061','scope-foreign@test.local');
@@ -47,7 +47,19 @@ update qarar_core.governance_units set governance_class_id='83000000-0000-0000-0
 select lives_ok($$select api_v2.save_user_submission_scope_v2('83000000-0000-0000-0000-000000000003',1,null,'[{"kind":"class","target_id":"83000000-0000-0000-0000-000000000040","include_descendants":true},{"kind":"council","target_id":"83000000-0000-0000-0000-000000000022","include_descendants":false}]',gen_random_uuid())$$,'multiple selections combine a level and independent council');
 select ok(qarar_iam.actor_can_submit_scoped_v2('83000000-0000-0000-0000-000000000003','83000000-0000-0000-0000-000000000021'),'class includes organizational descendants');
 select ok(qarar_iam.actor_can_submit_scoped_v2('83000000-0000-0000-0000-000000000003','83000000-0000-0000-0000-000000000022'),'specific extra council included');
-select lives_ok($$select api_v2.save_user_submission_scope_v2('83000000-0000-0000-0000-000000000003',2,null,'[]',gen_random_uuid())$$,'remove new grants');
+select lives_ok($$select api_v2.set_user_submission_enabled_v2('83000000-0000-0000-0000-000000000003',2,false,'83000000-0000-0000-0000-000000000070')$$,'disable submitter role');
+select isnt(qarar_iam.actor_can_submit_scoped_v2('83000000-0000-0000-0000-000000000003','83000000-0000-0000-0000-000000000021'),true,'disabled submitter cannot submit');
+select is(jsonb_array_length(api_v2.get_user_submission_scope_v2('83000000-0000-0000-0000-000000000003')->'rules'),2,'disable preserves configured scope');
+select lives_ok($$select api_v2.set_user_submission_enabled_v2('83000000-0000-0000-0000-000000000003',2,false,'83000000-0000-0000-0000-000000000070')$$,'same disable request safely replays');
+select lives_ok($$select api_v2.save_user_submission_scope_v2('83000000-0000-0000-0000-000000000003',3,null,'[{"kind":"council","target_id":"83000000-0000-0000-0000-000000000020","include_descendants":true}]',gen_random_uuid())$$,'edit scope of disabled submitter');
+select is(api_v2.get_user_submission_scope_v2('83000000-0000-0000-0000-000000000003')->>'submission_enabled','false','saving scope never silently reenables role');
+select throws_ok($$select api_v2.set_user_submission_enabled_v2('83000000-0000-0000-0000-000000000003',2,true,gen_random_uuid())$$,'40001',null,'stale role enable denied');
+select lives_ok($$select api_v2.set_user_submission_enabled_v2('83000000-0000-0000-0000-000000000003',4,true,gen_random_uuid())$$,'enable preserved submitter role');
+set local "request.jwt.claims"='{"sub":"83000000-0000-0000-0000-000000000003","role":"authenticated"}';
+select throws_ok($$select api_v2.set_user_submission_enabled_v2('83000000-0000-0000-0000-000000000003',4,false,gen_random_uuid())$$,'42501',null,'ordinary submitter cannot manage its role');
+set local "request.jwt.claims"='{"sub":"83000000-0000-0000-0000-000000000002","role":"authenticated"}';
+select throws_ok($$select api_v2.set_user_submission_enabled_v2('83000000-0000-0000-0000-000000000061',0,true,gen_random_uuid())$$,'P0002',null,'foreign target cannot receive submitter role');
+select lives_ok($$select api_v2.save_user_submission_scope_v2('83000000-0000-0000-0000-000000000003',5,null,'[]',gen_random_uuid())$$,'remove new grants');
 select isnt(qarar_iam.actor_can_submit_scoped_v2('83000000-0000-0000-0000-000000000003','83000000-0000-0000-0000-000000000021'),true,'removing grant revokes scoped access');
 insert into qarar_iam.permissions(id,organization_id,code,module,action,context_scope,name_ar) values('83000000-0000-0000-0000-000000000050','83000000-0000-0000-0000-000000000001','topics.create','topics','create','governance_unit','تقديم موضوع');
 insert into qarar_iam.roles(id,organization_id,code,name_ar,role_scope) values('83000000-0000-0000-0000-000000000051','83000000-0000-0000-0000-000000000001','submitter','مقدم','governance_unit');

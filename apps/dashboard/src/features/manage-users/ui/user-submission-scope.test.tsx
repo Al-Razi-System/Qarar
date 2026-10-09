@@ -34,3 +34,29 @@ it("does not show archived councils as new selections", async () => {
   await waitFor(() => expect(screen.queryByText("جارٍ تحميل جهة العمل والمجالس…")).not.toBeInTheDocument());
   expect(screen.queryByRole("checkbox", { name: "مجلس الاختبار" })).not.toBeInTheDocument();
 });
+it("disables the submitter role without clearing its selections",async()=>{
+ const user=userEvent.setup();const rules=[{kind:"council",target_id:"c1",include_descendants:false}];
+ const fetchMock=vi.spyOn(globalThis,"fetch").mockResolvedValueOnce(new Response(JSON.stringify({...scope,revision:1,submission_enabled:true,rules}))).mockResolvedValueOnce(new Response(JSON.stringify({saved:true,revision:2,submission_enabled:false})));
+ render(<UserSubmissionScope userId="user"/>);
+ await user.click(await screen.findByRole("button",{name:"تعطيل دور المقدم"}));
+ expect(await screen.findByRole("button",{name:"تفعيل دور المقدم"})).toBeEnabled();
+ expect(screen.getByRole("checkbox",{name:"مجلس الاختبار"})).toBeChecked();
+ expect(fetchMock.mock.calls[1][1]?.method).toBe("PATCH");
+});
+it("requires saving changed scope before changing the submitter role",async()=>{
+ const user=userEvent.setup();vi.spyOn(globalThis,"fetch").mockResolvedValue(new Response(JSON.stringify({...scope,revision:1,submission_enabled:true})));
+ render(<UserSubmissionScope userId="user"/>);
+ await user.click(await screen.findByRole("checkbox",{name:"مجلس الاختبار"}));
+ expect(screen.getByRole("button",{name:"تعطيل دور المقدم"})).toBeDisabled();
+ expect(screen.getByText("احفظ تعديلات النطاق أو أعد تحميله قبل تغيير حالة الدور.")).toBeVisible();
+});
+it("asks inline before discarding unsaved selections after a failure",async()=>{
+ const user=userEvent.setup();vi.spyOn(globalThis,"fetch").mockResolvedValueOnce(new Response(JSON.stringify(scope))).mockResolvedValueOnce(new Response(JSON.stringify({message:"تعذر حفظ النطاق"}),{status:503}));
+ render(<UserSubmissionScope userId="user"/>);
+ await user.click(await screen.findByRole("checkbox",{name:"مجلس الاختبار"}));
+ await user.click(screen.getByRole("button",{name:"حفظ جهة العمل والنطاق"}));
+ await user.click(await screen.findByRole("button",{name:"إعادة تحميل النطاق"}));
+ expect(screen.getByRole("group",{name:"تأكيد إعادة تحميل النطاق"})).toBeVisible();
+ await user.click(screen.getByRole("button",{name:"إبقاء الاختيارات"}));
+ expect(screen.getByRole("checkbox",{name:"مجلس الاختبار"})).toBeChecked();
+});

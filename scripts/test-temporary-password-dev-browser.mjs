@@ -27,6 +27,10 @@ try {
   console.log('Stage: isolated admin setup');
   adminId = (await api('/auth/v1/admin/users', { email: adminEmail, password, email_confirm: true })).id;
   sql(`insert into qarar_core.organizations(id,code,name_ar) values('${org}','temporary-${suffix}','اختبار حساب مؤقت معزول');`);
+  const typeId=crypto.randomUUID(), unitId=crypto.randomUUID(), roleA=crypto.randomUUID(), roleB=crypto.randomUUID();
+  sql(`insert into qarar_core.governance_unit_types(id,organization_id,code,name_ar,is_council_type) values('${typeId}','${org}','office','إدارة',false);
+insert into qarar_core.governance_units(id,organization_id,unit_type_id,code,name_ar,status) values('${unitId}','${org}','${typeId}','office','إدارة الاختبار','active');
+insert into qarar_iam.roles(id,organization_id,code,name_ar,role_scope) values('${roleA}','${org}','fixture_a','دور اختبار أول','governance_unit'),('${roleB}','${org}','fixture_b','دور اختبار ثان','governance_unit');`);
   await api('/rest/v1/rpc/service_bootstrap_organization_admin', { p_auth_user_id: adminId, p_organization_code: 'temporary-' + suffix, p_email: adminEmail, p_full_name_ar: 'مدير اختبار الحساب المؤقت', p_full_name_en: null, p_employee_no: null, p_mobile: null, p_job_title: null, p_approval_reference: 'DEV-TEMP-' + suffix }, env.SERVICE_ROLE_KEY, { 'Content-Profile': 'api_v1' });
   const session = await api('/auth/v1/token?grant_type=password', { email: adminEmail, password }, env.ANON_KEY);
   const factor = await api('/auth/v1/factors', { factor_type: 'totp', friendly_name: 'Temporary account isolated test' }, session.access_token);
@@ -58,6 +62,34 @@ try {
   userId = receipt.user_id;
   if (!creation.ok() || !receipt.account_created || receipt.invitation_sent !== false || receipt.must_change_password !== true) throw Error('Direct creation failed: ' + creation.status());
   await expect(dialog.getByRole('status').filter({ hasText: 'تم إنشاء الحساب' })).toContainText('دون دعوة');
+  console.log('Stage: multiple roles without activating identity');
+  const identityBeforeRoles=sql(`select status||':'||must_change_password::text||':'||is_system_admin::text from qarar_iam.users where id='${userId}';`);
+  const roles=dialog.getByRole('region',{name:'أدوار المستخدم'});
+  for (const role of [roleA,roleB]) {
+    await roles.getByRole('button',{name:'إضافة دور',exact:true}).click();
+    await roles.getByRole('combobox',{name:/^الدور/}).selectOption(role);
+    await roles.getByRole('combobox',{name:/^المجلس أو جهة الدور/}).selectOption(unitId);
+    await roles.getByRole('button',{name:'حفظ الدور',exact:true}).click();
+    await expect(roles.locator('article')).toHaveCount(role===roleA?1:2);
+  }
+  const firstRole=roles.locator('article').filter({hasText:'دور اختبار أول'});
+  await firstRole.getByRole('button',{name:'تعديل الدور',exact:true}).click();
+  await roles.getByText('السريان وصفة الدور — اختيارية',{exact:true}).click();
+  await roles.getByLabel('صفة الدور',{exact:true}).fill('صفة معدلة');
+  await roles.getByRole('button',{name:'حفظ الدور',exact:true}).click();
+  await expect(firstRole).toContainText('صفة معدلة');
+  await firstRole.getByRole('button',{name:'تعطيل الدور',exact:true}).click();
+  await expect(firstRole.getByRole('button',{name:'إعادة تفعيل الدور',exact:true})).toBeEnabled();
+  await firstRole.getByRole('button',{name:'إعادة تفعيل الدور',exact:true}).click();
+  await expect(firstRole.getByRole('button',{name:'تعطيل الدور',exact:true})).toBeEnabled();
+  await page.screenshot({path:'/tmp/qarar-user-roles-desktop.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  await page.screenshot({path:'/tmp/qarar-user-roles-mobile.png',fullPage:true});
+  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Role manager mobile overflow');
+  await page.setViewportSize({width:1440,height:1000});
+  if(sql(`select count(*) from qarar_iam.memberships where user_id='${userId}';`)!=='2')throw Error('Role records duplicated');
+  if(sql(`select status||':'||must_change_password::text||':'||is_system_admin::text from qarar_iam.users where id='${userId}';`)!==identityBeforeRoles)throw Error('Role edits changed account state or authority');
+  await roles.getByRole('button',{name:'متابعة إلى جهة العمل ونطاق التقديم',exact:true}).click();
   await dialog.getByRole('button', { name: 'حفظ جهة العمل والنطاق', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   if (sql(`select count(*) from qarar_iam.user_invitations where auth_user_id='${userId}';`) !== '0') throw Error('Direct flow created an invitation');
@@ -99,11 +131,12 @@ try {
   await page.getByRole('button', { name: 'تسجيل الدخول', exact: true }).click();
   await expect(page).toHaveURL(/\/admin$/);
   const account = await context.request.get(domain + '/api/account'); if (!account.ok()) throw Error('Fresh login cannot access personal account');
+  if((await context.request.get(domain+'/api/admin/users/'+userId+'/roles')).status()!==403)throw Error('Ordinary identity reached role management');
   const oldPassword = await fetch(base + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: env.ANON_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
   if (oldPassword.ok) throw Error('Old temporary password accepted');
   if (sql(`select count(*) from qarar_audit.audit_logs where organization_id='${org}' and actor_user_id='${userId}' and action='iam.temporary_password.complete';`) !== '1') throw Error('Completion audit missing');
   if (errors.length) throw Error('Browser errors: ' + errors.join('; '));
-  console.log(JSON.stringify({ ok: true, checks: ['real admin UI direct creation', 'no invitation', 'pending database gate', 'replacement-only login cookie', 'wrong current password denied', 'real replacement', 'all temporary sessions revoked', 'old JWT remains blocked', 'fresh personal password login', 'old password denied', 'audit actor', 'desktop/mobile'] }));
+  console.log(JSON.stringify({ ok: true, checks: ['real admin UI direct creation', 'two contextual roles', 'edit disable reactivate role', 'role edits preserve account gate', 'ordinary user denied role management', 'no invitation', 'pending database gate', 'replacement-only login cookie', 'wrong current password denied', 'real replacement', 'all temporary sessions revoked', 'old JWT remains blocked', 'fresh personal password login', 'old password denied', 'audit actor', 'desktop/mobile'] }));
 } catch (error) {
   if (page) { await page.screenshot({ path: '/tmp/qarar-temporary-failure.png', fullPage: true }).catch(() => {}); console.error((await page.locator('body').innerText()).slice(-2000)); }
   // Playwright's matcher object may contain password input snapshots. Never

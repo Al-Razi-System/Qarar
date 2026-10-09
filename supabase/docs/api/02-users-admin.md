@@ -217,3 +217,48 @@ A pending invitation cannot carry organization/system authority, including a rol
 permission matrix makes it elevated. Reissue it without a role or with a non-elevated role, wait for
 the invited identity to be active and verified, then let a system administrator make the elevated
 assignment through the normal role-assignment workflow.
+
+## Multiple user roles (api_v2)
+
+`get_user_roles_v2(p_user_id uuid)` returns the target's membership history,
+role/unit choices and optimistic concurrency timestamps. It is system-admin
+only and tenant-scoped. Organizational units may host operational roles;
+`council_*` roles require a real, non-archived council.
+
+`manage_user_role_v2(p_user_id uuid, p_action text, p_membership_id uuid = null,
+p_expected_updated_at timestamptz = null, p_role_id uuid = null,
+p_unit_id uuid = null, p_title text = null, p_start_date date = current_date,
+p_end_date date = null, p_request_id uuid = null)` supports `add`, `update`,
+`disable`, `enable`. Existing records require their last-read timestamp;
+stale writes return a conflict. Adding requires an internally generated request
+UUID, reused for retries of the same payload. UUIDs are never user-entered.
+
+Disabling preserves membership history. Ended memberships are not reopened;
+expired or unavailable roles require correction before reactivation. Existing
+period-overlap, council leadership and IAM authority guards remain enforced.
+Changes are transactional and audited with the actual actor. No change to
+account status, temporary-password requirements, `is_system_admin`, or explicit
+submission grants is made. Invited identities may be prepared without being
+activated. The dashboard uses `/api/admin/users/[userId]/roles` (GET/PUT) with
+session, MFA, origin and input validation, not a service-role shortcut.
+
+## Scoped topic submitter role
+
+The independent `topic_submitter` capability uses the submission profile, not a
+fabricated voting membership. Saving a new profile assigns it with the configured
+scope; existing profiles retain their previous access. `get_user_submission_scope_v2`
+adds `submission_enabled` and `submission_role_code` without removing old fields.
+
+`set_user_submission_enabled_v2(p_user_id uuid, p_expected_revision integer,
+p_enabled boolean, p_request_id uuid)` toggles this capability while retaining
+scope selections. It is system-admin/tenant limited, serializes with scope saves
+and audits the actual actor. Re-enabling requires a saved nonempty scope. Saving
+a disabled profile never enables it implicitly. Same-payload retries are safe;
+version conflicts require reload. PATCH `/api/admin/users/[userId]/submission-scope`
+uses this contract, and does not accept grant replacements in the toggle request.
+
+The contextual permission predicate, topic-form options, classification listing,
+preview and creation all obey the enabled scoped capability. Any independent
+legacy membership permission remains additive: disabling this capability alone
+does not withdraw a permission granted by another role. Existing topics, route
+instances, identity status and password requirements remain unchanged.

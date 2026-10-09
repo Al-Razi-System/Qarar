@@ -60,6 +60,7 @@ try {
  if(!createdResponse.ok()||!created.account_created||!created.invitation_sent)throw Error('Isolated account creation failed: '+createdResponse.status());
  invitedId=created.user_id;
  await expect(dialog.getByRole('status').filter({hasText:'تم إنشاء الحساب'})).toBeVisible();
+ await dialog.getByRole('button',{name:'متابعة إلى جهة العمل ونطاق التقديم',exact:true}).click();
  await expect(dialog.getByLabel('الوحدة أو الإدارة',{exact:true})).toBeVisible();
  await dialog.getByLabel('الوحدة أو الإدارة',{exact:true}).selectOption(u1);
  await dialog.getByRole('checkbox',{name:'مجلس الكلية التجريبية',exact:true}).check();
@@ -104,16 +105,39 @@ try {
  await page.reload({waitUntil:'domcontentloaded'});
  await expect(page.getByRole('checkbox',{name:'مجلس الكلية التجريبية',exact:true})).toBeChecked();
  await expect(page.getByLabel('الوحدة أو الإدارة',{exact:true})).toHaveValue(u1);
+ const employee=await api('/auth/v1/token?grant_type=password',{email:'employee-'+email,password},env.ANON_KEY);
+ await page.route('**/submission-scope',async route=>{
+  if(route.request().method()!=='PATCH')return route.continue();
+  await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'تعذر تغيير دور المقدم مؤقتًا.'})});
+ });
+ await page.getByRole('button',{name:'تعطيل دور المقدم',exact:true}).click();
+ await expect(page.locator('p[role="alert"]')).toContainText('تعذر تغيير دور المقدم');
+ await expect(page.getByRole('button',{name:'تعطيل دور المقدم',exact:true})).toBeDisabled();
+ await expect(page.getByRole('checkbox',{name:'مجلس الكلية التجريبية',exact:true})).toBeChecked();
+ await page.unroute('**/submission-scope');
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.getByRole('button',{name:'تعطيل دور المقدم',exact:true}).click();
+ await expect(page.getByRole('button',{name:'تفعيل دور المقدم',exact:true})).toBeEnabled();
+ const disabledOptions=await api('/rest/v1/rpc/get_topic_form_options',{},employee.access_token,{'Content-Profile':'api_v1'});
+ if(disabledOptions.governance_units.length!==0)throw Error('Disabled submitter still has council options');
+ await page.getByRole('button',{name:'حفظ جهة العمل والنطاق',exact:true}).click();
+ await expect(page.getByRole('status')).toContainText('حُفظت');
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.getByRole('button',{name:'تفعيل دور المقدم',exact:true})).toBeEnabled();
+ await expect(page.getByRole('checkbox',{name:'مجلس الكلية التجريبية',exact:true})).toBeChecked();
+ await page.getByRole('button',{name:'تفعيل دور المقدم',exact:true}).click();
+ await expect(page.getByRole('button',{name:'تعطيل دور المقدم',exact:true})).toBeEnabled();
  await page.screenshot({path:'/tmp/qarar-user-scope-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});
  await page.screenshot({path:'/tmp/qarar-user-scope-mobile.png',fullPage:true});
  if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Mobile overflow');
- const employee=await api('/auth/v1/token?grant_type=password',{email:'employee-'+email,password},env.ANON_KEY);
  const options=await api('/rest/v1/rpc/get_topic_form_options',{},employee.access_token,{'Content-Profile':'api_v1'});
  const allowed=options.governance_units.map(u=>u.id);
  if(!allowed.includes(c1)||!allowed.includes(c2)||allowed.includes(c3))throw Error('Submission options violate scope');
  const denied=await fetch(base+'/rest/v1/rpc/save_user_submission_scope_v2',{method:'POST',headers:{apikey:env.ANON_KEY,Authorization:'Bearer '+employee.access_token,'Content-Type':'application/json','Content-Profile':'api_v2'},body:JSON.stringify({p_user_id:employeeId,p_expected_revision:1,p_home_unit_id:null,p_rules:[],p_request_id:crypto.randomUUID()})});
  if(denied.ok)throw Error('Employee changed own scope');
+ const deniedRole=await fetch(base+'/rest/v1/rpc/set_user_submission_enabled_v2',{method:'POST',headers:{apikey:env.ANON_KEY,Authorization:'Bearer '+employee.access_token,'Content-Type':'application/json','Content-Profile':'api_v2'},body:JSON.stringify({p_user_id:employeeId,p_expected_revision:4,p_enabled:false,p_request_id:crypto.randomUUID()})});
+ if(deniedRole.ok)throw Error('Employee changed own submitter role');
  if(errors.length)throw Error('Browser errors: '+errors.join('; '));
  console.log(JSON.stringify({ok:true,checks:['real account creation and invitation','optional fields collapsed','creation scope step','scope failure never recreates account','successful save closes creation dialog','created account stays inactive','menu entry','home unit','council and descendants','server failure retains selections','retry same receipt','save and reload','desktop/mobile','real employee submission options','self elevation denied']}));
 } catch(error) {
