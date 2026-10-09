@@ -25,9 +25,151 @@
   --qarar-gradient-light: linear-gradient(135deg, #ffffff 0%, #f2f6fa 100%);
   --background: var(--qarar-white);
   --foreground: var(--qarar-navy);
+
+  /*
+   * Qarar design tokens (docs/design/DESIGN_STANDARDS_AR.md).
+   * New and migrated screens read these names only; a colour or size is never
+   * written by hand inside a component. The legacy --qarar-* names above stay
+   * until their last consumer is migrated.
+   */
+  --q-blue-50: #f0f7ff;
+  --q-blue-100: #d6e9ff;
+  --q-blue-300: #8cc0f5;
+  --q-blue-500: #1e88e5;
+  --q-blue-600: #0066cc;
+  --q-blue-700: #0052a3;
+  --q-blue-800: #003d7a;
+
+  --q-bg: #f3f5f8;
+  --q-surface: #ffffff;
+  --q-surface-2: #eaf1f9;
+  --q-border: #dde3ea;
+  --q-border-strong: #8a98ab;
+  --q-text: #0a1330;
+  --q-text-2: #46566b;
+  --q-text-3: #5b6b80;
+
+  --q-primary: #0066cc;
+  --q-primary-hover: #0052a3;
+  --q-on-primary: #ffffff;
+  --q-link: #0052a3;
+  --q-seat: #ffffff;
+
+  /* Orange marks the one live thing on a screen; it is never a status colour. */
+  --q-live: #c95f00;
+  --q-live-soft: #fff0e0;
+
+  --q-success: #0f7a55;
+  --q-success-soft: #e3f5ed;
+  --q-warning: #7a4e00;
+  --q-warning-soft: #fff3d6;
+  --q-danger: #b3261e;
+  --q-danger-soft: #fde8e6;
+  --q-on-danger: #ffffff;
+  --q-neutral-soft: #e9edf2;
+
+  --q-header: #0a1330;
+  --q-on-header: #ffffff;
+  --q-stage-from: #1e88e5;
+  --q-stage-to: #0057c8;
+  --q-on-stage: #ffffff;
+  --q-focus: rgba(0, 102, 204, 0.32);
+
+  --q-radius-control: 8px;
+  --q-radius-card: 12px;
+}
+
+/*
+ * Night mode is opt-in per subtree: set data-theme="dark" on the container
+ * (the live meeting room first). Screens that still hard-code colours do not
+ * respond to it, so it must not be set on <html> until they are migrated.
+ */
+[data-theme="dark"] {
+  --q-bg: #060b1f;
+  --q-surface: #0f1936;
+  --q-surface-2: #18244a;
+  --q-border: #25315a;
+  --q-border-strong: #5a6a94;
+  --q-text: #f3f6fb;
+  --q-text-2: #aebbd0;
+  --q-text-3: #93a2bb;
+
+  --q-primary: #0066cc;
+  --q-primary-hover: #1e7ee0;
+  --q-on-primary: #ffffff;
+  --q-link: #4da3ff;
+  --q-seat: #132352;
+
+  --q-live: #ff8a1f;
+  --q-live-soft: #3a2410;
+
+  --q-success: #3ecf98;
+  --q-success-soft: #0f2f27;
+  --q-warning: #f2c14e;
+  --q-warning-soft: #33290f;
+  --q-danger: #ff7b72;
+  --q-danger-soft: #3a1614;
+  --q-on-danger: #2a0705;
+  --q-neutral-soft: #1c274a;
+
+  --q-header: #060b1f;
+  --q-on-header: #f3f6fb;
+  --q-stage-from: #17357a;
+  --q-stage-to: #0b1740;
+  --q-on-stage: #f3f6fb;
+  --q-focus: rgba(77, 163, 255, 0.5);
+
+  color: var(--q-text);
 }
 
 @theme inline {
+  --font-sans: var(--font-qarar), "IBM Plex Sans Arabic", Tahoma, Arial, sans-serif;
+
+  --color-q-bg: var(--q-bg);
+  --color-q-surface: var(--q-surface);
+  --color-q-surface-2: var(--q-surface-2);
+  --color-q-border: var(--q-border);
+  --color-q-border-strong: var(--q-border-strong);
+  --color-q-text: var(--q-text);
+  --color-q-text-2: var(--q-text-2);
+  --color-q-text-3: var(--q-text-3);
+  --color-q-primary: var(--q-primary);
+  --color-q-primary-hover: var(--q-primary-hover);
+  --color-q-on-primary: var(--q-on-primary);
+  --color-q-link: var(--q-link);
+  --color-q-seat: var(--q-seat);
+  --color-q-live: var(--q-live);
+  --color-q-live-soft: var(--q-live-soft);
+  --color-q-success: var(--q-success);
+  --color-q-success-soft: var(--q-success-soft);
+  --color-q-warning: var(--q-warning);
+  --color-q-warning-soft: var(--q-warning-soft);
+  --color-q-danger: var(--q-danger);
+  --color-q-danger-soft: var(--q-danger-soft);
+  --color-q-on-danger: var(--q-on-danger);
+  --color-q-neutral-soft: var(--q-neutral-soft);
+  --color-q-header: var(--q-header);
+  --color-q-on-header: var(--q-on-header);
+  --color-q-on-stage: var(--q-on-stage);
+  --color-q-focus: var(--q-focus);
+
+  /* Type scale. 13px is the smallest size allowed anywhere in the product. */
+  --text-q-caption: 0.8125rem;
+  --text-q-caption--line-height: 1.7;
+  --text-q-ui: 0.9375rem;
+  --text-q-ui--line-height: 1.7;
+  --text-q-body: 1.0625rem;
+  --text-q-body--line-height: 1.85;
+  --text-q-h3: 1.25rem;
+  --text-q-h3--line-height: 1.6;
+  --text-q-h2: 1.5rem;
+  --text-q-h2--line-height: 1.5;
+  --text-q-h1: 2rem;
+  --text-q-h1--line-height: 1.4;
+
+  --radius-q-control: var(--q-radius-control);
+  --radius-q-card: var(--q-radius-card);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--qarar-primary);
@@ -51,7 +193,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Tahoma, sans-serif;
+  font-family: var(--font-qarar), "IBM Plex Sans Arabic", Tahoma, Arial, sans-serif;
 }
 
 button,
