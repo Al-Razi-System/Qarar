@@ -214,9 +214,8 @@ select throws_ok($$select api_v1.update_meeting_decision_text((select decision_i
 select is((api_v1.list_meeting_decisions('87000000-0000-0000-0000-000000000081')->0->>'can_edit_text')::boolean,false,'not editable while the minutes are out for approval');
 
 -- The attendees approve the minutes: the text is final.
--- Returning the minutes (respond 'return') would reopen the text, but the meeting
--- status guard rejects waiting_for_approval -> waiting_for_minutes today, so that
--- path is reported separately and not exercised here.
+-- Returning the minutes (respond 'return') reopens the text; that path is covered
+-- by 88_minutes_return_test.sql.
 select api_v1.respond_meeting_minutes_approval((pg_temp.s87_approval('87000000-0000-0000-0000-000000000011')).id,'approve',null,(pg_temp.s87_approval('87000000-0000-0000-0000-000000000011')).updated_at);
 set local "request.jwt.claims"='{"sub":"87000000-0000-0000-0000-000000000012","role":"authenticated"}';
 select api_v1.respond_meeting_minutes_approval((pg_temp.s87_approval('87000000-0000-0000-0000-000000000012')).id,'approve',null,(pg_temp.s87_approval('87000000-0000-0000-0000-000000000012')).updated_at);
