@@ -163,6 +163,11 @@ select is(
     source.rolname='qarar_topics_executor'
     and n.nspname='qarar_governance' and c.relname='topic_regulation_references'
    )
+   -- Creating a council writes its periodic governance meeting plan (20261007001000).
+   and not (
+    source.rolname='qarar_core_executor'
+    and n.nspname='qarar_meetings' and c.relname='council_meeting_plans_v2'
+   )
    and not (n.nspname='qarar_audit' and c.relname='audit_logs')),
 0,'module executors have no unregistered cross-module table writes');
 
