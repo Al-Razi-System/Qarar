@@ -1,0 +1,4 @@
+comment = 'Local stand-in for pg_cron: records jobs, never runs them'
+default_version = '1.0'
+relocatable = false
+schema = pg_catalog

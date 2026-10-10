@@ -218,6 +218,12 @@ result using `simple_majority`:
 `voting.manage` receive the electorate/participation list and individual votes; members cannot
 inspect other members' votes.
 
+`list_meeting_voting_rounds` returns, for an open round, `votes_cast_count` and `participation`
+(`[{user_id, full_name_ar, has_voted}]`) to callers with `voting.manage` or `agenda.manage` and to
+the members snapshotted as eligible for that round. Every other caller receives `null` and `[]`.
+It never returns a vote value or a vote note, and the option totals (`approve_count`,
+`reject_count`, `abstain_count`) are `null` for everyone until the round is closed.
+
 `cancel_voting_round` requires `p_voting_round_id` and a 5-2000 character `p_reason`. It marks the
 round `cancelled`, preserves any already cast votes as audit evidence, and resets the agenda item so
 a corrected round can be opened. A meeting cannot move to minutes while any round remains open.
