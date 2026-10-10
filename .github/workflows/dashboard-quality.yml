@@ -64,7 +64,12 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Fresh Docker configuration
-        run: cp supabase/docker/.env.example supabase/docker/.env
+        # The pgTAP files build their own fixtures. The development seed cannot
+        # run on a fresh volume yet: it executes functions that read
+        # auth.sessions, which GoTrue creates only after the migration runner.
+        run: |
+          cp supabase/docker/.env.example supabase/docker/.env
+          sed -i 's/^QARAR_APPLY_SEED=.*/QARAR_APPLY_SEED=false/' supabase/docker/.env
       - name: Validate and start the stack
         run: |
           npm run docker:config
