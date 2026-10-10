@@ -1,9 +1,11 @@
--- The chair and the rapporteur may edit a decision's text until the minutes are approved.
+-- The council's chair and rapporteur may edit a decision's text until the minutes are approved.
+-- A system administrator or an administrator holding every council permission may not.
+-- The minutes cannot leave for approval without the current text of every decision.
 -- Decision of the product owner, 2026-10-10 (docs/design/HANDOFF_AR.md).
 -- Impact map: docs/engineering/impact/DECISION_TEXT_EDIT_AR.md
 begin;
 create extension if not exists pgtap;
-select plan(26);
+select plan(38);
 
 insert into public.organizations(id,code,name_ar) values
 ('87000000-0000-0000-0000-000000000001','s87-prod','Decision Edit Production'),
@@ -12,12 +14,17 @@ insert into auth.users(id,email) values
 ('87000000-0000-0000-0000-000000000011','chair@s87.test'),
 ('87000000-0000-0000-0000-000000000012','rapporteur@s87.test'),
 ('87000000-0000-0000-0000-000000000013','member@s87.test'),
-('87000000-0000-0000-0000-000000000014','foreign@s87.test');
+('87000000-0000-0000-0000-000000000014','foreign@s87.test'),
+('87000000-0000-0000-0000-000000000015','sysadmin@s87.test'),
+('87000000-0000-0000-0000-000000000016','secretary@s87.test');
 insert into public.users(id,organization_id,email,full_name_ar) values
 ('87000000-0000-0000-0000-000000000011','87000000-0000-0000-0000-000000000001','chair@s87.test','Council Chair'),
 ('87000000-0000-0000-0000-000000000012','87000000-0000-0000-0000-000000000001','rapporteur@s87.test','Council Rapporteur'),
 ('87000000-0000-0000-0000-000000000013','87000000-0000-0000-0000-000000000001','member@s87.test','Council Member'),
-('87000000-0000-0000-0000-000000000014','87000000-0000-0000-0000-000000000002','foreign@s87.test','Foreign');
+('87000000-0000-0000-0000-000000000014','87000000-0000-0000-0000-000000000002','foreign@s87.test','Foreign'),
+('87000000-0000-0000-0000-000000000016','87000000-0000-0000-0000-000000000001','secretary@s87.test','Council Secretary');
+insert into public.users(id,organization_id,email,full_name_ar,is_system_admin) values
+('87000000-0000-0000-0000-000000000015','87000000-0000-0000-0000-000000000001','sysadmin@s87.test','System Admin',true);
 insert into public.governance_unit_types(id,organization_id,code,name_ar) values
 ('87000000-0000-0000-0000-000000000021','87000000-0000-0000-0000-000000000001','council','Council');
 insert into public.governance_units(id,organization_id,unit_type_id,code,name_ar,quorum_percentage) values
@@ -25,10 +32,13 @@ insert into public.governance_units(id,organization_id,unit_type_id,code,name_ar
  '87000000-0000-0000-0000-000000000021','main','Main Council',60);
 update qarar_core.governance_units set minute_approval_rule='all_present_members'
 where id='87000000-0000-0000-0000-000000000022';
+-- Organizations are seeded with empty council leadership roles; use fixed ids instead.
+delete from public.roles where organization_id='87000000-0000-0000-0000-000000000001' and code in ('council_chair','council_rapporteur');
 insert into public.roles(id,organization_id,code,name_ar,role_scope) values
-('87000000-0000-0000-0000-000000000031','87000000-0000-0000-0000-000000000001','s87_chair','Chair','governance_unit'),
-('87000000-0000-0000-0000-000000000032','87000000-0000-0000-0000-000000000001','s87_rapporteur','Rapporteur','governance_unit'),
-('87000000-0000-0000-0000-000000000033','87000000-0000-0000-0000-000000000001','s87_member','Member','governance_unit');
+('87000000-0000-0000-0000-000000000031','87000000-0000-0000-0000-000000000001','council_chair','Chair','governance_unit'),
+('87000000-0000-0000-0000-000000000032','87000000-0000-0000-0000-000000000001','council_rapporteur','Rapporteur','governance_unit'),
+('87000000-0000-0000-0000-000000000033','87000000-0000-0000-0000-000000000001','s87_member','Member','governance_unit'),
+('87000000-0000-0000-0000-000000000034','87000000-0000-0000-0000-000000000001','s87_secretary','Secretary','governance_unit');
 insert into public.permissions(id,organization_id,code,module,action,context_scope,name_ar) values
 ('87000000-0000-0000-0000-000000000041','87000000-0000-0000-0000-000000000001','meetings.manage','meetings','manage','governance_unit','Manage meeting'),
 ('87000000-0000-0000-0000-000000000042','87000000-0000-0000-0000-000000000001','attendance.read','attendance','read','governance_unit','Read attendance'),
@@ -45,12 +55,14 @@ insert into public.permissions(id,organization_id,code,module,action,context_sco
 ('87000000-0000-0000-0000-000000000053','87000000-0000-0000-0000-000000000001','topics.read','topics','read','governance_unit','Read governed topics'),
 ('87000000-0000-0000-0000-000000000054','87000000-0000-0000-0000-000000000001','agenda.manage','agenda','manage','governance_unit','Manage agenda'),
 ('87000000-0000-0000-0000-000000000055','87000000-0000-0000-0000-000000000001','decisions.read','decisions','read','governance_unit','Read decisions');
--- The chair holds every permission of the council.
+-- The chair, and an administrative secretary who is not council leadership,
+-- hold every permission of the council.
 insert into public.role_permissions(organization_id,role_id,permission_id)
-select '87000000-0000-0000-0000-000000000001','87000000-0000-0000-0000-000000000031',id
-from public.permissions
-where organization_id='87000000-0000-0000-0000-000000000001'
-  and left(id::text,8)='87000000';
+select '87000000-0000-0000-0000-000000000001',role_id,p.id
+from public.permissions p
+cross join (values ('87000000-0000-0000-0000-000000000031'::uuid),('87000000-0000-0000-0000-000000000034'::uuid)) r(role_id)
+where p.organization_id='87000000-0000-0000-0000-000000000001'
+  and left(p.id::text,8)='87000000';
 -- The rapporteur manages the agenda but not the meeting.
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select '87000000-0000-0000-0000-000000000001','87000000-0000-0000-0000-000000000032',id
@@ -79,7 +91,7 @@ insert into public.agenda_items(id,organization_id,meeting_id,topic_id,agenda_or
 ('87000000-0000-0000-0000-000000000091','87000000-0000-0000-0000-000000000001',
  '87000000-0000-0000-0000-000000000081','87000000-0000-0000-0000-000000000071',1);
 
-create temporary table s87_state(round_id uuid, decision_id uuid, minutes_updated_at timestamptz);
+create temporary table s87_state(round_id uuid, decision_id uuid, minutes_updated_at timestamptz, draft text);
 insert into s87_state default values;
 grant select,insert,update,delete on s87_state to authenticated;
 
@@ -121,7 +133,24 @@ select is((api_v1.list_meeting_decisions('87000000-0000-0000-0000-000000000081')
 set local "request.jwt.claims"='{"sub":"87000000-0000-0000-0000-000000000013","role":"authenticated"}';
 select is((api_v1.list_meeting_decisions('87000000-0000-0000-0000-000000000081')->0->>'can_edit_text')::boolean,false,'member does not see the decision as editable');
 
+-- The secretary joins after the roster is locked, so attendance and votes are unchanged.
+reset role;
+insert into public.memberships(id,organization_id,user_id,governance_unit_id,role_id) values
+('87000000-0000-0000-0000-000000000064','87000000-0000-0000-0000-000000000001','87000000-0000-0000-0000-000000000016','87000000-0000-0000-0000-000000000022','87000000-0000-0000-0000-000000000034');
+set local role authenticated;
+
+-- Denied: administration without council leadership.
+set local "request.jwt.claims"='{"sub":"87000000-0000-0000-0000-000000000015","role":"authenticated"}';
+select is((api_v1.list_meeting_decisions('87000000-0000-0000-0000-000000000081')->0->>'can_edit_text')::boolean,false,'a system administrator does not see the decision as editable');
+select throws_ok($$select api_v1.update_meeting_decision_text((select decision_id from s87_state),'System admin wording of the decision.',pg_temp.s87_decision_token())$$,
+ '42501',null,'a system administrator cannot edit the decision');
+set local "request.jwt.claims"='{"sub":"87000000-0000-0000-0000-000000000016","role":"authenticated"}';
+select is((api_v1.list_meeting_decisions('87000000-0000-0000-0000-000000000081')->0->>'can_edit_text')::boolean,false,'a secretary with every council permission does not see the decision as editable');
+select throws_ok($$select api_v1.update_meeting_decision_text((select decision_id from s87_state),'Secretary wording of the decision.',pg_temp.s87_decision_token())$$,
+ '42501',null,'a secretary with meetings.manage and agenda.manage but no leadership role cannot edit');
+
 -- Denied: a member, another organization, a short text, a stale token.
+set local "request.jwt.claims"='{"sub":"87000000-0000-0000-0000-000000000013","role":"authenticated"}';
 select throws_ok($$select api_v1.update_meeting_decision_text((select decision_id from s87_state),'Member wording of the decision.',pg_temp.s87_decision_token())$$,
  '42501',null,'a member cannot edit the decision');
 set local "request.jwt.claims"='{"sub":"87000000-0000-0000-0000-000000000014","role":"authenticated"}';
@@ -155,14 +184,31 @@ set local "request.jwt.claims"='{"sub":"87000000-0000-0000-0000-000000000011","r
 select api_v1.update_agenda_discussion('87000000-0000-0000-0000-000000000091','discussed','Discussed and approved by vote.',
  (select updated_at from public.agenda_items where id='87000000-0000-0000-0000-000000000091'));
 select api_v1.complete_meeting_session('87000000-0000-0000-0000-000000000081',(select updated_at from public.meetings where id='87000000-0000-0000-0000-000000000081'));
-update s87_state set minutes_updated_at=(api_v1.generate_meeting_minutes_draft('87000000-0000-0000-0000-000000000081')->>'updated_at')::timestamptz;
+update s87_state set (minutes_updated_at,draft)=(select (g->>'updated_at')::timestamptz, g->>'content_draft' from (select api_v1.generate_meeting_minutes_draft('87000000-0000-0000-0000-000000000081') g) x);
+select ok((select draft from s87_state) like '%Approve the proposal with the amended budget and timeline.%','the generated draft carries the decision text');
 set local "request.jwt.claims"='{"sub":"87000000-0000-0000-0000-000000000012","role":"authenticated"}';
 select is(api_v1.update_meeting_decision_text((select decision_id from s87_state),'Approve the proposal; the rapporteur corrected the wording.',pg_temp.s87_decision_token())->>'meeting_status','waiting_for_minutes','editing while the minutes are prepared is allowed');
 select is((api_v1.list_meeting_decisions('87000000-0000-0000-0000-000000000081')->0->>'can_edit_text')::boolean,true,'still editable while the minutes are prepared');
+select ok(exists(select 1 from pg_locks where locktype='advisory' and pid=pg_backend_pid() and granted
+ and ((classid::bigint<<32)|objid::bigint)=hashtextextended('meeting-minutes-sync:87000000-0000-0000-0000-000000000081',0)),
+ 'editing takes the per-meeting lock that minutes submission also takes');
+select ok(pg_get_functiondef('qarar_minutes.submit_meeting_minutes'::regproc) like '%pg_advisory_xact_lock(hashtextextended(''meeting-minutes-sync:''%',
+ 'minutes submission takes the same per-meeting lock');
+
+-- The minutes cannot leave with the old text.
+set local "request.jwt.claims"='{"sub":"87000000-0000-0000-0000-000000000011","role":"authenticated"}';
+select is((select d->>'decision_text' from jsonb_array_elements(api_v1.get_meeting_minutes('87000000-0000-0000-0000-000000000081')->'decisions') d),
+ 'Approve the proposal; the rapporteur corrected the wording.','the minutes read carries the current decision text');
+select throws_ok($$select api_v1.submit_meeting_minutes('87000000-0000-0000-0000-000000000081',(select draft from s87_state),(select minutes_updated_at from s87_state))$$,
+ '23514',null,'a draft generated before the edit cannot be submitted');
+select is((select status from public.meetings where id='87000000-0000-0000-0000-000000000081'),'waiting_for_minutes','the rejected submission leaves the meeting in minutes preparation');
+
+-- Regenerating picks up the current text and the minutes can leave.
+update s87_state set (minutes_updated_at,draft)=(select (g->>'updated_at')::timestamptz, g->>'content_draft' from (select api_v1.generate_meeting_minutes_draft('87000000-0000-0000-0000-000000000081') g) x);
+select is(api_v1.submit_meeting_minutes('87000000-0000-0000-0000-000000000081',(select draft from s87_state),(select minutes_updated_at from s87_state))->>'status',
+ 'ready_for_approval','the regenerated draft carries the current text and is submitted');
 
 -- Minutes out for approval: the text is frozen.
-set local "request.jwt.claims"='{"sub":"87000000-0000-0000-0000-000000000011","role":"authenticated"}';
-select api_v1.submit_meeting_minutes('87000000-0000-0000-0000-000000000081','Final minutes of the decision meeting.',(select minutes_updated_at from s87_state));
 select throws_ok($$select api_v1.update_meeting_decision_text((select decision_id from s87_state),'Wording after the minutes were sent.',pg_temp.s87_decision_token())$$,
  '23514',null,'the text cannot change while the minutes are out for approval');
 select is((api_v1.list_meeting_decisions('87000000-0000-0000-0000-000000000081')->0->>'can_edit_text')::boolean,false,'not editable while the minutes are out for approval');
@@ -182,9 +228,11 @@ select throws_ok($$select api_v1.update_meeting_decision_text((select decision_i
  '23514',null,'the text is final once the minutes are approved');
 select is((api_v1.list_meeting_decisions('87000000-0000-0000-0000-000000000081')->0->>'can_edit_text')::boolean,false,'not editable once the minutes are approved');
 select is(api_v1.list_meeting_decisions('87000000-0000-0000-0000-000000000081')->0->>'decision_text','Approve the proposal; the rapporteur corrected the wording.','the approved minutes keep the last agreed text');
+reset role;
+select ok((select content_final from qarar_minutes.meeting_minutes where meeting_id='87000000-0000-0000-0000-000000000081') like '%Approve the proposal; the rapporteur corrected the wording.%',
+ 'the certified minutes carry the final decision text');
 
 -- Contract surface.
-reset role;
 select ok(has_function_privilege('authenticated','api_v1.update_meeting_decision_text(uuid,text,timestamptz)','EXECUTE'),'authenticated can call the edit contract');
 select ok(not has_function_privilege('authenticated','qarar_decisions.update_meeting_decision_text(uuid,text,timestamptz)','EXECUTE'),'clients cannot bypass the edit facade');
 

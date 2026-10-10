@@ -247,16 +247,20 @@ action only then.
 }
 ```
 
-- Allowed for the council chair and the rapporteur (`agenda.manage`) while the meeting is
-  `in_progress` or `waiting_for_minutes`, and while the decision has not entered execution.
+- Allowed only for the council's chair or rapporteur, by an active membership in that council
+  with the role `council_chair` or `council_rapporteur`. A system administrator, or a user holding
+  `meetings.manage` or `agenda.manage` without a leadership role, is rejected with `42501`.
+- Allowed while the meeting is `in_progress` or `waiting_for_minutes`, and while the decision has
+  not entered execution.
 - Rejected with `23514` while the minutes are out for approval (`waiting_for_approval`) and once
   they are approved. The text must be at least 10 characters (`22023`).
 - `p_expected_updated_at` is the decision's `updated_at`; a stale value fails with `40001` so the
   chair and the rapporteur cannot overwrite each other.
 - An identical text writes nothing and returns `changed: false`. Each change is audited as
   `decision.text_update` with the previous text.
-- A minutes draft generated earlier keeps the old text; the response carries `meeting_status` so a
-  client preparing the minutes can ask the rapporteur to regenerate or edit the draft.
+- A minutes draft generated earlier keeps the old text, and `submit_meeting_minutes` refuses it
+  until the draft carries the current text (see [08-minutes.md](./08-minutes.md)). Editing and
+  submitting the minutes take the same per-meeting lock.
 
 ## Error Handling
 

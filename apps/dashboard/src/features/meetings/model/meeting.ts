@@ -1,3 +1,4 @@
+import type { MinutesDecision } from "./minutes-decisions";
 export type MeetingCapabilities = {
   can_manage?: boolean;
   can_manage_agenda?: boolean;
@@ -72,6 +73,8 @@ export type MinuteApproval = {
 export type MeetingMinutes = {
   id?: string; content_draft?: string | null; content_final?: string | null; status: string;
   updated_at?: string; approved_at?: string | null; approvals?: MinuteApproval[]; viewer_can_edit?: boolean; final_content_hash?: string | null;
+  /** The current text of each decision of the meeting; the minutes must carry each one to be submitted. */
+  decisions?: MinutesDecision[];
 };
 export type MeetingReadiness = { ready: boolean; checks: Array<{ code: string; label: string; complete: boolean; count?: number }> };
 export type MeetingTopicAttachment = { id: string; topic_id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number; description?: string | null; created_at?: string };

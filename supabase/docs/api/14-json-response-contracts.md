@@ -196,7 +196,7 @@ AgendaItem = {
 
 | Contract | Response |
 |---|---|
-| `get_meeting_minutes` | Meeting-minutes row plus `approvals[]`; each approval contains identity, status, notes, resolution, and concurrency fields |
+| `get_meeting_minutes` | Meeting-minutes row plus `approvals[]` and `decisions[]`; each approval contains identity, status, notes, resolution, and concurrency fields; each decision is `{id,decision_no,agenda_item_id,decision_text}` |
 | `save_meeting_minutes_draft` | `{id,status,updated_at}` |
 | `submit_meeting_minutes` | `{id,status:"ready_for_approval",approvers}` |
 | `respond_meeting_minutes_approval` | `{approval_id,decision}` |
