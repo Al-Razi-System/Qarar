@@ -200,10 +200,11 @@ select is(
       (to_regprocedure('qarar_iam.service_consume_iam_rate_limit(uuid,text,integer,integer)')),
       (to_regprocedure('qarar_iam.service_finalize_invited_user(uuid,uuid,text,text,text,text,text,uuid,uuid,text)'))
     ) as wrappers(function_oid)
-    where pg_get_functiondef(function_oid) like '%set_config(''request.jwt.claim'', v_actor_claims, true)%'
-      and pg_get_functiondef(function_oid) like '%set_config(''request.jwt.claims'', v_actor_claims, true)%'
-      and pg_get_functiondef(function_oid) like '%set_config(''request.jwt.claim.sub'', p_actor_user_id::text, true)%'
-      and pg_get_functiondef(function_oid) like '%set_config(''request.jwt.claim.role'', ''authenticated'', true)%'
+    -- Spacing and the local variable name are free; the four claim settings are not.
+    where pg_get_functiondef(function_oid) ~ 'set_config\(''request\.jwt\.claim'',\s*\w*actor_claims,\s*true\)'
+      and pg_get_functiondef(function_oid) ~ 'set_config\(''request\.jwt\.claims'',\s*\w*actor_claims,\s*true\)'
+      and pg_get_functiondef(function_oid) ~ 'set_config\(''request\.jwt\.claim\.sub'',\s*p_actor_user_id::text,\s*true\)'
+      and pg_get_functiondef(function_oid) ~ 'set_config\(''request\.jwt\.claim\.role'',\s*''authenticated'',\s*true\)'
   ),
   2,
   'both service wrappers normalize every supported JWT claim representation'
