@@ -19,7 +19,7 @@ select is(
     from qarar_architecture.api_release_registry
     where api_version = 'v1'
   ),
-  222,
+  228,
   'the api_v1 release metadata matches the reviewed registry count'
 );
 
