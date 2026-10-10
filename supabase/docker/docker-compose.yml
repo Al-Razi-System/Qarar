@@ -483,6 +483,11 @@ services:
     healthcheck:
       interval: 5s
       retries: 3
+      # PostgREST starts before the migration runner (storage depends on it and
+      # the runner depends on storage), so on a fresh volume it reconnects with
+      # backoff through every schema reload. Failures in this window do not
+      # count; a ready PostgREST still turns healthy at the first passing check.
+      start_period: 120s
       test:
         - CMD
         - postgrest
