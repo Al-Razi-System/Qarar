@@ -73,6 +73,15 @@ jobs:
             -f supabase/docker/docker-compose.yml up -d --wait --pull never
       - name: Run database contract smoke tests
         run: sh supabase/tests/run-completed-db-tests.sh
+      - name: Race a decision edit against minutes submission in two sessions
+        if: ${{ !cancelled() }}
+        run: |
+          PGHOST=127.0.0.1 \
+          PGPORT="$(sed -n 's/^QARAR_DB_DIRECT_PORT=//p' supabase/docker/.env)" \
+          PGUSER=supabase_admin \
+          PGPASSWORD="$(sed -n 's/^POSTGRES_PASSWORD=//p' supabase/docker/.env)" \
+          PGDATABASE=postgres \
+          bash supabase/tests/concurrency/decision_minutes_lock.sh
       - name: Verify generated API contract reference against the running registry
         run: npm run test:api-docs
       - if: always()
