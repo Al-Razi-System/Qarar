@@ -40,7 +40,7 @@ export function ControlDock({ item, actions, note, busy, blockers, onAction, onC
           ))}
           {busy && <span role="status" className="text-q-caption font-bold text-q-text-2">جارٍ التنفيذ…</span>}
           {!busy && reason && <span className="text-q-caption font-bold text-q-warning">{reason}</span>}
-          {!busy && actions.length === 0 && note && <span className="text-q-ui text-q-text-2">{note}</span>}
+          {!busy && !reason && note && <span className="text-q-ui text-q-text-2">{note}</span>}
         </div>
       </div>
       <div className="flex flex-col gap-1 border-t border-q-border pt-3 lg:items-end lg:border-s lg:border-t-0 lg:ps-4 lg:pt-0">

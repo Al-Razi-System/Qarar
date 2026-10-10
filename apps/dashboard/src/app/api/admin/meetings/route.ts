@@ -17,7 +17,7 @@ const contracts = new Set([
   "apply_quorum_failure", "get_attendance_history",
   "open_voting_round", "get_voting_round_detail", "get_my_open_votes",
   "cast_vote", "close_voting_round", "cancel_voting_round",
-  "create_decision_from_voting_round", "list_meeting_decisions", "list_meeting_voting_rounds",
+  "create_decision_from_voting_round", "update_meeting_decision_text", "list_meeting_decisions", "list_meeting_voting_rounds",
   "update_agenda_discussion", "complete_meeting_session",
   "send_meeting_invitations",
   "send_meeting_invitations_v2",

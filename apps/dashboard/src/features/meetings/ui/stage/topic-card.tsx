@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { InstructionContent } from "@/shared/content/instruction-content";
 import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
 import type { AgendaItemFlow, AgendaItemState } from "../../model/agenda-flow";
-import type { AgendaDiscussionItem, LiveMeetingSession, TopicGovernanceHistory } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Decision, LiveMeetingSession, TopicGovernanceHistory } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { TopicAttachmentsPanel } from "../topic-attachments-panel";
 import { VoteResultPanel } from "../vote-result-panel";
@@ -29,13 +30,14 @@ type Props = {
   summaryDraft?: string;
   onSummaryDraftChange: (text: string) => void;
   onUpdateDiscussion: UpdateDiscussion;
+  onEditDecision: (decision: Decision) => void;
 };
 
 /**
  * Everything the council needs on one agenda item: its guidance, its files and
  * what earlier councils decided, then the vote and the rapporteur's summary.
  */
-export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion }: Props) {
+export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision }: Props) {
   const [chosenTab, setChosenTab] = useState<ReferenceTab | null>(null);
   const instructions = item.discussion_instructions?.trim() ?? "";
   const tabs: Array<{ value: ReferenceTab; label: string }> = [
@@ -48,6 +50,8 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
   const manager = session.viewer.can_manage_voting && !presenting;
   const role = presenting ? "member" : session.viewer.mode;
   const showParticipation = flow.open && (session.viewer.can_manage_voting || (flow.open.participation?.length ?? 0) > 0);
+  const decision = flow.decision;
+  const canEditDecision = Boolean(decision?.can_edit_text) && !presenting;
 
   return (
     <Card live={state.tone === "live"} role="region" aria-label="الموضوع المعروض" className="flex min-w-0 flex-col gap-4">
@@ -88,6 +92,17 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
               {flow.open ? "التصويت مفتوح الآن؛ يسجّل كل عضو صوته من بطاقة التصويت على شاشته." : "يُفتح التصويت بعد أن ينهي رئيس المجلس المناقشة."}
             </p>
           )}
+        </section>
+      )}
+
+      {decision && (
+        <section aria-label="القرار" className="flex flex-col gap-2 rounded-q-control border border-q-border bg-q-surface-2 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="m-0 text-q-ui font-bold">القرار {decision.decision_no}</h3>
+            {canEditDecision && <Button variant="secondary" disabled={busy} onClick={() => onEditDecision(decision)}>تعديل القرار</Button>}
+          </div>
+          <p className="m-0 whitespace-pre-line text-q-body">{decision.decision_text}</p>
+          {canEditDecision && <p className="m-0 text-q-caption text-q-text-2">يعدّل النص رئيس المجلس والمقرر إلى اعتماد المحضر.</p>}
         </section>
       )}
 

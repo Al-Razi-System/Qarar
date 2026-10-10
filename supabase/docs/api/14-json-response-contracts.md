@@ -261,7 +261,8 @@ VotingRound = {
 | `cancel_voting_round` | `{voting_round_id,status,result}` |
 | `get_voting_round_detail` | `VotingRound + {has_voted,my_vote?,eligible_members:EligibleMember[]?,votes:VoteDetail[]?}` |
 | `create_decision_from_voting_round` | `{id,decision_no,decision_status,already_exists}` |
-| `list_meeting_decisions` | `DecisionSummary[]` with `{id,decision_no,agenda_item_id,decision_text,decision_status,requires_approval}` |
+| `list_meeting_decisions` | `DecisionSummary[]` with `{id,decision_no,agenda_item_id,decision_text,decision_status,requires_approval,updated_at,can_edit_text}` |
+| `update_meeting_decision_text` | `{id,decision_no,decision_status,decision_text,updated_at,changed,meeting_status}` |
 | `list_meeting_voting_rounds` | `VotingRoundSummary[]` with agenda identity, status/result, and vote counts |
 
 `eligible_members` and `votes` are `null` for ordinary members and arrays for callers with
