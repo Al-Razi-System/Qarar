@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { AgendaDiscussionItem, Attendance, LiveMeetingSession, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, VotingRound } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { AgendaWorkspace } from "./agenda-workspace";
 import { MemberVoteCard } from "./member-vote-card";
@@ -7,7 +7,7 @@ import { RoomStage } from "./room-stage";
 import { useRoomTheme } from "./use-room-theme";
 
 /** The agenda side of the live room as each role sees it, under the council-table scene. */
-type RoomProps = { mode: "chair" | "rapporteur" | "member"; agenda: AgendaDiscussionItem[]; rounds: VotingRound[]; presenting?: boolean; voting?: boolean };
+type RoomProps = { mode: "chair" | "rapporteur" | "member"; agenda: AgendaDiscussionItem[]; rounds: VotingRound[]; decisions?: Decision[]; presenting?: boolean; voting?: boolean };
 
 const names = ["د. منصور", "د. هدى", "د. خالد", "د. ريم", "د. فهد", "د. نورة", "د. ماجد", "د. أمل", "د. سامي"];
 const attendance: Attendance[] = names.map((name, index) => ({ id: `att-${index}`, user_id: `u${index}`, full_name_ar: name, status: "present", verification_status: "verified", updated_at: "2026-10-10T08:00:00Z" }));
@@ -41,17 +41,23 @@ const openRound: VotingRound = {
   participation: attendance.map((record, index) => ({ user_id: record.user_id, full_name_ar: record.full_name_ar, has_voted: index < 6 })),
 };
 const closedRound: VotingRound = { id: "r1", agenda_item_id: "a2", status: "closed", result: "approved", approve_count: 7, reject_count: 1, abstain_count: 1, closed_at: "2026-10-10T09:00:00Z" };
+const decided = voting.map((item) => item.id === "a2" ? { ...item, discussion_notes: "أوصى المجلس باعتماد الخطة مع مراجعة المتطلبات السابقة لمقررين.", updated_at: "2026-10-10T09:05:00Z" } : item);
+const savedDecision = (editable: boolean): Decision => ({
+  id: "d1", decision_no: "DEC-2026-000014", agenda_item_id: "a2", decision_status: "ready_for_approval",
+  decision_text: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي، على أن تُراجع المتطلبات السابقة لمقرري تعلم الآلة والرؤية الحاسوبية قبل بداية الفصل القادم.",
+  updated_at: "2026-10-10T09:10:00Z", can_edit_text: editable,
+});
 
-function Room({ mode, agenda, rounds, presenting = false, voting: hasBallot = false }: RoomProps) {
+function Room({ mode, agenda, rounds, decisions = [], presenting = false, voting: hasBallot = false }: RoomProps) {
   const theme = useRoomTheme();
   const live = session(mode);
   const noop = () => undefined;
   return (
     <div data-theme={theme.dark ? "dark" : undefined} className={`flex flex-col gap-4 font-sans ${theme.dark ? "rounded-q-card bg-q-bg p-5 text-q-text" : ""}`}>
-      <RoomStage session={live} agenda={agenda} rounds={rounds} decisions={[]} dark={theme.dark} onToggleTheme={theme.toggle} presentation={mode === "chair" ? { active: presenting, onToggle: noop } : undefined} />
+      <RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} dark={theme.dark} onToggleTheme={theme.toggle} presentation={mode === "chair" ? { active: presenting, onToggle: noop } : undefined} />
       {hasBallot && <MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي", has_voted: false }} busy={false} onCast={noop} />}
-      <AgendaWorkspace session={live} agenda={agenda} attachments={attachments} topicHistory={{}} rounds={rounds} decisions={[]} busy={false} presenting={presenting}
-        onUpdateDiscussion={async () => true} onRequestPostpone={noop} onOpenRound={noop} onCloseRound={noop} onCreateDecision={noop} onComplete={noop} />
+      <AgendaWorkspace session={live} agenda={agenda} attachments={attachments} topicHistory={{}} rounds={rounds} decisions={decisions} busy={false} presenting={presenting}
+        onUpdateDiscussion={async () => true} onRequestPostpone={noop} onOpenRound={noop} onCloseRound={noop} onCreateDecision={noop} onEditDecision={noop} onComplete={noop} />
     </div>
   );
 }
@@ -63,6 +69,8 @@ type Story = StoryObj<typeof Room>;
 export const ChairDiscussion: Story = { name: "الرئيس: قيد المناقشة", args: { mode: "chair", agenda: discussing, rounds: [] } };
 export const ChairVoting: Story = { name: "الرئيس: التصويت مفتوح", args: { mode: "chair", agenda: voting, rounds: [openRound] } };
 export const ChairResult: Story = { name: "الرئيس: صياغة القرار", args: { mode: "chair", agenda: voting, rounds: [closedRound] } };
+export const ChairDecisionSaved: Story = { name: "الرئيس: القرار محفوظ وقابل للتعديل", args: { mode: "chair", agenda: decided, rounds: [closedRound], decisions: [savedDecision(true)] } };
+export const MemberDecisionSaved: Story = { name: "العضو: القرار المحفوظ", args: { mode: "member", agenda: decided, rounds: [closedRound], decisions: [savedDecision(false)] } };
 export const RapporteurSummary: Story = { name: "المقرر: الملخص النهائي", args: { mode: "rapporteur", agenda: voting, rounds: [closedRound] } };
 export const MemberVoting: Story = { name: "العضو: بطاقة التصويت", args: { mode: "member", agenda: voting, rounds: [openRound], voting: true } };
 export const Presentation: Story = { name: "وضع العرض على الشاشة", args: { mode: "chair", agenda: voting, rounds: [openRound], presenting: true } };

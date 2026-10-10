@@ -25,6 +25,7 @@ type Props = {
   onOpenRound: (item: AgendaDiscussionItem) => void;
   onCloseRound: (round: VotingRound) => void;
   onCreateDecision: (round: VotingRound, item: AgendaDiscussionItem) => void;
+  onEditDecision: (decision: Decision, item: AgendaDiscussionItem, round: VotingRound | null) => void;
   onComplete: () => void;
 };
 
@@ -33,7 +34,7 @@ type Props = {
  * the chair, the control dock. The item on screen follows the meeting unless
  * the viewer picks another one, and returns to following when the meeting moves on.
  */
-export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onComplete }: Props) {
+export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onEditDecision, onComplete }: Props) {
   const ordered = sortAgenda(agenda);
   const currentId = activeAgendaItemId(session, ordered, rounds, decisions);
   const [picked, setPicked] = useState<{ whileCurrent: string | null; itemId: string } | null>(null);
@@ -59,6 +60,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
     else if (action.kind === "open_round") onOpenRound(selected);
     else if (action.kind === "close_round" && flow.open) onCloseRound(flow.open);
     else if (action.kind === "decision" && flow.closed) onCreateDecision(flow.closed, selected);
+    else if (action.kind === "edit_decision" && flow.decision) onEditDecision(flow.decision, selected, flow.closed);
   }
 
   return (
@@ -78,6 +80,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
           summaryDraft={summaryDrafts[selected.id]}
           onSummaryDraftChange={(text) => setSummaryDrafts((drafts) => ({ ...drafts, [selected.id]: text }))}
           onUpdateDiscussion={onUpdateDiscussion}
+          onEditDecision={(decision) => onEditDecision(decision, selected, flow.closed)}
         />
       </div>
       {manager && blockers.length > 0 && (

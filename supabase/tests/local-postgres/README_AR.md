@@ -26,6 +26,17 @@ PGHOST=127.0.0.1 PGPORT=54329 supabase/tests/local-postgres/run.sh
 PGHOST=127.0.0.1 PGPORT=54329 supabase/tests/local-postgres/run.sh supabase/tests/database/86_*.sql
 ```
 
+## اختبار التزامن بجلستين
+
+`supabase/tests/concurrency/decision_minutes_lock.sh` يفتح جلستين حقيقيتين في وقت واحد، ويتحقق
+أن تعديل نص القرار وإرسال المحضر يتتابعان ولا يتداخلان. السكربت يودِع بيانات تجهيز دائمة،
+فيُشغَّل على قاعدة مؤقتة فقط بعد `run.sh`:
+
+```bash
+PGHOST=127.0.0.1 PGPORT=54329 PGDATABASE=qarar_local_test PGUSER=postgres \
+  supabase/tests/concurrency/decision_minutes_lock.sh
+```
+
 ## خط الأساس في 2026-10-10
 
 كل الترحيلات تُطبَّق. تفشل هنا ثمانية ملفات قبل أي تغيير، فلا تُحسب على تغييرك:

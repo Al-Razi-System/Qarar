@@ -12,7 +12,7 @@ export type AgendaItemFlow = {
 export type AgendaStateTone = "neutral" | "live" | "info" | "success" | "warning" | "danger";
 export type AgendaItemState = { label: string; tone: AgendaStateTone };
 
-export type ChairActionKind = "start" | "end" | "postpone" | "open_round" | "close_round" | "decision";
+export type ChairActionKind = "start" | "end" | "postpone" | "open_round" | "close_round" | "decision" | "edit_decision";
 export type ChairAction = {
   kind: ChairActionKind;
   label: string;
@@ -105,6 +105,7 @@ export function chairActions(item: AgendaDiscussionItem, session: LiveMeetingSes
   } else if (flow.closed?.result === "approved" && !flow.decision) {
     actions.push({ kind: "decision", label: "صياغة القرار المعتمد" });
   } else if (flow.decision) {
+    if (flow.decision.can_edit_text) actions.push({ kind: "edit_decision", label: "تعديل القرار" });
     note = `${flow.decision.decision_no} · تم إنشاء القرار.`;
   } else if (flow.closed) {
     note = "تم توثيق نتيجة التصويت لهذا البند.";

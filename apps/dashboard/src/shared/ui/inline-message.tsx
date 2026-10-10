@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/utils";
 
-type Tone = "error" | "success" | "info";
+type Tone = "error" | "warning" | "success" | "info";
 
 const toneClass: Record<Tone, string> = {
   error: "bg-q-danger-soft text-q-danger",
+  warning: "bg-q-warning-soft text-q-warning",
   success: "bg-q-success-soft text-q-success",
   info: "bg-q-surface-2 text-q-text-2",
 };
@@ -13,7 +14,8 @@ type Props = { tone?: Tone; children: ReactNode; className?: string };
 
 /**
  * Feedback rendered at the action that produced it. Errors are announced
- * immediately; success and information are announced politely.
+ * immediately; warnings (an unmet requirement), success and information are
+ * announced politely.
  */
 export function InlineMessage({ tone = "info", className, children }: Props) {
   return (

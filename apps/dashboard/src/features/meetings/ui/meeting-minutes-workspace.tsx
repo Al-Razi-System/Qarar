@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Download, FileSignature, LoaderCircle, LockKeyhole, PenLine, RotateCcw, Send, ShieldCheck, Sparkles, Undo2 } from "lucide-react";
+import { InlineMessage } from "@/shared/ui/inline-message";
 import type { MeetingDetail, MeetingMinutes, MinuteApproval, SignatureStrokes } from "../model/meeting";
+import { decisionsMissingFromMinutes } from "../model/minutes-decisions";
 
 export function MeetingMinutesWorkspace({ meeting, minutes, text, loading, onTextChange, onGenerate, onSave, onSubmit, onSign, onReturn }: {
   meeting: MeetingDetail; minutes: MeetingMinutes | null; text: string; loading: boolean;
@@ -17,6 +19,7 @@ export function MeetingMinutesWorkspace({ meeting, minutes, text, loading, onTex
   const [returning, setReturning] = useState<MinuteApproval | null>(null);
   const [returnReason, setReturnReason] = useState("");
   const canEdit = meeting.status === "waiting_for_minutes" && Boolean(minutes?.viewer_can_edit);
+  const staleDecisions = decisionsMissingFromMinutes(text, minutes?.decisions);
   const final = minutes?.content_final ?? text;
   const approvals = minutes?.approvals ?? [];
   const approvedCount = approvals.filter((approval) => approval.approval_status === "approved").length;
@@ -38,7 +41,8 @@ export function MeetingMinutesWorkspace({ meeting, minutes, text, loading, onTex
       {canEdit ? <>
         <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h4 className="text-xs font-black text-[#173652]">تجهيز المسودة من سجل الجلسة</h4><p className="mt-1 text-[10px] leading-5 text-[#587189]">يجمع الحضور المعتمد والبنود بالترتيب وملخص النتائج. هذه خطوة منظمة تمهّد لإرسال المحتوى إلى خدمة الذكاء الاصطناعي عند ربطها، ولا تدّعي توليدًا ذكيًا حاليًا.</p></div><button onClick={onGenerate} disabled={loading} className="flex items-center gap-2 rounded-xl bg-[#0877d6] px-4 py-2.5 text-[10px] font-black text-white disabled:opacity-40"><Sparkles size={15} />تجهيز مسودة من بيانات الجلسة</button></div></div>
         <label className="block"><span className="mb-2 block text-[11px] font-black text-[#243a52]">نص المحضر الذي سيراجعه الحاضرون</span><textarea value={text} onChange={(event) => onTextChange(event.target.value)} placeholder="جهز المسودة من بيانات الجلسة أو اكتب المحضر هنا..." className="min-h-80 w-full resize-y rounded-2xl border border-[#d8e4ee] bg-white p-5 text-xs leading-8 text-[#1d334a] outline-none focus:border-[#0877d6] focus:ring-4 focus:ring-blue-50" /></label>
-        <div className="flex flex-wrap gap-2"><button onClick={onSave} disabled={loading || text.trim().length < 20} className="flex items-center gap-2 rounded-xl border border-blue-200 px-4 py-2.5 text-[10px] font-black text-blue-700 disabled:opacity-40"><PenLine size={14} />حفظ المسودة</button><button onClick={onSubmit} disabled={loading || !minutes?.id || text.trim().length < 20} className="flex items-center gap-2 rounded-xl bg-[#0a1b35] px-5 py-2.5 text-[10px] font-black text-white disabled:opacity-40"><Send size={14} />تثبيت النسخة وإرسالها لجميع الحاضرين</button></div>
+        <div className="flex flex-wrap gap-2"><button onClick={onSave} disabled={loading || text.trim().length < 20} className="flex items-center gap-2 rounded-xl border border-blue-200 px-4 py-2.5 text-[10px] font-black text-blue-700 disabled:opacity-40"><PenLine size={14} />حفظ المسودة</button><button onClick={onSubmit} disabled={loading || !minutes?.id || text.trim().length < 20 || staleDecisions.length > 0} className="flex items-center gap-2 rounded-xl bg-[#0a1b35] px-5 py-2.5 text-[10px] font-black text-white disabled:opacity-40"><Send size={14} />تثبيت النسخة وإرسالها لجميع الحاضرين</button></div>
+        {staleDecisions.length > 0 && <InlineMessage tone="warning">لا يُرسل المحضر للمصادقة قبل أن يتضمن النص الحالي {staleDecisions.length === 1 ? "للقرار" : "للقرارات"} {staleDecisions.map((decision) => decision.decision_no).join("، ")}، فقد عُدِّل بعد تجهيز المسودة. أعد تجهيز المسودة من بيانات الجلسة أو ضمّن النص الحالي ثم احفظ.</InlineMessage>}
       </> : <article className="rounded-2xl border border-[#dfe8f0] bg-[#fbfdff]"><div className="border-b border-[#e6edf4] px-5 py-4"><h4 className="text-xs font-black text-[#172d45]">النص النهائي للمحضر</h4><p className="mt-1 text-[9px] text-[#71869a]">كل توقيع أدناه مرتبط ببصمة هذه النسخة تحديدًا.</p></div><div className="whitespace-pre-wrap p-5 text-xs leading-8 text-[#24384e] sm:p-7">{final || "لم تُجهز نسخة المحضر بعد."}</div></article>}
 
       {!!approvals.length && <div><div className="mb-3 flex items-center justify-between"><h4 className="text-xs font-black text-[#0a1b35]">مصادقات الحاضرين</h4><span className="text-[9px] font-bold text-[#75889a]">{myApproval ? "بطاقتك مميزة، ولا يمكنك التوقيع عن حاضر آخر" : "متابعة حالة توقيعات الحاضرين"}</span></div><div className="grid gap-3 md:grid-cols-2">{[...approvals].sort((a, b) => Number(Boolean(b.can_respond)) - Number(Boolean(a.can_respond))).map((approval) => <ApprovalCard key={approval.id} approval={approval} onSign={() => { setSigning(approval); setSignature([]); }} onReturn={() => { setReturning(approval); setReturnReason(""); }} />)}</div></div>}
