@@ -9,8 +9,8 @@ select is(
     from qarar_architecture.api_contract_registry
     where api_version = 'v1'
   ),
-  227,
-  'the reviewed api_v1 registry contains 227 contracts (kept equal to 13_modular_architecture_test)'
+  228,
+  'the reviewed api_v1 registry contains 228 contracts (kept equal to 13_modular_architecture_test)'
 );
 
 select is(
