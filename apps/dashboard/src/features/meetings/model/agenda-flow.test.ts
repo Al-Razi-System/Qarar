@@ -32,6 +32,13 @@ describe("chairActions", () => {
     expect(done.note).toBe("ق-1 · تم إنشاء القرار.");
   });
 
+  it("offers to edit a saved decision only when the server allows it", () => {
+    const editable = kinds(item({ agenda_status: "discussed" }), session(), [approved], [{ ...decision, can_edit_text: true }]);
+    expect(editable.actions).toEqual([{ kind: "edit_decision", label: "تعديل القرار" }]);
+    expect(editable.note).toBe("ق-1 · تم إنشاء القرار.");
+    expect(kinds(item({ agenda_status: "discussed" }), session(), [approved], [{ ...decision, can_edit_text: false }]).actions).toEqual([]);
+  });
+
   it("ends a discussion-only item without mentioning a vote", () => {
     expect(kinds(item({ agenda_status: "under_discussion", requires_voting: false }), session()).actions[0].label).toBe("إنهاء المناقشة");
   });

@@ -83,7 +83,17 @@ export type LiveMeetingSession = {
 };
 
 export type MyVote = { voting_round_id: string; title_ar: string; has_voted: boolean };
-export type Decision = { id: string; decision_no: string; agenda_item_id: string; decision_status: string; decision_text: string };
+export type Decision = {
+  id: string;
+  decision_no: string;
+  agenda_item_id: string;
+  decision_status: string;
+  decision_text: string;
+  /** Concurrency token for editing the text. */
+  updated_at?: string;
+  /** Whether this viewer may edit the text now, as decided by the server. */
+  can_edit_text?: boolean;
+};
 
 export type TopicMeetingHistory = {
   agenda_item_id: string;

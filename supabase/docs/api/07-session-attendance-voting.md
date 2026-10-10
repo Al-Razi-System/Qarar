@@ -228,6 +228,40 @@ It never returns a vote value or a vote note, and the option totals (`approve_co
 round `cancelled`, preserves any already cast votes as audit evidence, and resets the agenda item so
 a corrected round can be opened. A meeting cannot move to minutes while any round remains open.
 
+## Decisions
+
+`create_decision_from_voting_round` drafts the decision of an approved, closed round. The council
+rapporteur (`agenda.manage`) or the chair may draft it; only the chair may issue it without approval.
+
+`list_meeting_decisions` returns each decision with `updated_at` and `can_edit_text`.
+`can_edit_text` is `true` only when the caller may edit the text now, so clients show the edit
+action only then.
+
+`update_meeting_decision_text` edits the text of a saved decision and nothing else:
+
+```json
+{
+  "p_decision_id": "uuid",
+  "p_decision_text": "اعتماد الخطة بعد تعديل الميزانية.",
+  "p_expected_updated_at": "2026-10-10T12:00:00Z"
+}
+```
+
+- Allowed only for the council's chair or rapporteur, by an active membership in that council
+  with the role `council_chair` or `council_rapporteur`. A system administrator, or a user holding
+  `meetings.manage` or `agenda.manage` without a leadership role, is rejected with `42501`.
+- Allowed while the meeting is `in_progress` or `waiting_for_minutes`, and while the decision has
+  not entered execution.
+- Rejected with `23514` while the minutes are out for approval (`waiting_for_approval`) and once
+  they are approved. The text must be at least 10 characters (`22023`).
+- `p_expected_updated_at` is the decision's `updated_at`; a stale value fails with `40001` so the
+  chair and the rapporteur cannot overwrite each other.
+- An identical text writes nothing and returns `changed: false`. Each change is audited as
+  `decision.text_update` with the previous text.
+- A minutes draft generated earlier keeps the old text, and `submit_meeting_minutes` refuses it
+  until the draft carries the current text (see [08-minutes.md](./08-minutes.md)). Editing and
+  submitting the minutes take the same per-meeting lock.
+
 ## Error Handling
 
 | Condition | Client action |

@@ -1,7 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { AgendaDiscussionItem, LiveMeetingSession, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Decision, LiveMeetingSession, VotingRound } from "../../model/live-meeting";
+import { DecisionComposerDialog } from "../decision-composer-dialog";
 import { AgendaWorkspace } from "./agenda-workspace";
 import { MemberVoteCard } from "./member-vote-card";
 import { ReasonDialog } from "./reason-dialog";
@@ -24,7 +25,7 @@ const second: AgendaDiscussionItem = { id: "a2", agenda_order: 2, agenda_status:
 
 function setup(mode: "chair" | "rapporteur" | "member", overrides: Partial<Parameters<typeof AgendaWorkspace>[0]> = {}) {
   const handlers = {
-    onUpdateDiscussion: vi.fn(async () => true), onRequestPostpone: vi.fn(), onOpenRound: vi.fn(), onCloseRound: vi.fn(), onCreateDecision: vi.fn(), onComplete: vi.fn(),
+    onUpdateDiscussion: vi.fn(async () => true), onRequestPostpone: vi.fn(), onOpenRound: vi.fn(), onCloseRound: vi.fn(), onCreateDecision: vi.fn(), onEditDecision: vi.fn(), onComplete: vi.fn(),
   };
   const props = { session: sessionOf(mode), agenda: [second, first], attachments: [], topicHistory: {}, rounds: [], decisions: [], busy: false, presenting: false, ...handlers, ...overrides };
   return { handlers, props, view: render(<AgendaWorkspace {...props} />) };
@@ -91,6 +92,40 @@ describe("AgendaWorkspace", () => {
     view.rerender(<AgendaWorkspace {...props} decisions={[{ id: "d1", decision_no: "ق-1", agenda_item_id: "a1", decision_status: "ready", decision_text: "نص القرار" }]} />);
     await userEvent.click(screen.getByRole("button", { name: "إنهاء الجلسة والانتقال إلى إعداد المحضر" }));
     expect(handlers.onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  describe("a saved decision", () => {
+    const closed: VotingRound = { id: "r1", agenda_item_id: "a1", status: "closed", result: "approved", approve_count: 3, reject_count: 0, abstain_count: 0, closed_at: "2026-10-09T09:00:00Z" };
+    const done = { ...first, agenda_status: "discussed", discussion_notes: "الملخص النهائي", updated_at: "2026-10-09T10:00:00Z" };
+    const saved: Decision = { id: "d1", decision_no: "ق-1", agenda_item_id: "a1", decision_status: "ready_for_approval", decision_text: "اعتماد الخطة كما وردت.", updated_at: "2026-10-09T10:05:00Z", can_edit_text: true };
+
+    it("is shown to everyone with its text", () => {
+      setup("member", { agenda: [done], rounds: [closed], decisions: [{ ...saved, can_edit_text: false }] });
+      const region = screen.getByRole("region", { name: "القرار" });
+      expect(region).toHaveTextContent("القرار ق-1");
+      expect(region).toHaveTextContent("اعتماد الخطة كما وردت.");
+      expect(within(region).queryByRole("button", { name: "تعديل القرار" })).not.toBeInTheDocument();
+    });
+
+    it("can be edited from the topic card by the rapporteur when the server allows it", async () => {
+      const { handlers } = setup("rapporteur", { agenda: [done], rounds: [closed], decisions: [saved] });
+      await userEvent.click(within(screen.getByRole("region", { name: "القرار" })).getByRole("button", { name: "تعديل القرار" }));
+      expect(handlers.onEditDecision).toHaveBeenCalledWith(saved, done, closed);
+    });
+
+    it("can be edited from the chair's dock, keeping the note of what happened", async () => {
+      const { handlers } = setup("chair", { agenda: [done], rounds: [closed], decisions: [saved] });
+      const dock = screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" });
+      expect(dock).toHaveTextContent("ق-1 · تم إنشاء القرار.");
+      await userEvent.click(within(dock).getByRole("button", { name: "تعديل القرار" }));
+      expect(handlers.onEditDecision).toHaveBeenCalledWith(saved, done, closed);
+    });
+
+    it("offers no edit on the hall screen", () => {
+      setup("chair", { agenda: [done], rounds: [closed], decisions: [saved], presenting: true });
+      expect(screen.getByRole("region", { name: "القرار" })).toHaveTextContent("اعتماد الخطة كما وردت.");
+      expect(screen.queryByRole("button", { name: "تعديل القرار" })).not.toBeInTheDocument();
+    });
   });
 
   it("shows no controls to a member, a rapporteur or the hall screen", () => {
@@ -160,6 +195,42 @@ describe("MemberVoteCard", () => {
   it("blocks every choice while a vote is being recorded", () => {
     render(<MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "خطة البرنامج", has_voted: false }} busy onCast={vi.fn()} />);
     for (const name of ["موافق", "غير موافق", "ممتنع"]) expect(screen.getByRole("button", { name })).toBeDisabled();
+  });
+});
+
+describe("DecisionComposerDialog editing a saved decision", () => {
+  const item: AgendaDiscussionItem = { id: "a1", agenda_order: 1, agenda_status: "discussed", topic: { id: "t1", title_ar: "خطة البرنامج" } };
+  const decision: Decision = { id: "d1", decision_no: "ق-1", agenda_item_id: "a1", decision_status: "ready_for_approval", decision_text: "اعتماد الخطة كما وردت.", updated_at: "2026-10-09T10:05:00Z", can_edit_text: true };
+
+  it("starts from the saved text, saves only a changed text and keeps it when saving fails", async () => {
+    const onClose = vi.fn();
+    const onSubmit = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const props = { item, round: null, decision, busy: false, isRapporteur: true, onClose, onSubmit };
+    const { rerender } = render(<DecisionComposerDialog {...props} />);
+    expect(screen.getByRole("heading", { name: "تعديل القرار ق-1" })).toBeInTheDocument();
+    const field = screen.getByLabelText("نص القرار");
+    expect(field).toHaveValue("اعتماد الخطة كما وردت.");
+    const save = screen.getByRole("button", { name: "حفظ التعديل" });
+    expect(save).toBeDisabled();
+    expect(screen.getByText("لم يتغير النص بعد.")).toBeInTheDocument();
+    await userEvent.type(field, " مع تعديل الميزانية.");
+    await userEvent.click(save);
+    expect(onSubmit).toHaveBeenCalledWith("اعتماد الخطة كما وردت. مع تعديل الميزانية.");
+    expect(onClose).not.toHaveBeenCalled();
+    rerender(<DecisionComposerDialog {...props} error="عُدِّل القرار من مستخدم آخر؛ أعد التحميل ثم أعد المحاولة." />);
+    expect(screen.getByRole("alert")).toHaveTextContent("عُدِّل القرار من مستخدم آخر");
+    expect(screen.getByLabelText("نص القرار")).toHaveValue("اعتماد الخطة كما وردت. مع تعديل الميزانية.");
+    await userEvent.click(screen.getByRole("button", { name: "حفظ التعديل" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps saving disabled below ten characters", async () => {
+    render(<DecisionComposerDialog item={item} round={null} decision={decision} busy={false} isRapporteur={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    const field = screen.getByLabelText("نص القرار");
+    await userEvent.clear(field);
+    await userEvent.type(field, "قصير");
+    expect(screen.getByRole("button", { name: "حفظ التعديل" })).toBeDisabled();
+    expect(screen.getByText("اكتب عشرة أحرف على الأقل ليُفعَّل الحفظ.")).toBeInTheDocument();
   });
 });
 

@@ -45,7 +45,8 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const loadInFlight = useRef(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [checkIn, setCheckIn] = useState<CheckInToken | null>(null);
-  const [decisionDraft, setDecisionDraft] = useState<{ round: VotingRound; item: AgendaDiscussionItem } | null>(null);
+  /** The decision dialog: drafting from an approved round, or editing a saved decision's text. */
+  const [decisionDraft, setDecisionDraft] = useState<{ round: VotingRound | null; item: AgendaDiscussionItem; decision?: Decision } | null>(null);
   const [reasonRequest, setReasonRequest] = useState<ReasonRequest | null>(null);
   const [completeConfirmation, setCompleteConfirmation] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -179,6 +180,18 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     return submitAttendance(session?.attendance.find((record) => record.id === reasonRequest.record.id) ?? reasonRequest.record, "present", reason);
   }
 
+  function submitDecision(text: string) {
+    if (!decisionDraft) return Promise.resolve(false);
+    const { round, decision } = decisionDraft;
+    if (decision) {
+      // The token of the text the editor started from, not of a newer polled copy:
+      // if someone else saved meanwhile, the server refuses instead of overwriting them.
+      return perform(() => liveMeetingRpc("update_meeting_decision_text", { p_decision_id: decision.id, p_decision_text: text, p_expected_updated_at: decision.updated_at }), "تم حفظ التعديل على نص القرار.");
+    }
+    if (!round) return Promise.resolve(false);
+    return perform(() => liveMeetingRpc("create_decision_from_voting_round", { p_voting_round_id: round.id, p_decision_text: text, p_requires_approval: true }), "تم حفظ صياغة القرار وإحالته للاعتماد.");
+  }
+
   async function confirmCompleteSession() {
     if (!session) return;
     const completed = await perform(() => liveMeetingRpc("complete_meeting_session", { p_meeting_id: meetingId, p_expected_updated_at: session.meeting.updated_at }), "انتهت الجلسة وانتقل الاجتماع إلى إعداد المحضر.");
@@ -279,13 +292,14 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           onOpenRound={(item) => void perform(() => liveMeetingRpc("open_voting_round", { p_agenda_item_id: item.id, p_expected_meeting_updated_at: session.meeting.updated_at }), "فُتحت جولة التصويت لهذا البند.")}
           onCloseRound={(round) => void perform(() => liveMeetingRpc("close_voting_round", { p_voting_round_id: round.id, p_reason: "إغلاق الجولة بعد اكتمال التصويت." }), "أُغلقت الجولة وحُسبت النتيجة.")}
           onCreateDecision={(round, item) => { setNotice(null); setDecisionDraft({ round, item }); }}
+          onEditDecision={(decision, item, round) => { setNotice(null); setDecisionDraft({ round, item, decision }); }}
           onComplete={() => { setNotice(null); setCompleteConfirmation(true); }}
         />
       )}
 
       {checkIn && <AttendanceQrDialog meetingId={meetingId} token={checkIn.token} expiresAt={checkIn.expires_at} publicOrigin={publicCheckInOrigin} attendance={session.attendance} viewerUserId={session.viewer.user_id} busy={busy} onVerify={verifyAttendance} onClose={() => setCheckIn(null)} onRenew={() => void createCheckInSession()} />}
 
-      {decisionDraft && <DecisionComposerDialog item={decisionDraft.item} round={decisionDraft.round} busy={busy} error={dialogError} isRapporteur={rapporteur} onClose={() => setDecisionDraft(null)} onSubmit={(text) => perform(() => liveMeetingRpc("create_decision_from_voting_round", { p_voting_round_id: decisionDraft.round.id, p_decision_text: text, p_requires_approval: true }), "تم حفظ صياغة القرار وإحالته للاعتماد.")} />}
+      {decisionDraft && <DecisionComposerDialog key={decisionDraft.decision?.id ?? decisionDraft.item.id} item={decisionDraft.item} round={decisionDraft.round} decision={decisionDraft.decision} busy={busy} error={dialogError} isRapporteur={rapporteur} onClose={() => setDecisionDraft(null)} onSubmit={submitDecision} />}
 
       {reasonRequest?.kind === "postpone" && (
         <ReasonDialog

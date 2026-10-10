@@ -49,6 +49,7 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `get_council_form_options` | `core` | `authenticated` | `-` | `jsonb` |
 | `create_decision_from_voting_round` | `decisions` | `authenticated` | `p_voting_round_id uuid, p_decision_text text, p_requires_approval boolean` | `jsonb` |
 | `list_meeting_decisions` | `decisions` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
+| `update_meeting_decision_text` | `decisions` | `authenticated` | `p_decision_id uuid, p_decision_text text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `act_topic_workflow_step` | `governance` | `authenticated` | `p_topic_id uuid, p_outcome_code text, p_comment text, p_idempotency_key uuid, p_expected_version integer` | `jsonb` |
 | `add_prior_route_evidence_attachment` | `governance` | `authenticated` | `p_step_evidence_id uuid, p_topic_attachment_id uuid` | `jsonb` |
 | `admin_activate_policy_version` | `governance` | `authenticated` | `p_policy_version_id uuid, p_effective_from date, p_effective_to date` | `jsonb` |
