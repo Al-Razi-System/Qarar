@@ -104,13 +104,24 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Prepare Supabase configuration
         working-directory: ${{ github.workspace }}
-        run: cp supabase/docker/.env.example supabase/docker/.env
+        run: |
+          cp supabase/docker/.env.example supabase/docker/.env
+          # The development seed calls functions that read auth.sessions, which
+          # GoTrue creates only after the migration runner finishes. Start the
+          # stack without it and apply it once GoTrue is up (next step).
+          sed -i 's/^QARAR_APPLY_SEED=.*/QARAR_APPLY_SEED=false/' supabase/docker/.env
       - name: Start Supabase
         working-directory: ${{ github.workspace }}
         run: |
           sh scripts/pull-supabase-compose-images.sh
           docker compose --env-file supabase/docker/.env \
             -f supabase/docker/docker-compose.yml up -d --wait --pull never
+          # The browser fixture copies the permission catalogue of the seeded
+          # demo organization. Re-run the migration runner with the seed on: it
+          # verifies the applied migrations and records the seed in its ledger.
+          docker compose --env-file supabase/docker/.env \
+            -f supabase/docker/docker-compose.yml run --rm --no-deps \
+            -e QARAR_APPLY_SEED=true db-migrate
       - name: Run regulations browser scenarios
         run: npm run test:e2e
       - name: Upload Playwright report
