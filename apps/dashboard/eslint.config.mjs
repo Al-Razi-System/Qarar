@@ -18,15 +18,32 @@ const eslintConfig = defineConfig([
     // Design standards (docs/design/DESIGN_STANDARDS_AR.md): shared components
     // take every colour and size from the tokens in globals.css. The ignore list
     // names the components written before the standards; it may only shrink.
-    files: ["src/shared/ui/**/*.tsx", "src/features/permissions/ui/permission-matrix.tsx", "src/app/(dashboard)/admin/permissions/**/*.tsx", "src/features/account/ui/**/*.tsx", "src/features/topics/ui/typed-topic-creator.tsx", "src/features/topics/ui/topic-submission-attachments.tsx", "src/app/(dashboard)/admin/topics/new/page.tsx"],
+    // Add a feature folder here when its screens are migrated to the standards.
+    files: [
+      "src/shared/ui/**/*.tsx",
+      "src/features/permissions/ui/permission-matrix.tsx",
+      "src/app/(dashboard)/admin/permissions/**/*.tsx",
+      "src/features/account/ui/**/*.tsx",
+      "src/features/topics/ui/typed-topic-creator.tsx",
+      "src/features/topics/ui/topic-submission-attachments.tsx",
+      "src/app/(dashboard)/admin/topics/new/page.tsx",
+      "src/features/meetings/ui/stage/**/*.tsx",
+      // The live meeting room, migrated file by file.
+      "src/features/meetings/ui/live-meeting-room.tsx",
+      "src/features/meetings/ui/chair-attendance-console.tsx",
+      "src/features/meetings/ui/attendance-verification-row.tsx",
+      "src/features/meetings/ui/member-check-in-card.tsx",
+      "src/features/meetings/ui/decision-composer-dialog.tsx",
+      "src/features/meetings/ui/topic-attachments-panel.tsx",
+      "src/features/meetings/ui/vote-result-panel.tsx",
+    ],
     ignores: [
       "src/shared/ui/form-field.tsx",
       "src/shared/ui/governance-page-header.tsx",
       "src/shared/ui/instruction-editor.tsx",
       "src/shared/ui/logo.tsx",
       "src/shared/ui/page-header.tsx",
-      "src/shared/ui/**/*.test.tsx",
-      "src/features/account/ui/**/*.test.tsx",
+      "src/**/*.test.tsx",
     ],
     rules: {
       "no-restricted-syntax": [

@@ -1,10 +1,12 @@
 "use client";
 
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Badge } from "@/shared/ui/badge";
+import { cn } from "@/shared/lib/utils";
 import type { Attendance } from "../model/live-meeting";
 
 const labels: Record<string, string> = { present: "حاضر", absent: "غائب", excused: "معتذر", late: "متأخر", pending: "لم يسجّل" };
-const tones: Record<string, string> = { present: "bg-emerald-50 text-emerald-700", absent: "bg-red-50 text-red-700", excused: "bg-amber-50 text-amber-700", late: "bg-orange-50 text-orange-700", pending: "bg-slate-100 text-slate-600" };
+const tones: Record<string, "success" | "danger" | "warning" | "neutral"> = { present: "success", absent: "danger", excused: "warning", late: "warning", pending: "neutral" };
 
 export function AttendanceVerificationRow({ record, busy, isSelf, highlighted = false, onVerify }: {
   record: Attendance;
@@ -16,31 +18,32 @@ export function AttendanceVerificationRow({ record, busy, isSelf, highlighted = 
   const initials = record.full_name_ar.split(" ").slice(0, 2).map((part) => part[0]).join("");
   const actionDisabled = busy || isSelf;
 
-  return <article className={`flex items-center gap-3 rounded-2xl border p-3.5 ${highlighted ? "border-blue-200 bg-white shadow-sm" : "border-[#e4ebf2] bg-white"}`}>
-    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#eaf4fd] text-[11px] font-black text-[#0877d6]">{initials}</span>
-    <div className="min-w-0 flex-1">
-      <h4 className="truncate text-xs font-black text-[#182b43]">{record.full_name_ar}</h4>
-      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-        <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${tones[record.status] ?? tones.pending}`}>{labels[record.status] ?? record.status}</span>
-        {record.check_in_method === "self_qr" && <span className="text-[9px] font-bold text-[#0877d6]">عبر QR</span>}
-        {isSelf && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black text-blue-700">حسابك · يعتمده الطرف الآخر</span>}
+  return (
+    <article className={cn("flex flex-wrap items-center gap-3 rounded-q-card border bg-q-surface p-3 font-sans text-q-text", highlighted ? "border-q-primary" : "border-q-border")}>
+      <span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-q-surface-2 text-q-caption font-bold text-q-link">{initials}</span>
+      <div className="min-w-0 flex-1">
+        <h4 className="m-0 truncate text-q-ui font-bold">{record.full_name_ar}</h4>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          <Badge tone={tones[record.status] ?? "neutral"}>{labels[record.status] ?? "غير محدد"}</Badge>
+          {record.check_in_method === "self_qr" && <span className="text-q-caption font-bold text-q-link">عبر رمز الحضور</span>}
+          {isSelf && <Badge tone="info">حسابك · يعتمده الطرف الآخر</Badge>}
+        </div>
       </div>
-    </div>
-    <div className="flex gap-1">
-      <Action label={isSelf ? "لا يمكنك اعتماد حضورك بنفسك" : "اعتماد حاضر"} tone="emerald" onClick={() => onVerify(record, "present")} disabled={actionDisabled} icon={CheckCircle2} />
-      <Action label={isSelf ? "لا يمكنك تعديل حضورك بنفسك" : "تسجيل معتذر"} tone="amber" onClick={() => onVerify(record, "excused")} disabled={actionDisabled} icon={Clock} />
-      <Action label={isSelf ? "لا يمكنك تعديل حضورك بنفسك" : "تسجيل غائب"} tone="red" onClick={() => onVerify(record, "absent")} disabled={actionDisabled} icon={XCircle} />
-    </div>
-  </article>;
+      <div className="flex gap-1.5">
+        <Action label={isSelf ? "لا يمكنك اعتماد حضورك بنفسك" : "اعتماد حاضر"} className="bg-q-success-soft text-q-success" onClick={() => onVerify(record, "present")} disabled={actionDisabled} icon={CheckCircle2} />
+        <Action label={isSelf ? "لا يمكنك تعديل حضورك بنفسك" : "تسجيل معتذر"} className="bg-q-warning-soft text-q-warning" onClick={() => onVerify(record, "excused")} disabled={actionDisabled} icon={Clock} />
+        <Action label={isSelf ? "لا يمكنك تعديل حضورك بنفسك" : "تسجيل غائب"} className="bg-q-danger-soft text-q-danger" onClick={() => onVerify(record, "absent")} disabled={actionDisabled} icon={XCircle} />
+      </div>
+    </article>
+  );
 }
 
-function Action({ label, tone, onClick, disabled, icon: Icon }: {
+function Action({ label, className, onClick, disabled, icon: Icon }: {
   label: string;
-  tone: "emerald" | "amber" | "red";
+  className: string;
   onClick: () => void;
   disabled: boolean;
   icon: typeof CheckCircle2;
 }) {
-  const style = { emerald: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100", amber: "bg-amber-50 text-amber-700 hover:bg-amber-100", red: "bg-red-50 text-red-700 hover:bg-red-100" }[tone];
-  return <button onClick={onClick} disabled={disabled} title={label} aria-label={label} className={`grid h-8 w-8 place-items-center rounded-lg transition disabled:cursor-not-allowed disabled:opacity-40 ${style}`}><Icon size={15} /></button>;
+  return <button type="button" onClick={onClick} disabled={disabled} title={label} aria-label={label} className={cn("grid h-11 w-11 place-items-center rounded-q-control transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40", className)}><Icon size={18} aria-hidden="true" /></button>;
 }

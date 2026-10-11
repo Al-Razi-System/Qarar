@@ -61,6 +61,7 @@
 
   --q-success: #0f7a55;
   --q-success-soft: #e3f5ed;
+  --q-on-success: #ffffff;
   --q-warning: #7a4e00;
   --q-warning-soft: #fff3d6;
   --q-danger: #b3261e;
@@ -73,7 +74,14 @@
   --q-stage-from: #1e88e5;
   --q-stage-to: #0057c8;
   --q-on-stage: #ffffff;
+  --q-stage-glow: rgba(0, 102, 204, 0.3);
+  /* Vote result colours that stay legible on the blue table. */
+  --q-stage-yes: #8ff2cb;
+  --q-stage-no: #ffb8b2;
+  --q-stage-abstain: #c9d9ee;
   --q-focus: rgba(0, 102, 204, 0.32);
+  /* Backdrop behind dialogs. */
+  --q-scrim: rgba(10, 19, 48, 0.62);
 
   --q-radius-control: 8px;
   --q-radius-card: 12px;
@@ -105,6 +113,7 @@
 
   --q-success: #3ecf98;
   --q-success-soft: #0f2f27;
+  --q-on-success: #04261b;
   --q-warning: #f2c14e;
   --q-warning-soft: #33290f;
   --q-danger: #ff7b72;
@@ -117,7 +126,12 @@
   --q-stage-from: #17357a;
   --q-stage-to: #0b1740;
   --q-on-stage: #f3f6fb;
+  --q-stage-glow: rgba(0, 102, 204, 0.45);
+  --q-stage-yes: #3ecf98;
+  --q-stage-no: #ff7b72;
+  --q-stage-abstain: #7f8ea6;
   --q-focus: rgba(77, 163, 255, 0.5);
+  --q-scrim: rgba(2, 5, 16, 0.74);
 
   color: var(--q-text);
 }
@@ -142,6 +156,7 @@
   --color-q-live-soft: var(--q-live-soft);
   --color-q-success: var(--q-success);
   --color-q-success-soft: var(--q-success-soft);
+  --color-q-on-success: var(--q-on-success);
   --color-q-warning: var(--q-warning);
   --color-q-warning-soft: var(--q-warning-soft);
   --color-q-danger: var(--q-danger);
@@ -151,7 +166,11 @@
   --color-q-header: var(--q-header);
   --color-q-on-header: var(--q-on-header);
   --color-q-on-stage: var(--q-on-stage);
+  --color-q-stage-yes: var(--q-stage-yes);
+  --color-q-stage-no: var(--q-stage-no);
+  --color-q-stage-abstain: var(--q-stage-abstain);
   --color-q-focus: var(--q-focus);
+  --color-q-scrim: var(--q-scrim);
 
   /* Type scale. 13px is the smallest size allowed anywhere in the product. */
   --text-q-caption: 0.8125rem;
@@ -236,4 +255,42 @@ button:disabled {
 .thin-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #c9d8e8 transparent;
+}
+
+/* The council table surface in the live meeting room. */
+.q-stage {
+  background: radial-gradient(ellipse at center, var(--q-stage-from) 0%, var(--q-stage-to) 72%);
+  color: var(--q-on-stage);
+  border: 1px solid var(--q-border-strong);
+  box-shadow: 0 0 80px var(--q-stage-glow);
+}
+
+@keyframes q-seat-wait {
+  from { box-shadow: 0 0 0 0 var(--q-focus); }
+  to { box-shadow: 0 0 0 12px transparent; }
+}
+
+.q-seat-waiting {
+  animation: q-seat-wait 1.6s ease-out infinite;
+}
+
+.q-ring-progress {
+  transition: stroke-dasharray 0.7s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .q-seat-waiting {
+    animation: none;
+  }
+
+  .q-ring-progress {
+    transition: none;
+  }
+}
+
+/* Lets topic instructions follow the room theme: their stylesheet reads the legacy names. */
+.q-instructions {
+  --qarar-navy: var(--q-text);
+  --qarar-snow: var(--q-surface-2);
+  --qarar-primary: var(--q-link);
 }
