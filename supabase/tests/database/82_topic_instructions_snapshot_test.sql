@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(32);
+select plan(36);
 
 insert into qarar_core.organizations(id,code,name_ar)
 values('79000000-0000-0000-0000-000000000001','typed-submission-ci','منظمة اختبار قراءة الحوكمة');
@@ -128,6 +128,12 @@ insert into qarar_meetings.agenda_items(organization_id,meeting_id,topic_id,agen
 select '79000000-0000-0000-0000-000000000001','79000000-0000-0000-0000-000000000080',(payload#>>'{data,topic_id}')::uuid,1,true,'استثناء اختبار قراءة لقطة تعليمات الموضوع' from created;
 update qarar_governance.topic_type_authoring_profiles_v2 set discussion_instructions='تعليمات جديدة' where topic_type_version_id='79000000-0000-0000-0000-000000000022';
 select is(api_v1.get_meeting_detail('79000000-0000-0000-0000-000000000080')#>>'{agenda_items,0,discussion_instructions}',E'qarar:markdown:v1\n## ناقش المبررات أولًا','meeting reads historical topic guidance not updated type');
+insert into qarar_iam.memberships(organization_id,user_id,governance_unit_id,role_id)
+select '79000000-0000-0000-0000-000000000001','79000000-0000-0000-0000-000000000002','79000000-0000-0000-0000-000000000011',id from qarar_iam.roles where organization_id='79000000-0000-0000-0000-000000000001' and code='council_chair';
+select lives_ok($$select api_v1.save_agenda_topic_instructions('79000000-0000-0000-0000-000000000080',(select (payload#>>'{data,topic_id}')::uuid from created),'تعليمات خاصة للموضوع في الاجتماع',(select updated_at from qarar_meetings.agenda_items where meeting_id='79000000-0000-0000-0000-000000000080'))$$,'chair customizes the classified topic instructions');
+select is(api_v1.get_meeting_detail('79000000-0000-0000-0000-000000000080')#>>'{agenda_items,0,discussion_instructions}','تعليمات خاصة للموضوع في الاجتماع','classified topic override is visible in the meeting');
+select is((select typed_creation_request#>>'{snapshot,authoring,discussion_instructions}' from qarar_topics.topics where id=(select (payload#>>'{data,topic_id}')::uuid from created)),E'qarar:markdown:v1\n## ناقش المبررات أولًا','chair customization preserves the original immutable snapshot');
+select is((select discussion_instructions from qarar_governance.topic_type_authoring_profiles_v2 where topic_type_version_id='79000000-0000-0000-0000-000000000022'),'تعليمات جديدة','chair customization never changes the classification instructions');
 set local "request.jwt.claims"='{"sub":"79000000-0000-0000-0000-000000000099","role":"authenticated"}';
 select throws_ok($$select api_v1.get_meeting_detail('79000000-0000-0000-0000-000000000080')$$,'P0002',null,'unregistered viewer cannot discover meeting guidance');
 insert into auth.users(id,email) values('79000000-0000-0000-0000-000000000099','guidance-denied@example.test');

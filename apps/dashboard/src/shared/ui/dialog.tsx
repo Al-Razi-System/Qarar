@@ -13,6 +13,8 @@ type Props = {
   /** Actions, rendered in a row at the bottom. Put the error message here, beside them. */
   footer?: ReactNode;
   size?: "md" | "lg";
+  /** Keep the header and actions visible for long editors on narrow screens. */
+  scrollContent?: boolean;
   children: ReactNode;
 };
 
@@ -21,7 +23,7 @@ type Props = {
  * user typed when an action fails and shows the error beside the action.
  * Render it inside the themed container so it follows the light or night mode.
  */
-export function Dialog({ title, description, onClose, closeDisabled = false, footer, size = "md", children }: Props) {
+export function Dialog({ title, description, onClose, closeDisabled = false, footer, size = "md", scrollContent = false, children }: Props) {
   const titleId = useId();
   const descriptionId = useId();
 
@@ -43,9 +45,9 @@ export function Dialog({ title, description, onClose, closeDisabled = false, foo
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className={cn("w-full rounded-q-card border border-q-border bg-q-surface font-sans text-q-text shadow-2xl", size === "lg" ? "max-w-2xl" : "max-w-lg")}
+        className={cn("w-full rounded-q-card border border-q-border bg-q-surface font-sans text-q-text shadow-2xl", size === "lg" ? "max-w-2xl" : "max-w-lg", scrollContent && "flex max-h-[calc(100dvh-2rem)] flex-col")}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-q-border p-5">
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-q-border p-5">
           <div className="min-w-0">
             <h2 id={titleId} className="m-0 text-q-h3 font-bold">{title}</h2>
             {description && <p id={descriptionId} className="m-0 mt-1 text-q-caption text-q-text-2">{description}</p>}
@@ -60,8 +62,8 @@ export function Dialog({ title, description, onClose, closeDisabled = false, foo
             <span aria-hidden="true">×</span>
           </button>
         </header>
-        <div className="flex flex-col gap-4 p-5">{children}</div>
-        {footer && <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-q-border p-5">{footer}</footer>}
+        <div className={cn("flex flex-col gap-4 p-5",scrollContent&&"min-h-0 overflow-y-auto")}>{children}</div>
+        {footer && <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-q-border p-5">{footer}</footer>}
       </div>
     </div>
   );

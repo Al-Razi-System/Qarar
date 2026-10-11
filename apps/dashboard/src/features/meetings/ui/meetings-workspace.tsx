@@ -19,6 +19,7 @@ import { localDateKey, meetingOperationalGroup } from "../model/meeting-operatio
 import { MeetingAgendaPanel } from "./meeting-agenda-panel";
 import { ScheduledAgendaSuggestions } from "./scheduled-agenda-suggestions";
 import {SubmittedAgendaSuggestions} from "./submitted-agenda-suggestions";
+import {AgendaInstructionsDialog} from "./agenda-instructions-dialog";
 import { CompletedMeetingSummary } from "./completed-meeting-summary";
 import { MeetingMinutesWorkspace } from "./meeting-minutes-workspace";
 import { InvitationTimingDialog } from "./invitation-timing-dialog";
@@ -97,6 +98,7 @@ export function MeetingsWorkspace() {
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [selected, setSelected] = useState<MeetingDetail | null>(null);
+  const [instructionTarget,setInstructionTarget]=useState<{topicId:string;title:string;text:string;updatedAt?:string}|null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [createModal, setCreateModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -594,10 +596,6 @@ export function MeetingsWorkspace() {
           ) : (
             <div className="divide-y divide-[#edf1f5]">
               <div className="p-5">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="text-[10px] text-[#7b8ba0]">أضف الموضوعات المؤهلة إلى جدول الأعمال قبل بدء الجلسة.</p>
-                  <button onClick={() => void openAgendaModal()} disabled={agendaLoading || !selected.capabilities?.can_manage_agenda} title={selected.capabilities?.can_manage_agenda ? "إضافة موضوع مؤهل إلى جدول الأعمال" : "لا تملك صلاحية التعديل أو أن جدول الأعمال مقفل"} className="rounded-xl border border-[#cfe0f0] px-3 py-2 text-[10px] font-bold text-[#0066cc] disabled:cursor-not-allowed disabled:border-[#e4e9ef] disabled:bg-[#f5f7fa] disabled:text-[#94a1b0] disabled:opacity-100">{agendaLoading ? "جارٍ التحميل…" : "إضافة موضوع"}</button>
-                </div>
                 <span className={`mb-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-black ${statusTone[selected.status] ?? ""}`}>{statusLabels[selected.status] ?? selected.status}</span>
                 <h2 className="text-base font-black text-[#0a1330]">{selected.title_ar}</h2>
                 <p className="mt-1 text-[10px] text-[#7b8ba0]">{selected.meeting_no ?? selected.id}</p>
@@ -611,7 +609,7 @@ export function MeetingsWorkspace() {
               </div>
 
               {selected.capabilities?.can_manage_agenda && <ScheduledAgendaSuggestions items={selected.scheduled_suggestions ?? []}/>}
-              {selected.capabilities?.can_manage_agenda && isAgendaEditable(selected.status) && selected.submitted_suggestions && <SubmittedAgendaSuggestions items={selected.submitted_suggestions.items} total={selected.submitted_suggestions.total} busy={detailLoading} onAdd={(id)=>void addAgendaItem(id)} onMore={()=>void openAgendaModal()} notice={agendaActionNotice}/>}
+              {selected.capabilities?.can_manage_agenda && isAgendaEditable(selected.status) && selected.submitted_suggestions && <SubmittedAgendaSuggestions items={selected.submitted_suggestions.items} total={selected.submitted_suggestions.total} busy={detailLoading} onAdd={(id)=>void addAgendaItem(id)} onReview={selected.capabilities?.can_edit_topic_instructions?item=>setInstructionTarget({topicId:item.id,title:item.title_ar,text:item.discussion_instructions??""}):undefined} onMore={()=>void openAgendaModal()} notice={agendaActionNotice}/>}
               {["closed", "archived"].includes(selected.status) ? <CompletedMeetingSummary meeting={selected} attachments={topicAttachments} /> : <MeetingAgendaPanel
                 meetingId={selected.id}
                 items={selected.agenda_items ?? []}
@@ -622,6 +620,7 @@ export function MeetingsWorkspace() {
                 onAdd={() => void openAgendaModal()}
                 onMove={(index, direction) => void moveAgendaItem(index, direction)}
                 onRemove={(id) => void removeAgendaItem(id)}
+                onEditInstructions={selected.capabilities?.can_edit_topic_instructions?item=>{if(item.topic)setInstructionTarget({topicId:item.topic.id,title:item.topic.title_ar,text:item.discussion_instructions??"",updatedAt:item.updated_at});}:undefined}
               />}
 
               {readiness && ["draft","scheduled","ready_to_start"].includes(selected.status) && <div className="p-5"><h3 className="mb-3 text-xs font-black text-[#0a1330]">جاهزية الاجتماع</h3><div className="grid gap-2 sm:grid-cols-2">{readiness.checks.map((check) => <div key={check.code} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-[10px] font-bold ${check.complete ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}><span className={`grid h-5 w-5 place-items-center rounded-full ${check.complete ? "bg-emerald-600 text-white" : "bg-amber-400 text-white"}`}>{check.complete ? "✓" : "!"}</span><span>{check.label}{typeof check.count === "number" ? ` (${check.count})` : ""}</span></div>)}</div></div>}
@@ -632,7 +631,7 @@ export function MeetingsWorkspace() {
 
               {/* Transition Actions */}
               <div className="flex flex-wrap gap-2 p-5">
-                {["draft", "scheduled"].includes(selected.status) && selected.capabilities?.can_manage && <button onClick={() => void openEditModal()} className="flex items-center gap-1.5 rounded-xl border border-[#9bc9f1] bg-white px-3 py-2 text-[11px] font-bold text-[#0066cc]"><Pencil size={14} /> تعديل إعدادات الاجتماع</button>}
+                {["draft", "scheduled"].includes(selected.status) && selected.capabilities?.can_manage && <Button variant="secondary" onClick={() => void openEditModal()}><Clock size={18} /> تحديد وقت الاجتماع</Button>}
                 {(["waiting_for_minutes", "waiting_for_approval", "closed", "archived"].includes(selected.status)) && <Link href={`/admin/meetings/${selected.id}/minutes`} className="flex items-center gap-1.5 rounded-xl bg-[#0877d6] px-4 py-2.5 text-[11px] font-black text-white shadow-[0_7px_18px_rgba(8,119,214,.2)]"><FileText size={14} />{["closed", "archived"].includes(selected.status) ? "عرض المحضر النهائي والتواقيع" : "فتح مساحة المحضر والمصادقات"}</Link>}
                 {(selected.capabilities?.can_schedule || (selected.status === "draft" && selected.capabilities?.can_manage && selected.schedule_date_confirmed === false)) && <div><Button pending={detailLoading} disabled={selected.schedule_date_confirmed === false} onClick={() => transitionMeeting("scheduled")}><Play size={14}/>جدولة</Button>{selected.schedule_date_confirmed === false && <p className="mt-2 text-q-caption text-q-text-2">حدد يوم الاجتماع ووقتي البداية والنهاية من تعديل الاجتماع أولاً.</p>}</div>}
                 {selected.status === "scheduled" && <>{selected.capabilities?.can_send_invitations && <button onClick={() => setInvitationModal(true)} disabled={detailLoading || !readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "تجهيز دعوات أعضاء المجلس"} className="flex items-center gap-1.5 rounded-xl border border-[#bfd5e8] px-3 py-2 text-[11px] font-bold text-[#0066cc] disabled:opacity-40"><Users size={14} /> تجهيز الدعوات</button>}{selected.capabilities?.can_prepare_session && <button onClick={() => transitionMeeting("ready_to_start")} disabled={!readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "قفل التحضير وتجهيز الجلسة"} className="flex items-center gap-1.5 rounded-xl bg-[#f28c28] px-3 py-2 text-[11px] font-bold text-white disabled:bg-[#a9b6c5]"><Users size={14} /> تجهيز الجلسة</button>}</>}
@@ -678,7 +677,7 @@ export function MeetingsWorkspace() {
                           {sourceLabel && <p className="mt-2 text-[10px] font-bold text-[#60748a]">مرحل من: {sourceLabel}</p>}
                           {topic.source_decision_text && <p className="mt-2 rounded-xl border border-[#e3edf6] bg-white px-3 py-2 text-[10px] leading-5 text-[#40566f]">القرار السابق: {truncateText(topic.source_decision_text)}</p>}
                         </div>
-                        <button type="button" onClick={() => void addAgendaItem(topic.id)} disabled={detailLoading} className="rounded-xl bg-[#0066cc] px-4 py-2 text-[11px] font-bold text-white shadow-[0_8px_18px_rgba(0,102,204,.16)] disabled:opacity-50">إضافة إلى الجدول</button>
+                        <Button disabled={detailLoading} onClick={()=>{if(selected.capabilities?.can_edit_topic_instructions){setAgendaModal(false);setInstructionTarget({topicId:topic.id,title:topic.title_ar,text:topic.discussion_instructions??""});}else void addAgendaItem(topic.id);}}>{selected.capabilities?.can_edit_topic_instructions?"مراجعة التعليمات والإدراج":"إضافة إلى الجدول"}</Button>
                       </div>
                     </div>
                   );
@@ -755,6 +754,10 @@ export function MeetingsWorkspace() {
           </form>
         </div>
       )}
+      {instructionTarget&&selected&&<AgendaInstructionsDialog title={instructionTarget.title} initialValue={instructionTarget.text} inserting={!instructionTarget.updatedAt} onClose={()=>setInstructionTarget(null)} onSave={async text=>{
+       await rpc("save_agenda_topic_instructions",{p_meeting_id:selected.id,p_topic_id:instructionTarget.topicId,p_instructions:text,p_expected_updated_at:instructionTarget.updatedAt??null});
+       await openDetail(selected.id);setAgendaActionNotice({kind:"success",text:"حُفظت تعليمات هذا الموضوع في الاجتماع دون تغيير التصنيف."});
+      }}/>}
     </div>
   );
 }

@@ -1,5 +1,9 @@
 # JSON Response Contracts
 
+### `save_agenda_topic_instructions`
+
+Returns `{ id: uuid, updated_at: timestamptz }` for the agenda item inserted or updated. Failed validation, missing chair membership, locked preparation and optimistic conflicts are errors, never a success response. `get_meeting_detail.capabilities.can_edit_topic_instructions` is a boolean; agenda items expose the resolved nullable `discussion_instructions`, while proposal items expose inherited instructions.
+
 This catalog fixes the frontend-visible shape of every authenticated `api_v1` function returning
 `jsonb`. It complements the exact argument/result reference in
 [12-contract-reference.md](./12-contract-reference.md). A trailing `?` means nullable. Arrays are

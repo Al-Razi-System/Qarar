@@ -1,5 +1,13 @@
 # Meeting Session, Attendance, Quorum, and Voting API
 
+## Preparing topic-specific discussion instructions
+
+`save_agenda_topic_instructions(p_meeting_id, p_topic_id, p_instructions, p_expected_updated_at)` is available only to an active `council_chair` in that meeting's council with `agenda.manage`, while the meeting is `draft` or `scheduled`. A system administrator or rapporteur without that chair membership is not allowed.
+
+For a proposal not yet inserted, send a null token: normal agenda eligibility is checked and insertion plus customization is one atomic transaction. For an existing item, send its `updated_at`. A stale token or repeated insertion is rejected without overwriting anything. Empty text explicitly removes instructions for that agenda item; null text is invalid. Maximum stored length is 10,000 characters, using the existing instruction serialization.
+
+The override belongs to this topic's agenda item in this meeting. Topic type, immutable submission snapshot, other topics and other meetings do not change. Existing items with a null override inherit their original instructions. `get_meeting_detail` and the live room receive the resolved `discussion_instructions`; preparation also receives `capabilities.can_edit_topic_instructions`. The proposal search supplies inherited instructions for editor initialization. Changes are audited and frozen after preparation is locked.
+
 Use authenticated `POST /rest/v1/rpc/<function>` requests. Clients must not insert or update
 `attendance_records`, `votes`, `voting_rounds`, `quorum_snapshots`, or their history tables.
 

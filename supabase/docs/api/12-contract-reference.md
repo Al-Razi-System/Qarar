@@ -197,6 +197,7 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `list_meeting_topic_attachments` | `meetings` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `remove_agenda_item` | `meetings` | `authenticated` | `p_agenda_item_id uuid, p_reason text` | `jsonb` |
 | `reorder_agenda_items` | `meetings` | `authenticated` | `p_meeting_id uuid, p_ordered_item_ids uuid[], p_expected_meeting_updated_at timestamp with time zone` | `jsonb` |
+| `save_agenda_topic_instructions` | `meetings` | `authenticated` | `p_meeting_id uuid, p_topic_id uuid, p_instructions text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `search_eligible_agenda_topics` | `meetings` | `authenticated` | `p_meeting_id uuid, p_query text, p_limit integer, p_offset integer` | `jsonb` |
 | `search_meetings` | `meetings` | `authenticated` | `p_query text, p_status text, p_unit_id uuid, p_from_date date, p_to_date date, p_limit integer, p_offset integer` | `jsonb` |
 | `send_meeting_invitations` | `meetings` | `authenticated` | `p_meeting_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |

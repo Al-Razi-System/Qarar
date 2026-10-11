@@ -9,6 +9,7 @@ export type MeetingCapabilities = {
   can_cancel?: boolean;
   can_archive?: boolean;
   can_edit?: boolean;
+  can_edit_topic_instructions?: boolean;
 };
 
 export type Meeting = {
@@ -38,6 +39,8 @@ export type AgendaItem = {
   agenda_order: number;
   agenda_status?: string;
   discussion_notes?: string | null;
+  discussion_instructions?: string | null;
+  updated_at?: string;
   is_exception?: boolean;
   exception_reason?: string | null;
   topic?: {
@@ -83,6 +86,7 @@ export type MeetingMinutes = {
 export type MeetingReadiness = { ready: boolean; checks: Array<{ code: string; label: string; complete: boolean; count?: number }> };
 export type MeetingTopicAttachment = { id: string; topic_id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number; description?: string | null; created_at?: string };
 export type AgendaCandidate = {
+  discussion_instructions?: string | null;
   id: string;
   title_ar: string;
   topic_no?: string;
