@@ -61,9 +61,9 @@ set local "request.jwt.claims"='{"sub":"83000000-0000-0000-0000-000000000002","r
 select throws_ok($$select api_v2.set_user_submission_enabled_v2('83000000-0000-0000-0000-000000000061',0,true,gen_random_uuid())$$,'P0002',null,'foreign target cannot receive submitter role');
 select lives_ok($$select api_v2.save_user_submission_scope_v2('83000000-0000-0000-0000-000000000003',5,null,'[]',gen_random_uuid())$$,'remove new grants');
 select isnt(qarar_iam.actor_can_submit_scoped_v2('83000000-0000-0000-0000-000000000003','83000000-0000-0000-0000-000000000021'),true,'removing grant revokes scoped access');
-insert into qarar_iam.permissions(id,organization_id,code,module,action,context_scope,name_ar) values('83000000-0000-0000-0000-000000000050','83000000-0000-0000-0000-000000000001','topics.create','topics','create','governance_unit','تقديم موضوع');
+insert into qarar_iam.permissions(id,organization_id,code,module,action,context_scope,name_ar) values('83000000-0000-0000-0000-000000000050','83000000-0000-0000-0000-000000000001','topics.create','topics','create','governance_unit','تقديم موضوع') on conflict (organization_id,code) do nothing;
 insert into qarar_iam.roles(id,organization_id,code,name_ar,role_scope) values('83000000-0000-0000-0000-000000000051','83000000-0000-0000-0000-000000000001','submitter','مقدم','governance_unit');
-insert into qarar_iam.role_permissions(organization_id,role_id,permission_id) values('83000000-0000-0000-0000-000000000001','83000000-0000-0000-0000-000000000051','83000000-0000-0000-0000-000000000050');
+insert into qarar_iam.role_permissions(organization_id,role_id,permission_id) values('83000000-0000-0000-0000-000000000001','83000000-0000-0000-0000-000000000051',(select id from qarar_iam.permissions where organization_id='83000000-0000-0000-0000-000000000001' and code='topics.create'));
 insert into qarar_iam.memberships(organization_id,user_id,role_id,governance_unit_id) values('83000000-0000-0000-0000-000000000001','83000000-0000-0000-0000-000000000003','83000000-0000-0000-0000-000000000051','83000000-0000-0000-0000-000000000022');
 set local "request.jwt.claims"='{"sub":"83000000-0000-0000-0000-000000000003","role":"authenticated"}';
 select ok(qarar_iam.has_permission('topics.create','83000000-0000-0000-0000-000000000022'),'old membership permission preserved after grant removal');

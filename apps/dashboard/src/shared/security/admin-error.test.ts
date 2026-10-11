@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { safeAdminError } from "./admin-error";
 
 describe("safeAdminError", () => {
+  it("preserves an authored Arabic HTTP conflict without reflecting SQL", () => {
+    expect(safeAdminError(Object.assign(new Error("تغيرت صورتك؛ أعد تحميلها"), { code: "PT409", status: 409 }), "تعذر الحفظ")).toMatchObject({ status: 409, message: "تغيرت صورتك؛ أعد تحميلها" });
+    expect(safeAdminError(Object.assign(new Error("private SQL details"), { code: "PT409", status: 409 }), "تعذر الحفظ")).toMatchObject({ status: 409, message: "تعذر الحفظ" });
+  });
   it("لا يعيد رسالة قاعدة البيانات الخام إلى المتصفح", () => {
     const error = safeAdminError(
       { status: 409, code: "23505", message: "duplicate key value violates unique constraint users_email_key" },

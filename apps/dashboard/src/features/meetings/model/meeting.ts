@@ -16,6 +16,9 @@ export type Meeting = {
   title_ar: string;
   status: string;
   scheduled_date?: string;
+  planned_window_start?: string | null;
+  planned_window_end?: string | null;
+  schedule_date_confirmed?: boolean;
   start_time?: string;
   end_time?: string;
   location_type?: string;
@@ -54,6 +57,7 @@ export type MeetingDetail = Meeting & {
   capabilities?: MeetingCapabilities;
   agenda_items?: AgendaItem[];
   scheduled_suggestions?: ScheduledAgendaSuggestion[];
+  submitted_suggestions?:{items:AgendaCandidate[];total:number;locked?:boolean}|null;
 };
 
 export type ScheduledAgendaSuggestion = {

@@ -17,6 +17,35 @@ import { councilRpc } from "../api/councils-client";
 afterEach(cleanup);
 
 describe("CouncilFormDialog", () => {
+  it("يحفظ الأسبوع الشهري وشهر البداية دون افتراض يوم انعقاد", async () => {
+    const submit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<CouncilFormDialog mode="edit" options={options} onClose={vi.fn()} onSubmit={submit} />);
+    await user.type(screen.getByLabelText("اسم المجلس"), "مجلس الكلية");
+    await user.selectOptions(screen.getByLabelText("نوع المجلس"), "type-1");
+    await user.click(screen.getByLabelText(/^إنشاء خطة اجتماعات/));
+    await user.selectOptions(screen.getByLabelText(/^موعد الاجتماع الشهري/), "2");
+    expect(screen.queryByLabelText("موعد أول اجتماع")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("شهر البداية"), { target: { value: "2026-11" } });
+    await user.click(screen.getByRole("button", { name: "حفظ التعديلات" }));
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ monthlyWeek: 2, firstMeetingDate: "2026-11-01", createMeetingPlan: true }));
+    expect(screen.queryByLabelText("وقت البداية")).not.toBeInTheDocument();
+  });
+  it("يشرح منع إنشاء الخطة لمن لا يملك الصلاحية المؤسسية", () => {
+    render(<CouncilFormDialog mode="edit" canCreateMeetingPlan={false} options={options} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText(/^إنشاء خطة اجتماعات/)).toBeDisabled();
+    expect(screen.getByText("إنشاء خطة الاجتماع يتطلب صلاحية إدارة المجالس على مستوى المؤسسة.")).toBeVisible();
+  });
+  it("يعرض الخطة المحفوظة دون تقديم إنشاء خطة ثانية", () => {
+    render(<CouncilFormDialog mode="edit" options={options} existingPlan={{id:"plan-1",recurrence:"monthly",first_meeting_date:"2026-11-01",ends_on:null,meeting_type_name_ar:"اجتماع دوري"}} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByText("موعد أول اجتماع: 2026-11-01")).toBeVisible();
+    expect(screen.queryByLabelText(/^إنشاء خطة اجتماعات/)).not.toBeInTheDocument();
+  });
+  it("يتيح إضافة خطة عند تعديل مجلس موجود", async () => {
+    render(<CouncilFormDialog mode="edit" options={options} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await userEvent.setup().click(screen.getByLabelText(/^إنشاء خطة اجتماعات لهذا المجلس/));
+    expect(screen.getByLabelText("موعد أول اجتماع")).toBeVisible();
+  });
   it("keeps rejection beside the save action and retains inputs", async () => {
     const submit = vi.fn().mockRejectedValue(new Error("تعذر إنشاء خطة المجلس"));
     render(<CouncilFormDialog options={options} onClose={vi.fn()} onSubmit={submit} />);

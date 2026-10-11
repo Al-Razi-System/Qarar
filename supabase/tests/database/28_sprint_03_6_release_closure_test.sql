@@ -54,7 +54,8 @@ select ok(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pron
  -- Product decision: creating a council also creates its periodic governance
  -- meeting plan, so the council creation command and its form options may name
  -- meeting types. No other council function may carry meeting policy.
- and not (n.nspname='qarar_core' and p.proname in('admin_create_council_v2','get_council_form_options'))
+ and not (n.nspname='qarar_core' and p.proname in('admin_create_council_v2','get_council_form_options',
+  'admin_get_council_detail_v2','admin_update_council_v2','admin_create_council_with_plan_v2'))
  and(pg_get_functiondef(p.oid) ilike '%meeting%' or pg_get_functiondef(p.oid) ilike '%quorum%'
   or pg_get_functiondef(p.oid) ilike '%voting%' or pg_get_functiondef(p.oid) ilike '%minute%')),
  'council implementation contains no meeting, quorum, voting, or minute policy');

@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppShell, type AppAccessContext } from "./app-shell";
+vi.mock("@/shared/ui/self-avatar", () => ({ SelfAvatar: () => <span>الصورة</span> }));
 
 const replace = vi.fn();
 

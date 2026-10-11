@@ -69,7 +69,7 @@ values
     'service_claims_elevated',
     'Service claims elevated',
     'organization'
-  );
+  ) on conflict (organization_id,code) do nothing;
 
 insert into qarar_iam.permissions(id, organization_id, code, module, action, context_scope, name_ar)
 values
@@ -90,19 +90,19 @@ values
     'roles.assign',
     'governance_unit',
     'Assign roles'
-  );
+  ) on conflict (organization_id,code) do nothing;
 
 insert into qarar_iam.role_permissions(organization_id, role_id, permission_id)
 values
   (
     '41000000-0000-0000-0000-000000000001',
     '41000000-0000-0000-0000-000000000201',
-    '41000000-0000-0000-0000-000000000301'
+    (select id from qarar_iam.permissions where organization_id='41000000-0000-0000-0000-000000000001' and code='iam.users.manage')
   ),
   (
     '41000000-0000-0000-0000-000000000001',
     '41000000-0000-0000-0000-000000000201',
-    '41000000-0000-0000-0000-000000000302'
+    (select id from qarar_iam.permissions where organization_id='41000000-0000-0000-0000-000000000001' and code='iam.roles.assign')
   );
 
 insert into qarar_iam.memberships(organization_id, user_id, governance_unit_id, role_id)

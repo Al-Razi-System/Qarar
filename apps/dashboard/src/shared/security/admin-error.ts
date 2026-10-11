@@ -10,6 +10,7 @@ const PUBLIC_ERROR_CODES = new Set([
   "42501",
   "23P01",
   "40001",
+  "PT409",
   "P0002",
   "P0003",
 ]);

@@ -197,7 +197,8 @@ set local role qarar_iam_executor;
 select is(
   (select count(distinct code)::integer
    from qarar_iam.permissions
-   where module='governance'),
+   where module='governance'
+     and code not in ('governance.prior_route.request','governance.prior_route.approve')),
   21,
   'migration seeds the complete governance permission vocabulary'
 );

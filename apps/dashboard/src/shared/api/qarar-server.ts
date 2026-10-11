@@ -100,6 +100,8 @@ export async function qararRpc<T>(
     );
   }
 
+  // PostgREST void commands commit successfully and return no JSON body.
+  if (response.status === 204) return null as T;
   return response.json() as Promise<T>;
 }
 
@@ -127,6 +129,7 @@ export async function qararRpcV2<T>(
     const payload = await response.json().catch(() => ({})) as { code?: string; message?: string; details?: string; hint?: string };
     throw new QararApiError(payload.message ?? `QARAR_API_${response.status}`, response.status, payload.code, payload.details, payload.hint);
   }
+  if (response.status === 204) return null as T;
   return response.json() as Promise<T>;
 }
 

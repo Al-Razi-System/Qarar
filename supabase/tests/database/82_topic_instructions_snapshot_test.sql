@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(31);
+select plan(32);
 
 insert into qarar_core.organizations(id,code,name_ar)
 values('79000000-0000-0000-0000-000000000001','typed-submission-ci','منظمة اختبار قراءة الحوكمة');
@@ -64,15 +64,29 @@ values('79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000
 set local role qarar_api_executor;
 select is(api_v2.prepare_typed_topic_v2('79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011')->>'ok','true','published scoped type can prepare');
 select is(api_v2.prepare_typed_topic_v2('79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011')#>>'{data,authoring,submission_instructions}',E'qarar:markdown:v1\n**أرفق خطة البرنامج**','preparation shows submission guidance');
-create temporary table created as select api_v2.create_topic_from_type_v2('عنوان الموضوع التجريبي','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050') payload;
+select is(api_v2.prepare_typed_submission_v2('79000000-0000-0000-0000-000000000050',
+ '{"title":"عنوان الموضوع التجريبي","description":"وصف الموضوع التجريبي الكامل","versionId":"79000000-0000-0000-0000-000000000022","unitId":"79000000-0000-0000-0000-000000000011","evidence":[]}')->>'ok','true','instruction fixture prepares before submission');
+reset role;
+insert into storage.objects(bucket_id,name,metadata)
+select 'qarar-evidence','topic-preparations/79000000-0000-0000-0000-000000000050/'||file_id||'.png','{"size":100,"mimetype":"image/png"}'::jsonb
+from (values ('79000000-0000-0000-0000-000000000051'),('79000000-0000-0000-0000-000000000052')) files(file_id);
+set local role qarar_api_executor;
+select api_v2.register_typed_submission_file_v2('79000000-0000-0000-0000-000000000050',file_id::uuid,'proof.png',
+ 'topic-preparations/79000000-0000-0000-0000-000000000050/'||file_id||'.png','image/png',100,
+ 'https://example.test/api/admin/typed-topics/files?submissionId=79000000-0000-0000-0000-000000000050&fileId='||file_id,null)
+from (values ('79000000-0000-0000-0000-000000000051'),('79000000-0000-0000-0000-000000000052')) files(file_id);
+create temporary table created as select api_v2.submit_typed_submission_v2('79000000-0000-0000-0000-000000000050') payload;
 grant select on created to qarar_topics_executor,qarar_governance_executor;
 select is((select payload->>'ok' from created),'true','typed submission succeeds');
-select is(api_v2.create_topic_from_type_v2('عنوان الموضوع التجريبي','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050')#>>'{data,idempotent_replay}','true','submission replays once');
-select is(api_v2.create_topic_from_type_v2('عنوان موضوع آخر','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050')->>'error_code','MODEL_VERSION_CONFLICT','request reuse with different input conflicts');
+select is(api_v2.submit_typed_submission_v2('79000000-0000-0000-0000-000000000050')#>>'{data,idempotent_replay}','true','submission replays once');
+select is(api_v2.prepare_typed_submission_v2('79000000-0000-0000-0000-000000000050',
+ '{"title":"عنوان موضوع آخر","description":"وصف الموضوع التجريبي الكامل","versionId":"79000000-0000-0000-0000-000000000022","unitId":"79000000-0000-0000-0000-000000000011","evidence":[]}')->>'error_code','MODEL_VERSION_CONFLICT','request reuse with different input conflicts');
 set local role qarar_topics_executor;
 select is((select topic_type_version_id from qarar_topics.topics where id=(select (payload#>>'{data,topic_id}')::uuid from created)),'79000000-0000-0000-0000-000000000022'::uuid,'topic binds to immutable version');
 select is((select typed_creation_request#>>'{snapshot,authoring,submission_instructions}' from qarar_topics.topics where id=(select (payload#>>'{data,topic_id}')::uuid from created)),E'qarar:markdown:v1\n**أرفق خطة البرنامج**','submission guidance snapshots at creation');
 select is((select typed_creation_request#>>'{snapshot,authoring,discussion_instructions}' from qarar_topics.topics where id=(select (payload#>>'{data,topic_id}')::uuid from created)),E'qarar:markdown:v1\n## ناقش المبررات أولًا','discussion guidance snapshots at creation');
+-- Simulate loss of stored evidence after submission: adjacent operations must recheck.
+delete from qarar_topics.topic_attachments where topic_id=(select (payload#>>'{data,topic_id}')::uuid from created);
 select is(qarar_topics.get_topic_requirements_status((select (payload#>>'{data,topic_id}')::uuid from created))->>'ready_for_review','false','attachments required before review');
 select throws_ok($$update qarar_topics.topics set topic_type_version_id=null,typed_creation_request=null where id=(select (payload#>>'{data,topic_id}')::uuid from created)$$,'23514','لا يمكن تغيير تصنيف موضوع سابق أو لقطة إنشائه','cannot unbind existing topic');
 set local role qarar_governance_executor;
@@ -82,7 +96,7 @@ select is(qarar_governance.get_governance_bundle_v2('79000000-0000-0000-0000-000
 set local role qarar_api_executor;
 select is(api_v2.manage_topic_type_v2('79000000-0000-0000-0000-000000000040','disable',5,gen_random_uuid(),null)#>>'{data,is_enabled}','false','disable gates future submission');
 select is(api_v2.create_topic_from_type_v2('عنوان موضوع جديد','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011',gen_random_uuid())->>'ok','false','disabled type rejects new topics');
-select is(api_v2.create_topic_from_type_v2('عنوان الموضوع التجريبي','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050')#>>'{data,idempotent_replay}','true','disabled type still replays completed request');
+select is(api_v2.submit_typed_submission_v2('79000000-0000-0000-0000-000000000050')#>>'{data,idempotent_replay}','true','disabled type still replays completed request');
 set local role qarar_topics_executor;
 select is((select count(*)::integer from qarar_topics.topics where organization_id='79000000-0000-0000-0000-000000000001'),1,'disable does not delete or duplicate existing topic');
 select throws_ok($$select qarar_topics.assert_topic_requirements_ready((select (payload#>>'{data,topic_id}')::uuid from created),'before_review')$$,'23514','لا يمكن متابعة الإجراء قبل استكمال المتطلبات الإلزامية: مرفقات التصنيف: 0 من 2','adjacent review refuses missing evidence');
@@ -122,5 +136,3 @@ values('79000000-0000-0000-0000-000000000099','79000000-0000-0000-0000-000000000
 select throws_ok($$select api_v1.get_meeting_detail('79000000-0000-0000-0000-000000000080')$$,'42501',null,'same-organization user without meeting access cannot read guidance');
 select * from finish();
 rollback;
-
-

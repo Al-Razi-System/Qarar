@@ -18,7 +18,7 @@ const eslintConfig = defineConfig([
     // Design standards (docs/design/DESIGN_STANDARDS_AR.md): shared components
     // take every colour and size from the tokens in globals.css. The ignore list
     // names the components written before the standards; it may only shrink.
-    files: ["src/shared/ui/**/*.tsx"],
+    files: ["src/shared/ui/**/*.tsx", "src/features/permissions/ui/permission-matrix.tsx", "src/app/(dashboard)/admin/permissions/**/*.tsx", "src/features/account/ui/**/*.tsx", "src/features/topics/ui/typed-topic-creator.tsx", "src/features/topics/ui/topic-submission-attachments.tsx", "src/app/(dashboard)/admin/topics/new/page.tsx"],
     ignores: [
       "src/shared/ui/form-field.tsx",
       "src/shared/ui/governance-page-header.tsx",
@@ -26,6 +26,7 @@ const eslintConfig = defineConfig([
       "src/shared/ui/logo.tsx",
       "src/shared/ui/page-header.tsx",
       "src/shared/ui/**/*.test.tsx",
+      "src/features/account/ui/**/*.test.tsx",
     ],
     rules: {
       "no-restricted-syntax": [

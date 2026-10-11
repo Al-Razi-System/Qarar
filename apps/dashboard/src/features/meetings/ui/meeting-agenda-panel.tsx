@@ -31,8 +31,8 @@ export function MeetingAgendaPanel({ meetingId, items, attachments, editable, bu
         <div className="flex items-start gap-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-600 text-white"><Sparkles size={17} /></span>
           <div className="flex-1">
-            <p className="text-xs font-black text-emerald-950">{eligibleCount === 1 ? "يوجد موضوع معتمد جاهز للإضافة" : `يوجد ${eligibleCount} موضوعات معتمدة جاهزة للإضافة`}</p>
-            <p className="mt-1 text-[10px] leading-5 text-emerald-800">اختر الموضوعات التي ستدرج في هذا الاجتماع؛ الاعتماد لا يحدد الاجتماع تلقائياً.</p>
+            <p className="text-xs font-black text-emerald-950">{eligibleCount === 1 ? "يوجد موضوع مكتمل جاهز للإدراج" : `يوجد ${eligibleCount} موضوعات مكتملة جاهزة للإدراج`}</p>
+            <p className="mt-1 text-[10px] leading-5 text-emerald-800">اختر الموضوعات المقترحة لهذا الاجتماع؛ قرار القبول أو الرفض يأتي بعد المناقشة.</p>
           </div>
         </div>
         <button type="button" onClick={onAdd} disabled={busy} className="mt-3 inline-flex h-10 items-center gap-2 rounded-xl bg-[#0877d1] px-4 text-[11px] font-black text-white shadow-[0_8px_18px_rgba(8,119,209,.18)] disabled:opacity-50"><Plus size={15} /> عرض الموضوعات وإضافتها</button>

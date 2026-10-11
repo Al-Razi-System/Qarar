@@ -12,9 +12,13 @@ import {
   type AgendaCandidate, type Meeting, type MeetingDetail, type MeetingFormOptions,
   type MeetingMinutes, type MeetingReadiness, type MeetingTopicAttachment, type MinuteApproval, type SignatureStrokes,
 } from "../model/meeting";
+import { Button } from "@/shared/ui/button";
+import { AdministrativeInput } from "@/shared/ui/administrative-field";
+import { meetingScheduleLabel } from "../model/meeting-schedule";
 import { localDateKey, meetingOperationalGroup } from "../model/meeting-operational-state";
 import { MeetingAgendaPanel } from "./meeting-agenda-panel";
 import { ScheduledAgendaSuggestions } from "./scheduled-agenda-suggestions";
+import {SubmittedAgendaSuggestions} from "./submitted-agenda-suggestions";
 import { CompletedMeetingSummary } from "./completed-meeting-summary";
 import { MeetingMinutesWorkspace } from "./meeting-minutes-workspace";
 import { InvitationTimingDialog } from "./invitation-timing-dialog";
@@ -106,6 +110,7 @@ export function MeetingsWorkspace() {
   const [meetingOptions, setMeetingOptions] = useState<MeetingFormOptions | null>(null);
   const [meetingOptionsLoading, setMeetingOptionsLoading] = useState(false);
   const [agendaCandidates, setAgendaCandidates] = useState<AgendaCandidate[]>([]);
+  const [agendaActionNotice,setAgendaActionNotice]=useState<{kind:"error"|"success";text:string}|null>(null);
   const [eligibleAgendaCount, setEligibleAgendaCount] = useState<number | null>(null);
   const [agendaLoading, setAgendaLoading] = useState(false);
   const [agendaModal, setAgendaModal] = useState(false);
@@ -144,6 +149,7 @@ export function MeetingsWorkspace() {
   }
 
   async function openDetail(meetingId: string) {
+    setAgendaActionNotice(null);
     setDetailLoading(true); setNotice(null);
     try {
       const detail = await rpc<MeetingDetail>("get_meeting_detail", { p_meeting_id: meetingId });
@@ -281,7 +287,7 @@ export function MeetingsWorkspace() {
     const currentSeries = series.find((item) => item.occurrences.some((occurrence) => occurrence.meeting_id === selected.id));
     const selectedType = availableOptions?.meeting_types?.find((type) => type.id === selected.meeting_type_id);
     const isLegacyRecurring = Boolean(selectedType?.name_ar.includes("دوري"));
-    setEditRecurring(Boolean(currentSeries) || isLegacyRecurring);
+    setEditRecurring(!selected.planned_window_start && (Boolean(currentSeries) || isLegacyRecurring));
     setEditRecurrenceFrequency(currentSeries?.frequency ?? (selected.title_ar.includes("سنوي") ? "annual" : "monthly"));
     setEditModal(true);
   }
@@ -296,8 +302,8 @@ export function MeetingsWorkspace() {
         p_meeting_id: selected.id,
         p_title_ar: fd.get("title_ar"),
         p_scheduled_date: fd.get("scheduled_date"),
-        p_start_time: selected.start_time ?? null,
-        p_end_time: selected.end_time ?? null,
+        p_start_time: fd.get("start_time") || null,
+        p_end_time: fd.get("end_time") || null,
         p_location_type: fd.get("location_type"),
         p_location_details: fd.get("location_details") || null,
         p_title_en: selected.title_en ?? null,
@@ -305,7 +311,7 @@ export function MeetingsWorkspace() {
         p_expected_updated_at: selected.updated_at ?? null,
       });
       const currentSeries = series.find((item) => item.occurrences.some((occurrence) => occurrence.meeting_id === selected.id));
-      if (currentSeries) {
+      if (!selected.planned_window_start && currentSeries) {
         await rpc("update_meeting_series_recurrence", {
           p_series_id: currentSeries.id,
           p_anchor_meeting_id: selected.id,
@@ -313,7 +319,7 @@ export function MeetingsWorkspace() {
           p_interval_count: Number(fd.get("interval_count") || 1),
           p_anchor_date: fd.get("scheduled_date"),
         });
-      } else if (editRecurring) {
+      } else if (!selected.planned_window_start && editRecurring) {
         await rpc("create_meeting_series_from_existing", {
           p_meeting_id: selected.id,
           p_frequency: fd.get("frequency"),
@@ -400,13 +406,15 @@ export function MeetingsWorkspace() {
       setNotice({ kind: "error", text: "لا يمكن إضافة موضوعات بعد بدء الاجتماع. اختر اجتماعًا في حالة مسودة أو مجدولًا." });
       return;
     }
-    setDetailLoading(true); setNotice(null);
+    setDetailLoading(true); setNotice(null);setAgendaActionNotice(null);
     try {
       await rpc("add_agenda_item", { p_meeting_id: selected.id, p_topic_id: topicId, p_is_exception: false, p_exception_reason: null });
       await openDetail(selected.id); await loadAgendaCandidates();
       setNotice({ kind: "success", text: "تمت إضافة الموضوع إلى جدول الأعمال." });
+      setAgendaActionNotice({kind:"success",text:"تم إدراج الموضوع في هذا الاجتماع. لا يعد الإدراج قبولًا للموضوع."});
     } catch (err) {
       setNotice({ kind: "error", text: meetingErrorMessage(err, "تعذر إضافة الموضوع.") });
+      setAgendaActionNotice({kind:"error",text:meetingErrorMessage(err,"تعذر إدراج الموضوع. حدّث المقترحات ثم أعد المحاولة.")});
     } finally { setDetailLoading(false); }
   }
 
@@ -568,7 +576,7 @@ export function MeetingsWorkspace() {
                     </div>
                     <h3 className="text-xs font-black text-[#0a1330]">{m.title_ar}</h3>
                     <p className="mt-1 text-[10px] text-[#7b8ba0]">
-                      {m.scheduled_date ?? "—"} · {m.start_time ?? ""}-{m.end_time ?? ""} · {m.unit_name_ar ?? "—"}
+                      {meetingScheduleLabel(m)} · {m.start_time ?? ""}-{m.end_time ?? ""} · {m.unit_name_ar ?? "—"}
                     </p>
                     <span className={`mt-3 inline-flex items-center gap-1 text-[9px] font-black ${selected?.id === m.id ? "text-[#0877d6]" : "text-[#718399] group-hover:text-[#0877d6]"}`}>{selected?.id === m.id ? "التفاصيل معروضة" : "عرض تفاصيل الاجتماع"}<ChevronLeft size={12}/></span>
                   </div>
@@ -595,7 +603,7 @@ export function MeetingsWorkspace() {
                 <p className="mt-1 text-[10px] text-[#7b8ba0]">{selected.meeting_no ?? selected.id}</p>
                 {!isAgendaEditable(selected.status) && <p className={`mt-3 rounded-lg px-3 py-2 text-[10px] font-bold leading-5 ${["closed", "archived"].includes(selected.status) ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>{agendaLockMessage(selected.status)}</p>}
                 <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="flex items-center gap-1.5 text-[#52647a]"><Calendar size={13} /> {selected.scheduled_date ?? "—"}</div>
+                  <div className="flex items-center gap-1.5 text-[#52647a]"><Calendar size={13} /> {meetingScheduleLabel(selected)}</div>
                   <div className="flex items-center gap-1.5 text-[#52647a]"><Clock size={13} /> {selected.start_time ?? "—"} - {selected.end_time ?? "—"}</div>
                   <div className="flex items-center gap-1.5 text-[#52647a]"><MapPin size={13} /> {selected.location_details ?? selected.location_type ?? "—"}</div>
                   <div className="flex items-center gap-1.5 text-[#52647a]"><Users size={13} /> {selected.unit_name_ar ?? "—"}</div>
@@ -603,6 +611,7 @@ export function MeetingsWorkspace() {
               </div>
 
               {selected.capabilities?.can_manage_agenda && <ScheduledAgendaSuggestions items={selected.scheduled_suggestions ?? []}/>}
+              {selected.capabilities?.can_manage_agenda && isAgendaEditable(selected.status) && selected.submitted_suggestions && <SubmittedAgendaSuggestions items={selected.submitted_suggestions.items} total={selected.submitted_suggestions.total} busy={detailLoading} onAdd={(id)=>void addAgendaItem(id)} onMore={()=>void openAgendaModal()} notice={agendaActionNotice}/>}
               {["closed", "archived"].includes(selected.status) ? <CompletedMeetingSummary meeting={selected} attachments={topicAttachments} /> : <MeetingAgendaPanel
                 meetingId={selected.id}
                 items={selected.agenda_items ?? []}
@@ -625,7 +634,7 @@ export function MeetingsWorkspace() {
               <div className="flex flex-wrap gap-2 p-5">
                 {["draft", "scheduled"].includes(selected.status) && selected.capabilities?.can_manage && <button onClick={() => void openEditModal()} className="flex items-center gap-1.5 rounded-xl border border-[#9bc9f1] bg-white px-3 py-2 text-[11px] font-bold text-[#0066cc]"><Pencil size={14} /> تعديل إعدادات الاجتماع</button>}
                 {(["waiting_for_minutes", "waiting_for_approval", "closed", "archived"].includes(selected.status)) && <Link href={`/admin/meetings/${selected.id}/minutes`} className="flex items-center gap-1.5 rounded-xl bg-[#0877d6] px-4 py-2.5 text-[11px] font-black text-white shadow-[0_7px_18px_rgba(8,119,214,.2)]"><FileText size={14} />{["closed", "archived"].includes(selected.status) ? "عرض المحضر النهائي والتواقيع" : "فتح مساحة المحضر والمصادقات"}</Link>}
-                {selected.capabilities?.can_schedule && <button onClick={() => transitionMeeting("scheduled")} className="flex items-center gap-1.5 rounded-xl bg-[#0066cc] px-3 py-2 text-[11px] font-bold text-white"><Play size={14} /> جدولة</button>}
+                {(selected.capabilities?.can_schedule || (selected.status === "draft" && selected.capabilities?.can_manage && selected.schedule_date_confirmed === false)) && <div><Button pending={detailLoading} disabled={selected.schedule_date_confirmed === false} onClick={() => transitionMeeting("scheduled")}><Play size={14}/>جدولة</Button>{selected.schedule_date_confirmed === false && <p className="mt-2 text-q-caption text-q-text-2">حدد يوم الاجتماع ووقتي البداية والنهاية من تعديل الاجتماع أولاً.</p>}</div>}
                 {selected.status === "scheduled" && <>{selected.capabilities?.can_send_invitations && <button onClick={() => setInvitationModal(true)} disabled={detailLoading || !readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "تجهيز دعوات أعضاء المجلس"} className="flex items-center gap-1.5 rounded-xl border border-[#bfd5e8] px-3 py-2 text-[11px] font-bold text-[#0066cc] disabled:opacity-40"><Users size={14} /> تجهيز الدعوات</button>}{selected.capabilities?.can_prepare_session && <button onClick={() => transitionMeeting("ready_to_start")} disabled={!readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "قفل التحضير وتجهيز الجلسة"} className="flex items-center gap-1.5 rounded-xl bg-[#f28c28] px-3 py-2 text-[11px] font-bold text-white disabled:bg-[#a9b6c5]"><Users size={14} /> تجهيز الجلسة</button>}</>}
                 {selected.capabilities?.can_start_session && <button onClick={() => void openLiveSession()} className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white"><Play size={14} /> فتح الجلسة الحية</button>}
                 {selected.status === "in_progress" && <Link href={`/admin/meetings/${selected.id}/live`} className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white"><Play size={14} /> متابعة الجلسة الحية</Link>}
@@ -727,14 +736,19 @@ export function MeetingsWorkspace() {
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">اسم الاجتماع *</span><input required name="title_ar" defaultValue={selected.title_ar} className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs"/></label>
               {(() => {
                 const currentSeries = series.find((item) => item.occurrences.some((occurrence) => occurrence.meeting_id === selected.id));
-                if (!currentSeries && !editRecurring) return null;
+                if (selected.planned_window_start || (!currentSeries && !editRecurring)) return null;
                 const occurrence = currentSeries?.occurrences.find((item) => item.meeting_id === selected.id);
                 return <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4">
                   <div className="mb-3 flex items-start justify-between gap-3"><div><strong className="block text-xs text-[#173652]">إعدادات السلسلة الدورية</strong><small className="mt-1 block text-[9px] leading-5 text-[#60748a]">{currentSeries ? `هذا الموعد رقم ${occurrence?.occurrence_number ?? "—"} من ${currentSeries.occurrence_count}. سيُطبق تغيير الدورة على هذا الموعد والمواعيد اللاحقة غير المنعقدة.` : "هذا اجتماع دوري قديم غير مرتبط بسلسلة. عند الحفظ سيصبح الموعد الأول وتُنشأ مواعيده اللاحقة تلقائياً."}</small></div><span className="rounded-full bg-white px-2.5 py-1 text-[9px] font-black text-[#0877d6]">دوري</span></div>
                   <div className="grid gap-3 sm:grid-cols-2"><label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">نوع الدورة</span><select name="frequency" value={editRecurrenceFrequency} onChange={(event) => setEditRecurrenceFrequency(event.target.value as MeetingSeries["frequency"])} className="h-10 w-full rounded-xl border border-[#cbddeb] bg-white px-3 text-xs"><option value="weekly">أسبوعية</option><option value="monthly">شهرية</option><option value="quarterly">ربعية (كل 3 أشهر)</option><option value="semiannual">نصف سنوية (كل 6 أشهر)</option><option value="annual">سنوية</option><option value="custom">مخصصة</option></select></label>{editRecurrenceFrequency === "custom" ? <label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">التكرار كل كم يوم؟</span><input required name="interval_count" type="number" min="1" max="365" defaultValue={currentSeries?.frequency === "custom" ? currentSeries.interval_count : 14} className="h-10 w-full rounded-xl border border-[#cbddeb] bg-white px-3 text-xs"/></label> : <input type="hidden" name="interval_count" value="1"/>}{!currentSeries && <label><span className="mb-1.5 block text-[10px] font-bold text-[#3d4f66]">إجمالي عدد الاجتماعات</span><input required name="occurrence_count" type="number" min="2" max="36" defaultValue="6" className="h-10 w-full rounded-xl border border-[#cbddeb] bg-white px-3 text-xs"/></label>}</div>
                 </div>;
               })()}
-              <div className="grid gap-3 sm:grid-cols-3"><label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">التاريخ *</span><input required type="date" name="scheduled_date" defaultValue={selected.scheduled_date} className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs"/></label></div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <AdministrativeInput label="تاريخ الانعقاد" required type="date" name="scheduled_date" min={selected.planned_window_start ?? undefined} max={selected.planned_window_end ?? undefined} defaultValue={selected.schedule_date_confirmed === false ? "" : selected.scheduled_date}/>
+                <AdministrativeInput label="وقت البداية" required={selected.schedule_date_confirmed === false} type="time" name="start_time" defaultValue={selected.start_time ?? ""}/>
+                <AdministrativeInput label="وقت النهاية" required={selected.schedule_date_confirmed === false} type="time" name="end_time" defaultValue={selected.end_time ?? ""}/>
+              </div>
+              {selected.schedule_date_confirmed === false && <p className="text-q-caption text-q-text-2">{meetingScheduleLabel(selected)}</p>}
               <div className="grid gap-3 sm:grid-cols-2"><label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">نوع المكان</span><select name="location_type" defaultValue={selected.location_type ?? "onsite"} className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs"><option value="onsite">حضوري</option><option value="online">افتراضي</option><option value="hybrid">مختلط</option></select></label><label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">تفاصيل المكان</span><input name="location_details" defaultValue={selected.location_details ?? ""} placeholder="القاعة أو رابط الاجتماع" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs"/></label></div>
             </div>
             <div className="flex justify-end gap-3 border-t border-[#e7edf3] bg-[#fbfcfe] px-6 py-4"><button type="button" onClick={() => setEditModal(false)} disabled={creating} className="h-10 rounded-xl border border-[#dbe5ef] px-4 text-xs font-bold text-[#52647a]">إلغاء</button><button disabled={creating} className="h-10 rounded-xl bg-[#0066cc] px-5 text-xs font-bold text-white disabled:opacity-50">{creating ? "جارٍ الحفظ…" : "حفظ التعديلات"}</button></div>

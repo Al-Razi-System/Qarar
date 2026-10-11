@@ -4,13 +4,17 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { KeyRound, UserRound } from "lucide-react";
+import { Button } from "@/shared/ui/button";
+import { Card } from "@/shared/ui/card";
+import { InlineMessage } from "@/shared/ui/inline-message";
+import { AvatarPanel } from "./avatar-panel";
 
-export type SelfAccount = { id: string; email: string; full_name_ar: string; mobile: string | null; job_title: string | null };
-const input = "mt-2 h-12 w-full rounded-xl border border-[#dce5ef] bg-white px-4 text-sm text-[#23334b] outline-none focus:border-[#0066cc] focus:ring-2 focus:ring-[#e7f2ff]";
-const button = "min-h-11 rounded-xl bg-[#0066cc] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50";
+export type SelfAccount = { id: string; email: string; full_name_ar: string; mobile: string | null; job_title: string | null; avatar_revision?:number;has_avatar?:boolean };
+const input = "mt-2 h-12 w-full rounded-q-control border border-q-border bg-q-surface px-4 text-q-ui text-q-text outline-none focus:border-q-primary focus:ring-2 focus:ring-q-primary";
+const button = "inline-flex min-h-11 items-center rounded-q-control bg-q-primary px-5 py-3 text-q-ui font-bold text-q-on-primary";
 type Feedback = { error: boolean; text: string } | null;
 function Notice({ value }: { value: Feedback }) {
-  return value && <p role={value.error ? "alert" : "status"} className={`mt-4 rounded-xl border p-3 text-sm leading-7 ${value.error ? "border-red-200 bg-red-50 text-red-800" : "border-[#cfe4f8] bg-[#f1f8ff] text-[#315b80]"}`}>{value.text}</p>;
+  return value && <InlineMessage tone={value.error?"error":"success"} className="mt-4">{value.text}</InlineMessage>;
 }
 
 export function AccountWorkspace({ account }: { account: SelfAccount }) {
@@ -65,36 +69,37 @@ export function AccountWorkspace({ account }: { account: SelfAccount }) {
   }
 
   return <div className="mx-auto max-w-5xl space-y-6" dir="rtl">
-    <header className="flex items-center gap-4 rounded-2xl border border-[#dce7f1] bg-white p-5 sm:p-7">
-      <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[#e7f2ff] text-[#0066cc]"><UserRound size={26} /></span>
-      <div><h1 className="text-2xl font-black text-[#14233a]">حسابي</h1><p className="mt-1 text-sm text-[#718196]">بياناتك الشخصية وأمان الدخول، في مكان واحد.</p></div>
-    </header>
-    <section className="rounded-2xl border border-[#dce7f1] bg-white p-5 sm:p-7">
-      <h2 className="text-lg font-bold text-[#14233a]">البيانات الشخصية</h2>
-      <p className="mt-2 break-all text-sm text-[#718196]" dir="ltr">{account.email}</p>
+    <Card className="flex items-center gap-4 p-6 sm:p-8">
+      <span className="grid h-14 w-14 shrink-0 place-items-center rounded-q-card bg-q-surface-2 text-q-primary"><UserRound size={26} /></span>
+      <div><h1 className="text-q-h1 font-bold">حسابي</h1><p className="mt-2 text-q-ui text-q-text-2">بياناتك الشخصية وأمان الدخول، في مكان واحد.</p></div>
+    </Card>
+    <AvatarPanel name={name} initialRevision={account.avatar_revision} initialHasImage={account.has_avatar} />
+    <Card className="p-6 sm:p-8">
+      <h2 className="text-q-h3 font-bold">البيانات الشخصية</h2>
+      <p className="mt-2 break-all text-q-ui text-q-text-2" dir="ltr">{account.email}</p>
       <form onSubmit={saveProfile} className="mt-6">
-        <fieldset disabled={saving} className="grid gap-5 sm:grid-cols-2">
-          <label className="text-sm font-bold text-[#23334b] sm:col-span-2">الاسم الكامل<input className={input} value={name} onChange={event => setName(event.target.value)} maxLength={200} autoComplete="name" required /></label>
-          <label className="text-sm font-bold text-[#23334b]">رقم الجوال<input className={input} value={mobile} onChange={event => setMobile(event.target.value)} maxLength={40} autoComplete="tel" type="tel" /></label>
-          <label className="text-sm font-bold text-[#23334b]">المسمى الوظيفي<input className={input} value={jobTitle} onChange={event => setJobTitle(event.target.value)} maxLength={200} autoComplete="organization-title" /></label>
+        <fieldset disabled={saving} className="grid min-w-0 gap-4 sm:grid-cols-2">
+          <label className="text-q-ui font-bold sm:col-span-2">الاسم الكامل<input className={input} value={name} onChange={event => setName(event.target.value)} maxLength={200} autoComplete="name" required /></label>
+          <label className="text-q-ui font-bold">رقم الجوال<input className={input} value={mobile} onChange={event => setMobile(event.target.value)} maxLength={40} autoComplete="tel" type="tel" /></label>
+          <label className="text-q-ui font-bold">المسمى الوظيفي<input className={input} value={jobTitle} onChange={event => setJobTitle(event.target.value)} maxLength={200} autoComplete="organization-title" /></label>
         </fieldset>
         <Notice value={profileFeedback} />
-        <div className="mt-5 flex justify-end"><button type="submit" disabled={saving} className={button}>{saving ? "جارٍ الحفظ…" : "حفظ بياناتي"}</button></div>
+        <div className="mt-4 flex justify-end"><Button type="submit" pending={saving} pendingLabel="جارٍ الحفظ…">حفظ بياناتي</Button></div>
       </form>
-    </section>
-    <section className="rounded-2xl border border-[#dce7f1] bg-white p-5 sm:p-7">
-      <h2 className="flex items-center gap-2 text-lg font-bold text-[#14233a]"><KeyRound size={20} className="text-[#0066cc]" />أمان الحساب</h2>
-      <p className="mt-2 text-sm leading-7 text-[#718196]">بعد تغيير كلمة المرور ستحتاج إلى تسجيل الدخول مجددًا. لا تشارك كلمة المرور مع أحد.</p>
+    </Card>
+    <Card className="p-6 sm:p-8">
+      <h2 className="flex items-center gap-2 text-q-h3 font-bold"><KeyRound size={20} className="text-q-primary" />أمان الحساب</h2>
+      <p className="mt-2 text-q-ui leading-7 text-q-text-2">بعد تغيير كلمة المرور ستحتاج إلى تسجيل الدخول مجددًا. لا تشارك كلمة المرور مع أحد.</p>
       <form onSubmit={changePassword} className="mt-6">
-        <fieldset disabled={changing || passwordClosed} className="grid gap-5 sm:grid-cols-2">
-          <label className="text-sm font-bold text-[#23334b] sm:col-span-2">كلمة المرور الحالية<input className={input} type="password" value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} autoComplete="current-password" required /></label>
-          <label className="text-sm font-bold text-[#23334b]">كلمة المرور الجديدة<input className={input} type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="new-password" maxLength={128} required /></label>
-          <label className="text-sm font-bold text-[#23334b]">تأكيد كلمة المرور الجديدة<input className={input} type="password" value={confirmation} onChange={event => setConfirmation(event.target.value)} autoComplete="new-password" maxLength={128} required /></label>
+        <fieldset disabled={changing || passwordClosed} className="grid min-w-0 gap-4 sm:grid-cols-2">
+          <label className="text-q-ui font-bold sm:col-span-2">كلمة المرور الحالية<input className={input} type="password" value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} autoComplete="current-password" required /></label>
+          <label className="text-q-ui font-bold">كلمة المرور الجديدة<input className={input} type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="new-password" maxLength={128} required /></label>
+          <label className="text-q-ui font-bold">تأكيد كلمة المرور الجديدة<input className={input} type="password" value={confirmation} onChange={event => setConfirmation(event.target.value)} autoComplete="new-password" maxLength={128} required /></label>
         </fieldset>
-        <p className="mt-3 text-xs leading-6 text-[#718196]">12 إلى 128 حرفًا، تشمل حرفًا إنجليزيًا كبيرًا وصغيرًا، ورقمًا ورمزًا.</p>
+        <p className="mt-3 text-q-caption leading-6 text-q-text-2">12 إلى 128 حرفًا، تشمل حرفًا إنجليزيًا كبيرًا وصغيرًا، ورقمًا ورمزًا.</p>
         <Notice value={passwordFeedback} />
-        <div className="mt-5 flex flex-wrap items-center justify-end gap-3">{passwordClosed ? <Link href="/login" className={button}>تسجيل الدخول</Link> : <button type="submit" disabled={changing} className={button}>{changing ? "جارٍ التحقق والتغيير…" : "تغيير كلمة المرور"}</button>}</div>
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-3">{passwordClosed ? <Link href="/login" className={button}>تسجيل الدخول</Link> : <Button type="submit" pending={changing} pendingLabel="جارٍ التحقق والتغيير…">تغيير كلمة المرور</Button>}</div>
       </form>
-    </section>
+    </Card>
   </div>;
 }

@@ -52,13 +52,15 @@ insert into qarar_iam.permissions(id, organization_id, code, module, action, con
 values
   ('35000000-0000-0000-0000-000000000301', '35000000-0000-0000-0000-000000000001', 'iam.roles.assign', 'iam', 'roles.assign', 'governance_unit', 'Assign roles'),
   ('35000000-0000-0000-0000-000000000302', '35000000-0000-0000-0000-000000000001', 'iam.roles.revoke', 'iam', 'roles.revoke', 'governance_unit', 'Revoke roles'),
-  ('35000000-0000-0000-0000-000000000303', '35000000-0000-0000-0000-000000000001', 'iam.users.manage', 'iam', 'users.manage', 'organization', 'Manage users');
+  ('35000000-0000-0000-0000-000000000303', '35000000-0000-0000-0000-000000000001', 'iam.users.manage', 'iam', 'users.manage', 'organization', 'Manage users')
+  -- Historical customized unit-scoped IAM definitions remain supported.
+  on conflict (organization_id,code) do update set context_scope=excluded.context_scope;
 
 insert into qarar_iam.role_permissions(organization_id, role_id, permission_id)
 values
-  ('35000000-0000-0000-0000-000000000001', '35000000-0000-0000-0000-000000000201', '35000000-0000-0000-0000-000000000301'),
-  ('35000000-0000-0000-0000-000000000001', '35000000-0000-0000-0000-000000000201', '35000000-0000-0000-0000-000000000302'),
-  ('35000000-0000-0000-0000-000000000001', '35000000-0000-0000-0000-000000000205', '35000000-0000-0000-0000-000000000303');
+  ('35000000-0000-0000-0000-000000000001', '35000000-0000-0000-0000-000000000201', (select id from qarar_iam.permissions where organization_id='35000000-0000-0000-0000-000000000001' and code='iam.roles.assign')),
+  ('35000000-0000-0000-0000-000000000001', '35000000-0000-0000-0000-000000000201', (select id from qarar_iam.permissions where organization_id='35000000-0000-0000-0000-000000000001' and code='iam.roles.revoke')),
+  ('35000000-0000-0000-0000-000000000001', '35000000-0000-0000-0000-000000000205', (select id from qarar_iam.permissions where organization_id='35000000-0000-0000-0000-000000000001' and code='iam.users.manage'));
 
 insert into qarar_iam.memberships(organization_id, user_id, governance_unit_id, role_id)
 values
