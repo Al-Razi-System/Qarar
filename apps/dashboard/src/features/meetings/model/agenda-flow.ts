@@ -55,7 +55,7 @@ export function activeAgendaItemId(session: LiveMeetingSession, ordered: AgendaD
     const closed = latestClosedRound(rounds, item.id);
     return !["discussed", "postponed"].includes(item.agenda_status ?? "pending")
       || (item.discussion_notes ?? "").trim().length < 5
-      || (item.requires_voting && !closed)
+      || (item.requires_voting && item.agenda_status !== "postponed" && !closed)
       || (closed?.result === "approved" && !decisions.some((decision) => decision.agenda_item_id === item.id));
   });
   return blocked?.id ?? null;
@@ -108,13 +108,19 @@ export function chairActions(item: AgendaDiscussionItem, session: LiveMeetingSes
     if (flow.decision.can_edit_text) actions.push({ kind: "edit_decision", label: "تعديل القرار" });
     note = `${flow.decision.decision_no} · تم إنشاء القرار.`;
   } else if (flow.closed) {
-    note = "تم توثيق نتيجة التصويت لهذا البند.";
-  } else if (item.voting_available_now) {
+    note = flow.closed.result === "tied" ? "تعادلت الأصوات، فبقي الموضوع في مرحلته من مساره." : "تم توثيق نتيجة التصويت لهذا البند.";
+  } else if (status === "discussed" && flow.hasVoting) {
+    // Every item is decided by the members' vote once its discussion ends. When the
+    // topic's route cannot take a vote, the server says why and the chair may postpone.
+    const unavailable = !item.voting_available_now;
     actions.push({
       kind: "open_round",
       label: "فتح التصويت للأعضاء",
-      disabledReason: !session.meeting.attendance_locked ? "ثبّت سجل الحضور أولاً لفتح التصويت." : !quorumMet(session) ? "النصاب غير مكتمل، فلا يُفتح التصويت." : undefined,
+      disabledReason: unavailable
+        ? item.voting_unavailable_reason ?? "لا يُفتح التصويت على هذا البند الآن."
+        : !session.meeting.attendance_locked ? "ثبّت سجل الحضور أولاً لفتح التصويت." : !quorumMet(session) ? "النصاب غير مكتمل، فلا يُفتح التصويت." : undefined,
     });
+    if (unavailable) actions.push({ kind: "postpone", label: "تأجيل البند" });
   } else if (status === "postponed") {
     note = "أُجّل هذا البند بسبب موثق.";
   } else if (status === "discussed") {
@@ -139,7 +145,7 @@ export function completionBlockers(session: LiveMeetingSession, ordered: AgendaD
     if ((item.discussion_notes ?? "").trim().length < 5) blockers.push(`${label}: حفظ ملخص النتائج والتوصيات.`);
     else if (closed?.closed_at && item.updated_at && new Date(item.updated_at).getTime() < new Date(closed.closed_at).getTime()) blockers.push(`${label}: تحديث الملخص النهائي بعد احتساب نتيجة التصويت.`);
     if (item.requires_voting && open) blockers.push(`${label}: إغلاق جولة التصويت المفتوحة واحتساب النتيجة.`);
-    else if (item.requires_voting && !closed) blockers.push(`${label}: إجراء التصويت وإغلاق الجولة.`);
+    else if (item.requires_voting && item.agenda_status !== "postponed" && !closed) blockers.push(`${label}: إجراء التصويت وإغلاق الجولة.`);
     if (closed?.result === "approved" && !decisions.some((decision) => decision.agenda_item_id === item.id)) blockers.push(`${label}: صياغة القرار المعتمد بعد نتيجة الموافقة.`);
   });
 

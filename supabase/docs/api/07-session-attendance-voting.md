@@ -187,9 +187,26 @@ The meeting must be `in_progress`, attendance must be locked, and quorum must be
 snapshots active members currently verified as `present` or `late`; later governed overrides do not
 alter that round's electorate.
 
-For a governed topic, the current workflow step must have `step_type=voting`, be active, and belong
-to the meeting council. The server snapshots that step on the voting round. Closing the round fails
-with a concurrency error if the topic has moved to another step since the round opened.
+Every agenda item is decided by the members' vote. In `get_meeting_detail`, each agenda item
+returns `requires_voting: true`, `voting_available_now`, and `voting_unavailable_reason` (Arabic text,
+`null` when the vote can open) so the room can show a disabled action with its reason.
+
+For a governed topic, the current workflow step must be active and belong to the meeting council, and
+the vote must be able to decide it:
+
+- a `voting` step, as before; or
+- a council step (`review`, `discussion`, `recommendation`, `approval`) whose route defines what
+  happens on `approved` and on `rejected`, which is how the route designer writes every council step.
+
+Steps of type `execution` or `follow_up`, and steps without both outcomes, are refused with `55000`
+and the reason. A legacy topic without a route can always be voted on.
+
+The server snapshots that step on the voting round. Closing the round applies the result to it:
+`approved` or `rejected` moves the topic as its route says (advance, complete, or return). A tie the
+chair did not break leaves a council step where it was; the round still closes and is audited as
+`voting.route_unchanged`. Closing fails with a concurrency error if the topic has moved to another
+step since the round opened. The route moves only through a closed round bound to that step;
+meeting steps cannot be acted on from the topic page.
 Only one voting round may be open across the meeting at a time.
 
 Success includes `voting_round_id`, round number, status, and eligible voter count.
@@ -235,6 +252,8 @@ It never returns a vote value or a vote note, and the option totals (`approve_co
 `cancel_voting_round` requires `p_voting_round_id` and a 5-2000 character `p_reason`. It marks the
 round `cancelled`, preserves any already cast votes as audit evidence, and resets the agenda item so
 a corrected round can be opened. A meeting cannot move to minutes while any round remains open.
+A meeting also cannot move to minutes while an agenda item that was not postponed has no closed
+round (`23514`, naming the item).
 
 ## Decisions
 
