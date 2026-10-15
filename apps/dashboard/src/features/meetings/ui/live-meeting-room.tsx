@@ -20,9 +20,15 @@ import type { DiscussionStatus } from "./stage/discussion-summary";
 import { MemberVoteCard, type VoteValue } from "./stage/member-vote-card";
 import { ReasonDialog } from "./stage/reason-dialog";
 import { RoomStage } from "./stage/room-stage";
+import { RoomTopBar } from "./stage/room-top-bar";
 import { useRoomTheme } from "./stage/use-room-theme";
 
-type MeetingDetail = { agenda_items?: AgendaDiscussionItem[] };
+type MeetingDetail = { agenda_items?: AgendaDiscussionItem[]; status_history?: Array<{ to_status: string; changed_at: string }> };
+
+/** When the session was opened: the last move of the meeting into "in_progress". */
+function sessionStartedAt(detail: MeetingDetail) {
+  return [...(detail.status_history ?? [])].reverse().find((entry) => entry.to_status === "in_progress")?.changed_at ?? null;
+}
 type CheckInToken = { token: string; expires_at: string };
 type RoomTab = "my-attendance" | "attendance" | "agenda";
 /** An action that the minutes must explain, waiting for its reason. */
@@ -36,6 +42,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [presenting, setPresenting] = useState(false);
   const [session, setSession] = useState<LiveMeetingSession | null>(null);
   const [agenda, setAgenda] = useState<AgendaDiscussionItem[]>([]);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
   const [myVotes, setMyVotes] = useState<MyVote[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [rounds, setRounds] = useState<VotingRound[]>([]);
@@ -98,10 +105,15 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
         return;
       }
       if (!session) {
-        setTab(live.viewer.can_operate_attendance ? "attendance" : live.viewer.is_roster_member ? "my-attendance" : "agenda");
+        // Open where the viewer has work: the roster until it is locked, one's own
+        // check-in until it is confirmed, otherwise the meeting itself.
+        const checkedIn = live.my_attendance?.verification_status === "verified";
+        setTab(live.viewer.can_operate_attendance && !live.meeting.attendance_locked ? "attendance"
+          : live.viewer.is_roster_member && !checkedIn && !live.meeting.attendance_locked ? "my-attendance" : "agenda");
       }
       setSession(live);
       setAgenda(detail.agenda_items ?? []);
+      setStartedAt(sessionStartedAt(detail));
       setMyVotes(votes ?? []);
       setDecisions(meetingDecisions ?? []);
       setRounds(meetingRounds ?? []);
@@ -222,30 +234,36 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     { value: "agenda", label: "جدول الأعمال والتصويت", count: pendingVotes.length },
   ];
 
+  const ballots = pendingVotes.map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy} onCast={(roundId: string, value: VoteValue, note: string | null) => void perform(() => liveMeetingRpc("cast_vote", { p_voting_round_id: roundId, p_vote_value: value, p_vote_note: note }), "تم تسجيل صوتك وملاحظتك بسرية.")} />);
+  const steering = session.viewer.mode !== "member" || session.viewer.can_manage_voting;
+  const stageProps = { session, agenda, rounds, decisions };
+
   return (
     <div
       ref={roomRef}
       data-theme={theme.dark ? "dark" : undefined}
-      className={cn("flex flex-col gap-4 font-sans", (theme.dark || presenting) && "rounded-q-card bg-q-bg p-3 text-q-text sm:p-5", presenting && "overflow-y-auto")}
+      className={cn(
+        "flex flex-col gap-3 font-sans text-q-text",
+        (theme.dark || presenting) && "rounded-q-card bg-q-bg p-3 sm:p-4",
+        // One fixed screen for whoever steers the meeting; the columns scroll inside it.
+        steering && activeTab === "agenda" && "lg:h-[calc(100dvh-9.5rem)] lg:min-h-[640px]",
+        presenting && "lg:h-dvh",
+      )}
     >
       {notice && !presenting && <InlineMessage tone={notice.kind === "success" ? "success" : "error"} className="sticky top-2 z-40 border border-q-border text-q-ui shadow-lg">{notice.text}</InlineMessage>}
 
-      <RoomStage
+      <RoomTopBar
         session={session}
-        agenda={agenda}
-        rounds={rounds}
-        decisions={decisions}
+        startedAt={startedAt}
         dark={theme.dark}
         onToggleTheme={theme.toggle}
-        hideCurrentItem={activeTab === "agenda"}
         presentation={session.viewer.can_manage_session ? { active: presenting, onToggle: togglePresentation } : undefined}
       />
 
-      {presenting
-        ? pendingVotes.length > 0 && <InlineMessage tone="info">لديك تصويت مفتوح. أنهِ وضع العرض لتسجيل صوتك دون أن يظهر على الشاشة.</InlineMessage>
-        : pendingVotes.map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy} onCast={(roundId: string, value: VoteValue, note: string | null) => void perform(() => liveMeetingRpc("cast_vote", { p_voting_round_id: roundId, p_vote_value: value, p_vote_note: note }), "تم تسجيل صوتك وملاحظتك بسرية.")} />)}
+      {presenting && pendingVotes.length > 0 && <InlineMessage tone="info">لديك تصويت مفتوح. أنهِ وضع العرض لتسجيل صوتك دون أن يظهر على الشاشة.</InlineMessage>}
+      {!presenting && activeTab !== "agenda" && ballots}
 
-      {!presenting && (
+      {!presenting && tabs.length > 1 && (
         <nav aria-label="أقسام غرفة الاجتماع" className="flex flex-wrap gap-1 rounded-q-card border border-q-border bg-q-surface p-1">
           {tabs.map((entry) => (
             <button
@@ -278,7 +296,10 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           onLock={() => void perform(() => liveMeetingRpc("lock_attendance_roster", { p_meeting_id: meetingId, p_expected_updated_at: session.meeting.updated_at }), "تم تثبيت سجل الحضور واعتماد النصاب.")}
         />
       ) : (
-        <AgendaWorkspace
+        <div className="min-h-0 flex-1"><AgendaWorkspace
+          stage={<RoomStage {...stageProps} />}
+          compactStage={<RoomStage {...stageProps} compact />}
+          ballot={ballots.length ? <div className="flex flex-col gap-3">{ballots}</div> : undefined}
           session={session}
           agenda={agenda}
           attachments={topicAttachments}
@@ -294,7 +315,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           onCreateDecision={(round, item) => { setNotice(null); setDecisionDraft({ round, item }); }}
           onEditDecision={(decision, item, round) => { setNotice(null); setDecisionDraft({ round, item, decision }); }}
           onComplete={() => { setNotice(null); setCompleteConfirmation(true); }}
-        />
+        /></div>
       )}
 
       {checkIn && <AttendanceQrDialog meetingId={meetingId} token={checkIn.token} expiresAt={checkIn.expires_at} publicOrigin={publicCheckInOrigin} attendance={session.attendance} viewerUserId={session.viewer.user_id} busy={busy} onVerify={verifyAttendance} onClose={() => setCheckIn(null)} onRenew={() => void createCheckInSession()} />}

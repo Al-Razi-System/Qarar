@@ -31,6 +31,8 @@ type Props = {
   chair?: boolean;
   /** When given, the seat opens the member's contact card. */
   onOpen?: () => void;
+  /** "sm" is the small table beside a member's topic: the name only, no status line. */
+  size?: "sm" | "md";
   className?: string;
 };
 
@@ -44,11 +46,13 @@ function initialOf(name: string) {
  * One member around the council table. A vote is shown only as "voted" or
  * "not yet": the seat never reveals the direction of a vote.
  */
-export function MemberSeat({ name, status, roleLabel, chair = false, onOpen, className }: Props) {
+export function MemberSeat({ name, status, roleLabel, chair = false, onOpen, size = "md", className }: Props) {
+  const small = size === "sm";
   const away = status === "excused" || status === "absent";
   const caption = status === "present" ? roleLabel ?? statusLabel.present : statusLabel[status];
   const avatarClass = cn(
-    "relative grid h-14 w-14 place-items-center rounded-full bg-q-seat font-sans text-q-h3 font-bold text-q-text",
+    "relative grid place-items-center rounded-full bg-q-seat font-sans font-bold text-q-text",
+    small ? "h-11 w-11 text-q-ui" : "h-14 w-14 text-q-h3",
     chair && status === "present" ? "border-[3px] border-q-live" : ringClass[status],
     status === "waiting" && "q-seat-waiting",
   );
@@ -64,14 +68,16 @@ export function MemberSeat({ name, status, roleLabel, chair = false, onOpen, cla
   );
 
   return (
-    <div className={cn("flex w-24 flex-col items-center gap-1 text-center", away && "opacity-50", className)}>
+    <div className={cn("flex flex-col items-center gap-1 text-center", small ? "w-[72px]" : "w-24", away && "opacity-50", className)}>
       {onOpen ? (
         <button type="button" onClick={onOpen} aria-label={`بطاقة ${name}`} className={avatarClass}>{avatar}</button>
       ) : (
         <div className={avatarClass}>{avatar}</div>
       )}
       <span className="max-w-full truncate font-sans text-q-caption font-bold text-q-text" title={name}>{name}</span>
-      <span className={cn("-mt-1 font-sans text-q-caption", status === "waiting" ? "text-q-link" : "text-q-text-2")}>{caption}</span>
+      {small
+        ? <span className="sr-only">{caption}</span>
+        : <span className={cn("-mt-1 font-sans text-q-caption", status === "waiting" ? "text-q-link" : "text-q-text-2")}>{caption}</span>}
     </div>
   );
 }

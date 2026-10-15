@@ -4,12 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgendaDiscussionItem, Attendance, LiveMeetingSession, VotingRound } from "../../model/live-meeting";
 import { MAX_ORBIT_SEATS } from "./council-table";
 import { RoomStage as ControlledRoomStage } from "./room-stage";
+import { RoomTopBar } from "./room-top-bar";
 import { useRoomTheme } from "./use-room-theme";
 
-type StageProps = Omit<Parameters<typeof ControlledRoomStage>[0], "dark" | "onToggleTheme">;
+type StageProps = Parameters<typeof ControlledRoomStage>[0] & { presentation?: { active: boolean; onToggle: () => void } };
 function RoomStage(props: StageProps) {
   const theme = useRoomTheme();
-  return <div data-testid="room" data-theme={theme.dark ? "dark" : undefined}><ControlledRoomStage {...props} dark={theme.dark} onToggleTheme={theme.toggle} /></div>;
+  return <div data-testid="room" data-theme={theme.dark ? "dark" : undefined}><RoomTopBar session={props.session} dark={theme.dark} onToggleTheme={theme.toggle} presentation={props.presentation} /><ControlledRoomStage {...props} /></div>;
 }
 
 function member(index: number, status = "present", verification = "verified"): Attendance {
@@ -45,7 +46,8 @@ describe("RoomStage", () => {
     render(<RoomStage session={sessionOf("chair", three)} agenda={agenda} rounds={[]} decisions={[]} />);
     expect(screen.getByRole("heading", { name: "اجتماع مجلس الكلية الثالث" })).toBeInTheDocument();
     expect(screen.getByText("لوحة رئيس المجلس")).toBeInTheDocument();
-    expect(screen.getByText(/مكتمل · 3 من 3 \(100%\)/)).toBeInTheDocument();
+    expect(screen.getByText("النصاب مكتمل")).toBeInTheDocument();
+    expect(screen.getByText("3 حاضرون من 3")).toBeInTheDocument();
   });
 
   it.each([["rapporteur", "لوحة مقرر المجلس"], ["member", "بوابة عضو المجلس"]] as const)("labels the %s view", (mode, label) => {
@@ -59,7 +61,6 @@ describe("RoomStage", () => {
     expect(seats).toHaveLength(3);
     expect(within(seats[0]).getByText("أنت")).toBeInTheDocument();
     expect(screen.getAllByText("قيد المناقشة").length).toBeGreaterThan(0);
-    expect(screen.getByText("البند 1 من 2 · توصية مجلس الكلية")).toBeInTheDocument();
   });
 
   it("shows participation to a monitor and never a direction", () => {

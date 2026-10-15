@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/shared/ui/button";
+import { Dialog } from "@/shared/ui/dialog";
 import type { ChairAction } from "../../model/agenda-flow";
 import type { AgendaDiscussionItem } from "../../model/live-meeting";
 
@@ -17,20 +19,23 @@ type Props = {
 };
 
 /**
- * The chair's control dock. It stays at the bottom of the screen and its main
- * button is always the next step of the item on screen. A step the server would
- * reject is disabled with the reason written beside it.
+ * The chair's control dock under the council table. Its main button is always
+ * the next step of the item on screen; a step the server would reject is
+ * disabled with the reason written beside it. What still stops the session
+ * from ending is one click away instead of a list on the screen.
  */
 export function ControlDock({ item, actions, note, busy, blockers, onAction, onComplete }: Props) {
+  const [showBlockers, setShowBlockers] = useState(false);
   const reason = actions.find((action) => action.disabledReason)?.disabledReason ?? null;
   return (
-    <section aria-label="شريط تحكم رئيس المجلس" className="sticky bottom-3 z-30 flex flex-col gap-3 rounded-q-card border border-q-border-strong bg-q-surface p-3 font-sans text-q-text shadow-xl lg:flex-row lg:items-center lg:justify-between">
+    <section aria-label="شريط تحكم رئيس المجلس" className="sticky bottom-3 z-30 flex flex-col gap-3 rounded-q-card border border-q-border-strong bg-q-surface p-3 font-sans text-q-text shadow-xl lg:static lg:flex-row lg:items-center lg:justify-between">
       <div className="flex min-w-0 flex-col gap-2">
         <p className="m-0 truncate text-q-caption font-bold text-q-text-2">{item ? `البند ${item.agenda_order} · ${item.topic?.title_ar ?? "بند جدول الأعمال"}` : "لا يوجد بند محدد"}</p>
         <div className="flex flex-wrap items-center gap-2">
           {actions.map((action, index) => (
             <Button
               key={action.kind}
+              size={index === 0 ? "lg" : undefined}
               variant={index === 0 ? "primary" : "secondary"}
               disabled={busy || Boolean(action.disabledReason)}
               onClick={() => onAction(action)}
@@ -43,10 +48,24 @@ export function ControlDock({ item, actions, note, busy, blockers, onAction, onC
           {!busy && !reason && note && <span className="text-q-ui text-q-text-2">{note}</span>}
         </div>
       </div>
-      <div className="flex flex-col gap-1 border-t border-q-border pt-3 lg:items-end lg:border-s lg:border-t-0 lg:ps-4 lg:pt-0">
+      <div className="flex flex-wrap items-center gap-2 border-t border-q-border pt-3 lg:border-s lg:border-t-0 lg:ps-4 lg:pt-0">
         <Button variant="secondary" disabled={busy || blockers.length > 0} onClick={onComplete}>إنهاء الجلسة والانتقال إلى إعداد المحضر</Button>
-        {blockers.length > 0 && <span className="text-q-caption text-q-text-2">متبقٍ {blockers.length} قبل الإنهاء، وهي في قائمة «قبل إنهاء الجلسة».</span>}
+        {blockers.length > 0 && (
+          <Button variant="ghost" onClick={() => setShowBlockers(true)}>ما بقي قبل الإنهاء ({blockers.length})</Button>
+        )}
       </div>
+      {showBlockers && (
+        <Dialog
+          title="قبل إنهاء الجلسة"
+          description="تنتهي الجلسة حين يكتمل كل ما يلي."
+          onClose={() => setShowBlockers(false)}
+          footer={<Button variant="secondary" onClick={() => setShowBlockers(false)}>عودة</Button>}
+        >
+          <section role="region" aria-label="قبل إنهاء الجلسة">
+            <ul className="m-0 flex list-disc flex-col gap-1 ps-5 text-q-ui text-q-text-2">{blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul>
+          </section>
+        </Dialog>
+      )}
     </section>
   );
 }

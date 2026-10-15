@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { InstructionContent } from "@/shared/content/instruction-content";
+import { cn } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
@@ -31,13 +32,17 @@ type Props = {
   onSummaryDraftChange: (text: string) => void;
   onUpdateDiscussion: UpdateDiscussion;
   onEditDecision: (decision: Decision) => void;
+  /** The member's ballot, placed right under the title while a round is open for them. */
+  ballot?: ReactNode;
+  /** A member sees the item the council is on; the chair's card scrolls inside its column. */
+  className?: string;
 };
 
 /**
  * Everything the council needs on one agenda item: its guidance, its files and
  * what earlier councils decided, then the vote and the rapporteur's summary.
  */
-export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision }: Props) {
+export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className }: Props) {
   const [chosenTab, setChosenTab] = useState<ReferenceTab | null>(null);
   const instructions = item.discussion_instructions?.trim() ?? "";
   const tabs: Array<{ value: ReferenceTab; label: string }> = [
@@ -49,23 +54,27 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
 
   const manager = session.viewer.can_manage_voting && !presenting;
   const role = presenting ? "member" : session.viewer.mode;
-  const showParticipation = flow.open && (session.viewer.can_manage_voting || (flow.open.participation?.length ?? 0) > 0);
   const decision = flow.decision;
   const canEditDecision = Boolean(decision?.can_edit_text) && !presenting;
 
   return (
-    <Card live={state.tone === "live"} role="region" aria-label="الموضوع المعروض" className="flex min-w-0 flex-col gap-4">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="m-0 text-q-caption font-bold text-q-text-2">البند {item.agenda_order} من {total}{item.workflow_step_name_ar ? ` · ${item.workflow_step_name_ar}` : ""}</p>
-          <h2 className="m-0 mt-1 text-q-h2 font-bold">{item.topic?.title_ar ?? "بند جدول الأعمال"}</h2>
+    <Card live={state.tone === "live"} role="region" aria-label="الموضوع المعروض" className={cn("flex min-w-0 flex-col gap-4", className)}>
+      <header className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-q-caption font-bold">
+          <span className={state.tone === "live" ? "text-q-live" : "text-q-text-2"}>البند {item.agenda_order} من {total}</span>
+          {item.topic?.category_name_ar && <span className="text-q-link">{item.topic.category_name_ar}</span>}
+          {item.topic?.topic_no && <span dir="ltr" className="font-normal text-q-text-2">{item.topic.topic_no}</span>}
         </div>
+        <h2 className="m-0 text-q-h2 font-bold">{item.topic?.title_ar ?? "بند جدول الأعمال"}</h2>
+        {item.topic?.submitted_by_name_ar && <p className="m-0 text-q-caption text-q-text-2">مقدم من {item.topic.submitted_by_name_ar}</p>}
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={state.tone}>{state.label}</Badge>
-          <Badge tone="neutral">{flow.hasVoting ? "يتطلب تصويتاً" : "عرض ومناقشة"}</Badge>
+          {item.workflow_step_name_ar && <Badge tone="neutral">{item.workflow_step_name_ar}</Badge>}
           {flow.decision && <Badge tone="success">{flow.decision.decision_no}</Badge>}
         </div>
       </header>
+
+      {ballot}
 
       {tabs.length === 0 ? (
         <p className="m-0 rounded-q-control bg-q-surface-2 p-3 text-q-ui text-q-text-2">لا تعليمات ولا مرفقات ولا قرارات سابقة مسجلة لهذا الموضوع.</p>
@@ -85,7 +94,6 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
 
       {flow.hasVoting && (
         <section aria-label="التصويت على البند" className="flex flex-col gap-3 border-t border-q-border pt-4">
-          {showParticipation && flow.open && <VoteResultPanel round={flow.open} live />}
           {flow.closed && <VoteResultPanel round={flow.closed} />}
           {!manager && !flow.closed && (
             <p className="m-0 text-q-ui text-q-text-2">
