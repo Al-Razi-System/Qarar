@@ -4,6 +4,7 @@ import type { MeetingTopicAttachment } from "../../model/meeting";
 import { AgendaWorkspace } from "./agenda-workspace";
 import { MemberVoteCard } from "./member-vote-card";
 import { RoomStage } from "./room-stage";
+import { RoomTopBar } from "./room-top-bar";
 import { useRoomTheme } from "./use-room-theme";
 
 /** The agenda side of the live room as each role sees it, under the council-table scene. */
@@ -48,16 +49,23 @@ const savedDecision = (editable: boolean): Decision => ({
   updated_at: "2026-10-10T09:10:00Z", can_edit_text: editable,
 });
 
+/** A fixed opening time keeps the story pure; the clock still ticks from it. */
+const SESSION_STARTED_AT = "2026-10-15T08:00:00Z";
+
 function Room({ mode, agenda, rounds, decisions = [], presenting = false, voting: hasBallot = false }: RoomProps) {
   const theme = useRoomTheme();
   const live = session(mode);
   const noop = () => undefined;
   return (
-    <div data-theme={theme.dark ? "dark" : undefined} className={`flex flex-col gap-4 font-sans ${theme.dark ? "rounded-q-card bg-q-bg p-5 text-q-text" : ""}`}>
-      <RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} dark={theme.dark} onToggleTheme={theme.toggle} presentation={mode === "chair" ? { active: presenting, onToggle: noop } : undefined} />
-      {hasBallot && <MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي", has_voted: false }} busy={false} onCast={noop} />}
-      <AgendaWorkspace session={live} agenda={agenda} attachments={attachments} topicHistory={{}} rounds={rounds} decisions={decisions} busy={false} presenting={presenting}
-        onUpdateDiscussion={async () => true} onRequestPostpone={noop} onOpenRound={noop} onCloseRound={noop} onCreateDecision={noop} onEditDecision={noop} onComplete={noop} />
+    <div data-theme={theme.dark ? "dark" : undefined} className={`flex flex-col gap-3 font-sans text-q-text ${theme.dark ? "rounded-q-card bg-q-bg p-4" : ""} ${mode !== "member" ? "lg:h-[860px]" : ""}`}>
+      <RoomTopBar session={live} startedAt={SESSION_STARTED_AT} dark={theme.dark} onToggleTheme={theme.toggle} presentation={mode === "chair" ? { active: presenting, onToggle: noop } : undefined} />
+      <div className="min-h-0 flex-1">
+        <AgendaWorkspace session={live} agenda={agenda} attachments={attachments} topicHistory={{}} rounds={rounds} decisions={decisions} busy={false} presenting={presenting}
+          stage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} />}
+          compactStage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} compact />}
+          ballot={hasBallot ? <MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي", has_voted: false }} busy={false} onCast={noop} /> : undefined}
+          onUpdateDiscussion={async () => true} onRequestPostpone={noop} onOpenRound={noop} onCloseRound={noop} onCreateDecision={noop} onEditDecision={noop} onComplete={noop} />
+      </div>
     </div>
   );
 }

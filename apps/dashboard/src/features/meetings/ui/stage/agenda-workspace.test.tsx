@@ -41,13 +41,23 @@ describe("AgendaWorkspace", () => {
     expect(screen.getByText("لا تعليمات ولا مرفقات ولا قرارات سابقة مسجلة لهذا الموضوع.")).toBeInTheDocument();
   });
 
-  it("lists the agenda in order and lets the viewer open another item", async () => {
-    setup("member");
+  it("lists the agenda in order and lets whoever runs the meeting open another item", async () => {
+    setup("chair");
     const items = within(screen.getByRole("navigation", { name: "جدول الأعمال" })).getAllByRole("button");
-    expect(items.map((item) => item.textContent)).toEqual(["1خطة البرنامجقيد المناقشة", "2تشكيل اللجنةلم يبدأ"]);
+    expect(items.map((item) => item.textContent)).toEqual(["1 · خطة البرنامجقيد المناقشة", "2 · تشكيل اللجنةلم يبدأ"]);
     expect(items[0]).toHaveAttribute("aria-current", "true");
     await userEvent.click(items[1]);
     expect(screen.getByRole("heading", { name: "تشكيل اللجنة" })).toBeInTheDocument();
+  });
+
+  it("keeps a member on the item the council is on, with the ballot under its title", () => {
+    setup("member", { ballot: <p>ورقة التصويت</p> });
+    const timeline = screen.getByRole("navigation", { name: "جدول الأعمال" });
+    expect(within(timeline).queryAllByRole("button")).toHaveLength(0);
+    expect(within(timeline).getByText("1 · خطة البرنامج").closest("[aria-current]")).toHaveAttribute("aria-current", "step");
+    const topic = screen.getByRole("region", { name: "الموضوع المعروض" });
+    expect(within(topic).getByRole("heading", { name: "خطة البرنامج" })).toBeInTheDocument();
+    expect(within(topic).getByText("ورقة التصويت")).toBeInTheDocument();
   });
 
   it("gives the chair the next step of the item on screen and asks for a reason before postponing", async () => {
@@ -71,13 +81,14 @@ describe("AgendaWorkspace", () => {
     const { handlers } = setup("chair", { agenda: [{ ...first, agenda_status: "discussed" }], rounds: [open] });
     expect(screen.getByRole("button", { name: "إغلاق التصويت واحتساب النتيجة" })).toBeDisabled();
     expect(screen.getByText("بانتظار تصويت 2 من الأعضاء المؤهلين قبل الإغلاق.")).toBeInTheDocument();
-    expect(screen.getByLabelText("متابعة المشاركة في التصويت")).toHaveTextContent("1 من 3 صوّتوا");
     expect(handlers.onCloseRound).not.toHaveBeenCalled();
   });
 
-  it("keeps ending the session disabled and lists what is left", () => {
+  it("keeps ending the session disabled and lists what is left on request", async () => {
     setup("chair");
     expect(screen.getByRole("button", { name: "إنهاء الجلسة والانتقال إلى إعداد المحضر" })).toBeDisabled();
+    expect(screen.queryByRole("region", { name: "قبل إنهاء الجلسة" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /ما بقي قبل الإنهاء/ }));
     const left = screen.getByRole("region", { name: "قبل إنهاء الجلسة" });
     expect(within(left).getByText("البند 1 «خطة البرنامج»: إنهاء المناقشة أو تأجيل البند بسبب موثق.")).toBeInTheDocument();
   });
@@ -140,18 +151,11 @@ describe("AgendaWorkspace", () => {
     expect(screen.queryByRole("region", { name: "قبل إنهاء الجلسة" })).not.toBeInTheDocument();
   });
 
-  it("does not show a member who voted when the server returned no participation", () => {
-    setup("member", { agenda: [{ ...first, agenda_status: "discussed" }], rounds: [{ id: "r1", agenda_item_id: "a1", status: "open", participation: [] }] });
-    expect(screen.queryByLabelText("متابعة المشاركة في التصويت")).not.toBeInTheDocument();
-    expect(screen.getByText(/التصويت مفتوح الآن/)).toBeInTheDocument();
-  });
-
-  it("shows a member who voted, without a direction, once the server returns participation", () => {
+  it("leaves who voted to the seats around the table, without repeating it in the topic", () => {
     const open: VotingRound = { id: "r1", agenda_item_id: "a1", status: "open", eligible_voter_count: 2, participation: [{ user_id: "u1", full_name_ar: "د. هدى", has_voted: true }, { user_id: "u2", full_name_ar: "د. خالد", has_voted: false }] };
     setup("member", { agenda: [{ ...first, agenda_status: "discussed" }], rounds: [open] });
-    const panel = screen.getByLabelText("متابعة المشاركة في التصويت");
-    expect(panel).toHaveTextContent("1 من 2 صوّتوا");
-    expect(panel).not.toHaveTextContent(/موافق|ممتنع/);
+    expect(screen.queryByLabelText("متابعة المشاركة في التصويت")).not.toBeInTheDocument();
+    expect(screen.getByText(/التصويت مفتوح الآن/)).toBeInTheDocument();
   });
 
   it("lets only the rapporteur write the summary and keeps unsaved text when the item on screen changes", async () => {

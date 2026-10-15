@@ -26,7 +26,14 @@ export type AgendaDiscussionItem = {
   voting_available_now?: boolean;
   /** Why the vote cannot be opened now, from the server; null when it can. */
   voting_unavailable_reason?: string | null;
-  topic?: { id: string; title_ar: string };
+  topic?: {
+    id: string;
+    title_ar: string;
+    /** Human reference, e.g. TOP-2026-000123. */
+    topic_no?: string | null;
+    category_name_ar?: string | null;
+    submitted_by_name_ar?: string | null;
+  };
 };
 
 export type VotingRound = {

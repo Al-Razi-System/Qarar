@@ -1,12 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import type { AgendaDiscussionItem, Attendance, LiveMeetingSession, VotingRound } from "../../model/live-meeting";
 import { RoomStage as ControlledRoomStage } from "./room-stage";
+import { RoomTopBar } from "./room-top-bar";
 import { useRoomTheme } from "./use-room-theme";
 
-type StageProps = Omit<Parameters<typeof ControlledRoomStage>[0], "dark" | "onToggleTheme">;
+type StageProps = Parameters<typeof ControlledRoomStage>[0] & { presentation?: { active: boolean; onToggle: () => void } };
 function RoomStage(props: StageProps) {
   const theme = useRoomTheme();
-  return <div data-theme={theme.dark ? "dark" : undefined}><ControlledRoomStage {...props} dark={theme.dark} onToggleTheme={theme.toggle} /></div>;
+  return <div data-theme={theme.dark ? "dark" : undefined}><RoomTopBar session={props.session} dark={theme.dark} onToggleTheme={theme.toggle} presentation={props.presentation} /><ControlledRoomStage {...props} /></div>;
 }
 
 /** The council-table scene of the live meeting room, in each stage of an agenda item. */

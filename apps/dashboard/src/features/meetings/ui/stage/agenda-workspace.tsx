@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Card } from "@/shared/ui/card";
 import { activeAgendaItemId, agendaItemState, chairActions, completionBlockers, itemFlow, sortAgenda, type AgendaItemState, type ChairAction } from "../../model/agenda-flow";
 import type { AgendaDiscussionItem, Decision, LiveMeetingSession, TopicGovernanceHistory, VotingRound } from "../../model/live-meeting";
@@ -20,6 +20,12 @@ type Props = {
   busy: boolean;
   /** Presentation mode: the shared view only, with every control hidden. */
   presenting: boolean;
+  /** The council table at the centre of the chair's room. */
+  stage?: ReactNode;
+  /** The small table beside a member's topic. */
+  compactStage?: ReactNode;
+  /** The viewer's open ballot, placed under the topic's title. */
+  ballot?: ReactNode;
   onUpdateDiscussion: UpdateDiscussion;
   onRequestPostpone: (item: AgendaDiscussionItem) => void;
   onOpenRound: (item: AgendaDiscussionItem) => void;
@@ -30,11 +36,12 @@ type Props = {
 };
 
 /**
- * The agenda side of the live room: the timeline, the item on screen and, for
- * the chair, the control dock. The item on screen follows the meeting unless
- * the viewer picks another one, and returns to following when the meeting moves on.
+ * The meeting itself. The chair and the rapporteur see one fixed screen in three
+ * columns (agenda, council table, the item on screen); the chair steers it from
+ * the dock under the table. A member follows the item the council is on: its
+ * topic and ballot first, the table beside it, and no navigation of their own.
  */
-export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onEditDecision, onComplete }: Props) {
+export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, stage, compactStage, ballot, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onEditDecision, onComplete }: Props) {
   const ordered = sortAgenda(agenda);
   const currentId = activeAgendaItemId(session, ordered, rounds, decisions);
   const [picked, setPicked] = useState<{ whileCurrent: string | null; itemId: string } | null>(null);
@@ -44,7 +51,9 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
     return <Card className="text-center"><h2 className="m-0 text-q-h3 font-bold">لا توجد بنود في جدول الأعمال</h2><p className="m-0 mt-1 text-q-ui text-q-text-2">تُضاف البنود من صفحة الاجتماع قبل بدء الجلسة.</p></Card>;
   }
 
-  const pickedId = picked && picked.whileCurrent === currentId && ordered.some((item) => item.id === picked.itemId) ? picked.itemId : null;
+  // A member follows the meeting; only who runs it may look at another item.
+  const follower = session.viewer.mode === "member" && !session.viewer.can_manage_voting;
+  const pickedId = !follower && picked && picked.whileCurrent === currentId && ordered.some((item) => item.id === picked.itemId) ? picked.itemId : null;
   const selected = ordered.find((item) => item.id === (pickedId ?? currentId)) ?? ordered[ordered.length - 1];
   const flows = Object.fromEntries(ordered.map((item) => [item.id, itemFlow(item, session, rounds, decisions)]));
   const states: Record<string, AgendaItemState> = Object.fromEntries(ordered.map((item) => [item.id, agendaItemState(item, flows[item.id])]));
@@ -63,33 +72,59 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
     else if (action.kind === "edit_decision" && flow.decision) onEditDecision(flow.decision, selected, flow.closed);
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="grid items-start gap-4 lg:grid-cols-[19rem_minmax(0,1fr)]">
-        <AgendaTimeline items={ordered} states={states} currentId={currentId} selectedId={selected.id} onSelect={(itemId) => setPicked({ whileCurrent: currentId, itemId })} />
-        <TopicCard
-          item={selected}
-          total={ordered.length}
-          flow={flow}
-          state={states[selected.id]}
-          session={session}
-          attachments={attachments.filter((attachment) => attachment.topic_id === selected.topic?.id)}
-          history={selected.topic?.id ? topicHistory[selected.topic.id] : undefined}
-          busy={busy}
-          presenting={presenting}
-          summaryDraft={summaryDrafts[selected.id]}
-          onSummaryDraftChange={(text) => setSummaryDrafts((drafts) => ({ ...drafts, [selected.id]: text }))}
-          onUpdateDiscussion={onUpdateDiscussion}
-          onEditDecision={(decision) => onEditDecision(decision, selected, flow.closed)}
-        />
+  const topic = (
+    <TopicCard
+      item={selected}
+      total={ordered.length}
+      flow={flow}
+      state={states[selected.id]}
+      session={session}
+      attachments={attachments.filter((attachment) => attachment.topic_id === selected.topic?.id)}
+      history={selected.topic?.id ? topicHistory[selected.topic.id] : undefined}
+      busy={busy}
+      presenting={presenting}
+      summaryDraft={summaryDrafts[selected.id]}
+      onSummaryDraftChange={(text) => setSummaryDrafts((drafts) => ({ ...drafts, [selected.id]: text }))}
+      onUpdateDiscussion={onUpdateDiscussion}
+      onEditDecision={(decision) => onEditDecision(decision, selected, flow.closed)}
+      ballot={presenting ? undefined : ballot}
+    />
+  );
+  const timeline = (
+    <AgendaTimeline
+      items={ordered}
+      states={states}
+      currentId={currentId}
+      selectedId={selected.id}
+      onSelect={follower ? undefined : (itemId) => setPicked({ whileCurrent: currentId, itemId })}
+    />
+  );
+
+  if (follower) {
+    return (
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
+        <div className="min-w-0">{topic}</div>
+        <aside aria-label="طاولة المجلس وجدول الأعمال" className="flex min-w-0 flex-col gap-4">
+          {compactStage && (
+            <Card className="flex flex-col gap-2 p-3">
+              <h3 className="m-0 px-1 text-q-ui font-bold">طاولة المجلس</h3>
+              {compactStage}
+            </Card>
+          )}
+          {timeline}
+        </aside>
       </div>
-      {manager && blockers.length > 0 && (
-        <Card role="region" aria-label="قبل إنهاء الجلسة" className="flex flex-col gap-2">
-          <h3 className="m-0 text-q-ui font-bold">قبل إنهاء الجلسة</h3>
-          <ul className="m-0 flex list-disc flex-col gap-1 ps-5 text-q-ui text-q-text-2">{blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul>
-        </Card>
-      )}
-      {manager && <ControlDock item={selected} actions={actions} note={note} busy={busy} blockers={blockers} onAction={run} onComplete={onComplete} />}
+    );
+  }
+
+  return (
+    <div className="grid gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[15rem_minmax(0,1fr)_minmax(20rem,24rem)]">
+      <div className="order-2 min-w-0 lg:order-none lg:min-h-0 lg:overflow-y-auto">{timeline}</div>
+      <div className="order-1 flex min-w-0 flex-col gap-3 lg:order-none lg:min-h-0">
+        {stage && <div className="min-h-0 lg:flex-1">{stage}</div>}
+        {manager && <ControlDock item={selected} actions={actions} note={note} busy={busy} blockers={blockers} onAction={run} onComplete={onComplete} />}
+      </div>
+      <div className="order-3 min-w-0 lg:order-none lg:min-h-0 lg:overflow-y-auto">{topic}</div>
     </div>
   );
 }
