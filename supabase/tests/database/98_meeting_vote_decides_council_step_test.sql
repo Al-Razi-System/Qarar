@@ -88,7 +88,11 @@ insert into qarar_governance.workflow_template_transitions(organization_id,workf
 ('98000000-0000-0000-0000-000000000001','98000000-0000-0000-0000-0000000001b3','98000000-0000-0000-0000-0000000001c4',null,'approved','complete'),
 ('98000000-0000-0000-0000-000000000001','98000000-0000-0000-0000-0000000001b3','98000000-0000-0000-0000-0000000001c4',null,'rejected','reject'),
 ('98000000-0000-0000-0000-000000000001','98000000-0000-0000-0000-0000000001b4','98000000-0000-0000-0000-0000000001c5','98000000-0000-0000-0000-0000000001c6','completed','forward');
--- The mapping row is not needed by the meeting flow; replica mode skips its key.
+-- Each route hangs on its topic's governance mapping (an existing routing decision).
+insert into qarar_governance.topic_governance_mappings(id,organization_id,topic_id,governance_source,routing_status,routing_decision_id,workflow_template_version_id,snapshot,mapped_by_user_id)
+select ('98000000-0000-0000-0000-0000000001d'||n)::uuid,'98000000-0000-0000-0000-000000000001',('98000000-0000-0000-0000-00000000007'||n)::uuid,
+ 'regulated','routing_ready',gen_random_uuid(),('98000000-0000-0000-0000-0000000001b'||n)::uuid,'{}','98000000-0000-0000-0000-000000000011'
+from generate_series(1,4) n;
 insert into qarar_governance.workflow_instances(id,organization_id,topic_id,topic_governance_mapping_id,workflow_template_version_id,status,started_by_user_id,snapshot)
 select ('98000000-0000-0000-0000-0000000001e'||n)::uuid,'98000000-0000-0000-0000-000000000001',('98000000-0000-0000-0000-00000000007'||n)::uuid,
  ('98000000-0000-0000-0000-0000000001d'||n)::uuid,('98000000-0000-0000-0000-0000000001b'||n)::uuid,'active','98000000-0000-0000-0000-000000000011','{}'
@@ -132,6 +136,10 @@ create function pg_temp.s98_step(p_id uuid) returns qarar_governance.workflow_in
 $$ select * from qarar_governance.workflow_instance_steps where id=p_id $$;
 create function pg_temp.s98_topic(p_id uuid) returns qarar_topics.topics language sql security definer as
 $$ select * from qarar_topics.topics where id=p_id $$;
+-- The whole test is one transaction, so updated_at (now()) predates closed_at
+-- (clock_timestamp()); align the rounds so the final-summary guard compares like with like.
+create function pg_temp.s98_align_round_clock() returns void language sql security definer as
+$$ update qarar_voting.voting_rounds set closed_at=now() where meeting_id='98000000-0000-0000-0000-000000000081' and status='closed' $$;
 create function pg_temp.s98_round() returns qarar_voting.voting_rounds language sql security definer as
 $$ select * from qarar_voting.voting_rounds where id=(select round_id from s98_state) $$;
 -- Discuss an item, then open its vote; returns nothing, keeps the round id.
@@ -218,6 +226,7 @@ select api_v1.update_agenda_discussion('98000000-0000-0000-0000-000000000095','u
 select api_v1.update_agenda_discussion('98000000-0000-0000-0000-000000000095','discussed',null,pg_temp.s98_item_token(5));
 select api_v1.update_agenda_discussion(('98000000-0000-0000-0000-00000000009'||n)::uuid,'discussed','Final summary of the item after the vote.',pg_temp.s98_item_token(n))
 from generate_series(1,3) n;
+select pg_temp.s98_align_round_clock();
 select throws_like($$select api_v1.complete_meeting_session('98000000-0000-0000-0000-000000000081',pg_temp.s98_meeting_token())$$,
  '%البند 4%','the session cannot end while an item that was not postponed has no closed vote');
 
@@ -230,6 +239,7 @@ select pg_temp.s98_vote('98000000-0000-0000-0000-000000000013','reject');
 select pg_temp.s98_as('98000000-0000-0000-0000-000000000011');
 select api_v1.close_voting_round((select round_id from s98_state),null);
 select api_v1.update_agenda_discussion('98000000-0000-0000-0000-000000000095','discussed','Final summary of the legacy item.',pg_temp.s98_item_token(5));
+select pg_temp.s98_align_round_clock();
 select lives_ok($$select api_v1.complete_meeting_session('98000000-0000-0000-0000-000000000081',pg_temp.s98_meeting_token())$$,
  'the session ends once every item is voted on or postponed');
 
