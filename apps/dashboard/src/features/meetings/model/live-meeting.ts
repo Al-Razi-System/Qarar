@@ -24,6 +24,8 @@ export type AgendaDiscussionItem = {
   workflow_step_name_ar?: string | null;
   requires_voting?: boolean;
   voting_available_now?: boolean;
+  /** Why the vote cannot be opened now, from the server; null when it can. */
+  voting_unavailable_reason?: string | null;
   topic?: { id: string; title_ar: string };
 };
 

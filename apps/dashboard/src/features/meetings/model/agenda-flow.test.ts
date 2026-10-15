@@ -62,6 +62,21 @@ describe("chairActions", () => {
     expect(kinds(ready, session({}, "not_met")).actions[0].disabledReason).toBe("النصاب غير مكتمل، فلا يُفتح التصويت.");
   });
 
+  it("opens the vote only after the discussion, and says why when the route cannot be voted on", () => {
+    expect(kinds(item({ voting_available_now: true }), session()).actions.map((a) => a.kind)).toEqual(["start"]);
+    const blocked = kinds(item({ agenda_status: "discussed", voting_available_now: false, voting_unavailable_reason: "مرحلة «عرض» لا تحدد ما يحدث عند القبول والرفض." }), session());
+    expect(blocked.actions).toEqual([
+      { kind: "open_round", label: "فتح التصويت للأعضاء", disabledReason: "مرحلة «عرض» لا تحدد ما يحدث عند القبول والرفض." },
+      { kind: "postpone", label: "تأجيل البند" },
+    ]);
+    expect(kinds(item({ agenda_status: "discussed" }), session()).actions[0].disabledReason).toBe("لا يُفتح التصويت على هذا البند الآن.");
+  });
+
+  it("explains that a tie leaves the topic where it was", () => {
+    expect(kinds(item({ agenda_status: "discussed" }), session(), [{ ...approved, result: "tied" }]).note)
+      .toBe("تعادلت الأصوات، فبقي الموضوع في مرحلته من مساره.");
+  });
+
   it("offers no decision for a rejected result", () => {
     const rejected = kinds(item({ agenda_status: "discussed" }), session(), [{ ...approved, result: "rejected" }]);
     expect(rejected.actions).toEqual([]);
@@ -88,6 +103,14 @@ describe("agenda state and focus", () => {
     expect(activeAgendaItemId(session(), sortAgenda([second, first]), [], [])).toBe("a2");
     expect(activeAgendaItemId(session(), sortAgenda([third, second, first]), [], [])).toBe("a3");
     expect(activeAgendaItemId(session(), [first], [], [])).toBeNull();
+  });
+});
+
+describe("postponed items", () => {
+  it("need no vote: they neither hold the focus nor block the end of the session", () => {
+    const postponed = item({ agenda_status: "postponed", discussion_notes: "سبب التأجيل" });
+    expect(activeAgendaItemId(session(), [postponed], [], [])).toBeNull();
+    expect(completionBlockers(session(), [postponed], [], [])).toEqual([]);
   });
 });
 

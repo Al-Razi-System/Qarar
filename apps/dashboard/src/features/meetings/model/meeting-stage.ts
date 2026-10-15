@@ -38,7 +38,7 @@ function attendanceSeatStatus(record: Attendance): SeatStatus {
 function isUnfinished(item: AgendaDiscussionItem, rounds: VotingRound[], decisions: Decision[]) {
   const closed = latestClosedRound(rounds, item.id);
   return !FINISHED_AGENDA_STATES.includes(item.agenda_status ?? "pending")
-    || (item.requires_voting === true && !closed)
+    || (item.requires_voting === true && item.agenda_status !== "postponed" && !closed)
     || (closed?.result === "approved" && !decisions.some((decision) => decision.agenda_item_id === item.id));
 }
 
