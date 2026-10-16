@@ -195,9 +195,14 @@ async function openAgenda(page: Page) {
   await page.getByRole("button", { name: /جدول الأعمال والتصويت/ }).click();
 }
 
-async function vote(page: Page) {
+async function vote(page: Page, followsBroadcast = false) {
   await page.reload();
-  await openAgenda(page);
+  if (followsBroadcast) {
+    await expect(page.getByRole("region", { name: "بث الجلسة" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "أقسام غرفة الاجتماع" })).toHaveCount(0);
+  } else {
+    await openAgenda(page);
+  }
   await expect(page.getByText("تصويت مفتوح لك الآن")).toBeVisible();
   await page.getByRole("button", { name: "موافق", exact: true }).click();
   await expect(page.getByText("تم تسجيل صوتك وملاحظتك بسرية.")).toBeVisible();
@@ -254,6 +259,7 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     await openAgenda(chair.page);
     await chair.page.getByRole("button", { name: "بدء المناقشة" }).click();
     await expect(chair.page.getByText("بدأت مناقشة البند.")).toBeVisible();
+    await expect(chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" })).toBeInViewport();
     await chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" }).click();
     await expect(chair.page.getByText("تم حفظ الملخص النهائي للبند بنجاح.")).toBeVisible();
     await chair.page.getByRole("button", { name: "فتح التصويت للأعضاء" }).click();
@@ -262,7 +268,7 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     await expect(chair.page.getByRole("img", { name: "صوّت 0 من 3", exact: true })).toBeVisible();
     await expect(chair.page.getByLabel("النتيجة النهائية للتصويت")).not.toBeVisible();
 
-    await vote(member.page);
+    await vote(member.page, true);
     await vote(rapporteur.page);
     await vote(chair.page);
     await member.page.goto("about:blank");
