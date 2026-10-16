@@ -32,6 +32,8 @@ function stateOf(assignment: MeetingAssignment): { label: string; tone: "warning
   if (assignment.status === "proposed") return { label: "مقترح بانتظار اعتماد الرئيس", tone: "warning" };
   if (assignment.status === "withdrawn") return { label: "مسحوب", tone: "neutral" };
   if (assignment.action_status === "cancelled") return { label: "أُلغيت مهمته", tone: "neutral" };
+  if (assignment.action_status === "completed") return { label: "منجز", tone: "success" };
+  if (assignment.action_status === "submitted") return { label: "نافذ · بانتظار التحقق", tone: "success" };
   return { label: "نافذ", tone: "success" };
 }
 
