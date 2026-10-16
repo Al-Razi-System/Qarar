@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MemberProfiles, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingBroadcast, MemberProfiles, VotingRound } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { AgendaWorkspace } from "./agenda-workspace";
 import { MemberVoteCard } from "./member-vote-card";
@@ -29,6 +29,15 @@ function profiles(mode: RoomProps["mode"]): MemberProfiles {
       membership_title: index === 2 ? "ممثل القسم" : null, membership_start_date: index < 2 ? "2024-09-01" : "2026-01-15",
       attendance_status: "present", verification_status: "verified", has_avatar: false, avatar_revision: 0,
     })),
+  };
+}
+
+/** The chair drives the screens; the rapporteur and the members follow. */
+function broadcastFor(mode: RoomProps["mode"]): MeetingBroadcast {
+  const chair = mode === "chair";
+  return {
+    meeting_id: "m1", active: true, controller_role: "chair", agenda_item_id: null, panel: "instructions", revision: 3,
+    viewer_controls: chair, can_hand_over: chair, can_take_back: false, can_return: false,
   };
 }
 
@@ -77,12 +86,13 @@ function Room({ mode, agenda, rounds, decisions = [], presenting = false, voting
   const noop = () => undefined;
   return (
     <div data-theme={theme.dark ? "dark" : undefined} className={`flex flex-col gap-3 font-sans text-q-text ${theme.dark ? "rounded-q-card bg-q-bg p-4" : ""} ${mode !== "member" ? "lg:h-[860px]" : ""}`}>
-      <RoomTopBar session={live} startedAt={SESSION_STARTED_AT} dark={theme.dark} onToggleTheme={theme.toggle} presentation={mode === "chair" ? { active: presenting, onToggle: noop } : undefined} />
+      <RoomTopBar session={live} startedAt={SESSION_STARTED_AT} dark={theme.dark} onToggleTheme={theme.toggle} presentation={mode === "chair" ? { active: presenting, onToggle: noop } : undefined} fullscreen={mode === "chair" ? undefined : { active: false, onToggle: noop }} />
       <div className="min-h-0 flex-1">
         <AgendaWorkspace session={live} agenda={agenda} attachments={attachments} topicHistory={{}} rounds={rounds} decisions={decisions} busy={false} presenting={presenting}
           stage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} profiles={profiles(mode)} />}
           compactStage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} profiles={profiles(mode)} compact />}
           ballot={hasBallot ? <MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي", has_voted: false }} busy={false} onCast={noop} /> : undefined}
+          broadcast={broadcastFor(mode)} onBroadcast={noop} onHandOver={noop}
           onUpdateDiscussion={async () => true} onRequestPostpone={noop} onOpenRound={noop} onCloseRound={noop} onCreateDecision={noop} onEditDecision={noop} onComplete={noop} />
       </div>
     </div>

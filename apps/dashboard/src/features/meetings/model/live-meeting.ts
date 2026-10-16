@@ -34,6 +34,23 @@ export type MemberProfile = {
 
 export type MemberProfiles = { mobile_visible: boolean; members: MemberProfile[] };
 
+/** What the council's screens show, written by whoever controls the broadcast (get_meeting_broadcast_v2). */
+export type MeetingBroadcast = {
+  meeting_id: string;
+  /** Only while the session runs; before and after it nothing is broadcast. */
+  active: boolean;
+  controller_role: "chair" | "rapporteur";
+  /** Null until the controller chooses an item; screens then show the item the council is on. */
+  agenda_item_id: string | null;
+  panel: "instructions" | "attachments" | "history";
+  revision: number;
+  updated_at?: string | null;
+  viewer_controls: boolean;
+  can_hand_over: boolean;
+  can_take_back: boolean;
+  can_return: boolean;
+};
+
 export type AgendaDiscussionItem = {
   id: string;
   agenda_order: number;

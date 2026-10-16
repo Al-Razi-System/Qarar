@@ -206,6 +206,39 @@ The live room shows a card for every roster member and their photo on the seat.
 
 `get_meeting_member_avatar_v2(p_meeting_id uuid, p_user_id uuid)` returns `{revision, has_image, content_base64}` for a roster member only (`P0002` otherwise). The dashboard serves it as JPEG at `GET /api/admin/meetings/{meetingId}/members/{userId}/avatar?v={avatar_revision}`.
 
+## Screen Broadcast (v2)
+
+While the session runs, one person drives what every screen shows: the chair by default, or the rapporteur after a handover.
+
+`get_meeting_broadcast_v2(p_meeting_id uuid)` returns:
+
+```json
+{
+  "meeting_id": "uuid", "active": true, "controller_role": "chair",
+  "agenda_item_id": "uuid or null", "panel": "instructions", "revision": 4, "updated_at": "...",
+  "viewer_controls": true, "can_hand_over": true, "can_take_back": false, "can_return": false
+}
+```
+
+- Read authority as Session Detail. `active` is true only while the meeting is `in_progress`.
+- `agenda_item_id` null means "the item the council is on".
+
+`set_meeting_broadcast_v2(p_meeting_id, p_agenda_item_id, p_panel, p_expected_revision)`:
+
+- Only the current controller, holding the active `council_chair` or `council_rapporteur` role in the meeting's council. System administration does not suffice (`42501`).
+- `p_panel` is `instructions`, `attachments` or `history`. The item must belong to the meeting (`22023`).
+- Only during the session (`23514`).
+- A stale `p_expected_revision` is refused with `40001`; reload and retry.
+- Navigation is display state and is not audited.
+
+`hand_over_meeting_broadcast_v2(p_meeting_id, p_to_role, p_expected_revision)`:
+
+- The chair hands control to the rapporteur (`p_to_role = 'rapporteur'`) or takes it back (`'chair'`). The rapporteur in control may only return it to the chair.
+- Requires an active rapporteur for a handover to them (`23514`).
+- Each handover is audited as `meetings.broadcast.handover`.
+
+The dashboard reads the broadcast every two seconds while the session runs. A member's screen follows it: no item or panel of their own, and a full-screen control.
+
 ## Open Voting
 
 `open_voting_round` accepts `p_agenda_item_id` and `p_expected_meeting_updated_at`.
