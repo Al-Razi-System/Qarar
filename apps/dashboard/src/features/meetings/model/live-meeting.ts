@@ -54,6 +54,18 @@ export type MeetingBroadcast = {
   can_return: boolean;
 };
 
+/** An agenda item's discussion time, recorded by the database (list_meeting_item_timers_v2). */
+export type ItemTimer = {
+  agenda_item_id: string;
+  /** The chair's planned duration, or null without one. */
+  planned_minutes: number | null;
+  discussion_started_at: string | null;
+  discussion_ended_at: string | null;
+  revision: number;
+};
+
+export type MeetingItemTimers = { server_now: string; timers: ItemTimer[] };
+
 export type AgendaDiscussionItem = {
   id: string;
   agenda_order: number;

@@ -267,6 +267,27 @@ The file routes (`/api/admin/topics/upload`, `/api/admin/typed-topics/files`) re
 
 Withholding downloads does not stop anyone from capturing what is shown on their screen. Users with direct access to the topic outside the meeting keep that access.
 
+## Agenda Item Timer (v2)
+
+The database records when an item's discussion starts and ends: the trigger `agenda_items_track_discussion_time` follows `agenda_status`. `under_discussion` sets the start; `discussed` or `postponed` sets the end.
+
+`list_meeting_item_timers_v2(p_meeting_id)` returns:
+
+```json
+{ "server_now": "...", "timers": [{ "agenda_item_id": "uuid", "planned_minutes": 15, "discussion_started_at": "...", "discussion_ended_at": null, "revision": 2 }] }
+```
+
+- Read authority as Session Detail.
+- `server_now` lets every screen count from the server's clock.
+
+`set_agenda_item_planned_minutes_v2(p_agenda_item_id, p_minutes, p_expected_revision)`:
+
+- The active `council_chair` of the meeting's council only (`42501`).
+- `p_minutes` is 1 to 240, or null to clear it (`22023`).
+- Not after the meeting is closed, archived or cancelled (`23514`).
+- A stale revision is refused (`40001`).
+- Audited as `meetings.agenda.planned_minutes`.
+
 ## Open Voting
 
 `open_voting_round` accepts `p_agenda_item_id` and `p_expected_meeting_updated_at`.

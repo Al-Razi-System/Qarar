@@ -81,7 +81,7 @@
        - لا قناة لحظية بعد. التحديث كل ثانيتين، لأن اللوحة لا تملك عميل Supabase في المتصفح.
        - يُبث البند والتبويب، أما المرفق المفتوح والصفحة فمع عارض المستندات في 4ب.
      - خريطة الأثر: `docs/engineering/impact/MEETING_BROADCAST_AR.md`.
-   - **4ب (فرع `claude/meeting-document-viewer`):**
+   - **4ب: منجزة ومدموجة (#141).**
      - الترحيل `20261016030000_meeting_document_viewer.sql`، واختباره `101_meeting_document_viewer_test.sql` (21 فحصاً). يضيف:
        - جدول `agenda_item_download_settings`.
        - عمودي `attachment_id` و`page` في البث.
@@ -99,6 +99,18 @@
        - لا عرض داخل الغرفة لملفات Word.
      - خريطة الأثر: `docs/engineering/impact/MEETING_DOCUMENT_VIEWER_AR.md`.
 5. **عدّاد مدة البند، ثم الإحالة والتكليف.**
+   - **5أ، العدّاد (فرع `claude/agenda-item-timer`):**
+     - الترحيل `20261016040000_meeting_item_timer.sql`، واختباره `102_meeting_item_timer_test.sql` (19 فحصاً). يضيف:
+       - جدول `agenda_item_timers`.
+       - مشغّلاً يكتب بدء المناقشة ونهايتها من انتقالات `agenda_status` القائمة.
+       - العقدين `list_meeting_item_timers_v2` و`set_agenda_item_planned_minutes_v2`.
+     - `ItemTimer` تحت شارات بطاقة البند:
+       - مدة جارية أو نهائية، محسوبة على ساعة الخادم.
+       - المدة المقررة، ولون التنبيه عند التجاوز.
+       - اختيار المدة للرئيس.
+     - البند الذي كانت مناقشته جارية قبل الترحيل لا عدّاد له حتى تبدأ مناقشة جديدة.
+     - خريطة الأثر: `docs/engineering/impact/MEETING_ITEM_TIMER_AR.md`.
+   - **5ب، الإحالة والتكليف:** التالية، بعد مراجعة عقود الإحالة (06) والتنفيذ (09) القائمة.
 
 ## كيف تستخدم هذا الملف
 

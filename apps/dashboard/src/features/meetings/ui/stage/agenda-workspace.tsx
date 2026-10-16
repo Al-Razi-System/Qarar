@@ -3,11 +3,12 @@
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { Card } from "@/shared/ui/card";
 import { activeAgendaItemId, agendaItemState, chairActions, completionBlockers, itemFlow, sortAgenda, type AgendaItemState, type ChairAction } from "../../model/agenda-flow";
-import type { AgendaDiscussionItem, Decision, LiveMeetingSession, MeetingBroadcast, TopicGovernanceHistory, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Decision, LiveMeetingSession, MeetingBroadcast, MeetingItemTimers, TopicGovernanceHistory, VotingRound } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { AgendaTimeline } from "./agenda-timeline";
 import { BroadcastBar } from "./broadcast-bar";
 import { ControlDock } from "./control-dock";
+import { ItemTimer } from "./item-timer";
 import type { UpdateDiscussion } from "./discussion-summary";
 import { TopicCard, type ReferenceTab } from "./topic-card";
 
@@ -40,6 +41,10 @@ type Props = {
   onBroadcastDocument?: (attachmentId: string | null, page: number | null, agendaItemId: string) => void;
   /** The chair's download decision for an item, with where it stands. */
   downloads?: { pendingItemId: string | null; errorItemId: string | null; error: string | null; onChange: (agendaItemId: string, allowed: boolean, revision: number) => void };
+  /** The items' discussion timers, with the server's time minus this device's. */
+  timers?: { data: MeetingItemTimers | null; clockOffsetMs: number };
+  /** The chair's planned duration for an item, with where it stands. */
+  plannedMinutes?: { pendingItemId: string | null; errorItemId: string | null; error: string | null; onChange: (agendaItemId: string, minutes: number | null, revision: number) => void };
   onUpdateDiscussion: UpdateDiscussion;
   onRequestPostpone: (item: AgendaDiscussionItem) => void;
   onOpenRound: (item: AgendaDiscussionItem) => void;
@@ -55,7 +60,7 @@ type Props = {
  * the dock under the table. A member follows the item the council is on: its
  * topic and ballot first, the table beside it, and no navigation of their own.
  */
-export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, stage, compactStage, ballot, broadcast = null, broadcastPending = false, broadcastError = null, onBroadcast, onHandOver, onBroadcastDocument, downloads, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onEditDecision, onComplete }: Props) {
+export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, stage, compactStage, ballot, broadcast = null, broadcastPending = false, broadcastError = null, onBroadcast, onHandOver, onBroadcastDocument, downloads, timers, plannedMinutes, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onEditDecision, onComplete }: Props) {
   const ordered = sortAgenda(agenda);
   const currentId = activeAgendaItemId(session, ordered, rounds, decisions);
   const [picked, setPicked] = useState<{ whileCurrent: string | null; itemId: string } | null>(null);
@@ -116,6 +121,19 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
     onChange: (allowed: boolean) => downloads.onChange(selected.id, allowed, itemFiles[0]?.download_revision ?? 0),
   } : undefined;
 
+  const selectedTimer = timers?.data?.timers.find((entry) => entry.agenda_item_id === selected.id);
+  const timer = timers?.data ? (
+    <ItemTimer
+      timer={selectedTimer}
+      clockOffsetMs={timers.clockOffsetMs}
+      plan={viewerIsChair && plannedMinutes && !presenting ? {
+        pending: plannedMinutes.pendingItemId === selected.id,
+        error: plannedMinutes.errorItemId === selected.id ? plannedMinutes.error : null,
+        onChange: (minutes) => plannedMinutes.onChange(selected.id, minutes, selectedTimer?.revision ?? 0),
+      } : undefined}
+    />
+  ) : null;
+
   const topic = (
     <TopicCard
       item={selected}
@@ -141,6 +159,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
         : undefined}
       controllerName={controllerName}
       downloads={downloadControl}
+      timer={timer}
     />
   );
   const timeline = (

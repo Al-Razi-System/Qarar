@@ -14,6 +14,7 @@ const contracts = new Set([
   "open_meeting_session", "get_meeting_session_detail", "list_meeting_member_profiles_v2", "lock_attendance_roster",
   "get_meeting_broadcast_v2", "set_meeting_broadcast_v2", "hand_over_meeting_broadcast_v2",
   "set_meeting_broadcast_document_v2", "set_agenda_item_downloads_v2",
+  "list_meeting_item_timers_v2", "set_agenda_item_planned_minutes_v2",
   "create_checkin_session", "revoke_checkin_session", "self_check_in",
   "override_attendance", "verify_attendance", "recalculate_meeting_quorum",
   "apply_quorum_failure", "get_attendance_history",
