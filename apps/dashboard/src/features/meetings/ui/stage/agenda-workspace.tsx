@@ -3,7 +3,7 @@
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { Card } from "@/shared/ui/card";
 import { activeAgendaItemId, agendaItemState, chairActions, completionBlockers, itemFlow, sortAgenda, type AgendaItemState, type ChairAction } from "../../model/agenda-flow";
-import type { AgendaDiscussionItem, Decision, LiveMeetingSession, MeetingBroadcast, MeetingItemTimers, TopicGovernanceHistory, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Decision, LiveMeetingSession, MeetingBroadcast, MeetingItemTimers, MeetingReferrals, TopicGovernanceHistory, VotingRound } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { AgendaTimeline } from "./agenda-timeline";
 import { BroadcastBar } from "./broadcast-bar";
@@ -47,6 +47,10 @@ type Props = {
   plannedMinutes?: { pendingItemId: string | null; errorItemId: string | null; error: string | null; onChange: (agendaItemId: string, minutes: number | null, revision: number) => void };
   onUpdateDiscussion: UpdateDiscussion;
   onRequestPostpone: (item: AgendaDiscussionItem) => void;
+  /** The meeting's referrals; without them the room works as before. */
+  referrals?: MeetingReferrals | null;
+  /** Given to the council's chair: refers the item instead of a vote. */
+  onRequestReferral?: (item: AgendaDiscussionItem) => void;
   onOpenRound: (item: AgendaDiscussionItem) => void;
   onCloseRound: (round: VotingRound) => void;
   onCreateDecision: (round: VotingRound, item: AgendaDiscussionItem) => void;
@@ -60,9 +64,10 @@ type Props = {
  * the dock under the table. A member follows the item the council is on: its
  * topic and ballot first, the table beside it, and no navigation of their own.
  */
-export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, stage, compactStage, ballot, broadcast = null, broadcastPending = false, broadcastError = null, onBroadcast, onHandOver, onBroadcastDocument, downloads, timers, plannedMinutes, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onEditDecision, onComplete }: Props) {
+export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, stage, compactStage, ballot, broadcast = null, broadcastPending = false, broadcastError = null, onBroadcast, onHandOver, onBroadcastDocument, downloads, timers, plannedMinutes, referrals, onRequestReferral, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onEditDecision, onComplete }: Props) {
   const ordered = sortAgenda(agenda);
-  const currentId = activeAgendaItemId(session, ordered, rounds, decisions);
+  const referred = referrals?.referrals ?? [];
+  const currentId = activeAgendaItemId(session, ordered, rounds, decisions, referred);
   const [picked, setPicked] = useState<{ whileCurrent: string | null; itemId: string } | null>(null);
   const [summaryDrafts, setSummaryDrafts] = useState<Record<string, string>>({});
 
@@ -93,17 +98,20 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
   const pickedId = !live && !follower && picked && picked.whileCurrent === currentId && ordered.some((item) => item.id === picked.itemId) ? picked.itemId : null;
   const selected = ordered.find((item) => item.id === (live ? broadcastItemId ?? currentId : pickedId ?? currentId)) ?? ordered[ordered.length - 1];
   const controllerName = live?.controller_role === "rapporteur" ? "مقرر المجلس" : "رئيس المجلس";
-  const flows = Object.fromEntries(ordered.map((item) => [item.id, itemFlow(item, session, rounds, decisions)]));
+  const flows = Object.fromEntries(ordered.map((item) => [item.id, itemFlow(item, session, rounds, decisions, referred)]));
   const states: Record<string, AgendaItemState> = Object.fromEntries(ordered.map((item) => [item.id, agendaItemState(item, flows[item.id])]));
   const flow = flows[selected.id];
   const manager = session.viewer.can_manage_voting && !presenting;
-  const blockers = manager ? completionBlockers(session, ordered, rounds, decisions) : [];
-  const { actions, note } = chairActions(selected, session, flow);
+  const blockers = manager ? completionBlockers(session, ordered, rounds, decisions, referred) : [];
+  // Only the council's chair decides on downloads and referrals; the broadcast tells the room who that is.
+  const viewerIsChair = Boolean(live && (live.can_hand_over || live.can_take_back));
+  const { actions, note } = chairActions(selected, session, flow, { canRefer: viewerIsChair && Boolean(referrals && onRequestReferral) });
 
   function run(action: ChairAction) {
     if (action.kind === "start") void onUpdateDiscussion(selected, "under_discussion", selected.discussion_notes ?? null);
     else if (action.kind === "end") void onUpdateDiscussion(selected, "discussed", selected.discussion_notes ?? null);
     else if (action.kind === "postpone") onRequestPostpone(selected);
+    else if (action.kind === "refer") onRequestReferral?.(selected);
     else if (action.kind === "open_round") onOpenRound(selected);
     else if (action.kind === "close_round" && flow.open) onCloseRound(flow.open);
     else if (action.kind === "decision" && flow.closed) onCreateDecision(flow.closed, selected);
@@ -111,8 +119,6 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
   }
 
   const itemFiles = attachments.filter((attachment) => attachment.topic_id === selected.topic?.id);
-  // Only the council's chair decides on downloads; the broadcast tells the room who that is.
-  const viewerIsChair = Boolean(live && (live.can_hand_over || live.can_take_back));
   const downloadControl = downloads && itemFiles.length > 0 ? {
     allowed: itemFiles.every((file) => file.download_allowed !== false),
     canChange: viewerIsChair,

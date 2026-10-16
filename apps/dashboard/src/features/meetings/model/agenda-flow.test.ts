@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { activeAgendaItemId, agendaItemState, chairActions, completionBlockers, itemFlow, sortAgenda } from "./agenda-flow";
-import type { AgendaDiscussionItem, Decision, LiveMeetingSession, VotingRound } from "./live-meeting";
+import type { AgendaDiscussionItem, Decision, ItemReferral, LiveMeetingSession, VotingRound } from "./live-meeting";
 
 function session(overrides: Partial<LiveMeetingSession["meeting"]> = {}, quorumStatus = "met"): LiveMeetingSession {
   return {
@@ -125,5 +125,39 @@ describe("completionBlockers", () => {
   it("asks for the final summary again when it is older than the vote result", () => {
     const stale = item({ agenda_status: "discussed", discussion_notes: "ملاحظات أولية", updated_at: "2026-10-10T08:30:00Z" });
     expect(completionBlockers(session(), [stale], [approved], [decision])).toEqual(["البند 1 «الخطة»: تحديث الملخص النهائي بعد احتساب نتيجة التصويت."]);
+  });
+});
+
+describe("referred items", () => {
+  const referral: ItemReferral = { agenda_item_id: "a1", referral_id: "f1", to_unit_id: "u9", to_unit_name_ar: "لجنة الخطط", reason: "يحتاج دراسة اللجنة", status: "pending", referred_at: "2026-10-10T09:00:00Z" };
+  const referredKinds = (it_: AgendaDiscussionItem, canRefer: boolean, referrals: ItemReferral[] = []) =>
+    chairActions(it_, session(), itemFlow(it_, session(), [], [], referrals), { canRefer });
+
+  it("offers the chair a referral once the discussion starts and until a vote opens", () => {
+    expect(referredKinds(item(), true).actions.map((a) => a.kind)).toEqual(["start"]);
+    expect(referredKinds(item({ agenda_status: "under_discussion" }), true).actions.map((a) => a.kind)).toEqual(["end", "postpone", "refer"]);
+    expect(referredKinds(item({ agenda_status: "discussed", voting_available_now: true }), true).actions.map((a) => a.kind)).toEqual(["open_round", "refer"]);
+    expect(chairActions(item({ agenda_status: "discussed" }), session(), itemFlow(item({ agenda_status: "discussed" }), session(), [open], []), { canRefer: true }).actions.map((a) => a.kind)).toEqual(["close_round"]);
+  });
+
+  it("offers no referral to anyone but the chair", () => {
+    expect(referredKinds(item({ agenda_status: "under_discussion" }), false).actions.map((a) => a.kind)).toEqual(["end", "postpone"]);
+  });
+
+  it("shows where a referred item went and offers no vote on it", () => {
+    const referred = item({ agenda_status: "discussed", voting_available_now: true });
+    const result = referredKinds(referred, true, [referral]);
+    expect(result.actions).toEqual([]);
+    expect(result.note).toBe("أُحيل البند إلى لجنة الخطط، بانتظار قبولها.");
+    expect(referredKinds(referred, true, [{ ...referral, status: "accepted" }]).note).toBe("أُحيل البند إلى لجنة الخطط، وقبلت الإحالة.");
+    expect(referredKinds(referred, true, [{ ...referral, status: "rejected" }]).note).toBe("أُحيل البند إلى لجنة الخطط، ورفضت الإحالة.");
+    expect(agendaItemState(referred, itemFlow(referred, session(), [], [], [referral]))).toEqual({ label: "محال إلى لجنة الخطط", tone: "info" });
+  });
+
+  it("need no vote: once summarised they neither hold the focus nor block the end of the session", () => {
+    const referred = item({ agenda_status: "discussed", discussion_notes: "ملخص المناقشة" });
+    expect(activeAgendaItemId(session(), [referred], [], [], [referral])).toBeNull();
+    expect(completionBlockers(session(), [referred], [], [], [referral])).toEqual([]);
+    expect(completionBlockers(session(), [referred], [], [])).toEqual(["البند 1 «الخطة»: إجراء التصويت وإغلاق الجولة."]);
   });
 });

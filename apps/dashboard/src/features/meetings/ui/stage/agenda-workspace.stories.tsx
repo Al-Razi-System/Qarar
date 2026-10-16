@@ -1,14 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingBroadcast, MeetingItemTimers, MemberProfiles, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingBroadcast, MeetingItemTimers, MeetingReferrals, MemberProfiles, VotingRound } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { AgendaWorkspace } from "./agenda-workspace";
 import { MemberVoteCard } from "./member-vote-card";
+import { ReferralDialog } from "./referral-dialog";
 import { RoomStage } from "./room-stage";
 import { RoomTopBar } from "./room-top-bar";
 import { useRoomTheme } from "./use-room-theme";
 
 /** The agenda side of the live room as each role sees it, under the council-table scene. */
-type RoomProps = { mode: "chair" | "rapporteur" | "member"; agenda: AgendaDiscussionItem[]; rounds: VotingRound[]; decisions?: Decision[]; presenting?: boolean; voting?: boolean };
+type RoomProps = { mode: "chair" | "rapporteur" | "member"; agenda: AgendaDiscussionItem[]; rounds: VotingRound[]; decisions?: Decision[]; presenting?: boolean; voting?: boolean; referred?: boolean; referring?: boolean };
 
 const names = ["د. منصور", "د. هدى", "د. خالد", "د. ريم", "د. فهد", "د. نورة", "د. ماجد", "د. أمل", "د. سامي"];
 const attendance: Attendance[] = names.map((name, index) => ({ id: `att-${index}`, user_id: `u${index}`, full_name_ar: name, status: "present", verification_status: "verified", updated_at: "2026-10-10T08:00:00Z" }));
@@ -87,12 +88,18 @@ const savedDecision = (editable: boolean): Decision => ({
   updated_at: "2026-10-10T09:10:00Z", can_edit_text: editable,
 });
 
+const destinations = [{ id: "u-plans", name_ar: "لجنة الخطط والمناهج" }, { id: "u-quality", name_ar: "وكالة الكلية للجودة" }];
+const referralsFor = (referred: boolean): MeetingReferrals => ({
+  referrals: referred ? [{ agenda_item_id: "a2", referral_id: "ref1", to_unit_id: "u-plans", to_unit_name_ar: "لجنة الخطط والمناهج", reason: "تحتاج الساعات المعتمدة دراسة اللجنة قبل التصويت.", status: "pending", referred_at: "2026-10-10T09:00:00Z" }] : [],
+  destinations,
+});
+
 /** A fixed opening time keeps the story pure; the clock still ticks from it. */
 const SESSION_STARTED_AT = "2026-10-15T08:00:00Z";
 /** Read once when the stories load, so the timers show the same scene on every render. */
 const FIXED_NOW = Date.parse(new Date().toISOString());
 
-function Room({ mode, agenda, rounds, decisions = [], presenting = false, voting: hasBallot = false }: RoomProps) {
+function Room({ mode, agenda, rounds, decisions = [], presenting = false, voting: hasBallot = false, referred = false, referring = false }: RoomProps) {
   const theme = useRoomTheme();
   const live = session(mode);
   const noop = () => undefined;
@@ -101,14 +108,16 @@ function Room({ mode, agenda, rounds, decisions = [], presenting = false, voting
       <RoomTopBar session={live} startedAt={SESSION_STARTED_AT} dark={theme.dark} onToggleTheme={theme.toggle} presentation={mode === "chair" ? { active: presenting, onToggle: noop } : undefined} fullscreen={mode === "chair" ? undefined : { active: false, onToggle: noop }} />
       <div className="min-h-0 flex-1">
         <AgendaWorkspace session={live} agenda={agenda} attachments={attachments} topicHistory={{}} rounds={rounds} decisions={decisions} busy={false} presenting={presenting}
-          stage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} profiles={profiles(mode)} />}
+          stage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} referrals={referralsFor(referred).referrals} profiles={profiles(mode)} />}
           compactStage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} profiles={profiles(mode)} compact />}
           ballot={hasBallot ? <MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي", has_voted: false }} busy={false} onCast={noop} /> : undefined}
           broadcast={broadcastFor(mode)} onBroadcast={noop} onHandOver={noop}
           timers={{ data: timers, clockOffsetMs: TIMERS_AT - FIXED_NOW }}
           plannedMinutes={{ pendingItemId: null, errorItemId: null, error: null, onChange: noop }}
+          referrals={referralsFor(referred)} onRequestReferral={noop}
           onUpdateDiscussion={async () => true} onRequestPostpone={noop} onOpenRound={noop} onCloseRound={noop} onCreateDecision={noop} onEditDecision={noop} onComplete={noop} />
       </div>
+      {referring && <ReferralDialog topicTitle="اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي" destinations={destinations} busy={false} onClose={noop} onSubmit={async () => false} />}
     </div>
   );
 }
@@ -118,6 +127,8 @@ export default meta;
 type Story = StoryObj<typeof Room>;
 
 export const ChairDiscussion: Story = { name: "الرئيس: قيد المناقشة", args: { mode: "chair", agenda: discussing, rounds: [] } };
+export const ChairReferral: Story = { name: "الرئيس: إحالة البند", args: { mode: "chair", agenda: discussing, rounds: [], referring: true } };
+export const ChairReferred: Story = { name: "الرئيس: البند المحال", args: { mode: "chair", agenda: voting, rounds: [], referred: true } };
 export const ChairVoting: Story = { name: "الرئيس: التصويت مفتوح", args: { mode: "chair", agenda: voting, rounds: [openRound] } };
 export const ChairResult: Story = { name: "الرئيس: صياغة القرار", args: { mode: "chair", agenda: voting, rounds: [closedRound] } };
 export const ChairDecisionSaved: Story = { name: "الرئيس: القرار محفوظ وقابل للتعديل", args: { mode: "chair", agenda: decided, rounds: [closedRound], decisions: [savedDecision(true)] } };

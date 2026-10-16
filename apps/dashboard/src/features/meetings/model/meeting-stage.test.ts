@@ -114,6 +114,12 @@ describe("deriveMeetingStage phase", () => {
     expect(decided).toEqual({ kind: "idle", item: expect.objectContaining({ id: "a2" }) });
   });
 
+  it("moves past a referred item: it needs no vote", () => {
+    const agenda = [item("a1", 1, { agenda_status: "discussed", requires_voting: true }), item("a2", 2)];
+    expect(deriveMeetingStage(sessionOf(), agenda, [], []).phase).toEqual({ kind: "idle", item: expect.objectContaining({ id: "a1" }) });
+    expect(deriveMeetingStage(sessionOf(), agenda, [], [], [], ["a1"]).phase).toEqual({ kind: "idle", item: expect.objectContaining({ id: "a2" }) });
+  });
+
   it("distinguishes an empty agenda from a finished one", () => {
     expect(deriveMeetingStage(sessionOf(), [], [], []).phase).toEqual({ kind: "idle", item: null });
     expect(deriveMeetingStage(sessionOf(), [item("a1", 1, { agenda_status: "discussed" })], [], []).phase).toEqual({ kind: "finished" });

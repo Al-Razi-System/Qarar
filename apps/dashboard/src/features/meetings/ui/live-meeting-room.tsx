@@ -9,7 +9,7 @@ import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { cn } from "@/shared/lib/utils";
-import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingItemTimers, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
+import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingItemTimers, MeetingReferrals, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
 import type { MeetingTopicAttachment } from "../model/meeting";
 import { AttendanceQrDialog } from "./attendance-qr-dialog";
 import { ChairAttendanceConsole } from "./chair-attendance-console";
@@ -19,6 +19,7 @@ import { AgendaWorkspace } from "./stage/agenda-workspace";
 import type { DiscussionStatus } from "./stage/discussion-summary";
 import { MemberVoteCard, type VoteValue } from "./stage/member-vote-card";
 import { ReasonDialog } from "./stage/reason-dialog";
+import { ReferralDialog } from "./stage/referral-dialog";
 import { RoomStage } from "./stage/room-stage";
 import { RoomTopBar } from "./stage/room-top-bar";
 import { useMeetingBroadcast } from "./stage/use-meeting-broadcast";
@@ -42,6 +43,8 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [tab, setTab] = useState<RoomTab>("attendance");
   const [presenting, setPresenting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [referrals, setReferrals] = useState<MeetingReferrals | null>(null);
+  const [referralItem, setReferralItem] = useState<AgendaDiscussionItem | null>(null);
   const [itemTimers, setItemTimers] = useState<{ data: MeetingItemTimers | null; clockOffsetMs: number }>({ data: null, clockOffsetMs: 0 });
   const [plannedState, setPlannedState] = useState<{ pendingItemId: string | null; errorItemId: string | null; error: string | null }>({ pendingItemId: null, errorItemId: null, error: null });
   const [downloadState, setDownloadState] = useState<{ pendingItemId: string | null; errorItemId: string | null; error: string | null }>({ pendingItemId: null, errorItemId: null, error: null });
@@ -135,6 +138,10 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       await liveMeetingRpc<MeetingItemTimers>("list_meeting_item_timers_v2", { p_meeting_id: meetingId })
         .then((data) => setItemTimers({ data, clockOffsetMs: Date.parse(data.server_now) - Date.now() }))
         .catch(() => setItemTimers((current) => current));
+      // Referrals too: without them the room shows no referral and offers none.
+      await liveMeetingRpc<MeetingReferrals>("list_meeting_referrals_v2", { p_meeting_id: meetingId })
+        .then(setReferrals)
+        .catch(() => setReferrals((current) => current));
       const rosterKey = `${meetingId}|${live.attendance.map((record) => `${record.user_id}:${record.status}:${record.verification_status ?? ""}`).join(",")}`;
       if (profilesLoadedFor.current !== rosterKey) {
         profilesLoadedFor.current = rosterKey;
@@ -249,6 +256,16 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     else if (document.fullscreenElement) void document.exitFullscreen?.()?.catch(() => undefined);
   }
 
+  function submitReferral(toUnitId: string, reason: string) {
+    if (!referralItem) return Promise.resolve(false);
+    // The item as the room last read it: a change from another screen is refused, not overwritten.
+    const item = agenda.find((row) => row.id === referralItem.id) ?? referralItem;
+    return perform(
+      () => liveMeetingRpc("refer_agenda_item_v2", { p_agenda_item_id: item.id, p_to_unit_id: toUnitId, p_reason: reason, p_expected_updated_at: item.updated_at }),
+      "أُحيل البند، وينتظر قبول الجهة المحال إليها.",
+    );
+  }
+
   async function setPlannedMinutes(agendaItemId: string, minutes: number | null, revision: number) {
     setPlannedState({ pendingItemId: agendaItemId, errorItemId: null, error: null });
     try {
@@ -298,7 +315,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
 
   const ballots = pendingVotes.map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy} onCast={(roundId: string, value: VoteValue, note: string | null) => void perform(() => liveMeetingRpc("cast_vote", { p_voting_round_id: roundId, p_vote_value: value, p_vote_note: note }), "تم تسجيل صوتك وملاحظتك بسرية.")} />);
   const steering = session.viewer.mode !== "member" || session.viewer.can_manage_voting;
-  const stageProps = { session, agenda, rounds, decisions, profiles, profilesError };
+  const stageProps = { session, agenda, rounds, decisions, referrals: referrals?.referrals, profiles, profilesError };
 
   return (
     <div
@@ -382,6 +399,8 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           downloads={{ ...downloadState, onChange: (itemId, allowed, revision) => void setItemDownloads(itemId, allowed, revision) }}
           onUpdateDiscussion={updateDiscussion}
           onRequestPostpone={(item) => { setNotice(null); setReasonRequest({ kind: "postpone", item }); }}
+          referrals={referrals}
+          onRequestReferral={(item) => { setNotice(null); setReferralItem(item); }}
           onOpenRound={(item) => void perform(() => liveMeetingRpc("open_voting_round", { p_agenda_item_id: item.id, p_expected_meeting_updated_at: session.meeting.updated_at }), "فُتحت جولة التصويت لهذا البند.")}
           onCloseRound={(round) => void perform(() => liveMeetingRpc("close_voting_round", { p_voting_round_id: round.id, p_reason: "إغلاق الجولة بعد اكتمال التصويت." }), "أُغلقت الجولة وحُسبت النتيجة.")}
           onCreateDecision={(round, item) => { setNotice(null); setDecisionDraft({ round, item }); }}
@@ -394,6 +413,16 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
 
       {decisionDraft && <DecisionComposerDialog key={decisionDraft.decision?.id ?? decisionDraft.item.id} item={decisionDraft.item} round={decisionDraft.round} decision={decisionDraft.decision} busy={busy} error={dialogError} isRapporteur={rapporteur} onClose={() => setDecisionDraft(null)} onSubmit={submitDecision} />}
 
+      {referralItem && (
+        <ReferralDialog
+          topicTitle={referralItem.topic?.title_ar ?? "البند"}
+          destinations={referrals?.destinations ?? []}
+          busy={busy}
+          error={dialogError}
+          onClose={() => setReferralItem(null)}
+          onSubmit={submitReferral}
+        />
+      )}
       {reasonRequest?.kind === "postpone" && (
         <ReasonDialog
           title="تأجيل البند"

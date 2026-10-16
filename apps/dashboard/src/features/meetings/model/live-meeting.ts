@@ -66,6 +66,20 @@ export type ItemTimer = {
 
 export type MeetingItemTimers = { server_now: string; timers: ItemTimer[] };
 
+/** An agenda item the chair referred to another unit, pending its acceptance. */
+export type ItemReferral = {
+  agenda_item_id: string;
+  referral_id: string;
+  to_unit_id: string;
+  to_unit_name_ar: string;
+  reason: string;
+  status: "pending" | "accepted" | "rejected";
+  referred_at: string;
+};
+
+/** The meeting's referrals, and for the chair alone the units an item may go to. */
+export type MeetingReferrals = { referrals: ItemReferral[]; destinations: Array<{ id: string; name_ar: string }> };
+
 export type AgendaDiscussionItem = {
   id: string;
   agenda_order: number;
