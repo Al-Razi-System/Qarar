@@ -61,3 +61,15 @@ test('resolved overlay is isolated; unmodified default stack is rejected', () =>
   assert.equal(defaults.services.db.environment.POSTGRES_DB,'postgres');
   assert.equal(defaults.volumes['qarar-db-data'].name,'qarar-v2-db-data');
 });
+test('browser scenarios reuse the warmed runner without weakening the aggregate gate', () => {
+  const workflow=readFileSync(new URL('../.github/workflows/dashboard-quality.yml',import.meta.url),'utf8');
+  const start=workflow.indexOf('  docker-smoke:');
+  const gate=workflow.indexOf('  regulations-e2e:');
+  const runner=workflow.slice(start,gate);
+  assert.ok(runner.includes('run: npm run test:e2e'));
+  assert.ok(runner.indexOf('down -v')<runner.indexOf('sh scripts/prepare-e2e-supabase-env.sh'));
+  assert.ok(runner.includes('node scripts/e2e-supabase.mjs images'));
+  assert.ok(!runner.includes('node scripts/e2e-supabase.mjs pull'));
+  assert.match(workflow.slice(gate),/needs: \[quality, api-contracts, docker-smoke\]/);
+  assert.ok(readFileSync(new URL('./e2e-supabase.mjs',import.meta.url),'utf8').includes("'--pull','never'"));
+});

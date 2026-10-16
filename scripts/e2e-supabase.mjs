@@ -16,6 +16,13 @@ validateE2ECompose(config);
 const action=process.argv[2];
 try {
 if(action==='config') console.log('Isolated Compose verified: qarar-e2e / qarar_e2e / loopback-only ports');
+else if(action==='images') {
+  for(const [service,definition] of Object.entries(config.services)) {
+    if(definition.profiles?.length) continue;
+    docker(['image','inspect',definition.image,'--format','{{.Id}}']);
+    console.log(`Verified cached image for ${service}`);
+  }
+}
 else if(action==='up') docker([...base,'up','-d','--wait','--wait-timeout','600','--pull','never'],'inherit');
 else if(action==='seed') docker([...base,'run','--rm','--no-deps','-e','QARAR_APPLY_SEED=true','db-migrate'],'inherit');
 else if(action==='down') docker([...base,'down','-v'],'inherit');
@@ -34,7 +41,7 @@ else if(action==='pull') {
       }
     }
   }
-} else throw new Error('Expected config, pull, up, seed, logs or down');
+} else throw new Error('Expected config, images, pull, up, seed, logs or down');
 } catch(error) {
   const message=redact(String(error.message??error)).slice(-3000);
   // Public check annotations identify the failing phase even when full job
