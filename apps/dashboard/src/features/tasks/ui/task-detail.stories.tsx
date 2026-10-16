@@ -31,3 +31,18 @@ export const Verifier: Story = {
   name: "المتحقق: بانتظار التحقق",
   args: { task: { ...base, status: "submitted", viewer: { ...base.viewer, is_executor: false, is_verifier: true, can_update: false, can_submit: false, can_verify: true } } },
 };
+export const NotStarted: Story = {
+  name: "المنفّذ: لم تبدأ",
+  args: { task: { ...base, status: "new", progress_percent: 0, events: [], evidence: [], viewer: { ...base.viewer, can_start: true, can_update: false, can_submit: false } } },
+};
+export const Completed: Story = {
+  name: "منجزة ومعتمدة",
+  args: {
+    task: {
+      ...base, status: "completed", progress_percent: 100, viewer: { ...base.viewer, can_update: false, can_submit: false },
+      events: [...base.events,
+        { id: "e3", event_type: "submit", progress_percent: 90, note: "أُرفقت المراجعة النهائية.", actor_name_ar: "د. خالد", created_at: "2026-10-14T10:00:00Z" },
+        { id: "e4", event_type: "verify", progress_percent: 100, note: null, actor_name_ar: "د. هدى", created_at: "2026-10-15T10:00:00Z" }],
+    },
+  },
+};

@@ -10,6 +10,9 @@ import { SegmentedControl } from "@/shared/ui/segmented-control";
 import { TextArea } from "@/shared/ui/text-area";
 import { tasksRpc } from "../api/tasks-client";
 import { decisionStatusLabel, FOLLOW_UP_FILTERS, OUTCOME_KIND_LABEL, type DecisionTasks, type FollowedDecision, type FollowUpFilter } from "../model/follow-up";
+import { cn } from "@/shared/lib/utils";
+import { JourneyRail } from "@/shared/ui/journey-rail";
+import { dueText, taskJourney } from "../model/journey";
 import { assigneeName, taskStatusLabel, type TaskSummary } from "../model/tasks";
 
 const messageOf = (error: unknown, fallback: string) => error instanceof Error && error.message ? error.message : fallback;
@@ -86,6 +89,47 @@ export function ManageDialog({ manage, units, busy, error, onClose, onSubmit }: 
   );
 }
 
+/**
+ * Where a decision's tasks stand, as one bar split by state: done, running,
+ * late, cancelled. Each slice is also counted in words beneath it.
+ */
+function TaskMix({ decision }: { decision: FollowedDecision }) {
+  const running = Math.max(0, decision.open_tasks - decision.overdue_tasks);
+  const slices = [
+    { key: "done", label: "منجزة", count: decision.completed_tasks, bar: "bg-q-success", dot: "bg-q-success" },
+    { key: "running", label: "جارية", count: running, bar: "bg-q-primary", dot: "bg-q-primary" },
+    { key: "late", label: "متأخرة", count: decision.overdue_tasks, bar: "bg-q-danger", dot: "bg-q-danger" },
+    { key: "cancelled", label: "ملغاة", count: decision.cancelled_tasks, bar: "bg-q-border-strong", dot: "bg-q-border-strong" },
+  ];
+  if (decision.total_tasks === 0) {
+    return <p className="m-0 text-q-caption text-q-text-2">لا تكليفات على هذا القرار.</p>;
+  }
+  return (
+    <div className="flex items-center gap-4">
+      <div className="flex shrink-0 flex-col items-center">
+        <span dir="ltr" className="text-q-h2 font-bold leading-none text-q-text">{decision.progress_percent}%</span>
+        <span className="text-q-caption text-q-text-2">إنجاز</span>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div aria-hidden="true" className="flex h-3 gap-0.5 overflow-hidden rounded-full bg-q-neutral-soft">
+          {slices.filter((slice) => slice.count > 0).map((slice) => (
+            <span key={slice.key} className={cn("h-full first:rounded-s-full last:rounded-e-full", slice.bar)} style={{ flexGrow: slice.count }} />
+          ))}
+        </div>
+        <ul aria-label="حال المهام" className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 text-q-caption text-q-text-2">
+          <li className="font-bold text-q-text">{decision.total_tasks === 1 ? "مهمة واحدة" : decision.total_tasks === 2 ? "مهمتان" : `${decision.total_tasks} مهام`}</li>
+          {slices.filter((slice) => slice.count > 0).map((slice) => (
+            <li key={slice.key} className={cn("flex items-center gap-1.5", slice.key === "late" && "font-bold text-q-danger")}>
+              <span aria-hidden="true" className={cn("h-2 w-2 rounded-full", slice.dot)} />
+              {slice.label}: {slice.count}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 export function DecisionCard({ decision, open, onToggle, detail, detailError, onManage }: {
   decision: FollowedDecision;
   open: boolean;
@@ -112,14 +156,7 @@ export function DecisionCard({ decision, open, onToggle, detail, detailError, on
             <Badge tone="neutral">{OUTCOME_KIND_LABEL[decision.outcome_kind] ?? "قرار"}</Badge>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-q-caption text-q-text-2">
-          <span>المهام: {decision.total_tasks}</span>
-          <span>مفتوحة: {decision.open_tasks}</span>
-          <span>منجزة: {decision.completed_tasks}</span>
-          {decision.cancelled_tasks > 0 && <span>ملغاة: {decision.cancelled_tasks}</span>}
-          {decision.overdue_tasks > 0 && <span className="font-bold text-q-danger">متأخرة: {decision.overdue_tasks}</span>}
-          <span>الإنجاز: <span dir="ltr">{decision.progress_percent}%</span></span>
-        </div>
+        <TaskMix decision={decision} />
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" aria-expanded={open} onClick={onToggle}>{open ? "إخفاء المهام" : "عرض المهام"}</Button>
           {decision.decision_status !== "closed" && decision.can_manage && (
@@ -138,16 +175,20 @@ export function DecisionCard({ decision, open, onToggle, detail, detailError, on
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {detail.tasks.map((task) => {
                   const taskState = taskStatusLabel(task);
+                  const due = dueText(task);
                   return (
                     <li key={task.id} className="flex flex-col gap-2 rounded-q-control border border-q-border p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-q-ui font-bold">{task.title_ar}</span>
                         <Badge tone={taskState.tone}>{taskState.label}</Badge>
                       </div>
-                      <p className="m-0 text-q-caption text-q-text-2">
-                        <span dir="ltr">{task.action_no}</span> · {assigneeName(task)} · المتابع: {task.follow_up_user_name_ar ?? "غير محدد"}
-                        {task.due_date && <> · <span className={task.is_overdue ? "font-bold text-q-danger" : undefined}>حتى {formatDate(task.due_date)}</span></>}
-                        {" · "}<span dir="ltr">{task.progress_percent}%</span>
+                      <JourneyRail compact label={`مسار المهمة: ${taskState.label}`} steps={taskJourney(task)} />
+                      <p className="m-0 flex flex-wrap gap-x-3 gap-y-1 text-q-caption text-q-text-2">
+                        <span dir="ltr">{task.action_no}</span>
+                        <span>المكلَّف: {assigneeName(task)}</span>
+                        <span>المتابع: {task.follow_up_user_name_ar ?? "غير محدد"}</span>
+                        <span className={due.tone === "danger" ? "font-bold text-q-danger" : undefined}>{due.text}{task.due_date && ` (${formatDate(task.due_date)})`}</span>
+                        <span dir="ltr" className="font-bold text-q-text">{task.progress_percent}%</span>
                       </p>
                       {task.can_manage && (
                         <div className="flex flex-wrap gap-2">

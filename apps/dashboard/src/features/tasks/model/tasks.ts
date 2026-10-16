@@ -22,7 +22,7 @@ export type TaskSummary = {
 
 export type MyTasks = { to_execute: TaskSummary[]; to_verify: TaskSummary[]; following: TaskSummary[] };
 
-export type TaskEventType = "start" | "progress" | "evidence_added" | "evidence_removed" | "submit" | "verify" | "return";
+export type TaskEventType = "start" | "progress" | "evidence_added" | "evidence_removed" | "submit" | "verify" | "return" | "cancel" | "reassign" | "extend";
 
 export type TaskDetail = TaskSummary & {
   decision_text: string | null;
@@ -67,6 +67,9 @@ export const TASK_EVENT_LABEL: Record<TaskEventType, string> = {
   submit: "تسليم للتحقق",
   verify: "اعتماد الإنجاز",
   return: "إعادة للتنفيذ",
+  cancel: "إلغاء المهمة",
+  reassign: "إعادة التكليف",
+  extend: "تمديد الموعد",
 };
 
 export function assigneeName(task: Pick<TaskSummary, "assigned_user_name_ar" | "assigned_unit_name_ar">) {

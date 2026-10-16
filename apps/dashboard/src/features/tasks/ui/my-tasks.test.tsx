@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MyTasks, TaskDetail, TaskSummary } from "../model/tasks";
@@ -80,6 +80,29 @@ describe("MyTasksWorkspace", () => {
     expect(reads).toBe(2);
   });
 
+  it("says what waits on the viewer, and each sentence opens the matching tasks", async () => {
+    const soon = new Date(); soon.setDate(soon.getDate() + 3);
+    rpc.mockResolvedValue(lists({
+      to_execute: [
+        summary({ id: "late", title_ar: "إبلاغ الأقسام", is_overdue: true, due_date: "2026-01-01" }),
+        summary({ id: "soon", title_ar: "إعداد التقرير", due_date: soon.toLocaleDateString("en-CA") }),
+        summary({ id: "later", title_ar: "مراجعة اللائحة", due_date: "2099-01-01" }),
+      ],
+      to_verify: [summary({ id: "v", status: "submitted" }), summary({ id: "v2", status: "submitted" })],
+    }));
+    render(<MyTasksWorkspace />);
+    const strip = await screen.findByRole("region", { name: "ما ينتظرك" });
+    expect(strip).toHaveTextContent("أنت مكلَّف بـ3 مهام مفتوحة.");
+    expect(within(strip).getByRole("button", { name: "مهمتان بانتظار تحققك" })).toBeInTheDocument();
+    await userEvent.click(within(strip).getByRole("button", { name: "مهمة متأخرة" }));
+    const list = screen.getByRole("list", { name: "مهام للتنفيذ" });
+    expect(within(list).getByRole("button", { name: /إبلاغ الأقسام/ })).toHaveTextContent("متأخرة منذ");
+    expect(within(list).queryByRole("button", { name: /مراجعة اللائحة/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "عرض الكل" }));
+    expect(screen.getByRole("listitem", { name: "خلال سبعة أيام" })).toHaveTextContent("إعداد التقرير");
+    expect(screen.getByRole("listitem", { name: "لاحقاً" })).toHaveTextContent("مراجعة اللائحة");
+  });
+
   it("keeps the panel and shows the server's reason when a step is refused", async () => {
     rpc.mockImplementation((contract: string) => {
       if (contract === "list_my_tasks_v2") return Promise.resolve(lists());
@@ -132,6 +155,29 @@ describe("TaskDetailPanel", () => {
     render(<TaskDetailPanel task={detail({ viewer: viewer({ can_submit: true, submit_blocked_reason: null }) })} pending="submit" error={null} onAction={onAction} />);
     expect(screen.getByRole("button", { name: "جارٍ التسليم…" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "حفظ الإنجاز" })).toBeDisabled();
+  });
+
+  it("names the viewer's next step and saves progress picked from quick choices", async () => {
+    render(<TaskDetailPanel task={detail({ viewer: viewer({ can_submit: true, submit_blocked_reason: null }) })} pending={null} error="تعذر الحفظ." onAction={onAction} />);
+    const next = screen.getByRole("region", { name: "خطوتك التالية" });
+    expect(next).toHaveTextContent("سلّم الإنجاز حين تنتهي");
+    expect(within(next).getByRole("alert")).toHaveTextContent("تعذر الحفظ.");
+    expect(screen.getByRole("list", { name: "مسار المهمة" })).toHaveTextContent("تنفيذ: الآن");
+    const form = screen.getByRole("form", { name: "تحديث الإنجاز" });
+    expect(within(form).getByRole("button", { name: "40%" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(within(form).getByRole("button", { name: "75%" }));
+    await userEvent.click(within(form).getByRole("button", { name: "حفظ الإنجاز" }));
+    expect(onAction).toHaveBeenCalledWith({ kind: "progress", percent: 75, note: "" });
+  });
+
+  it("takes evidence dropped on the drop zone", async () => {
+    render(<TaskDetailPanel task={detail()} pending={null} error={null} onAction={onAction} />);
+    const form = screen.getByRole("form", { name: "إرفاق دليل" });
+    const file = new File(["%PDF"], "minutes.pdf", { type: "application/pdf" });
+    fireEvent.drop(within(form).getByText("اسحب الملف هنا أو اختره من جهازك"), { dataTransfer: { files: [file] } });
+    expect(within(form).getByText("minutes.pdf")).toBeInTheDocument();
+    await userEvent.click(within(form).getByRole("button", { name: "إرفاق الدليل" }));
+    expect(onAction).toHaveBeenCalledWith({ kind: "upload", file, description: "" });
   });
 
   it("shows the task's trail with its notes", () => {
