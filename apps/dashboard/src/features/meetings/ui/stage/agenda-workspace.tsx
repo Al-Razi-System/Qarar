@@ -3,11 +3,12 @@
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { Card } from "@/shared/ui/card";
 import { activeAgendaItemId, agendaItemState, chairActions, completionBlockers, itemFlow, sortAgenda, type AgendaItemState, type ChairAction } from "../../model/agenda-flow";
-import type { AgendaDiscussionItem, Decision, LiveMeetingSession, MeetingBroadcast, MeetingItemTimers, MeetingReferrals, TopicGovernanceHistory, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Decision, LiveMeetingSession, MeetingBroadcast, MeetingAssignment, MeetingAssignments, MeetingItemTimers, MeetingReferrals, NewAssignment, TopicGovernanceHistory, VotingRound } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { AgendaTimeline } from "./agenda-timeline";
 import { BroadcastBar } from "./broadcast-bar";
 import { ControlDock } from "./control-dock";
+import { ItemAssignments, type AssignmentActivity } from "./item-assignments";
 import { ItemTimer } from "./item-timer";
 import type { UpdateDiscussion } from "./discussion-summary";
 import { TopicCard, type ReferenceTab } from "./topic-card";
@@ -47,6 +48,14 @@ type Props = {
   plannedMinutes?: { pendingItemId: string | null; errorItemId: string | null; error: string | null; onChange: (agendaItemId: string, minutes: number | null, revision: number) => void };
   onUpdateDiscussion: UpdateDiscussion;
   onRequestPostpone: (item: AgendaDiscussionItem) => void;
+  /** The meeting's assignments and their actions; without them the room works as before. */
+  assignments?: {
+    data: MeetingAssignments | null;
+    activity: AssignmentActivity;
+    onCreate: (agendaItemId: string, input: NewAssignment) => Promise<boolean>;
+    onConfirm: (assignment: MeetingAssignment) => void;
+    onWithdraw: (assignment: MeetingAssignment) => void;
+  };
   /** The meeting's referrals; without them the room works as before. */
   referrals?: MeetingReferrals | null;
   /** Given to the council's chair: refers the item instead of a vote. */
@@ -64,7 +73,7 @@ type Props = {
  * the dock under the table. A member follows the item the council is on: its
  * topic and ballot first, the table beside it, and no navigation of their own.
  */
-export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, stage, compactStage, ballot, broadcast = null, broadcastPending = false, broadcastError = null, onBroadcast, onHandOver, onBroadcastDocument, downloads, timers, plannedMinutes, referrals, onRequestReferral, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onEditDecision, onComplete }: Props) {
+export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, stage, compactStage, ballot, broadcast = null, broadcastPending = false, broadcastError = null, onBroadcast, onHandOver, onBroadcastDocument, downloads, timers, plannedMinutes, assignments, referrals, onRequestReferral, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onEditDecision, onComplete }: Props) {
   const ordered = sortAgenda(agenda);
   const referred = referrals?.referrals ?? [];
   const currentId = activeAgendaItemId(session, ordered, rounds, decisions, referred);
@@ -140,6 +149,18 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
     />
   ) : null;
 
+  const assignmentList = assignments?.data ? (
+    <ItemAssignments
+      assignments={assignments.data.assignments.filter((row) => row.agenda_item_id === selected.id)}
+      viewer={assignments.data.viewer}
+      options={presenting ? null : assignments.data.options}
+      activity={assignments.activity}
+      onCreate={(input) => assignments.onCreate(selected.id, input)}
+      onConfirm={assignments.onConfirm}
+      onWithdraw={assignments.onWithdraw}
+    />
+  ) : null;
+
   const topic = (
     <TopicCard
       item={selected}
@@ -166,6 +187,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
       controllerName={controllerName}
       downloads={downloadControl}
       timer={timer}
+      assignments={assignmentList}
     />
   );
   const timeline = (

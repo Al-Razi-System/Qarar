@@ -53,13 +53,15 @@ type Props = {
   downloads?: DownloadControl;
   /** The item's discussion timer, under its badges. */
   timer?: ReactNode;
+  /** The decision's assignments, under the decision. */
+  assignments?: ReactNode;
 };
 
 /**
  * Everything the council needs on one agenda item: its guidance, its files and
  * what earlier councils decided, then the vote and the rapporteur's summary.
  */
-export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads, timer }: Props) {
+export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads, timer, assignments }: Props) {
   const [chosenTab, setChosenTab] = useState<ReferenceTab | null>(null);
   const [localDocument, setLocalDocument] = useState<{ attachmentId: string | null; page: number } | null>(null);
   // Without a broadcast the card keeps its own open file; with one, the broadcast decides.
@@ -173,6 +175,8 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
           {canEditDecision && <p className="m-0 text-q-caption text-q-text-2">يعدّل النص رئيس المجلس والمقرر إلى اعتماد المحضر.</p>}
         </section>
       )}
+
+      {decision && assignments}
 
       <DiscussionSummary key={item.id} item={item} votingFinished={Boolean(flow.closed)} role={role} busy={busy} draft={summaryDraft} onDraftChange={onSummaryDraftChange} onUpdate={onUpdateDiscussion} />
     </Card>
