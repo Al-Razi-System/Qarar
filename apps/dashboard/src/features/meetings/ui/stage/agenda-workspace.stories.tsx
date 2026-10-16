@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingBroadcast, MemberProfiles, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingBroadcast, MeetingItemTimers, MemberProfiles, VotingRound } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { AgendaWorkspace } from "./agenda-workspace";
 import { MemberVoteCard } from "./member-vote-card";
@@ -31,6 +31,16 @@ function profiles(mode: RoomProps["mode"]): MemberProfiles {
     })),
   };
 }
+
+/** Item 1 took eight minutes; item 2 has run twelve minutes of a planned ten. */
+const TIMERS_AT = Date.parse("2026-10-15T09:12:00Z");
+const timers: MeetingItemTimers = {
+  server_now: "2026-10-15T09:12:00Z",
+  timers: [
+    { agenda_item_id: "a1", planned_minutes: 10, discussion_started_at: "2026-10-15T08:52:00Z", discussion_ended_at: "2026-10-15T09:00:00Z", revision: 1 },
+    { agenda_item_id: "a2", planned_minutes: 10, discussion_started_at: "2026-10-15T09:00:00Z", discussion_ended_at: null, revision: 1 },
+  ],
+};
 
 /** The chair drives the screens; the rapporteur and the members follow. */
 function broadcastFor(mode: RoomProps["mode"]): MeetingBroadcast {
@@ -79,6 +89,8 @@ const savedDecision = (editable: boolean): Decision => ({
 
 /** A fixed opening time keeps the story pure; the clock still ticks from it. */
 const SESSION_STARTED_AT = "2026-10-15T08:00:00Z";
+/** Read once when the stories load, so the timers show the same scene on every render. */
+const FIXED_NOW = Date.parse(new Date().toISOString());
 
 function Room({ mode, agenda, rounds, decisions = [], presenting = false, voting: hasBallot = false }: RoomProps) {
   const theme = useRoomTheme();
@@ -93,6 +105,8 @@ function Room({ mode, agenda, rounds, decisions = [], presenting = false, voting
           compactStage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} profiles={profiles(mode)} compact />}
           ballot={hasBallot ? <MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي", has_voted: false }} busy={false} onCast={noop} /> : undefined}
           broadcast={broadcastFor(mode)} onBroadcast={noop} onHandOver={noop}
+          timers={{ data: timers, clockOffsetMs: TIMERS_AT - FIXED_NOW }}
+          plannedMinutes={{ pendingItemId: null, errorItemId: null, error: null, onChange: noop }}
           onUpdateDiscussion={async () => true} onRequestPostpone={noop} onOpenRound={noop} onCloseRound={noop} onCreateDecision={noop} onEditDecision={noop} onComplete={noop} />
       </div>
     </div>

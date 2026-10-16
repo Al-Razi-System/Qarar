@@ -316,6 +316,48 @@ describe("AgendaWorkspace documents", () => {
   });
 });
 
+describe("AgendaWorkspace item timer", () => {
+  const timers = (overrides = {}) => ({
+    data: { server_now: "2026-10-16T08:07:32Z", timers: [{ agenda_item_id: "a1", planned_minutes: 5, discussion_started_at: "2026-10-16T08:00:00Z", discussion_ended_at: null, revision: 3, ...overrides }] },
+    clockOffsetMs: 0,
+  });
+  const planned = (onChange = vi.fn(), extra = {}) => ({ pendingItemId: null, errorItemId: null, error: null, onChange, ...extra });
+
+  it("shows every screen how long the item has been discussed, and the overrun", () => {
+    vi.useFakeTimers({ now: new Date("2026-10-16T08:07:32Z"), shouldAdvanceTime: true });
+    try {
+      setup("member", { timers: timers(), broadcast: broadcastOf(), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+      const timer = screen.getByRole("timer");
+      expect(timer).toHaveAccessibleName("تجاوزت المناقشة الوقت المحدد بـ 02:32");
+      expect(timer).toHaveTextContent("07:32");
+      expect(timer).toHaveTextContent("من 5 دقيقة");
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("lets only the chair plan the item's duration, with its pending and failure states", async () => {
+    const onChange = vi.fn();
+    const { props, view } = setup("chair", { timers: timers(), plannedMinutes: planned(onChange), broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "المدة المقررة" }), "15");
+    expect(onChange).toHaveBeenCalledWith("a1", 15, 3);
+    view.rerender(<AgendaWorkspace {...props} plannedMinutes={planned(onChange, { pendingItemId: "a1" })} />);
+    expect(screen.getByRole("combobox", { name: "المدة المقررة" })).toBeDisabled();
+    expect(screen.getByText("جارٍ حفظ المدة…")).toBeInTheDocument();
+    view.rerender(<AgendaWorkspace {...props} plannedMinutes={planned(onChange, { errorItemId: "a1", error: "تغيّرت مدة البند من شاشة أخرى" })} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("تغيّرت مدة البند من شاشة أخرى");
+    view.rerender(<AgendaWorkspace {...props} broadcast={broadcastOf({ controller_role: "rapporteur", can_take_back: false })} session={sessionOf("rapporteur")} />);
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("shows the final duration of a finished discussion without counting on", () => {
+    setup("member", { timers: timers({ discussion_ended_at: "2026-10-16T08:04:00Z" }), broadcast: broadcastOf(), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    expect(screen.getByRole("timer")).toHaveTextContent("استغرقت المناقشة");
+    expect(screen.getByRole("timer")).toHaveTextContent("04:00");
+  });
+});
+
 describe("DecisionComposerDialog editing a saved decision", () => {
   const item: AgendaDiscussionItem = { id: "a1", agenda_order: 1, agenda_status: "discussed", topic: { id: "t1", title_ar: "خطة البرنامج" } };
   const decision: Decision = { id: "d1", decision_no: "ق-1", agenda_item_id: "a1", decision_status: "ready_for_approval", decision_text: "اعتماد الخطة كما وردت.", updated_at: "2026-10-09T10:05:00Z", can_edit_text: true };

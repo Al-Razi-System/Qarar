@@ -9,7 +9,7 @@ import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { cn } from "@/shared/lib/utils";
-import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
+import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingItemTimers, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
 import type { MeetingTopicAttachment } from "../model/meeting";
 import { AttendanceQrDialog } from "./attendance-qr-dialog";
 import { ChairAttendanceConsole } from "./chair-attendance-console";
@@ -42,6 +42,8 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [tab, setTab] = useState<RoomTab>("attendance");
   const [presenting, setPresenting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [itemTimers, setItemTimers] = useState<{ data: MeetingItemTimers | null; clockOffsetMs: number }>({ data: null, clockOffsetMs: 0 });
+  const [plannedState, setPlannedState] = useState<{ pendingItemId: string | null; errorItemId: string | null; error: string | null }>({ pendingItemId: null, errorItemId: null, error: null });
   const [downloadState, setDownloadState] = useState<{ pendingItemId: string | null; errorItemId: string | null; error: string | null }>({ pendingItemId: null, errorItemId: null, error: null });
   const [session, setSession] = useState<LiveMeetingSession | null>(null);
   const [agenda, setAgenda] = useState<AgendaDiscussionItem[]>([]);
@@ -129,6 +131,10 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       setDecisions(meetingDecisions ?? []);
       setRounds(meetingRounds ?? []);
       setTopicAttachments(attachments ?? []);
+      // The timers are read with every refresh; without them the room works as before.
+      await liveMeetingRpc<MeetingItemTimers>("list_meeting_item_timers_v2", { p_meeting_id: meetingId })
+        .then((data) => setItemTimers({ data, clockOffsetMs: Date.parse(data.server_now) - Date.now() }))
+        .catch(() => setItemTimers((current) => current));
       const rosterKey = `${meetingId}|${live.attendance.map((record) => `${record.user_id}:${record.status}:${record.verification_status ?? ""}`).join(",")}`;
       if (profilesLoadedFor.current !== rosterKey) {
         profilesLoadedFor.current = rosterKey;
@@ -241,6 +247,18 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     // Full screen is a convenience; presentation mode works when the browser refuses it.
     if (next) void roomRef.current?.requestFullscreen?.()?.catch(() => undefined);
     else if (document.fullscreenElement) void document.exitFullscreen?.()?.catch(() => undefined);
+  }
+
+  async function setPlannedMinutes(agendaItemId: string, minutes: number | null, revision: number) {
+    setPlannedState({ pendingItemId: agendaItemId, errorItemId: null, error: null });
+    try {
+      await liveMeetingRpc("set_agenda_item_planned_minutes_v2", { p_agenda_item_id: agendaItemId, p_minutes: minutes, p_expected_revision: revision });
+      await load(true);
+      setPlannedState({ pendingItemId: null, errorItemId: null, error: null });
+    } catch (error) {
+      setPlannedState({ pendingItemId: null, errorItemId: agendaItemId, error: messageOf(error, "تعذر حفظ مدة البند.") });
+      await load(true);
+    }
   }
 
   async function setItemDownloads(agendaItemId: string, allowed: boolean, revision: number) {
@@ -359,6 +377,8 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           onBroadcast={live.choose}
           onHandOver={(toRole) => void live.handOver(toRole)}
           onBroadcastDocument={live.openDocument}
+          timers={itemTimers}
+          plannedMinutes={{ ...plannedState, onChange: (itemId, minutes, revision) => void setPlannedMinutes(itemId, minutes, revision) }}
           downloads={{ ...downloadState, onChange: (itemId, allowed, revision) => void setItemDownloads(itemId, allowed, revision) }}
           onUpdateDiscussion={updateDiscussion}
           onRequestPostpone={(item) => { setNotice(null); setReasonRequest({ kind: "postpone", item }); }}

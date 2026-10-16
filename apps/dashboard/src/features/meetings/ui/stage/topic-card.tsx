@@ -51,13 +51,15 @@ type Props = {
   controllerName?: string;
   /** The chair's decision on downloading this item's files. */
   downloads?: DownloadControl;
+  /** The item's discussion timer, under its badges. */
+  timer?: ReactNode;
 };
 
 /**
  * Everything the council needs on one agenda item: its guidance, its files and
  * what earlier councils decided, then the vote and the rapporteur's summary.
  */
-export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads }: Props) {
+export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads, timer }: Props) {
   const [chosenTab, setChosenTab] = useState<ReferenceTab | null>(null);
   const [localDocument, setLocalDocument] = useState<{ attachmentId: string | null; page: number } | null>(null);
   // Without a broadcast the card keeps its own open file; with one, the broadcast decides.
@@ -102,6 +104,7 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
           {item.workflow_step_name_ar && <Badge tone="neutral">{item.workflow_step_name_ar}</Badge>}
           {flow.decision && <Badge tone="success">{flow.decision.decision_no}</Badge>}
         </div>
+        {timer}
       </header>
 
       {ballot}
