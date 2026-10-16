@@ -4,6 +4,9 @@ import { assertIsolatedE2ETarget } from "../src/lib/e2e-target-guard";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dockerEnv, fixturePath } from "./fixture";
+import { closeE2EContexts } from "../src/lib/e2e-cleanup";
+
+test.use({ actionTimeout: 15_000, navigationTimeout: 30_000 });
 
 type Fixture = { userId: string; organizationId: string; email: string; password: string };
 type Lifecycle = Fixture & {
@@ -162,21 +165,30 @@ test.afterAll(async () => {
   }
 });
 
-async function login(browser: Browser, email: string, password: string) {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  const response = await page.request.post("/api/auth/login", {
-    data: { email, password }, headers: { "x-qarar-client-ip": `127.0.0.${Math.floor(Math.random() * 200) + 1}` },
-  });
-  expect(response.status(), await response.text()).toBe(200);
-  return { context, page };
+async function login(browser: Browser, email: string, password: string, options: Parameters<Browser["newContext"]>[0]) {
+  const context = await browser.newContext(options);
+  try {
+    const page = await context.newPage();
+    const response = await page.request.post("/api/auth/login", {
+      data: { email, password }, headers: { "x-qarar-client-ip": `127.0.0.${Math.floor(Math.random() * 200) + 1}` },
+      timeout: 30_000,
+    });
+    expect(response.status(), await response.text()).toBe(200);
+    expect((await response.json()).authenticated).toBe(true);
+    return { context, page };
+  } catch (error) {
+    await closeE2EContexts([context], { error });
+    throw error;
+  }
 }
 
 async function rpc<T>(page: Page, contract: string, params: Record<string, unknown> = {}) {
-  const response = await page.request.post("/api/admin/meetings", { data: { contract, params } });
-  const body = await response.json();
-  expect(response.status(), body.error?.message ?? contract).toBe(200);
-  return body.data as T;
+  return test.step(`عقد الاجتماع: ${contract}`, async () => {
+    const response = await page.request.post("/api/admin/meetings", { data: { contract, params }, timeout: 30_000 });
+    const body = await response.json();
+    expect(response.status(), body.error?.message ?? contract).toBe(200);
+    return body.data as T;
+  });
 }
 
 async function openAgenda(page: Page) {
@@ -207,14 +219,18 @@ async function sign(page: Page) {
   await expect(page.getByText("حُفظ توقيعك وربط ببصمة النسخة النهائية.")).toBeVisible();
 }
 
-test("دورة اجتماع حقيقية متعددة الحسابات حتى اعتماد المحضر", async ({ browser }) => {
+test("دورة اجتماع حقيقية متعددة الحسابات حتى اعتماد المحضر", async ({ browser }, testInfo) => {
   test.setTimeout(240_000);
-  const chair = await login(browser, lifecycle.email, lifecycle.password);
-  const rapporteur = await login(browser, lifecycle.rapporteur.email, lifecycle.rapporteur.password);
-  const member = await login(browser, lifecycle.member.email, lifecycle.member.password);
-  const contexts: BrowserContext[] = [chair.context, rapporteur.context, member.context];
+  const use = testInfo.project.use;
+  const options = { viewport: use.viewport, isMobile: use.isMobile, hasTouch: use.hasTouch, deviceScaleFactor: use.deviceScaleFactor, userAgent: use.userAgent };
+  const contexts: BrowserContext[] = [];
+  let primary: { error: unknown } | undefined;
   try {
-    const opened = await rpc<{ meeting: { updated_at: string } }>(chair.page, "open_meeting_session", {
+    const chair = await login(browser, lifecycle.email, lifecycle.password, options); contexts.push(chair.context);
+    const rapporteur = await login(browser, lifecycle.rapporteur.email, lifecycle.rapporteur.password, options); contexts.push(rapporteur.context);
+    const member = await login(browser, lifecycle.member.email, lifecycle.member.password, options); contexts.push(member.context);
+    expect(chair.page.viewportSize()).toEqual(use.viewport);
+    await rpc<{ meeting: { updated_at: string } }>(chair.page, "open_meeting_session", {
       p_meeting_id: lifecycle.meetingId,
       p_expected_updated_at: (await rpc<{ updated_at: string }>(chair.page, "get_meeting_detail", { p_meeting_id: lifecycle.meetingId })).updated_at,
     });
@@ -243,8 +259,8 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     await chair.page.getByRole("button", { name: "فتح التصويت للأعضاء" }).click();
     const closeVote = chair.page.getByRole("button", { name: "إغلاق التصويت واحتساب النتيجة" });
     await expect(closeVote).toBeDisabled();
-    await expect(chair.page.getByLabel("متابعة المشاركة في التصويت")).toContainText("0 من 3 صوّتوا");
-    await expect(chair.page.getByLabel("متابعة المشاركة في التصويت")).not.toContainText("النتيجة النهائية");
+    await expect(chair.page.getByRole("img", { name: "صوّت 0 من 3", exact: true })).toBeVisible();
+    await expect(chair.page.getByLabel("النتيجة النهائية للتصويت")).not.toBeVisible();
 
     await vote(member.page);
     await vote(rapporteur.page);
@@ -252,7 +268,7 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     await member.page.goto("about:blank");
     await chair.page.reload();
     await openAgenda(chair.page);
-    await expect(chair.page.getByLabel("متابعة المشاركة في التصويت")).toContainText("3 من 3 صوّتوا");
+    await expect(chair.page.getByRole("img", { name: "صوّت 3 من 3", exact: true })).toBeVisible();
     await expect(closeVote).toBeEnabled();
     await closeVote.click();
     await expect(chair.page.getByText("أُغلقت الجولة وحُسبت النتيجة.")).toBeVisible({ timeout: 15_000 });
@@ -285,7 +301,6 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     await sign(rapporteur.page);
     await sign(chair.page);
     await expect(chair.page.getByText("اعتمد المحضر وأُغلق الاجتماع")).toBeVisible();
-  } finally {
-    await Promise.all(contexts.map((context) => context.close()));
-  }
+  } catch (error) { primary = { error }; }
+  await closeE2EContexts(contexts, primary);
 });

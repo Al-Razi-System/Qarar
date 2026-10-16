@@ -45,7 +45,7 @@ jobs:
         run: npm run test:development-governance
       - name: Verify E2E isolation safeguards
         working-directory: ${{ github.workspace }}
-        run: node --test scripts/isolated-e2e-ci.test.mjs
+        run: node --test scripts/isolated-e2e-ci.test.mjs scripts/report-e2e-failures.test.mjs
 
   api-contracts:
     runs-on: ubuntu-latest
@@ -139,6 +139,9 @@ jobs:
       - name: Run regulations browser scenarios
         run: npm run test:e2e
         working-directory: apps/dashboard
+      - name: Report final browser failure causes without retry duplicates
+        if: ${{ failure() && hashFiles('apps/dashboard/test-results/e2e-report.json') != '' }}
+        run: node scripts/report-e2e-failures.mjs
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4

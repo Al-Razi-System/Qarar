@@ -41,7 +41,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: process.env.CI
-    ? [["html", { open: "never" }], ["github"], ["junit", { outputFile: "test-results/e2e-junit.xml" }]]
+    ? [["html", { open: "never" }], ["github"], ["junit", { outputFile: "test-results/e2e-junit.xml" }], ["json", { outputFile: "test-results/e2e-report.json" }]]
     : "list",
   globalSetup: process.env.QARAR_ACTIVATION_E2E_ONLY ? undefined : "./e2e/global-setup.ts",
   globalTeardown: process.env.QARAR_ACTIVATION_E2E_ONLY ? undefined : "./e2e/global-teardown.ts",
