@@ -121,13 +121,21 @@ jobs:
       - name: Prepare Supabase configuration
         working-directory: ${{ github.workspace }}
         run: sh scripts/prepare-e2e-supabase-env.sh
-      - name: Start Supabase
+      - name: Validate isolated Supabase configuration
+        working-directory: ${{ github.workspace }}
+        run: node scripts/e2e-supabase.mjs config
+      - name: Pull isolated Supabase images
+        working-directory: ${{ github.workspace }}
+        run: node scripts/e2e-supabase.mjs pull
+      - name: Start isolated Supabase
+        working-directory: ${{ github.workspace }}
+        run: node scripts/e2e-supabase.mjs up
+      - name: Verify JWT database initialization
+        working-directory: ${{ github.workspace }}
+        run: node scripts/test-e2e-jwt-database.mjs
+      - name: Seed isolated Supabase after Auth is ready
         working-directory: ${{ github.workspace }}
         run: |
-          node scripts/e2e-supabase.mjs config
-          node scripts/e2e-supabase.mjs pull
-          node scripts/e2e-supabase.mjs up
-          node scripts/test-e2e-jwt-database.mjs
           # The browser fixture copies the permission catalogue of the seeded
           # demo organization. Re-run the migration runner with the seed on: it
           # verifies the applied migrations and records the seed in its ledger.
