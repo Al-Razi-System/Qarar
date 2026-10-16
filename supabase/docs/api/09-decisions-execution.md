@@ -73,3 +73,26 @@ Task states: `new` → `in_progress` → `submitted` (awaiting verification) →
 Every step is recorded in `qarar_execution.action_item_events` and audited as `execution.task.<step>`.
 
 The dashboard route `/api/admin/tasks/evidence` uploads (`POST`), serves (`GET`) and removes (`DELETE`) evidence files. It follows the checks of the topic attachment route.
+
+
+## Following decisions and managing tasks (v2, 2026-10-16)
+
+**Access**
+
+- **Read:** the chair or rapporteur of the decision's council, or a holder of `execution.tasks.read` or `execution.tasks.manage`.
+- **Manage and close:** the council's chair, or a holder of `execution.tasks.manage`.
+
+**Contracts**
+
+| Contract | Effect | Errors |
+|---|---|---|
+| `list_decision_follow_up_v2(p_status 'open' or 'closed' or 'all')` | Followed decisions with task counts (`open_tasks`, `overdue_tasks` and so on), `progress_percent`, `can_manage`, `can_close` and `close_blocked_reason` | `22023` for an unknown filter |
+| `list_decision_tasks_v2(p_decision_id)` | The same row, plus `tasks` (each with `can_manage`) and the `units` a task may be reassigned to | `P0002`, `42501` |
+| `cancel_task_v2(p_task_id, p_reason, p_expected_updated_at)` | Cancels the task | `22023`, `42501`, `23514`, `40001` |
+| `reassign_task_v2(p_task_id, p_assigned_user_id, p_assigned_unit_id, p_reason, p_expected_updated_at)` | Reassigns to exactly one person or unit. A submitted task is not reassigned | `22023`, `42501`, `23514`, `40001` |
+| `extend_task_due_date_v2(p_task_id, p_due_date, p_reason, p_expected_updated_at)` | Sets a due date that is not in the past | `22023`, `42501`, `23514`, `40001` |
+| `close_decision_v2(p_decision_id, p_note, p_expected_updated_at)` | Closes an `approved`, `sent_to_execution` or `under_follow_up` decision once every task is completed or cancelled | `23514` with the reason, `42501`, `40001` |
+
+- Every reason is 5 to 2000 characters.
+- Each step is recorded in the task trail and audited.
+- The closing note is written to `decision_status_history.reason`.

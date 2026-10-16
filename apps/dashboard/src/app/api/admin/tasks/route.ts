@@ -9,6 +9,8 @@ import { logEvent } from "@/shared/observability/logger";
 const contracts = new Set([
   "list_my_tasks_v2", "get_task_v2", "start_task_v2", "update_task_progress_v2",
   "submit_task_completion_v2", "verify_task_completion_v2", "return_task_v2",
+  "list_decision_follow_up_v2", "list_decision_tasks_v2", "close_decision_v2",
+  "cancel_task_v2", "reassign_task_v2", "extend_task_due_date_v2",
 ]);
 
 export async function POST(request: Request) {

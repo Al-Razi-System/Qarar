@@ -84,7 +84,7 @@ $$ select coalesce(jsonb_agg(t->>'id'),'[]'::jsonb) from jsonb_array_elements(ap
 select pg_temp.s106_seed();
 
 select is((select count(*)::integer from qarar_iam.system_permission_catalog() where code in ('execution.tasks.read','execution.tasks.verify','execution.unit_tasks.execute')),3,'the catalog defines the three execution permissions');
-select is((select count(*)::integer from public.permissions where organization_id='a7000000-0000-0000-0000-000000000001' and code like 'execution.%'),3,'every organization is provisioned with them');
+select is((select count(*)::integer from public.permissions where organization_id='a7000000-0000-0000-0000-000000000001' and code in ('execution.tasks.read','execution.tasks.verify','execution.unit_tasks.execute')),3,'every organization is provisioned with them');
 
 set local role authenticated;
 

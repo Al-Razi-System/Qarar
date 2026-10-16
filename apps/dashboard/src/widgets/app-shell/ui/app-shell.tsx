@@ -19,6 +19,7 @@ const navGroups = [
     { href: "/admin/governance-model", label: "تصنيفات الموضوعات", icon: Workflow, requiredAny: ["governance.regulations.manage"] },
     { href: "/admin/topics", label: "المعاملات والموضوعات", icon: FileText, requiredAny: ["topics.read", "topics.create"] },
     { href: "/admin/meetings", label: "الاجتماعات والقرارات", icon: Calendar, requiredAny: ["meetings.read"] },
+    { href: "/admin/follow-up", label: "متابعة القرارات", icon: ClipboardList, requiredAny: ["decisions.read", "execution.tasks.read", "execution.tasks.manage"] },
   ]},
   { label: "الإدارة والتشغيل", items: [
     { href: "/admin/users", label: "المستخدمون", icon: Users, requiredAny: ["iam.users.read"] },
