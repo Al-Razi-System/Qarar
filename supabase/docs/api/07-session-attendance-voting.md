@@ -180,6 +180,32 @@ returns required/actual percentages, eligible/present counts, status, and snapsh
 Actions are `postpone` and `cancel`. The action is rejected when quorum is met. It changes meeting
 state and appends status history and audit atomically.
 
+## Member Cards (v2)
+
+The live room shows a card for every roster member and their photo on the seat.
+
+`list_meeting_member_profiles_v2(p_meeting_id uuid)` returns:
+
+```json
+{
+  "mobile_visible": false,
+  "members": [{
+    "user_id": "uuid", "attendance_record_id": "uuid", "full_name_ar": "...",
+    "job_title": "...", "email": "...", "mobile": null, "home_unit_name_ar": "...",
+    "council_role_code": "council_chair", "council_role_name_ar": "...", "membership_title": null,
+    "membership_start_date": "2026-01-15", "attendance_status": "present", "verification_status": "verified",
+    "has_avatar": true, "avatar_revision": 3
+  }]
+}
+```
+
+- Same read authority as Session Detail: `attendance.read` or `attendance.manage` in the meeting's unit, or system administration.
+- `mobile` is filled only when the caller holds the active `council_chair` or `council_rapporteur` role in the meeting's council (`mobile_visible: true`). System administration does not unlock it.
+- The council role is the member's active membership in the meeting's council; the chair and the rapporteur win when one person holds several roles.
+- The list never carries photo bytes.
+
+`get_meeting_member_avatar_v2(p_meeting_id uuid, p_user_id uuid)` returns `{revision, has_image, content_base64}` for a roster member only (`P0002` otherwise). The dashboard serves it as JPEG at `GET /api/admin/meetings/{meetingId}/members/{userId}/avatar?v={avatar_revision}`.
+
 ## Open Voting
 
 `open_voting_round` accepts `p_agenda_item_id` and `p_expected_meeting_updated_at`.

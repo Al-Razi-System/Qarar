@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AgendaDiscussionItem, Attendance, LiveMeetingSession, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Attendance, LiveMeetingSession, MemberProfile, MemberProfiles, VotingRound } from "../../model/live-meeting";
 import { MAX_ORBIT_SEATS } from "./council-table";
 import { RoomStage as ControlledRoomStage } from "./room-stage";
 import { RoomTopBar } from "./room-top-bar";
@@ -38,6 +38,20 @@ const agenda: AgendaDiscussionItem[] = [
   { id: "a2", agenda_order: 2, agenda_status: "pending", topic: { id: "t2", title_ar: "تشكيل لجنة المناقشة" } },
 ];
 const three = [member(1), member(2), member(3)];
+
+function profile(index: number, extra: Partial<MemberProfile> = {}): MemberProfile {
+  return {
+    user_id: `u${index}`, attendance_record_id: `att-${index}`, full_name_ar: `عضو ${index}`,
+    job_title: "أستاذ مشارك", email: `m${index}@uni.test`, mobile: null, home_unit_name_ar: "قسم علوم الحاسب",
+    council_role_code: index === 1 ? "council_chair" : "s_member", council_role_name_ar: index === 1 ? "رئيس المجلس" : "عضو",
+    membership_title: null, membership_start_date: "2026-01-15", attendance_status: "present", verification_status: "verified",
+    has_avatar: false, avatar_revision: 0, ...extra,
+  };
+}
+const cards = (mobileVisible: boolean): MemberProfiles => ({
+  mobile_visible: mobileVisible,
+  members: [1, 2, 3].map((index) => profile(index, { mobile: mobileVisible ? `050000000${index}` : null })),
+});
 
 describe("RoomStage", () => {
   beforeEach(() => window.localStorage.clear());
@@ -128,5 +142,43 @@ describe("RoomStage", () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
     rerender(<RoomStage session={sessionOf("chair", three)} agenda={agenda} rounds={[]} decisions={[]} presentation={{ active: true, onToggle }} />);
     expect(screen.getByRole("button", { name: "إنهاء وضع العرض" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  describe("member card", () => {
+    it("opens a member's card from their seat, without the mobile for a member", async () => {
+      const user = userEvent.setup();
+      render(<RoomStage session={sessionOf("member", three)} agenda={agenda} rounds={[]} decisions={[]} profiles={cards(false)} />);
+      await user.click(screen.getByRole("button", { name: "بطاقة عضو 2" }));
+      const card = screen.getByRole("dialog", { name: "بطاقة عضو 2" });
+      expect(within(card).getByText("قسم علوم الحاسب")).toBeInTheDocument();
+      expect(within(card).getByRole("link", { name: "m2@uni.test" })).toHaveAttribute("href", "mailto:m2@uni.test");
+      expect(within(card).getByText("حاضر")).toBeInTheDocument();
+      expect(within(card).getByText("يظهر لرئيس المجلس ومقرره فقط.")).toBeInTheDocument();
+      expect(within(card).queryByRole("link", { name: /^05/ })).not.toBeInTheDocument();
+      await user.click(within(card).getAllByRole("button", { name: "إغلاق" })[0]);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("shows the mobile to the chair, and names the chair on every seat", async () => {
+      const user = userEvent.setup();
+      render(<RoomStage session={sessionOf("chair", three)} agenda={agenda} rounds={[]} decisions={[]} profiles={cards(true)} />);
+      expect(screen.getByText("الرئيس · أنت")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "بطاقة عضو 3" }));
+      expect(within(screen.getByRole("dialog")).getByRole("link", { name: "0500000003" })).toHaveAttribute("href", "tel:0500000003");
+    });
+
+    it("explains in the card when the cards could not be loaded", async () => {
+      const user = userEvent.setup();
+      render(<RoomStage session={sessionOf("member", three)} agenda={agenda} rounds={[]} decisions={[]} profiles={null} profilesError="تعذر تحميل بطاقات الأعضاء." />);
+      await user.click(screen.getByRole("button", { name: "بطاقة عضو 2" }));
+      expect(within(screen.getByRole("dialog")).getByRole("alert")).toHaveTextContent("تعذر تحميل بطاقات الأعضاء.");
+    });
+
+    it("shows a member's photo on their seat", () => {
+      const withPhoto: MemberProfiles = { mobile_visible: false, members: [profile(1), profile(2, { has_avatar: true, avatar_revision: 5 }), profile(3)] };
+      render(<RoomStage session={sessionOf("member", three)} agenda={agenda} rounds={[]} decisions={[]} profiles={withPhoto} />);
+      const seat = screen.getByRole("button", { name: "بطاقة عضو 2" });
+      expect(seat.querySelector("img")?.getAttribute("src")).toMatch(/\/api\/admin\/meetings\/m1\/members\/u2\/avatar\?v=5$/);
+    });
   });
 });

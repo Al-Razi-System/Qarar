@@ -12,6 +12,28 @@ export type Attendance = {
   updated_at: string;
 };
 
+/** A roster member as the member card shows them (list_meeting_member_profiles_v2). */
+export type MemberProfile = {
+  user_id: string;
+  attendance_record_id: string;
+  full_name_ar: string;
+  job_title?: string | null;
+  email?: string | null;
+  /** Returned only to the council's chair and rapporteur; null for everyone else. */
+  mobile?: string | null;
+  home_unit_name_ar?: string | null;
+  council_role_code?: string | null;
+  council_role_name_ar?: string | null;
+  membership_title?: string | null;
+  membership_start_date?: string | null;
+  attendance_status?: string | null;
+  verification_status?: string | null;
+  has_avatar: boolean;
+  avatar_revision: number;
+};
+
+export type MemberProfiles = { mobile_visible: boolean; members: MemberProfile[] };
+
 export type AgendaDiscussionItem = {
   id: string;
   agenda_order: number;

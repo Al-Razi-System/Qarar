@@ -9,7 +9,7 @@ import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { cn } from "@/shared/lib/utils";
-import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
+import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
 import type { MeetingTopicAttachment } from "../model/meeting";
 import { AttendanceQrDialog } from "./attendance-qr-dialog";
 import { ChairAttendanceConsole } from "./chair-attendance-console";
@@ -49,6 +49,10 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [topicAttachments, setTopicAttachments] = useState<MeetingTopicAttachment[]>([]);
   const [topicHistory, setTopicHistory] = useState<Record<string, TopicGovernanceHistory>>({});
   const historyLoadedForMeeting = useRef<string | null>(null);
+  // The member cards are reloaded only when the roster or someone's attendance changes.
+  const profilesLoadedFor = useRef<string | null>(null);
+  const [profiles, setProfiles] = useState<MemberProfiles | null>(null);
+  const [profilesError, setProfilesError] = useState<string | null>(null);
   const loadInFlight = useRef(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [checkIn, setCheckIn] = useState<CheckInToken | null>(null);
@@ -118,6 +122,18 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       setDecisions(meetingDecisions ?? []);
       setRounds(meetingRounds ?? []);
       setTopicAttachments(attachments ?? []);
+      const rosterKey = `${meetingId}|${live.attendance.map((record) => `${record.user_id}:${record.status}:${record.verification_status ?? ""}`).join(",")}`;
+      if (profilesLoadedFor.current !== rosterKey) {
+        profilesLoadedFor.current = rosterKey;
+        try {
+          setProfiles(await liveMeetingRpc<MemberProfiles>("list_meeting_member_profiles_v2", { p_meeting_id: meetingId }));
+          setProfilesError(null);
+        } catch (error) {
+          // The table still works without the cards; the failure is shown in the card the viewer opens.
+          profilesLoadedFor.current = null;
+          setProfilesError(messageOf(error, "تعذر تحميل بطاقات الأعضاء. أعد المحاولة بعد قليل."));
+        }
+      }
       if (historyLoadedForMeeting.current !== meetingId) {
         const topicIds = [...new Set((detail.agenda_items ?? []).map((item) => item.topic?.id).filter((id): id is string => Boolean(id)))];
         const entries = await Promise.all(topicIds.map(async (topicId) => {
@@ -236,7 +252,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
 
   const ballots = pendingVotes.map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy} onCast={(roundId: string, value: VoteValue, note: string | null) => void perform(() => liveMeetingRpc("cast_vote", { p_voting_round_id: roundId, p_vote_value: value, p_vote_note: note }), "تم تسجيل صوتك وملاحظتك بسرية.")} />);
   const steering = session.viewer.mode !== "member" || session.viewer.can_manage_voting;
-  const stageProps = { session, agenda, rounds, decisions };
+  const stageProps = { session, agenda, rounds, decisions, profiles, profilesError };
 
   return (
     <div

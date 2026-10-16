@@ -11,7 +11,7 @@ const contracts = new Set([
   "transition_meeting", "get_sprint02_form_options",
   "admin_list_meeting_types", "admin_create_meeting_type", "admin_update_meeting_type",
   "search_eligible_agenda_topics", "add_agenda_item", "remove_agenda_item", "reorder_agenda_items",
-  "open_meeting_session", "get_meeting_session_detail", "lock_attendance_roster",
+  "open_meeting_session", "get_meeting_session_detail", "list_meeting_member_profiles_v2", "lock_attendance_roster",
   "create_checkin_session", "revoke_checkin_session", "self_check_in",
   "override_attendance", "verify_attendance", "recalculate_meeting_quorum",
   "apply_quorum_failure", "get_attendance_history",

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MemberProfiles, VotingRound } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { AgendaWorkspace } from "./agenda-workspace";
 import { MemberVoteCard } from "./member-vote-card";
@@ -12,6 +12,25 @@ type RoomProps = { mode: "chair" | "rapporteur" | "member"; agenda: AgendaDiscus
 
 const names = ["د. منصور", "د. هدى", "د. خالد", "د. ريم", "د. فهد", "د. نورة", "د. ماجد", "د. أمل", "د. سامي"];
 const attendance: Attendance[] = names.map((name, index) => ({ id: `att-${index}`, user_id: `u${index}`, full_name_ar: name, status: "present", verification_status: "verified", updated_at: "2026-10-10T08:00:00Z" }));
+
+const titles = ["عميد الكلية", "وكيل الكلية للشؤون الأكاديمية", "رئيس قسم علوم الحاسب", "أستاذ مشارك", "أستاذ", "أستاذ مساعد", "أستاذ مشارك", "أستاذ", "أستاذ مساعد"];
+const units = ["كلية الحاسبات", "كلية الحاسبات", "قسم علوم الحاسب", "قسم نظم المعلومات", "قسم هندسة البرمجيات", "قسم علوم الحاسب", "قسم الذكاء الاصطناعي", "قسم نظم المعلومات", "قسم الشبكات"];
+/** The member cards as the server returns them: mobile numbers only for the chair and the rapporteur. */
+function profiles(mode: RoomProps["mode"]): MemberProfiles {
+  const officer = mode !== "member";
+  return {
+    mobile_visible: officer,
+    members: attendance.map((record, index) => ({
+      user_id: record.user_id, attendance_record_id: record.id, full_name_ar: record.full_name_ar,
+      job_title: titles[index], home_unit_name_ar: units[index], email: `member${index + 1}@university.edu.sa`,
+      mobile: officer ? `05501234${String(index).padStart(2, "0")}` : null,
+      council_role_code: index === 0 ? "council_chair" : index === 1 ? "council_rapporteur" : "council_member",
+      council_role_name_ar: index === 0 ? "رئيس المجلس" : index === 1 ? "مقرر المجلس" : "عضو",
+      membership_title: index === 2 ? "ممثل القسم" : null, membership_start_date: index < 2 ? "2024-09-01" : "2026-01-15",
+      attendance_status: "present", verification_status: "verified", has_avatar: false, avatar_revision: 0,
+    })),
+  };
+}
 
 function session(mode: RoomProps["mode"]): LiveMeetingSession {
   const chair = mode === "chair";
@@ -61,8 +80,8 @@ function Room({ mode, agenda, rounds, decisions = [], presenting = false, voting
       <RoomTopBar session={live} startedAt={SESSION_STARTED_AT} dark={theme.dark} onToggleTheme={theme.toggle} presentation={mode === "chair" ? { active: presenting, onToggle: noop } : undefined} />
       <div className="min-h-0 flex-1">
         <AgendaWorkspace session={live} agenda={agenda} attachments={attachments} topicHistory={{}} rounds={rounds} decisions={decisions} busy={false} presenting={presenting}
-          stage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} />}
-          compactStage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} compact />}
+          stage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} profiles={profiles(mode)} />}
+          compactStage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} profiles={profiles(mode)} compact />}
           ballot={hasBallot ? <MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي", has_voted: false }} busy={false} onCast={noop} /> : undefined}
           onUpdateDiscussion={async () => true} onRequestPostpone={noop} onOpenRound={noop} onCloseRound={noop} onCreateDecision={noop} onEditDecision={noop} onComplete={noop} />
       </div>
