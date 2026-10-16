@@ -88,6 +88,10 @@ export type MeetingAssignment = {
   assigned_user_name_ar: string | null;
   assigned_unit_id: string | null;
   assigned_unit_name_ar: string | null;
+  /** Who follows the task and verifies its completion. */
+  follow_up_user_id: string | null;
+  follow_up_user_name_ar: string | null;
+  requires_evidence: boolean;
   due_date: string | null;
   status: "proposed" | "active" | "withdrawn";
   revision: number;
@@ -104,7 +108,7 @@ export type MeetingAssignments = {
   options: { users: Array<{ id: string; name_ar: string }>; units: Array<{ id: string; name_ar: string }> } | null;
 };
 
-export type NewAssignment = { title: string; userId: string | null; unitId: string | null; dueDate: string | null };
+export type NewAssignment = { title: string; userId: string | null; unitId: string | null; dueDate: string | null; followUpId: string; requiresEvidence: boolean };
 
 /** The meeting's referrals, and for the chair alone the units an item may go to. */
 export type MeetingReferrals = { referrals: ItemReferral[]; destinations: Array<{ id: string; name_ar: string }> };

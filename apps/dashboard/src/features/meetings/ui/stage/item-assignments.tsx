@@ -43,18 +43,26 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
   const [title, setTitle] = useState("");
   const [assignee, setAssignee] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [followUp, setFollowUp] = useState("");
+  const [requiresEvidence, setRequiresEvidence] = useState(false);
   // Withdrawing cancels a task, so it asks once more beside the button.
   const [confirmingWithdraw, setConfirmingWithdraw] = useState<string | null>(null);
   const busy = activity.key !== null;
   const canWrite = (viewer.can_issue || viewer.can_propose) && options !== null;
-  const missing = title.trim().length < 5 ? "اكتب عنوان التكليف بخمسة أحرف على الأقل." : !assignee ? "اختر المكلَّف." : null;
+  const missing = title.trim().length < 5 ? "اكتب عنوان التكليف بخمسة أحرف على الأقل."
+    : !assignee ? "اختر المكلَّف."
+    : !followUp ? "اختر متابع التكليف؛ هو من يتحقق من إنجازه."
+    : null;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (missing || busy) return;
     const [kind, id] = assignee.split(":");
-    const saved = await onCreate({ title: title.trim(), userId: kind === "user" ? id : null, unitId: kind === "unit" ? id : null, dueDate: dueDate || null });
-    if (saved) { setTitle(""); setAssignee(""); setDueDate(""); }
+    const saved = await onCreate({
+      title: title.trim(), userId: kind === "user" ? id : null, unitId: kind === "unit" ? id : null,
+      dueDate: dueDate || null, followUpId: followUp, requiresEvidence,
+    });
+    if (saved) { setTitle(""); setAssignee(""); setDueDate(""); setFollowUp(""); setRequiresEvidence(false); }
   }
 
   if (assignments.length === 0 && !canWrite) return null;
@@ -82,7 +90,10 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
                   </div>
                 </div>
                 <p className="m-0 text-q-caption text-q-text-2">
-                  المكلَّف: {assignment.assigned_user_name_ar ?? assignment.assigned_unit_name_ar ?? "غير محدد"} · {dueLabel(assignment.due_date)}
+                  المكلَّف: {assignment.assigned_user_name_ar ?? assignment.assigned_unit_name_ar ?? "غير محدد"}
+                  {" · "}المتابع: {assignment.follow_up_user_name_ar ?? "غير محدد"}
+                  {" · "}{dueLabel(assignment.due_date)}
+                  {assignment.requires_evidence && " · يتطلب أدلة إنجاز"}
                 </p>
                 {(confirmable || withdrawable) && (
                   <div className="flex flex-wrap items-center gap-2">
@@ -140,6 +151,22 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
                 onChange={(event) => setDueDate(event.target.value)}
                 className="h-11 rounded-q-control border border-q-border bg-q-surface px-2 text-q-ui font-normal text-q-text"
               />
+            </label>
+            <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
+              المتابع
+              <select
+                value={followUp}
+                disabled={busy}
+                onChange={(event) => setFollowUp(event.target.value)}
+                className="h-11 rounded-q-control border border-q-border bg-q-surface px-2 text-q-ui font-normal text-q-text"
+              >
+                <option value="">اختر من يتابع التنفيذ</option>
+                {options.users.map((user) => <option key={user.id} value={user.id}>{user.name_ar}</option>)}
+              </select>
+            </label>
+            <label className="flex min-h-11 items-center gap-2 self-end text-q-ui text-q-text">
+              <input type="checkbox" checked={requiresEvidence} disabled={busy} onChange={(event) => setRequiresEvidence(event.target.checked)} className="h-5 w-5 accent-q-primary" />
+              يتطلب أدلة إنجاز
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-2">

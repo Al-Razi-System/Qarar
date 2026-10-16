@@ -97,8 +97,8 @@ const referralsFor = (referred: boolean): MeetingReferrals => ({
 const assignmentsFor = (mode: RoomProps["mode"]): MeetingAssignments => ({
   viewer: { can_issue: mode === "chair", can_propose: mode === "rapporteur" },
   assignments: [
-    { id: "s1", agenda_item_id: "a2", decision_id: "d1", title_ar: "مراجعة المتطلبات السابقة لمقرري تعلم الآلة والرؤية الحاسوبية", description: null, assigned_user_id: "u2", assigned_user_name_ar: "د. خالد", assigned_unit_id: null, assigned_unit_name_ar: null, due_date: "2026-11-15", status: "active", revision: 1, proposed_by_me: false, action_no: "TSK-2026-000031", action_status: "new" },
-    { id: "s2", agenda_item_id: "a2", decision_id: "d1", title_ar: "إبلاغ عمادة القبول بالخطة المعتمدة", description: null, assigned_user_id: null, assigned_user_name_ar: null, assigned_unit_id: "g1", assigned_unit_name_ar: "عمادة القبول والتسجيل", due_date: null, status: "proposed", revision: 0, proposed_by_me: mode === "rapporteur", action_no: null, action_status: null },
+    { id: "s1", agenda_item_id: "a2", decision_id: "d1", title_ar: "مراجعة المتطلبات السابقة لمقرري تعلم الآلة والرؤية الحاسوبية", description: null, assigned_user_id: "u2", assigned_user_name_ar: "د. خالد", assigned_unit_id: null, assigned_unit_name_ar: null, follow_up_user_id: "u1", follow_up_user_name_ar: "د. هدى", requires_evidence: true, due_date: "2026-11-15", status: "active", revision: 1, proposed_by_me: false, action_no: "TSK-2026-000031", action_status: "new" },
+    { id: "s2", agenda_item_id: "a2", decision_id: "d1", title_ar: "إبلاغ عمادة القبول بالخطة المعتمدة", description: null, assigned_user_id: null, assigned_user_name_ar: null, assigned_unit_id: "g1", assigned_unit_name_ar: "عمادة القبول والتسجيل", follow_up_user_id: "u1", follow_up_user_name_ar: "د. هدى", requires_evidence: false, due_date: null, status: "proposed", revision: 0, proposed_by_me: mode === "rapporteur", action_no: null, action_status: null },
   ],
   options: mode === "member" ? null : {
     users: names.slice(0, 4).map((name, index) => ({ id: `u${index}`, name_ar: name })),
