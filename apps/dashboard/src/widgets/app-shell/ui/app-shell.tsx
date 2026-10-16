@@ -4,13 +4,13 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, BookOpenCheck, Building2, Calendar, ChevronDown, CircleHelp, ClipboardList, FileText, GitBranch, KeyRound, LayoutDashboard, LogOut, Menu, Search, Settings, ShieldCheck, Users, Workflow, X } from "lucide-react";
+import { Bell, BookOpenCheck, Building2, Calendar, ChevronDown, CircleHelp, ClipboardList, FileText, GitBranch, KeyRound, LayoutDashboard, ListChecks, LogOut, Menu, Search, Settings, ShieldCheck, Users, Workflow, X } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { SelfAvatar } from "@/shared/ui/self-avatar";
 
 const navGroups = [
   { label: "نظرة عامة", items: [{ href: "/admin", label: "لوحة التحكم", icon: LayoutDashboard }] },
-  { label: "حسابي", items: [{ href: "/admin/account", label: "حسابي الشخصي", icon: Users }] },
+  { label: "حسابي", items: [{ href: "/admin/account", label: "حسابي الشخصي", icon: Users }, { href: "/admin/tasks", label: "مهامي", icon: ListChecks }] },
   { label: "الحوكمة والمعاملات", items: [
     { href: "/admin/councils", label: "المجالس والوحدات", icon: Building2, requiredAny: ["governance.units.read"] },
     { href: "/admin/organizational-units", label: "الوحدات التنظيمية", icon: Building2, requiredAny: ["governance.units.read"] },
