@@ -43,6 +43,9 @@ export type MeetingBroadcast = {
   /** Null until the controller chooses an item; screens then show the item the council is on. */
   agenda_item_id: string | null;
   panel: "instructions" | "attachments" | "history";
+  /** The file open on every screen, with its page; null when none is open. */
+  attachment_id?: string | null;
+  page?: number | null;
   revision: number;
   updated_at?: string | null;
   viewer_controls: boolean;

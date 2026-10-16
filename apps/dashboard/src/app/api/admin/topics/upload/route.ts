@@ -9,6 +9,7 @@ import {
   inspectMultipartRequestSize,
   MAX_UPLOAD_BYTES,
 } from "@/shared/security/upload-security";
+import { MEETING_DOWNLOAD_WITHHELD } from "@/shared/security/meeting-downloads";
 import { scanUploadForMalware } from "@/shared/security/upload-malware-scan";
 import { getDashboardOrigin, rejectUntrustedMutation } from "@/shared/security/request-guards";
 
@@ -68,17 +69,21 @@ export async function GET(request: Request) {
   if (!(await authenticated())) return NextResponse.json({ error: { message: "انتهت الجلسة." } }, { status: 401 });
   const url = new URL(request.url); const topicId = url.searchParams.get("topicId") ?? ""; const path = url.searchParams.get("path") ?? ""; const meetingId = url.searchParams.get("meetingId") ?? "";
   if (!topicId || !path.startsWith(`topics/${topicId}/`) || path.includes("..")) return NextResponse.json({ error: { message: "مسار الملف غير صالح." } }, { status: 400 });
+  let downloadWithheld = false;
   if (meetingId) {
-    const attachments = await qararRpc<Array<{ topic_id: string; file_url: string }>>("list_meeting_topic_attachments", { p_meeting_id: meetingId });
-    const allowed = attachments.some((attachment) => attachment.topic_id === topicId && new URL(attachment.file_url).searchParams.get("path") === path);
-    if (!allowed) return NextResponse.json({ error: { message: "المرفق غير مرتبط بجدول أعمال هذا الاجتماع." } }, { status: 403 });
+    const attachments = await qararRpc<Array<{ topic_id: string; file_url: string; download_allowed?: boolean }>>("list_meeting_topic_attachments", { p_meeting_id: meetingId });
+    const found = attachments.find((attachment) => attachment.topic_id === topicId && new URL(attachment.file_url).searchParams.get("path") === path);
+    if (!found) return NextResponse.json({ error: { message: "المرفق غير مرتبط بجدول أعمال هذا الاجتماع." } }, { status: 403 });
+    downloadWithheld = found.download_allowed === false;
   } else {
     await qararRpc("get_topic_detail", { p_topic_id: topicId });
   }
+  const contentType = contentTypeForStoredAttachment(path);
+  const inline = url.searchParams.get("disposition") === "inline" && (contentType === "application/pdf" || contentType.startsWith("image/"));
+  // The chair may withhold downloads for an agenda item: through the meeting, its files are then shown inline only.
+  if (downloadWithheld && !inline) return NextResponse.json({ error: { message: MEETING_DOWNLOAD_WITHHELD } }, { status: 403 });
   const env = await getQararEnv();
   const stored = await fetch(`${env.SUPABASE_URL}/storage/v1/object/qarar-evidence/${path}`, { headers: { apikey: env.SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SERVICE_ROLE_KEY}` }, cache: "no-store" });
   if (!stored.ok || !stored.body) return NextResponse.json({ error: { message: "الملف غير موجود." } }, { status: 404 });
-  const contentType = contentTypeForStoredAttachment(path);
-  const inline = url.searchParams.get("disposition") === "inline" && (contentType === "application/pdf" || contentType.startsWith("image/"));
   return new NextResponse(stored.body, { headers: { "Content-Type": contentType, "Content-Disposition": inline ? "inline" : "attachment", "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store" } });
 }

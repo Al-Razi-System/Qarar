@@ -36,6 +36,10 @@ type Props = {
   /** The controller chose an item or a panel. */
   onBroadcast?: (agendaItemId: string, panel: ReferenceTab) => void;
   onHandOver?: (toRole: "chair" | "rapporteur") => void;
+  /** The controller opened, turned or closed a file of an item. */
+  onBroadcastDocument?: (attachmentId: string | null, page: number | null, agendaItemId: string) => void;
+  /** The chair's download decision for an item, with where it stands. */
+  downloads?: { pendingItemId: string | null; errorItemId: string | null; error: string | null; onChange: (agendaItemId: string, allowed: boolean, revision: number) => void };
   onUpdateDiscussion: UpdateDiscussion;
   onRequestPostpone: (item: AgendaDiscussionItem) => void;
   onOpenRound: (item: AgendaDiscussionItem) => void;
@@ -51,7 +55,7 @@ type Props = {
  * the dock under the table. A member follows the item the council is on: its
  * topic and ballot first, the table beside it, and no navigation of their own.
  */
-export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, stage, compactStage, ballot, broadcast = null, broadcastPending = false, broadcastError = null, onBroadcast, onHandOver, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onEditDecision, onComplete }: Props) {
+export function AgendaWorkspace({ session, agenda, attachments, topicHistory, rounds, decisions, busy, presenting, stage, compactStage, ballot, broadcast = null, broadcastPending = false, broadcastError = null, onBroadcast, onHandOver, onBroadcastDocument, downloads, onUpdateDiscussion, onRequestPostpone, onOpenRound, onCloseRound, onCreateDecision, onEditDecision, onComplete }: Props) {
   const ordered = sortAgenda(agenda);
   const currentId = activeAgendaItemId(session, ordered, rounds, decisions);
   const [picked, setPicked] = useState<{ whileCurrent: string | null; itemId: string } | null>(null);
@@ -101,6 +105,17 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
     else if (action.kind === "edit_decision" && flow.decision) onEditDecision(flow.decision, selected, flow.closed);
   }
 
+  const itemFiles = attachments.filter((attachment) => attachment.topic_id === selected.topic?.id);
+  // Only the council's chair decides on downloads; the broadcast tells the room who that is.
+  const viewerIsChair = Boolean(live && (live.can_hand_over || live.can_take_back));
+  const downloadControl = downloads && itemFiles.length > 0 ? {
+    allowed: itemFiles.every((file) => file.download_allowed !== false),
+    canChange: viewerIsChair,
+    pending: downloads.pendingItemId === selected.id,
+    error: downloads.errorItemId === selected.id ? downloads.error : null,
+    onChange: (allowed: boolean) => downloads.onChange(selected.id, allowed, itemFiles[0]?.download_revision ?? 0),
+  } : undefined;
+
   const topic = (
     <TopicCard
       item={selected}
@@ -108,7 +123,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
       flow={flow}
       state={states[selected.id]}
       session={session}
-      attachments={attachments.filter((attachment) => attachment.topic_id === selected.topic?.id)}
+      attachments={itemFiles}
       history={selected.topic?.id ? topicHistory[selected.topic.id] : undefined}
       busy={busy}
       presenting={presenting}
@@ -120,6 +135,12 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
       panel={live ? live.panel : undefined}
       onPanelChange={controls && onBroadcast ? (panel) => onBroadcast(selected.id, panel) : undefined}
       panelLockedReason={live && !controls ? `يعرض ${controllerName} هذا القسم على كل الشاشات.` : null}
+      document={live ? { attachmentId: live.attachment_id ?? null, page: live.page ?? 1 } : undefined}
+      onDocumentChange={controls && onBroadcastDocument
+        ? (attachment, page) => onBroadcastDocument(attachment?.id ?? null, page, attachment?.agenda_item_id ?? selected.id)
+        : undefined}
+      controllerName={controllerName}
+      downloads={downloadControl}
     />
   );
   const timeline = (

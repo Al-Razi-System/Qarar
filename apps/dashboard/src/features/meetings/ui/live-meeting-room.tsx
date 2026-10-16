@@ -42,6 +42,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [tab, setTab] = useState<RoomTab>("attendance");
   const [presenting, setPresenting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [downloadState, setDownloadState] = useState<{ pendingItemId: string | null; errorItemId: string | null; error: string | null }>({ pendingItemId: null, errorItemId: null, error: null });
   const [session, setSession] = useState<LiveMeetingSession | null>(null);
   const [agenda, setAgenda] = useState<AgendaDiscussionItem[]>([]);
   const [startedAt, setStartedAt] = useState<string | null>(null);
@@ -242,6 +243,18 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     else if (document.fullscreenElement) void document.exitFullscreen?.()?.catch(() => undefined);
   }
 
+  async function setItemDownloads(agendaItemId: string, allowed: boolean, revision: number) {
+    setDownloadState({ pendingItemId: agendaItemId, errorItemId: null, error: null });
+    try {
+      await liveMeetingRpc("set_agenda_item_downloads_v2", { p_agenda_item_id: agendaItemId, p_allowed: allowed, p_expected_revision: revision });
+      await load(true);
+      setDownloadState({ pendingItemId: null, errorItemId: null, error: null });
+    } catch (error) {
+      setDownloadState({ pendingItemId: null, errorItemId: agendaItemId, error: messageOf(error, "تعذر حفظ إذن التنزيل.") });
+      await load(true);
+    }
+  }
+
   function toggleFullscreen() {
     // A member may fill the screen with the meeting; the browser may refuse, and the room still works.
     if (document.fullscreenElement) void document.exitFullscreen?.()?.catch(() => undefined);
@@ -345,6 +358,8 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           broadcastError={live.error}
           onBroadcast={live.choose}
           onHandOver={(toRole) => void live.handOver(toRole)}
+          onBroadcastDocument={live.openDocument}
+          downloads={{ ...downloadState, onChange: (itemId, allowed, revision) => void setItemDownloads(itemId, allowed, revision) }}
           onUpdateDiscussion={updateDiscussion}
           onRequestPostpone={(item) => { setNotice(null); setReasonRequest({ kind: "postpone", item }); }}
           onOpenRound={(item) => void perform(() => liveMeetingRpc("open_voting_round", { p_agenda_item_id: item.id, p_expected_meeting_updated_at: session.meeting.updated_at }), "فُتحت جولة التصويت لهذا البند.")}

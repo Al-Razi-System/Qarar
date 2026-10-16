@@ -10,9 +10,10 @@ import { SegmentedControl } from "@/shared/ui/segmented-control";
 import type { AgendaItemFlow, AgendaItemState } from "../../model/agenda-flow";
 import type { AgendaDiscussionItem, Decision, LiveMeetingSession, TopicGovernanceHistory } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
-import { TopicAttachmentsPanel } from "../topic-attachments-panel";
+import { TopicAttachmentsPanel, type DownloadControl } from "../topic-attachments-panel";
 import { VoteResultPanel } from "../vote-result-panel";
 import { DiscussionSummary, type UpdateDiscussion } from "./discussion-summary";
+import { DocumentViewer } from "./document-viewer";
 import { hasTopicHistory, TopicHistory } from "./topic-history";
 
 export type ReferenceTab = "instructions" | "attachments" | "history";
@@ -42,14 +43,31 @@ type Props = {
   onPanelChange?: (panel: ReferenceTab) => void;
   /** Why this viewer cannot choose a panel (they follow the broadcast). */
   panelLockedReason?: string | null;
+  /** The broadcast file and page; when given, the card shows it instead of its own choice. */
+  document?: { attachmentId: string | null; page: number } | null;
+  /** Given to the broadcast's controller: opening, turning and closing reach every screen. */
+  onDocumentChange?: (attachment: MeetingTopicAttachment | null, page: number | null) => void;
+  /** Who shows the file, for a viewer who follows the broadcast. */
+  controllerName?: string;
+  /** The chair's decision on downloading this item's files. */
+  downloads?: DownloadControl;
 };
 
 /**
  * Everything the council needs on one agenda item: its guidance, its files and
  * what earlier councils decided, then the vote and the rapporteur's summary.
  */
-export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason }: Props) {
+export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads }: Props) {
   const [chosenTab, setChosenTab] = useState<ReferenceTab | null>(null);
+  const [localDocument, setLocalDocument] = useState<{ attachmentId: string | null; page: number } | null>(null);
+  // Without a broadcast the card keeps its own open file; with one, the broadcast decides.
+  const shownDocument = document !== undefined ? document : localDocument;
+  const openFile = shownDocument?.attachmentId ? attachments.find((attachment) => attachment.id === shownDocument.attachmentId) ?? null : null;
+  const steersDocument = document === undefined || Boolean(onDocumentChange);
+  function changeDocument(attachment: MeetingTopicAttachment | null, page: number | null) {
+    if (document === undefined) setLocalDocument(attachment ? { attachmentId: attachment.id, page: page ?? 1 } : null);
+    else onDocumentChange?.(attachment, page);
+  }
   const instructions = item.discussion_instructions?.trim() ?? "";
   const tabs: Array<{ value: ReferenceTab; label: string }> = [
     ...(instructions ? [{ value: "instructions" as const, label: "التعليمات" }] : []),
@@ -104,7 +122,29 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
               <InstructionContent value={instructions} />
             </section>
           )}
-          {tab === "attachments" && <TopicAttachmentsPanel meetingId={session.meeting.id} attachments={attachments} />}
+          {tab === "attachments" && (
+            <div className="flex flex-col gap-3">
+              {openFile && shownDocument && (
+                <DocumentViewer
+                  meetingId={session.meeting.id}
+                  attachment={openFile}
+                  page={shownDocument.page}
+                  controls={steersDocument}
+                  controllerName={controllerName}
+                  onPage={(page) => changeDocument(openFile, page)}
+                  onClose={() => changeDocument(null, null)}
+                />
+              )}
+              <TopicAttachmentsPanel
+                meetingId={session.meeting.id}
+                attachments={attachments}
+                onView={steersDocument ? (attachment) => changeDocument(attachment, 1) : undefined}
+                viewingId={openFile?.id ?? null}
+                downloads={presenting ? undefined : downloads}
+                followsBroadcast={!steersDocument}
+              />
+            </div>
+          )}
           {tab === "history" && history && <TopicHistory history={history} />}
         </div>
       )}

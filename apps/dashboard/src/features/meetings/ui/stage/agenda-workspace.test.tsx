@@ -270,6 +270,52 @@ describe("AgendaWorkspace broadcast", () => {
   });
 });
 
+describe("AgendaWorkspace documents", () => {
+  const pdf = { id: "f2", topic_id: "t2", agenda_item_id: "a2", file_name: "قائمة اللجنة.pdf", file_url: "https://example.test/api/admin/topics/upload?topicId=t2&path=topics/t2/list.pdf", mime_type: "application/pdf", download_allowed: true, download_revision: 2 };
+
+  it("shows a member the file the chair broadcasts, on its page, with nothing to open or turn", () => {
+    setup("member", { agenda: withMaterials, attachments: [pdf], broadcast: broadcastOf({ agenda_item_id: "a2", panel: "attachments", attachment_id: "f2", page: 4 }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    const viewer = screen.getByRole("region", { name: "عرض قائمة اللجنة.pdf" });
+    expect(within(viewer).getByText(/يعرضه رئيس المجلس على كل الشاشات/)).toBeInTheDocument();
+    const frame = viewer.querySelector("iframe");
+    expect(frame).toHaveAttribute("src", expect.stringContaining("#page=4"));
+    expect(frame).toHaveAttribute("src", expect.stringContaining("meetingId=meeting"));
+    expect(within(viewer).queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "عرض قائمة اللجنة.pdf" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "عرض قائمة اللجنة.pdf" })).not.toBeInTheDocument();
+  });
+
+  it("lets the controller open, turn and close a file for every screen", async () => {
+    const onBroadcastDocument = vi.fn();
+    const { props, view } = setup("chair", { agenda: withMaterials, attachments: [pdf], broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true, agenda_item_id: "a2", panel: "attachments" }), onBroadcast: vi.fn(), onHandOver: vi.fn(), onBroadcastDocument });
+    await userEvent.click(screen.getByRole("button", { name: "عرض قائمة اللجنة.pdf" }));
+    expect(onBroadcastDocument).toHaveBeenLastCalledWith("f2", 1, "a2");
+    view.rerender(<AgendaWorkspace {...props} broadcast={broadcastOf({ viewer_controls: true, can_hand_over: true, agenda_item_id: "a2", panel: "attachments", attachment_id: "f2", page: 1 })} />);
+    await userEvent.click(screen.getByRole("button", { name: "الصفحة التالية" }));
+    expect(onBroadcastDocument).toHaveBeenLastCalledWith("f2", 2, "a2");
+    await userEvent.click(screen.getByRole("button", { name: "إغلاق الملف" }));
+    expect(onBroadcastDocument).toHaveBeenLastCalledWith(null, null, "a2");
+  });
+
+  it("hides the download of a withheld item and lets only the chair change it", async () => {
+    const onChange = vi.fn();
+    const withheld = { ...pdf, download_allowed: false };
+    const downloads = { pendingItemId: null, errorItemId: null, error: null, onChange };
+    const { props, view } = setup("chair", { agenda: withMaterials, attachments: [withheld], broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true, agenda_item_id: "a2", panel: "attachments" }), onBroadcast: vi.fn(), onHandOver: vi.fn(), downloads });
+    expect(screen.queryByRole("link", { name: "تنزيل قائمة اللجنة.pdf" })).not.toBeInTheDocument();
+    expect(screen.getByText("التنزيل غير متاح لهذا البند؛ يُعرض داخل الغرفة.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: "السماح للمشاركين بتنزيل مرفقات هذا البند" }));
+    expect(onChange).toHaveBeenCalledWith("a2", true, 2);
+    view.rerender(<AgendaWorkspace {...props} downloads={{ ...downloads, pendingItemId: "a2" }} />);
+    expect(screen.getByRole("checkbox", { name: "السماح للمشاركين بتنزيل مرفقات هذا البند" })).toBeDisabled();
+    expect(screen.getByText("جارٍ حفظ إذن التنزيل…")).toBeInTheDocument();
+    view.rerender(<AgendaWorkspace {...props} downloads={{ ...downloads, errorItemId: "a2", error: "تغيّر إذن التنزيل من شاشة أخرى" }} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("تغيّر إذن التنزيل من شاشة أخرى");
+    view.rerender(<AgendaWorkspace {...props} session={sessionOf("member")} broadcast={broadcastOf({ agenda_item_id: "a2", panel: "attachments" })} />);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+});
+
 describe("DecisionComposerDialog editing a saved decision", () => {
   const item: AgendaDiscussionItem = { id: "a1", agenda_order: 1, agenda_status: "discussed", topic: { id: "t1", title_ar: "خطة البرنامج" } };
   const decision: Decision = { id: "d1", decision_no: "ق-1", agenda_item_id: "a1", decision_status: "ready_for_approval", decision_text: "اعتماد الخطة كما وردت.", updated_at: "2026-10-09T10:05:00Z", can_edit_text: true };

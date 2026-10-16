@@ -30,3 +30,12 @@ it("downloads an agenda attachment after contextual meeting authorization",async
  rpc.mockResolvedValue([{id,file_url:`https://example.test/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}`,mime_type:"application/pdf"}]);const fetchMock=vi.fn().mockResolvedValue(new Response("pdf"));vi.stubGlobal("fetch",fetchMock);
  const response=await GET(new Request(`http://localhost/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}&meetingId=${id}&disposition=inline`));expect(response.status).toBe(200);expect(response.headers.get("Content-Disposition")).toBe("inline");expect(rpc).toHaveBeenCalledWith("list_meeting_topic_attachments",{p_meeting_id:id});expect(fetchMock.mock.calls[0][0]).toContain(`topic-preparations/${id}/${id}.pdf`);
 });
+it("refuses a download through the meeting when the chair withheld it, and still shows the file inline",async()=>{
+ rpc.mockResolvedValue([{id,file_url:`https://example.test/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}`,mime_type:"application/pdf",download_allowed:false}]);const fetchMock=vi.fn().mockResolvedValue(new Response("pdf"));vi.stubGlobal("fetch",fetchMock);
+ const download=await GET(new Request(`http://localhost/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}&meetingId=${id}&disposition=attachment`));expect(download.status).toBe(403);expect((await download.json()).error.message).toContain("منع رئيس المجلس");expect(fetchMock).not.toHaveBeenCalled();
+ const shown=await GET(new Request(`http://localhost/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}&meetingId=${id}&disposition=inline`));expect(shown.status).toBe(200);expect(shown.headers.get("Content-Disposition")).toBe("inline");
+});
+it("refuses an inline request that would fall back to a download when the chair withheld it",async()=>{
+ rpc.mockResolvedValue([{id,file_url:`https://example.test/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}`,mime_type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",download_allowed:false}]);const fetchMock=vi.fn();vi.stubGlobal("fetch",fetchMock);
+ expect((await GET(new Request(`http://localhost/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}&meetingId=${id}&disposition=inline`))).status).toBe(403);expect(fetchMock).not.toHaveBeenCalled();
+});
