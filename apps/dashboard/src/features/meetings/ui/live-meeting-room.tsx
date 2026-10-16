@@ -21,6 +21,7 @@ import { MemberVoteCard, type VoteValue } from "./stage/member-vote-card";
 import { ReasonDialog } from "./stage/reason-dialog";
 import { RoomStage } from "./stage/room-stage";
 import { RoomTopBar } from "./stage/room-top-bar";
+import { useMeetingBroadcast } from "./stage/use-meeting-broadcast";
 import { useRoomTheme } from "./stage/use-room-theme";
 
 type MeetingDetail = { agenda_items?: AgendaDiscussionItem[]; status_history?: Array<{ to_status: string; changed_at: string }> };
@@ -40,6 +41,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const roomRef = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<RoomTab>("attendance");
   const [presenting, setPresenting] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const [session, setSession] = useState<LiveMeetingSession | null>(null);
   const [agenda, setAgenda] = useState<AgendaDiscussionItem[]>([]);
   const [startedAt, setStartedAt] = useState<string | null>(null);
@@ -81,9 +83,13 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     };
   }, [meetingId, refreshInterval]);
 
+  // While the session runs, every screen follows the broadcast of whoever controls it.
+  const live = useMeetingBroadcast(meetingId, session?.meeting.status === "in_progress");
+
   // Leaving full screen with the browser's own key also leaves presentation mode.
   useEffect(() => {
     function onFullscreenChange() {
+      setFullscreen(Boolean(document.fullscreenElement));
       if (!document.fullscreenElement) setPresenting(false);
     }
     document.addEventListener("fullscreenchange", onFullscreenChange);
@@ -236,6 +242,12 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     else if (document.fullscreenElement) void document.exitFullscreen?.()?.catch(() => undefined);
   }
 
+  function toggleFullscreen() {
+    // A member may fill the screen with the meeting; the browser may refuse, and the room still works.
+    if (document.fullscreenElement) void document.exitFullscreen?.()?.catch(() => undefined);
+    else void roomRef.current?.requestFullscreen?.()?.catch(() => undefined);
+  }
+
   if (loading) return <div className="grid min-h-96 place-items-center font-sans"><p role="status" className="m-0 text-q-ui font-bold text-q-text-2">جارٍ تجهيز غرفة الاجتماع…</p></div>;
   if (!session) return <div className="flex flex-col items-start gap-3 font-sans"><InlineMessage tone="error">{loadError ?? "تعذر تحميل بيانات الجلسة. أعد المحاولة من صفحة الاجتماعات."}</InlineMessage><Button variant="secondary" onClick={() => void load()}>إعادة المحاولة</Button></div>;
 
@@ -243,8 +255,11 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const rapporteur = session.viewer.mode === "rapporteur";
   const pendingVotes = myVotes.filter((vote) => !vote.has_voted);
   const dialogError = notice?.kind === "error" ? notice.text : null;
-  const activeTab: RoomTab = presenting ? "agenda" : tab;
-  const tabs: Array<{ value: RoomTab; label: string; count?: number }> = [
+  // Once the roster is locked a member has nothing else to open: their screen follows the broadcast.
+  const followsBroadcast = Boolean(live.broadcast?.active && !live.broadcast.viewer_controls)
+    && session.viewer.mode === "member" && !session.viewer.can_manage_voting && session.meeting.attendance_locked;
+  const activeTab: RoomTab = presenting || followsBroadcast ? "agenda" : tab;
+  const tabs: Array<{ value: RoomTab; label: string; count?: number }> = followsBroadcast ? [] : [
     ...(session.viewer.is_roster_member ? [{ value: "my-attendance" as const, label: "حضوري الشخصي" }] : []),
     ...(operator ? [{ value: "attendance" as const, label: "إدارة الحضور" }] : []),
     { value: "agenda", label: "جدول الأعمال والتصويت", count: pendingVotes.length },
@@ -263,7 +278,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
         (theme.dark || presenting) && "rounded-q-card bg-q-bg p-3 sm:p-4",
         // One fixed screen for whoever steers the meeting; the columns scroll inside it.
         steering && activeTab === "agenda" && "lg:h-[calc(100dvh-9.5rem)] lg:min-h-[640px]",
-        presenting && "lg:h-dvh",
+        (presenting || fullscreen) && "lg:h-dvh overflow-y-auto",
       )}
     >
       {notice && !presenting && <InlineMessage tone={notice.kind === "success" ? "success" : "error"} className="sticky top-2 z-40 border border-q-border text-q-ui shadow-lg">{notice.text}</InlineMessage>}
@@ -274,6 +289,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
         dark={theme.dark}
         onToggleTheme={theme.toggle}
         presentation={session.viewer.can_manage_session ? { active: presenting, onToggle: togglePresentation } : undefined}
+        fullscreen={session.viewer.can_manage_session ? undefined : { active: fullscreen, onToggle: toggleFullscreen }}
       />
 
       {presenting && pendingVotes.length > 0 && <InlineMessage tone="info">لديك تصويت مفتوح. أنهِ وضع العرض لتسجيل صوتك دون أن يظهر على الشاشة.</InlineMessage>}
@@ -324,6 +340,11 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           decisions={decisions}
           busy={busy}
           presenting={presenting}
+          broadcast={live.broadcast}
+          broadcastPending={live.pending}
+          broadcastError={live.error}
+          onBroadcast={live.choose}
+          onHandOver={(toRole) => void live.handOver(toRole)}
           onUpdateDiscussion={updateDiscussion}
           onRequestPostpone={(item) => { setNotice(null); setReasonRequest({ kind: "postpone", item }); }}
           onOpenRound={(item) => void perform(() => liveMeetingRpc("open_voting_round", { p_agenda_item_id: item.id, p_expected_meeting_updated_at: session.meeting.updated_at }), "فُتحت جولة التصويت لهذا البند.")}
