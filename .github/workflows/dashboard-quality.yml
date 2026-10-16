@@ -9,9 +9,13 @@ on:
       - "supabase/functions/**"
       - "supabase/migrations/**"
       - "supabase/tests/**"
+      - "supabase/docker/**"
+      - "scripts/*e2e*"
       - ".github/workflows/dashboard-quality.yml"
   push:
-    branches: [dev]
+    # Dedicated validation branches can exercise the complete gate before a
+    # merge, without API credentials or changing the shared working branch.
+    branches: [dev, "codex/ci-*"]
 
 concurrency:
   group: dashboard-quality-${{ github.workflow }}-${{ github.ref }}
@@ -39,6 +43,9 @@ jobs:
       - name: Verify documentation encoding
         working-directory: ${{ github.workspace }}
         run: npm run test:development-governance
+      - name: Verify E2E isolation safeguards
+        working-directory: ${{ github.workspace }}
+        run: node --test scripts/isolated-e2e-ci.test.mjs
 
   api-contracts:
     runs-on: ubuntu-latest
@@ -113,24 +120,18 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Prepare Supabase configuration
         working-directory: ${{ github.workspace }}
-        run: |
-          cp supabase/docker/.env.example supabase/docker/.env
-          # The development seed calls functions that read auth.sessions, which
-          # GoTrue creates only after the migration runner finishes. Start the
-          # stack without it and apply it once GoTrue is up (next step).
-          sed -i 's/^QARAR_APPLY_SEED=.*/QARAR_APPLY_SEED=false/' supabase/docker/.env
+        run: sh scripts/prepare-e2e-supabase-env.sh
       - name: Start Supabase
         working-directory: ${{ github.workspace }}
         run: |
-          sh scripts/pull-supabase-compose-images.sh
-          docker compose --env-file supabase/docker/.env \
-            -f supabase/docker/docker-compose.yml up -d --wait --pull never
+          node scripts/e2e-supabase.mjs config
+          node scripts/e2e-supabase.mjs pull
+          node scripts/e2e-supabase.mjs up
+          node scripts/test-e2e-jwt-database.mjs
           # The browser fixture copies the permission catalogue of the seeded
           # demo organization. Re-run the migration runner with the seed on: it
           # verifies the applied migrations and records the seed in its ledger.
-          docker compose --env-file supabase/docker/.env \
-            -f supabase/docker/docker-compose.yml run --rm --no-deps \
-            -e QARAR_APPLY_SEED=true db-migrate
+          node scripts/e2e-supabase.mjs seed
       - name: Run regulations browser scenarios
         run: npm run test:e2e
       - name: Upload Playwright report
@@ -144,10 +145,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
       - name: Print service logs on failure
-        if: failure()
+        if: ${{ failure() && env.QARAR_E2E_ENV_FILE != '' }}
         working-directory: ${{ github.workspace }}
-        run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml logs --tail 300
+        run: node scripts/e2e-supabase.mjs logs
       - name: Stop Supabase
-        if: always()
+        if: ${{ always() && env.QARAR_E2E_ENV_FILE != '' }}
         working-directory: ${{ github.workspace }}
-        run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml down -v
+        run: node scripts/e2e-supabase.mjs down
