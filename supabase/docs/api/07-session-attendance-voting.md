@@ -239,6 +239,34 @@ While the session runs, one person drives what every screen shows: the chair by 
 
 The dashboard reads the broadcast every two seconds while the session runs. A member's screen follows it: no item or panel of their own, and a full-screen control.
 
+## Documents in the Room and Download Permission (v2)
+
+`list_meeting_topic_attachments` (v1) also returns, per file:
+
+- `agenda_item_id`: the item the file is discussed under.
+- `download_allowed`: false when the chair withheld downloads for that item.
+- `download_revision`: the revision of that decision.
+
+`set_agenda_item_downloads_v2(p_agenda_item_id, p_allowed, p_expected_revision)`:
+
+- The active `council_chair` of the meeting's council only (`42501`).
+- Not after the meeting is closed, archived or cancelled (`23514`).
+- A stale revision is refused (`40001`).
+- Audited as `meetings.agenda.downloads`.
+- Items without a decision keep their files downloadable.
+
+The file routes (`/api/admin/topics/upload`, `/api/admin/typed-topics/files`) refuse a download through the meeting (`meetingId` set, not shown inline) for a withheld item with 403, and still serve PDF and images inline. Only these two routes may be framed, by this site only (`X-Frame-Options: SAMEORIGIN`, `frame-ancestors 'self'`).
+
+`set_meeting_broadcast_document_v2(p_meeting_id, p_attachment_id, p_page, p_expected_revision)`:
+
+- The current broadcast controller only, during the session.
+- The file must belong to a topic on the meeting's agenda (`22023`). The page must be between 1 and 10000.
+- Opening a file sets the broadcast item and the `attachments` panel. `p_attachment_id = null` closes it and keeps the item.
+- `get_meeting_broadcast_v2` returns `attachment_id` and `page`.
+- `set_meeting_broadcast_v2` closes an open file when the item changes or the files panel is left.
+
+Withholding downloads does not stop anyone from capturing what is shown on their screen. Users with direct access to the topic outside the meeting keep that access.
+
 ## Open Voting
 
 `open_voting_round` accepts `p_agenda_item_id` and `p_expected_meeting_updated_at`.

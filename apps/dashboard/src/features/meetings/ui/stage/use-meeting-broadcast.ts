@@ -25,7 +25,7 @@ export function useMeetingBroadcast(meetingId: string, enabled: boolean) {
   const shown = useRef<MeetingBroadcast | null>(null);
   const confirmedRevision = useRef(0);
   const writing = useRef(false);
-  const queued = useRef<{ agendaItemId: string; panel: ReferenceTab } | null>(null);
+  const queued = useRef<BroadcastChange | null>(null);
 
   function show(next: MeetingBroadcast, confirmed = true) {
     shown.current = next;
@@ -74,12 +74,19 @@ export function useMeetingBroadcast(meetingId: string, enabled: boolean) {
         const next = queued.current;
         queued.current = null;
         try {
-          const saved = await liveMeetingRpc<MeetingBroadcast>("set_meeting_broadcast_v2", {
-            p_meeting_id: meetingId,
-            p_agenda_item_id: next.agendaItemId,
-            p_panel: next.panel,
-            p_expected_revision: confirmedRevision.current,
-          });
+          const saved = next.kind === "view"
+            ? await liveMeetingRpc<MeetingBroadcast>("set_meeting_broadcast_v2", {
+              p_meeting_id: meetingId,
+              p_agenda_item_id: next.agendaItemId,
+              p_panel: next.panel,
+              p_expected_revision: confirmedRevision.current,
+            })
+            : await liveMeetingRpc<MeetingBroadcast>("set_meeting_broadcast_document_v2", {
+              p_meeting_id: meetingId,
+              p_attachment_id: next.attachmentId,
+              p_page: next.page,
+              p_expected_revision: confirmedRevision.current,
+            });
           confirmedRevision.current = saved.revision;
           if (!queued.current) show(saved);
           setError(null);
@@ -96,13 +103,27 @@ export function useMeetingBroadcast(meetingId: string, enabled: boolean) {
     }
   }
 
-  /** The controller chose an item or a panel: show it now, send it in order. */
-  function choose(agendaItemId: string, panel: ReferenceTab) {
+  function send(change: BroadcastChange, optimistic: (current: MeetingBroadcast) => MeetingBroadcast) {
     const current = shown.current;
     if (!current?.viewer_controls) return;
-    show({ ...current, agenda_item_id: agendaItemId, panel }, false);
-    queued.current = { agendaItemId, panel };
+    show(optimistic(current), false);
+    queued.current = change;
     if (!writing.current) void flush();
+  }
+
+  /** The controller chose an item or a panel: show it now, send it in order. */
+  function choose(agendaItemId: string, panel: ReferenceTab) {
+    send({ kind: "view", agendaItemId, panel }, (current) => {
+      const keep = panel === "attachments" && current.agenda_item_id === agendaItemId;
+      return { ...current, agenda_item_id: agendaItemId, panel, attachment_id: keep ? current.attachment_id : null, page: keep ? current.page : null };
+    });
+  }
+
+  /** The controller opened a file (on a page) of an item, or closed it with null. */
+  function openDocument(attachmentId: string | null, page: number | null, agendaItemId?: string) {
+    send({ kind: "document", attachmentId, page: attachmentId ? page ?? 1 : null }, (current) => attachmentId
+      ? { ...current, attachment_id: attachmentId, page: page ?? 1, panel: "attachments", agenda_item_id: agendaItemId ?? current.agenda_item_id }
+      : { ...current, attachment_id: null, page: null });
   }
 
   async function handOver(toRole: "chair" | "rapporteur") {
@@ -123,7 +144,11 @@ export function useMeetingBroadcast(meetingId: string, enabled: boolean) {
     }
   }
 
-  return { broadcast: enabled ? broadcast : null, error: enabled ? error : null, pending, choose, handOver };
+  return { broadcast: enabled ? broadcast : null, error: enabled ? error : null, pending, choose, openDocument, handOver };
 }
 
 const READ_FAILED = "تعذر تحديث البث، وتُعرض آخر حالة معروفة.";
+
+type BroadcastChange =
+  | { kind: "view"; agendaItemId: string; panel: ReferenceTab }
+  | { kind: "document"; attachmentId: string | null; page: number | null };

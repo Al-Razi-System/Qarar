@@ -92,4 +92,16 @@ describe("useMeetingBroadcast", () => {
     expect(result.current.broadcast).toMatchObject({ controller_role: "rapporteur", can_take_back: true });
     expect(rpc).toHaveBeenCalledWith("hand_over_meeting_broadcast_v2", { p_meeting_id: "m1", p_to_role: "rapporteur", p_expected_revision: 7 });
   });
+
+  it("opens a document for every screen against the confirmed revision", async () => {
+    rpc.mockImplementation((contract: string, params: Record<string, unknown>) => contract === "get_meeting_broadcast_v2"
+      ? Promise.resolve(server({ revision: 2 }))
+      : Promise.resolve(server({ revision: 3, agenda_item_id: "a2", panel: "attachments", attachment_id: params.p_attachment_id as string, page: params.p_page as number })));
+    const { result } = renderHook(() => useMeetingBroadcast("m1", true));
+    await waitFor(() => expect(result.current.broadcast?.revision).toBe(2));
+    act(() => result.current.openDocument("f2", 1, "a2"));
+    expect(result.current.broadcast).toMatchObject({ attachment_id: "f2", page: 1, panel: "attachments", agenda_item_id: "a2" });
+    await waitFor(() => expect(result.current.broadcast?.revision).toBe(3));
+    expect(rpc).toHaveBeenCalledWith("set_meeting_broadcast_document_v2", { p_meeting_id: "m1", p_attachment_id: "f2", p_page: 1, p_expected_revision: 2 });
+  });
 });
