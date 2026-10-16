@@ -6,6 +6,7 @@ import { DecisionComposerDialog } from "../decision-composer-dialog";
 import { AgendaWorkspace } from "./agenda-workspace";
 import { MemberVoteCard } from "./member-vote-card";
 import { ReasonDialog } from "./reason-dialog";
+import { ReferralDialog } from "./referral-dialog";
 
 function sessionOf(mode: "chair" | "rapporteur" | "member", locked = true): LiveMeetingSession {
   return {
@@ -410,5 +411,68 @@ describe("ReasonDialog", () => {
     expect(screen.getByLabelText("سبب تأجيل البند")).toHaveValue("استكمال الدراسة");
     await userEvent.click(screen.getByRole("button", { name: "تأجيل" }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AgendaWorkspace referral", () => {
+  const referrals = (rows: Array<Record<string, unknown>> = []) => ({
+    referrals: rows.map((row) => ({ agenda_item_id: "a1", referral_id: "f1", to_unit_id: "u9", to_unit_name_ar: "لجنة الخطط", reason: "يحتاج دراسة اللجنة", status: "pending" as const, referred_at: "2026-10-16T09:00:00Z", ...row })),
+    destinations: [{ id: "u9", name_ar: "لجنة الخطط" }],
+  });
+
+  it("offers the chair a referral of the item under discussion", async () => {
+    const onRequestReferral = vi.fn();
+    setup("chair", { referrals: referrals(), onRequestReferral, broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    await userEvent.click(within(screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" })).getByRole("button", { name: "إحالة البند" }));
+    expect(onRequestReferral).toHaveBeenCalledWith(expect.objectContaining({ id: "a1" }));
+  });
+
+  it("offers no referral to a manager who is not the chair", () => {
+    setup("chair", { referrals: referrals(), onRequestReferral: vi.fn(), broadcast: broadcastOf({ controller_role: "rapporteur", viewer_controls: true, can_hand_over: false, can_return: true }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    expect(screen.queryByRole("button", { name: "إحالة البند" })).not.toBeInTheDocument();
+  });
+
+  it("shows every screen where the item went, and no vote on it", () => {
+    setup("chair", { agenda: [{ ...first, agenda_status: "discussed", voting_available_now: true }, second], referrals: referrals([{}]), onRequestReferral: vi.fn(), broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    const dock = screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" });
+    expect(within(dock).queryByRole("button", { name: "فتح التصويت للأعضاء" })).not.toBeInTheDocument();
+    expect(within(dock).getByText("أُحيل البند إلى لجنة الخطط، بانتظار قبولها.")).toBeInTheDocument();
+    expect(within(screen.getByRole("navigation", { name: "جدول الأعمال" })).getByText("محال إلى لجنة الخطط")).toBeInTheDocument();
+  });
+});
+
+describe("ReferralDialog", () => {
+  const units = [{ id: "u9", name_ar: "لجنة الخطط" }];
+
+  it("explains what is missing, keeps the choice on failure and closes on success", async () => {
+    const onClose = vi.fn();
+    const onSubmit = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const { rerender } = render(<ReferralDialog topicTitle="خطة البرنامج" destinations={units} busy={false} onClose={onClose} onSubmit={onSubmit} />);
+    const confirm = screen.getByRole("button", { name: "إحالة البند" });
+    expect(confirm).toBeDisabled();
+    expect(screen.getByText("اختر الجهة المحال إليها.")).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("الجهة المحال إليها"), "u9");
+    expect(screen.getByText("اكتب سبب الإحالة بخمسة أحرف على الأقل.")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("سبب الإحالة"), "يحتاج دراسة اللجنة");
+    await userEvent.click(confirm);
+    expect(onSubmit).toHaveBeenCalledWith("u9", "يحتاج دراسة اللجنة");
+    expect(onClose).not.toHaveBeenCalled();
+    rerender(<ReferralDialog topicTitle="خطة البرنامج" destinations={units} busy={false} error="تغيّر البند من شاشة أخرى، فحُدّثت الشاشة. أعد المحاولة." onClose={onClose} onSubmit={onSubmit} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("تغيّر البند من شاشة أخرى");
+    expect(screen.getByLabelText("الجهة المحال إليها")).toHaveValue("u9");
+    expect(screen.getByLabelText("سبب الإحالة")).toHaveValue("يحتاج دراسة اللجنة");
+    await userEvent.click(screen.getByRole("button", { name: "إحالة البند" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the pending state and blocks a second submission", () => {
+    render(<ReferralDialog topicTitle="خطة البرنامج" destinations={units} busy onClose={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /جارٍ الإحالة/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "إلغاء" })).toBeDisabled();
+  });
+
+  it("says so when no unit can receive the item", () => {
+    render(<ReferralDialog topicTitle="خطة البرنامج" destinations={[]} busy={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByText("لا توجد جهة نشطة أخرى يُحال إليها البند.")).toBeInTheDocument();
   });
 });

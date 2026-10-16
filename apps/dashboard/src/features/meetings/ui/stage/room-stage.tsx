@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MemberCard, type MemberCardDetails } from "@/shared/ui/member-card";
-import type { AgendaDiscussionItem, Decision, LiveMeetingSession, MemberProfile, MemberProfiles, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Decision, ItemReferral, LiveMeetingSession, MemberProfile, MemberProfiles, VotingRound } from "../../model/live-meeting";
 import { deriveMeetingStage, memberPhotoUrl, type StageSeat } from "../../model/meeting-stage";
 import { CouncilTable } from "./council-table";
 import { StageCenter } from "./stage-center";
@@ -12,6 +12,8 @@ type Props = {
   agenda: AgendaDiscussionItem[];
   rounds: VotingRound[];
   decisions: Decision[];
+  /** Items the chair referred: the table moves past them. */
+  referrals?: ItemReferral[];
   /** The member cards; null while loading or after a failure. */
   profiles?: MemberProfiles | null;
   /** Why the member cards could not be loaded, for the viewer. */
@@ -59,9 +61,9 @@ function cardDetails(meetingId: string, profile: MemberProfile): MemberCardDetai
  * council is doing right now. It is derived on every refresh from the data the
  * room already loads; a seat opens that member's card.
  */
-export function RoomStage({ session, agenda, rounds, decisions, profiles = null, profilesError = null, compact = false }: Props) {
+export function RoomStage({ session, agenda, rounds, decisions, referrals = [], profiles = null, profilesError = null, compact = false }: Props) {
   const [openSeat, setOpenSeat] = useState<StageSeat | null>(null);
-  const { seats, phase } = deriveMeetingStage(session, agenda, rounds, decisions, profiles?.members);
+  const { seats, phase } = deriveMeetingStage(session, agenda, rounds, decisions, profiles?.members, referrals.map((row) => row.agenda_item_id));
   const profile = openSeat ? profiles?.members.find((member) => member.user_id === openSeat.userId) : undefined;
   return (
     <section aria-label="مشهد الاجتماع" className="font-sans text-q-text">

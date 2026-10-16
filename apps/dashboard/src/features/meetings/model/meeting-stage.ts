@@ -46,10 +46,10 @@ function attendanceSeatStatus(record: Attendance): SeatStatus {
   return attended && verified ? "present" : "pending";
 }
 
-function isUnfinished(item: AgendaDiscussionItem, rounds: VotingRound[], decisions: Decision[]) {
+function isUnfinished(item: AgendaDiscussionItem, rounds: VotingRound[], decisions: Decision[], referredItemIds: string[]) {
   const closed = latestClosedRound(rounds, item.id);
   return !FINISHED_AGENDA_STATES.includes(item.agenda_status ?? "pending")
-    || (item.requires_voting === true && item.agenda_status !== "postponed" && !closed)
+    || (item.requires_voting === true && item.agenda_status !== "postponed" && !closed && !referredItemIds.includes(item.id))
     || (closed?.result === "approved" && !decisions.some((decision) => decision.agenda_item_id === item.id));
 }
 
@@ -65,6 +65,8 @@ export function deriveMeetingStage(
   decisions: Decision[],
   /** The member cards, when loaded; seats fall back to names and the viewer's own role without them. */
   profiles: MemberProfile[] = [],
+  /** Items the chair referred to another unit: they need no vote. */
+  referredItemIds: string[] = [],
 ): MeetingStage {
   const ordered = [...agenda].sort((a, b) => a.agenda_order - b.agenda_order);
   const openRound = rounds.find((round) => round.status === "open") ?? session.open_voting_rounds[0] ?? null;
@@ -91,7 +93,7 @@ export function deriveMeetingStage(
     };
   });
 
-  return { seats, phase: derivePhase(session, ordered, rounds, decisions, openRound, seats) };
+  return { seats, phase: derivePhase(session, ordered, rounds, decisions, openRound, seats, referredItemIds) };
 }
 
 function derivePhase(
@@ -101,6 +103,7 @@ function derivePhase(
   decisions: Decision[],
   openRound: VotingRound | null,
   seats: StageSeat[],
+  referredItemIds: string[],
 ): StagePhase {
   if (!session.meeting.attendance_locked) {
     const present = seats.filter((seat) => seat.status === "present").length;
@@ -117,7 +120,7 @@ function derivePhase(
   }
 
   const discussing = ordered.find((item) => item.agenda_status === "under_discussion");
-  const current = discussing ?? ordered.find((item) => isUnfinished(item, rounds, decisions));
+  const current = discussing ?? ordered.find((item) => isUnfinished(item, rounds, decisions, referredItemIds));
   if (!current) return ordered.length === 0 ? { kind: "idle", item: null } : { kind: "finished" };
 
   const closed = latestClosedRound(rounds, current.id);

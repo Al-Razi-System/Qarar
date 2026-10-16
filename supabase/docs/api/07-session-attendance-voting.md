@@ -288,6 +288,29 @@ The database records when an item's discussion starts and ends: the trigger `age
 - A stale revision is refused (`40001`).
 - Audited as `meetings.agenda.planned_minutes`.
 
+## Agenda Item Referral (v2)
+
+The council's chair refers an item to another unit instead of a vote. It uses the topic referral of section 06: the referral is `pending` until the receiving unit accepts or rejects it with `respond_topic_referral`.
+
+`refer_agenda_item_v2(p_agenda_item_id, p_to_unit_id, p_reason, p_expected_updated_at)`:
+
+- The active `council_chair` of the meeting's council only (`42501`). A system administrator is refused.
+- During the session (`in_progress`), once the item's discussion has started, before any vote opens, and once per item (`23514`).
+- The destination must be an active unit other than the council and the topic's current unit (`22023`). The reason is 5 to 2000 characters (`22023`).
+- `p_expected_updated_at` is the agenda item's `updated_at`. A stale value is refused (`40001`).
+- An item under discussion becomes `discussed`. Audited as `meetings.agenda.referred` and `topics.referral.request`.
+- No voting round opens on a referred item (`23514`). Ending the session accepts a referred item, as it does a postponed one.
+
+`list_meeting_referrals_v2(p_meeting_id)` returns:
+
+```json
+{ "referrals": [{ "agenda_item_id": "uuid", "referral_id": "uuid", "to_unit_id": "uuid", "to_unit_name_ar": "...", "reason": "...", "status": "pending", "referred_at": "..." }],
+  "destinations": [{ "id": "uuid", "name_ar": "..." }] }
+```
+
+- Read authority as Session Detail.
+- `destinations` is filled for the council's chair only.
+
 ## Open Voting
 
 `open_voting_round` accepts `p_agenda_item_id` and `p_expected_meeting_updated_at`.
