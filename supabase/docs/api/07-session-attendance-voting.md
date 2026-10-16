@@ -311,6 +311,33 @@ The council's chair refers an item to another unit instead of a vote. It uses th
 - Read authority as Session Detail.
 - `destinations` is filled for the council's chair only.
 
+## Meeting Assignments (v2)
+
+An assignment is an execution task tied to the decision drafted for an agenda item. The council's chair issues one during the session and it becomes a task at once, before the decision is approved (owner decision, 2026-10-16). The rapporteur proposes one for the chair to confirm.
+
+`propose_meeting_assignment_v2(p_agenda_item_id, p_title, p_description, p_assigned_user_id, p_assigned_unit_id, p_due_date)`:
+
+- The active `council_chair` or `council_rapporteur` of the meeting's council only (`42501`).
+- During the session, and only once the item has a decision that is not rejected, cancelled or closed (`23514`).
+- Title 5 to 300 characters. Description up to 2000. An active user or an active unit of the tenant. A due date not in the past (`22023`).
+- From the chair: `status = active`, and an execution task `TSK-YYYY-NNNNNN` with status `new` is created. From the rapporteur: `status = proposed`.
+- Audited as `meetings.assignment.propose`, `meetings.assignment.issue` and `execution.action_item.create_from_meeting`.
+
+`confirm_meeting_assignment_v2(p_assignment_id, p_expected_revision)`:
+
+- The chair only (`42501`), during the session, for a proposal (`23514`).
+- A stale revision is refused (`40001`).
+- Creates the task.
+
+`withdraw_meeting_assignment_v2(p_assignment_id, p_expected_revision)`:
+
+- The chair, or the rapporteur for their own proposal (`42501`), during the session.
+- Cancels an issued assignment's task only while it is still `new` (`23514`).
+
+`list_meeting_assignments_v2(p_meeting_id)` returns `viewer` (`can_issue`, `can_propose`), `assignments` (with assignee names, `action_no` and `action_status`), and `options` (the meeting's roster and the active units). `options` is filled for the chair and the rapporteur only. Read authority is the same as Session Detail.
+
+**Execution rule.** `qarar_execution.check_action_item_creation` still refuses a task for a decision that is not approved (`23514`, Arabic message). The one exception is a task whose `meeting_assignment_id` is an assignment the chair issued for that very decision, while the decision is `ready_for_approval`. When a decision becomes `rejected`, the session's unfinished tasks are cancelled.
+
 ## Open Voting
 
 `open_voting_round` accepts `p_agenda_item_id` and `p_expected_meeting_updated_at`.

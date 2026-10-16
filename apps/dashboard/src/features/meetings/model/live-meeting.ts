@@ -77,6 +77,35 @@ export type ItemReferral = {
   referred_at: string;
 };
 
+/** An execution task the chair issued in the session, or the rapporteur proposed. */
+export type MeetingAssignment = {
+  id: string;
+  agenda_item_id: string;
+  decision_id: string;
+  title_ar: string;
+  description: string | null;
+  assigned_user_id: string | null;
+  assigned_user_name_ar: string | null;
+  assigned_unit_id: string | null;
+  assigned_unit_name_ar: string | null;
+  due_date: string | null;
+  status: "proposed" | "active" | "withdrawn";
+  revision: number;
+  proposed_by_me: boolean;
+  /** The execution task, once issued. */
+  action_no: string | null;
+  action_status: string | null;
+};
+
+export type MeetingAssignments = {
+  viewer: { can_issue: boolean; can_propose: boolean };
+  assignments: MeetingAssignment[];
+  /** For the chair and the rapporteur only: the roster and the active units. */
+  options: { users: Array<{ id: string; name_ar: string }>; units: Array<{ id: string; name_ar: string }> } | null;
+};
+
+export type NewAssignment = { title: string; userId: string | null; unitId: string | null; dueDate: string | null };
+
 /** The meeting's referrals, and for the chair alone the units an item may go to. */
 export type MeetingReferrals = { referrals: ItemReferral[]; destinations: Array<{ id: string; name_ar: string }> };
 

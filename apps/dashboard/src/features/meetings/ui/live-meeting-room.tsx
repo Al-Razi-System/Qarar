@@ -9,7 +9,7 @@ import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { cn } from "@/shared/lib/utils";
-import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingItemTimers, MeetingReferrals, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
+import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingAssignment, MeetingAssignments, MeetingItemTimers, MeetingReferrals, NewAssignment, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
 import type { MeetingTopicAttachment } from "../model/meeting";
 import { AttendanceQrDialog } from "./attendance-qr-dialog";
 import { ChairAttendanceConsole } from "./chair-attendance-console";
@@ -19,6 +19,7 @@ import { AgendaWorkspace } from "./stage/agenda-workspace";
 import type { DiscussionStatus } from "./stage/discussion-summary";
 import { MemberVoteCard, type VoteValue } from "./stage/member-vote-card";
 import { ReasonDialog } from "./stage/reason-dialog";
+import { NEW_ASSIGNMENT_KEY, type AssignmentActivity } from "./stage/item-assignments";
 import { ReferralDialog } from "./stage/referral-dialog";
 import { RoomStage } from "./stage/room-stage";
 import { RoomTopBar } from "./stage/room-top-bar";
@@ -43,6 +44,8 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [tab, setTab] = useState<RoomTab>("attendance");
   const [presenting, setPresenting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [assignments, setAssignments] = useState<MeetingAssignments | null>(null);
+  const [assignmentActivity, setAssignmentActivity] = useState<AssignmentActivity>({ key: null, errorKey: null, error: null });
   const [referrals, setReferrals] = useState<MeetingReferrals | null>(null);
   const [referralItem, setReferralItem] = useState<AgendaDiscussionItem | null>(null);
   const [itemTimers, setItemTimers] = useState<{ data: MeetingItemTimers | null; clockOffsetMs: number }>({ data: null, clockOffsetMs: 0 });
@@ -142,6 +145,10 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       await liveMeetingRpc<MeetingReferrals>("list_meeting_referrals_v2", { p_meeting_id: meetingId })
         .then(setReferrals)
         .catch(() => setReferrals((current) => current));
+      // And assignments: without them the decision shows no assignment section.
+      await liveMeetingRpc<MeetingAssignments>("list_meeting_assignments_v2", { p_meeting_id: meetingId })
+        .then(setAssignments)
+        .catch(() => setAssignments((current) => current));
       const rosterKey = `${meetingId}|${live.attendance.map((record) => `${record.user_id}:${record.status}:${record.verification_status ?? ""}`).join(",")}`;
       if (profilesLoadedFor.current !== rosterKey) {
         profilesLoadedFor.current = rosterKey;
@@ -255,6 +262,29 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     if (next) void roomRef.current?.requestFullscreen?.()?.catch(() => undefined);
     else if (document.fullscreenElement) void document.exitFullscreen?.()?.catch(() => undefined);
   }
+
+  async function runAssignment(key: string, action: () => Promise<unknown>, fallback: string) {
+    setAssignmentActivity({ key, errorKey: null, error: null });
+    try {
+      await action();
+      await load(true);
+      setAssignmentActivity({ key: null, errorKey: null, error: null });
+      return true;
+    } catch (error) {
+      setAssignmentActivity({ key: null, errorKey: key, error: messageOf(error, fallback) });
+      await load(true);
+      return false;
+    }
+  }
+
+  const assignmentActions = {
+    onCreate: (agendaItemId: string, input: NewAssignment) => runAssignment(NEW_ASSIGNMENT_KEY, () => liveMeetingRpc("propose_meeting_assignment_v2", {
+      p_agenda_item_id: agendaItemId, p_title: input.title, p_description: null,
+      p_assigned_user_id: input.userId, p_assigned_unit_id: input.unitId, p_due_date: input.dueDate,
+    }), "تعذر حفظ التكليف."),
+    onConfirm: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => liveMeetingRpc("confirm_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر اعتماد التكليف."),
+    onWithdraw: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => liveMeetingRpc("withdraw_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر سحب التكليف."),
+  };
 
   function submitReferral(toUnitId: string, reason: string) {
     if (!referralItem) return Promise.resolve(false);
@@ -400,6 +430,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           onUpdateDiscussion={updateDiscussion}
           onRequestPostpone={(item) => { setNotice(null); setReasonRequest({ kind: "postpone", item }); }}
           referrals={referrals}
+          assignments={{ data: assignments, activity: assignmentActivity, ...assignmentActions }}
           onRequestReferral={(item) => { setNotice(null); setReferralItem(item); }}
           onOpenRound={(item) => void perform(() => liveMeetingRpc("open_voting_round", { p_agenda_item_id: item.id, p_expected_meeting_updated_at: session.meeting.updated_at }), "فُتحت جولة التصويت لهذا البند.")}
           onCloseRound={(round) => void perform(() => liveMeetingRpc("close_voting_round", { p_voting_round_id: round.id, p_reason: "إغلاق الجولة بعد اكتمال التصويت." }), "أُغلقت الجولة وحُسبت النتيجة.")}
