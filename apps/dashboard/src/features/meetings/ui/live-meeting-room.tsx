@@ -281,6 +281,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     onCreate: (agendaItemId: string, input: NewAssignment) => runAssignment(NEW_ASSIGNMENT_KEY, () => liveMeetingRpc("propose_meeting_assignment_v2", {
       p_agenda_item_id: agendaItemId, p_title: input.title, p_description: null,
       p_assigned_user_id: input.userId, p_assigned_unit_id: input.unitId, p_due_date: input.dueDate,
+      p_follow_up_user_id: input.followUpId, p_requires_evidence: input.requiresEvidence,
     }), "تعذر حفظ التكليف."),
     onConfirm: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => liveMeetingRpc("confirm_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر اعتماد التكليف."),
     onWithdraw: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => liveMeetingRpc("withdraw_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر سحب التكليف."),

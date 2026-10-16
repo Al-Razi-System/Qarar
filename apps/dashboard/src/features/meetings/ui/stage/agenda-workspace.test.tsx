@@ -478,7 +478,7 @@ describe("ReferralDialog", () => {
 });
 
 describe("AgendaWorkspace assignments", () => {
-  const data = { viewer: { can_issue: true, can_propose: false }, assignments: [], options: { users: [], units: [{ id: "g1", name_ar: "عمادة القبول" }] } };
+  const data = { viewer: { can_issue: true, can_propose: false }, assignments: [], options: { users: [{ id: "u2", name_ar: "د. هدى" }], units: [{ id: "g1", name_ar: "عمادة القبول" }] } };
   const assignments = (onCreate = vi.fn(async () => true)) => ({ data, activity: { key: null, errorKey: null, error: null }, onCreate, onConfirm: vi.fn(), onWithdraw: vi.fn() });
   const approvedRound: VotingRound = { id: "r1", agenda_item_id: "a1", status: "closed", result: "approved", closed_at: "2026-10-16T09:00:00Z" };
   const decision: Decision = { id: "d1", decision_no: "DEC-2026-000014", agenda_item_id: "a1", decision_status: "ready_for_approval", decision_text: "اعتماد الخطة." };
@@ -489,8 +489,9 @@ describe("AgendaWorkspace assignments", () => {
     const section = screen.getByRole("region", { name: "التكليفات" });
     await userEvent.type(within(section).getByLabelText("عنوان التكليف"), "إبلاغ عمادة القبول");
     await userEvent.selectOptions(within(section).getByLabelText("المكلَّف"), "unit:g1");
+    await userEvent.selectOptions(within(section).getByLabelText("المتابع"), "u2");
     await userEvent.click(within(section).getByRole("button", { name: "إصدار التكليف" }));
-    expect(onCreate).toHaveBeenCalledWith("a1", { title: "إبلاغ عمادة القبول", userId: null, unitId: "g1", dueDate: null });
+    expect(onCreate).toHaveBeenCalledWith("a1", { title: "إبلاغ عمادة القبول", userId: null, unitId: "g1", dueDate: null, followUpId: "u2", requiresEvidence: false });
   });
 
   it("offers no assignment before the decision is drafted, nor a form on the presentation screen", () => {

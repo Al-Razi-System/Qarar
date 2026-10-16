@@ -4,12 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { MeetingAssignment, MeetingAssignments } from "../../model/live-meeting";
 import { ItemAssignments, NEW_ASSIGNMENT_KEY, type AssignmentActivity } from "./item-assignments";
 
-const options: MeetingAssignments["options"] = { users: [{ id: "u3", name_ar: "د. خالد" }], units: [{ id: "g1", name_ar: "عمادة القبول" }] };
+const options: MeetingAssignments["options"] = { users: [{ id: "u3", name_ar: "د. خالد" }, { id: "u2", name_ar: "د. هدى" }], units: [{ id: "g1", name_ar: "عمادة القبول" }] };
 const idle: AssignmentActivity = { key: null, errorKey: null, error: null };
 const row = (patch: Partial<MeetingAssignment> = {}): MeetingAssignment => ({
   id: "s1", agenda_item_id: "a1", decision_id: "d1", title_ar: "تحديث الخطة الدراسية", description: null,
   assigned_user_id: "u3", assigned_user_name_ar: "د. خالد", assigned_unit_id: null, assigned_unit_name_ar: null,
-  due_date: "2026-11-15", status: "active", revision: 1, proposed_by_me: false, action_no: "TSK-2026-000007", action_status: "new", ...patch,
+  follow_up_user_id: "u2", follow_up_user_name_ar: "د. هدى", requires_evidence: true, due_date: "2026-11-15", status: "active", revision: 1, proposed_by_me: false, action_no: "TSK-2026-000007", action_status: "new", ...patch,
 });
 
 function setup(viewer: MeetingAssignments["viewer"], assignments: MeetingAssignment[] = [], extra: Partial<Parameters<typeof ItemAssignments>[0]> = {}) {
@@ -27,9 +27,14 @@ describe("ItemAssignments", () => {
     await userEvent.type(screen.getByLabelText("عنوان التكليف"), "تحديث الخطة الدراسية");
     expect(screen.getByText("اختر المكلَّف.")).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText("المكلَّف"), "unit:g1");
+    expect(screen.getByText("اختر متابع التكليف؛ هو من يتحقق من إنجازه.")).toBeInTheDocument();
+    expect(issue).toBeDisabled();
+    await userEvent.selectOptions(screen.getByLabelText("المتابع"), "u2");
+    await userEvent.click(screen.getByLabelText("يتطلب أدلة إنجاز"));
     expect(screen.getByText("يصبح التكليف مهمة تنفيذ فور إصداره، قبل اعتماد القرار.")).toBeInTheDocument();
     await userEvent.click(issue);
-    expect(handlers.onCreate).toHaveBeenCalledWith({ title: "تحديث الخطة الدراسية", userId: null, unitId: "g1", dueDate: null });
+    expect(handlers.onCreate).toHaveBeenCalledWith({ title: "تحديث الخطة الدراسية", userId: null, unitId: "g1", dueDate: null, followUpId: "u2", requiresEvidence: true });
+    expect(screen.getByLabelText("يتطلب أدلة إنجاز")).not.toBeChecked();
     expect(screen.getByLabelText("عنوان التكليف")).toHaveValue("");
   });
 
@@ -38,6 +43,7 @@ describe("ItemAssignments", () => {
     const { props, view } = setup({ can_issue: false, can_propose: true }, [], { onCreate });
     await userEvent.type(screen.getByLabelText("عنوان التكليف"), "إبلاغ الأقسام");
     await userEvent.selectOptions(screen.getByLabelText("المكلَّف"), "user:u3");
+    await userEvent.selectOptions(screen.getByLabelText("المتابع"), "u2");
     await userEvent.click(screen.getByRole("button", { name: "اقتراح التكليف" }));
     view.rerender(<ItemAssignments {...props} onCreate={onCreate} activity={{ key: null, errorKey: NEW_ASSIGNMENT_KEY, error: "صغ قرار البند أولاً، ثم أضف تكليفاته." }} />);
     expect(screen.getByRole("alert")).toHaveTextContent("صغ قرار البند أولاً");
@@ -53,6 +59,8 @@ describe("ItemAssignments", () => {
     const items = screen.getAllByRole("listitem");
     expect(within(items[0]).getByText("نافذ")).toBeInTheDocument();
     expect(within(items[0]).getByText("TSK-2026-000007")).toBeInTheDocument();
+    expect(items[0]).toHaveTextContent("المتابع: د. هدى");
+    expect(items[0]).toHaveTextContent("يتطلب أدلة إنجاز");
     expect(within(items[1]).getByText("مقترح بانتظار اعتماد الرئيس")).toBeInTheDocument();
     await userEvent.click(within(items[1]).getByRole("button", { name: "اعتماد التكليف" }));
     expect(handlers.onConfirm).toHaveBeenCalledWith(proposal);

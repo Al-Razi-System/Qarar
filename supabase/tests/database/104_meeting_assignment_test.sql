@@ -99,27 +99,27 @@ select pg_temp.s104_as('a5000000-0000-0000-0000-000000000011');
 select pg_temp.s104_seat_roster();
 set local role authenticated;
 
-select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30) $$,'23514',null,'no assignment before the session opens');
+select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30,'a5000000-0000-0000-0000-000000000012',false) $$,'23514',null,'no assignment before the session opens');
 select api_v1.open_meeting_session('a5000000-0000-0000-0000-000000000081',pg_temp.s104_meeting_token());
 
 -- Preconditions and validation.
-select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000092','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30) $$,'23514',null,'an item without a decision takes no assignment');
-select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30) $$,'22023',null,'an assignment needs a title of five characters or more');
-select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,null,null,current_date+30) $$,'22023',null,'an assignment needs a person or a unit');
-select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date-1) $$,'22023',null,'an assignment is not due in the past');
-select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000016',null,current_date+30) $$,'22023',null,'another tenant''s user cannot be assigned');
+select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000092','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30,'a5000000-0000-0000-0000-000000000012',false) $$,'23514',null,'an item without a decision takes no assignment');
+select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30,'a5000000-0000-0000-0000-000000000012',false) $$,'22023',null,'an assignment needs a title of five characters or more');
+select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,null,null,current_date+30,'a5000000-0000-0000-0000-000000000012',false) $$,'22023',null,'an assignment needs a person or a unit');
+select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date-1,'a5000000-0000-0000-0000-000000000012',false) $$,'22023',null,'an assignment is not due in the past');
+select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000016',null,current_date+30,'a5000000-0000-0000-0000-000000000012',false) $$,'22023',null,'another tenant''s user cannot be assigned');
 
 -- Authority.
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000013');
-select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30) $$,'42501',null,'a member cannot assign');
+select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30,'a5000000-0000-0000-0000-000000000012',false) $$,'42501',null,'a member cannot assign');
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000015');
-select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30) $$,'42501',null,'a system administrator cannot assign');
+select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30,'a5000000-0000-0000-0000-000000000012',false) $$,'42501',null,'a system administrator cannot assign');
 
 -- The chair issues: the task executes at once, before the decision is approved.
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000011');
 create temp table s104_ids(name text primary key, id uuid);
 grant select, insert on s104_ids to authenticated;
-insert into s104_ids select 'chair', (api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan','Within the semester','a5000000-0000-0000-0000-000000000013',null,current_date+30)->>'id')::uuid;
+insert into s104_ids select 'chair', (api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan','Within the semester','a5000000-0000-0000-0000-000000000013',null,current_date+30,'a5000000-0000-0000-0000-000000000012',false)->>'id')::uuid;
 select is(pg_temp.s104_assignment((select id from s104_ids where name='chair'))->>'status','active','the chair''s assignment is issued at once');
 select is(pg_temp.s104_task((select id from s104_ids where name='chair'))->>'status','new','it is an execution task at once');
 select ok(pg_temp.s104_task((select id from s104_ids where name='chair'))->>'action_no' ~ '^TSK-[0-9]{4}-[0-9]{6}$','the task gets a TSK reference from the database');
@@ -128,7 +128,7 @@ select is(pg_temp.s104_audits('meetings.assignment.issue'),1::bigint,'issuing is
 
 -- The rapporteur proposes; only the chair confirms.
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000012');
-insert into s104_ids select 'proposal', (api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Inform the departments',null,null,'a5000000-0000-0000-0000-000000000023',null)->>'id')::uuid;
+insert into s104_ids select 'proposal', (api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Inform the departments',null,null,'a5000000-0000-0000-0000-000000000023',null,'a5000000-0000-0000-0000-000000000012',false)->>'id')::uuid;
 select is(pg_temp.s104_assignment((select id from s104_ids where name='proposal'))->>'status','proposed','the rapporteur''s assignment is a proposal');
 select is(pg_temp.s104_task((select id from s104_ids where name='proposal'))->>'id',null,'a proposal is not executed');
 select throws_ok($$ select api_v2.confirm_meeting_assignment_v2((select id from s104_ids where name='proposal'),0) $$,'42501',null,'the rapporteur cannot confirm');
@@ -141,7 +141,7 @@ select throws_ok($$ select api_v2.confirm_meeting_assignment_v2((select id from 
 
 -- Withdrawing: the proposer before confirmation, the chair before work starts.
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000012');
-insert into s104_ids select 'withdrawn', (api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Draft a timetable',null,'a5000000-0000-0000-0000-000000000012',null,null)->>'id')::uuid;
+insert into s104_ids select 'withdrawn', (api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Draft a timetable',null,'a5000000-0000-0000-0000-000000000012',null,null,'a5000000-0000-0000-0000-000000000012',false)->>'id')::uuid;
 select is(api_v2.withdraw_meeting_assignment_v2((select id from s104_ids where name='withdrawn'),0)->>'status','withdrawn','the rapporteur withdraws their own proposal');
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000011');
 select is(api_v2.withdraw_meeting_assignment_v2((select id from s104_ids where name='proposal'),1)->>'status','withdrawn','the chair withdraws an issued assignment');
@@ -165,7 +165,7 @@ select pg_temp.s104_reject_decision();
 select is(pg_temp.s104_task((select id from s104_ids where name='chair'))->>'status','cancelled','a rejected decision cancels the session''s tasks');
 
 select pg_temp.s104_close_meeting();
-select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30) $$,'23514',null,'no assignment after the session');
+select throws_ok($$ select api_v2.propose_meeting_assignment_v2('a5000000-0000-0000-0000-000000000091','Update the study plan',null,'a5000000-0000-0000-0000-000000000013',null,current_date+30,'a5000000-0000-0000-0000-000000000012',false) $$,'23514',null,'no assignment after the session');
 
 select * from finish();
 rollback;
