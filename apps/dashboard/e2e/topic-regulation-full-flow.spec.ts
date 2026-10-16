@@ -22,8 +22,15 @@ test("إنشاء من القائمة: مجلس ثم تصنيف دون إعداد
   });
   await page.route("**/api/admin/typed-topics**", async route => {
     if (route.request().method() === "POST") {
-      submissions.push(route.request().postDataJSON());
-      await route.fulfill({ json: { data: { topic_id: topic, topic_no: "TOP-2026-000001" } } });
+      const command = route.request().postDataJSON();
+      submissions.push(command);
+      if (command.action === "prepare") {
+        await route.fulfill({ json: { data: { request_id: command.requestId, files: [] } } });
+      } else if (command.action === "submit") {
+        await route.fulfill({ json: { data: { topic_id: topic, topic_no: "TOP-2026-000001" } } });
+      } else {
+        await route.fulfill({ status: 400, json: { error: { message: "أمر تقديم غير متوقع في الاختبار" } } });
+      }
       return;
     }
     const query = new URL(route.request().url()).searchParams;
@@ -47,9 +54,11 @@ test("إنشاء من القائمة: مجلس ثم تصنيف دون إعداد
   await page.getByLabel("تفاصيل الموضوع").fill("طلب إنشاء برنامج أكاديمي جديد وفق التصنيف المحدد.");
   await page.getByRole("button", { name: "تقديم الموضوع", exact: true }).click();
   await expect(page.getByText("TOP-2026-000001", { exact: true })).toBeVisible();
-  expect(submissions).toHaveLength(1);
-  expect(Object.keys(submissions[0]).sort()).toEqual(["description", "requestId", "title", "unitId", "versionId"]);
+  expect(submissions).toHaveLength(2);
+  expect(submissions.map(command => command.action)).toEqual(["prepare", "submit"]);
+  expect(Object.keys(submissions[0]).sort()).toEqual(["action", "description", "evidence", "requestId", "title", "unitId", "versionId"]);
   expect(submissions[0]).toMatchObject({ unitId: council, versionId: version });
+  expect(submissions[1]).toEqual({ action: "submit", requestId: submissions[0].requestId });
   for (const contract of ["get_topic_regulation_options", "get_topic_categories_for_unit", "create_topic_with_regulation_bundle"]) {
     expect(legacyContracts).not.toContain(contract);
   }

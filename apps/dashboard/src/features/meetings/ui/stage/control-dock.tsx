@@ -28,7 +28,7 @@ export function ControlDock({ item, actions, note, busy, blockers, onAction, onC
   const [showBlockers, setShowBlockers] = useState(false);
   const reason = actions.find((action) => action.disabledReason)?.disabledReason ?? null;
   return (
-    <section aria-label="شريط تحكم رئيس المجلس" className="sticky bottom-3 z-30 flex flex-col gap-3 rounded-q-card border border-q-border-strong bg-q-surface p-3 font-sans text-q-text shadow-xl lg:static lg:flex-row lg:items-center lg:justify-between">
+    <section aria-label="شريط تحكم رئيس المجلس" className="sticky bottom-3 z-30 flex min-w-0 flex-col gap-3 rounded-q-card border border-q-border-strong bg-q-surface p-3 font-sans text-q-text shadow-xl lg:static">
       <div className="flex min-w-0 flex-col gap-2">
         <p className="m-0 truncate text-q-caption font-bold text-q-text-2">{item ? `البند ${item.agenda_order} · ${item.topic?.title_ar ?? "بند جدول الأعمال"}` : "لا يوجد بند محدد"}</p>
         <div className="flex flex-wrap items-center gap-2">
@@ -48,7 +48,7 @@ export function ControlDock({ item, actions, note, busy, blockers, onAction, onC
           {!busy && !reason && note && <span className="text-q-ui text-q-text-2">{note}</span>}
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2 border-t border-q-border pt-3 lg:border-s lg:border-t-0 lg:ps-4 lg:pt-0">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-q-border pt-3">
         <Button variant="secondary" disabled={busy || blockers.length > 0} onClick={onComplete}>إنهاء الجلسة والانتقال إلى إعداد المحضر</Button>
         {blockers.length > 0 && (
           <Button variant="ghost" onClick={() => setShowBlockers(true)}>ما بقي قبل الإنهاء ({blockers.length})</Button>
