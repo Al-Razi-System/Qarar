@@ -44,7 +44,7 @@ select throws_like(
 set local role qarar_execution_executor;
 select throws_like(
   $$ insert into qarar_execution.action_items (organization_id, action_no, decision_id, topic_id, title_ar) values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ACT-001', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'Test Action') $$,
-  '%Cannot create an action item for a decision in draft status%',
+  '%لا تُنشأ مهمة تنفيذ قبل اعتماد القرار%',
   'Should prevent creating action item for draft decision'
 );
 

@@ -84,7 +84,15 @@ export type MeetingMinutes = {
   decisions?: MinutesDecision[];
 };
 export type MeetingReadiness = { ready: boolean; checks: Array<{ code: string; label: string; complete: boolean; count?: number }> };
-export type MeetingTopicAttachment = { id: string; topic_id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number; description?: string | null; created_at?: string };
+export type MeetingTopicAttachment = {
+  id: string; topic_id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number; description?: string | null; created_at?: string;
+  /** The agenda item the file is discussed under, in this meeting. */
+  agenda_item_id?: string;
+  /** False when the chair withheld downloads for the item; the file is then shown inside the room only. */
+  download_allowed?: boolean;
+  /** The revision of that decision, sent back when the chair changes it. */
+  download_revision?: number;
+};
 export type AgendaCandidate = {
   discussion_instructions?: string | null;
   id: string;

@@ -12,6 +12,107 @@ export type Attendance = {
   updated_at: string;
 };
 
+/** A roster member as the member card shows them (list_meeting_member_profiles_v2). */
+export type MemberProfile = {
+  user_id: string;
+  attendance_record_id: string;
+  full_name_ar: string;
+  job_title?: string | null;
+  email?: string | null;
+  /** Returned only to the council's chair and rapporteur; null for everyone else. */
+  mobile?: string | null;
+  home_unit_name_ar?: string | null;
+  council_role_code?: string | null;
+  council_role_name_ar?: string | null;
+  membership_title?: string | null;
+  membership_start_date?: string | null;
+  attendance_status?: string | null;
+  verification_status?: string | null;
+  has_avatar: boolean;
+  avatar_revision: number;
+};
+
+export type MemberProfiles = { mobile_visible: boolean; members: MemberProfile[] };
+
+/** What the council's screens show, written by whoever controls the broadcast (get_meeting_broadcast_v2). */
+export type MeetingBroadcast = {
+  meeting_id: string;
+  /** Only while the session runs; before and after it nothing is broadcast. */
+  active: boolean;
+  controller_role: "chair" | "rapporteur";
+  /** Null until the controller chooses an item; screens then show the item the council is on. */
+  agenda_item_id: string | null;
+  panel: "instructions" | "attachments" | "history";
+  /** The file open on every screen, with its page; null when none is open. */
+  attachment_id?: string | null;
+  page?: number | null;
+  revision: number;
+  updated_at?: string | null;
+  viewer_controls: boolean;
+  can_hand_over: boolean;
+  can_take_back: boolean;
+  can_return: boolean;
+};
+
+/** An agenda item's discussion time, recorded by the database (list_meeting_item_timers_v2). */
+export type ItemTimer = {
+  agenda_item_id: string;
+  /** The chair's planned duration, or null without one. */
+  planned_minutes: number | null;
+  discussion_started_at: string | null;
+  discussion_ended_at: string | null;
+  revision: number;
+};
+
+export type MeetingItemTimers = { server_now: string; timers: ItemTimer[] };
+
+/** An agenda item the chair referred to another unit, pending its acceptance. */
+export type ItemReferral = {
+  agenda_item_id: string;
+  referral_id: string;
+  to_unit_id: string;
+  to_unit_name_ar: string;
+  reason: string;
+  status: "pending" | "accepted" | "rejected";
+  referred_at: string;
+};
+
+/** An execution task the chair issued in the session, or the rapporteur proposed. */
+export type MeetingAssignment = {
+  id: string;
+  agenda_item_id: string;
+  decision_id: string;
+  title_ar: string;
+  description: string | null;
+  assigned_user_id: string | null;
+  assigned_user_name_ar: string | null;
+  assigned_unit_id: string | null;
+  assigned_unit_name_ar: string | null;
+  /** Who follows the task and verifies its completion. */
+  follow_up_user_id: string | null;
+  follow_up_user_name_ar: string | null;
+  requires_evidence: boolean;
+  due_date: string | null;
+  status: "proposed" | "active" | "withdrawn";
+  revision: number;
+  proposed_by_me: boolean;
+  /** The execution task, once issued. */
+  action_no: string | null;
+  action_status: string | null;
+};
+
+export type MeetingAssignments = {
+  viewer: { can_issue: boolean; can_propose: boolean };
+  assignments: MeetingAssignment[];
+  /** For the chair and the rapporteur only: the roster and the active units. */
+  options: { users: Array<{ id: string; name_ar: string }>; units: Array<{ id: string; name_ar: string }> } | null;
+};
+
+export type NewAssignment = { title: string; userId: string | null; unitId: string | null; dueDate: string | null; followUpId: string; requiresEvidence: boolean };
+
+/** The meeting's referrals, and for the chair alone the units an item may go to. */
+export type MeetingReferrals = { referrals: ItemReferral[]; destinations: Array<{ id: string; name_ar: string }> };
+
 export type AgendaDiscussionItem = {
   id: string;
   agenda_order: number;

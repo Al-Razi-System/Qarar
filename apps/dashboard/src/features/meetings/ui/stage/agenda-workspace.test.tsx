@@ -1,11 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { AgendaDiscussionItem, Decision, LiveMeetingSession, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, Decision, LiveMeetingSession, MeetingBroadcast, VotingRound } from "../../model/live-meeting";
 import { DecisionComposerDialog } from "../decision-composer-dialog";
 import { AgendaWorkspace } from "./agenda-workspace";
 import { MemberVoteCard } from "./member-vote-card";
 import { ReasonDialog } from "./reason-dialog";
+import { ReferralDialog } from "./referral-dialog";
 
 function sessionOf(mode: "chair" | "rapporteur" | "member", locked = true): LiveMeetingSession {
   return {
@@ -202,6 +203,162 @@ describe("MemberVoteCard", () => {
   });
 });
 
+function broadcastOf(overrides: Partial<MeetingBroadcast> = {}): MeetingBroadcast {
+  return {
+    meeting_id: "meeting", active: true, controller_role: "chair", agenda_item_id: null, panel: "instructions", revision: 4,
+    viewer_controls: false, can_hand_over: false, can_take_back: false, can_return: false, ...overrides,
+  };
+}
+const withMaterials: AgendaDiscussionItem[] = [
+  { ...first, discussion_instructions: "ابدأ بعرض مبررات البرنامج" },
+  { ...second, discussion_instructions: "عرض أسماء اللجنة" },
+];
+const files = [
+  { id: "f1", topic_id: "t2", file_name: "قائمة اللجنة.pdf", file_url: "https://example.test/f1", mime_type: "application/pdf" },
+];
+
+describe("AgendaWorkspace broadcast", () => {
+  it("shows a member the item and panel the chair broadcasts, without letting them choose", () => {
+    setup("member", { agenda: withMaterials, attachments: files, broadcast: broadcastOf({ agenda_item_id: "a2", panel: "attachments" }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    expect(screen.getByRole("status")).toHaveTextContent("تتابع شاشة رئيس المجلس.");
+    const topic = screen.getByRole("region", { name: "الموضوع المعروض" });
+    expect(within(topic).getByRole("heading", { name: "تشكيل اللجنة" })).toBeInTheDocument();
+    expect(within(topic).getByText("قائمة اللجنة.pdf")).toBeInTheDocument();
+    expect(within(topic).getByRole("radio", { name: "التعليمات" })).toBeDisabled();
+    expect(within(topic).getByText("يعرض رئيس المجلس هذا القسم على كل الشاشات.")).toBeInTheDocument();
+    expect(within(screen.getByRole("navigation", { name: "جدول الأعمال" })).queryAllByRole("button")).toHaveLength(0);
+  });
+
+  it("broadcasts the item the controller opens", async () => {
+    const onBroadcast = vi.fn();
+    setup("chair", { agenda: withMaterials, attachments: files, broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), onBroadcast, onHandOver: vi.fn() });
+    await userEvent.click(within(screen.getByRole("navigation", { name: "جدول الأعمال" })).getAllByRole("button")[1]);
+    expect(onBroadcast).toHaveBeenCalledWith("a2", "instructions");
+  });
+
+  it("broadcasts a panel chosen by the controller", async () => {
+    const onBroadcast = vi.fn();
+    setup("chair", { agenda: withMaterials, attachments: files, broadcast: broadcastOf({ viewer_controls: true, agenda_item_id: "a2" }), onBroadcast, onHandOver: vi.fn() });
+    await userEvent.click(screen.getByRole("radio", { name: "المرفقات (1)" }));
+    expect(onBroadcast).toHaveBeenCalledWith("a2", "attachments");
+  });
+
+  it("offers each handover only to whoever may make it", async () => {
+    const onHandOver = vi.fn();
+    const { props, view } = setup("chair", { broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), onBroadcast: vi.fn(), onHandOver });
+    await userEvent.click(screen.getByRole("button", { name: "تسليم التحكم للمقرر" }));
+    expect(onHandOver).toHaveBeenCalledWith("rapporteur");
+    view.rerender(<AgendaWorkspace {...props} broadcast={broadcastOf({ controller_role: "rapporteur", can_take_back: true })} />);
+    expect(screen.getByRole("status")).toHaveTextContent("تتابع شاشة مقرر المجلس.");
+    await userEvent.click(screen.getByRole("button", { name: "استرجاع التحكم" }));
+    expect(onHandOver).toHaveBeenLastCalledWith("chair");
+    view.rerender(<AgendaWorkspace {...props} session={sessionOf("member")} broadcast={broadcastOf()} />);
+    expect(screen.queryByRole("button", { name: /التحكم/ })).not.toBeInTheDocument();
+  });
+
+  it("moves the broadcast with the council once the item on screen is finished", () => {
+    const onBroadcast = vi.fn();
+    const decided: AgendaDiscussionItem = { ...first, agenda_status: "discussed", requires_voting: false, discussion_notes: "ملخص كافٍ" };
+    const { props, view } = setup("chair", { agenda: [first, second], broadcast: broadcastOf({ viewer_controls: true, agenda_item_id: "a1" }), onBroadcast, onHandOver: vi.fn() });
+    expect(onBroadcast).not.toHaveBeenCalled();
+    view.rerender(<AgendaWorkspace {...props} agenda={[decided, second]} />);
+    expect(onBroadcast).toHaveBeenCalledWith("a2", "instructions");
+  });
+
+  it("shows why the broadcast could not be changed", () => {
+    setup("chair", { broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), broadcastError: "تغيّر البث من شاشة أخرى، فحُدّثت الشاشة. أعد المحاولة.", onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    expect(screen.getByRole("alert")).toHaveTextContent("تغيّر البث من شاشة أخرى");
+  });
+});
+
+describe("AgendaWorkspace documents", () => {
+  const pdf = { id: "f2", topic_id: "t2", agenda_item_id: "a2", file_name: "قائمة اللجنة.pdf", file_url: "https://example.test/api/admin/topics/upload?topicId=t2&path=topics/t2/list.pdf", mime_type: "application/pdf", download_allowed: true, download_revision: 2 };
+
+  it("shows a member the file the chair broadcasts, on its page, with nothing to open or turn", () => {
+    setup("member", { agenda: withMaterials, attachments: [pdf], broadcast: broadcastOf({ agenda_item_id: "a2", panel: "attachments", attachment_id: "f2", page: 4 }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    const viewer = screen.getByRole("region", { name: "عرض قائمة اللجنة.pdf" });
+    expect(within(viewer).getByText(/يعرضه رئيس المجلس على كل الشاشات/)).toBeInTheDocument();
+    const frame = viewer.querySelector("iframe");
+    expect(frame).toHaveAttribute("src", expect.stringContaining("#page=4"));
+    expect(frame).toHaveAttribute("src", expect.stringContaining("meetingId=meeting"));
+    expect(within(viewer).queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "عرض قائمة اللجنة.pdf" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "عرض قائمة اللجنة.pdf" })).not.toBeInTheDocument();
+  });
+
+  it("lets the controller open, turn and close a file for every screen", async () => {
+    const onBroadcastDocument = vi.fn();
+    const { props, view } = setup("chair", { agenda: withMaterials, attachments: [pdf], broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true, agenda_item_id: "a2", panel: "attachments" }), onBroadcast: vi.fn(), onHandOver: vi.fn(), onBroadcastDocument });
+    await userEvent.click(screen.getByRole("button", { name: "عرض قائمة اللجنة.pdf" }));
+    expect(onBroadcastDocument).toHaveBeenLastCalledWith("f2", 1, "a2");
+    view.rerender(<AgendaWorkspace {...props} broadcast={broadcastOf({ viewer_controls: true, can_hand_over: true, agenda_item_id: "a2", panel: "attachments", attachment_id: "f2", page: 1 })} />);
+    await userEvent.click(screen.getByRole("button", { name: "الصفحة التالية" }));
+    expect(onBroadcastDocument).toHaveBeenLastCalledWith("f2", 2, "a2");
+    await userEvent.click(screen.getByRole("button", { name: "إغلاق الملف" }));
+    expect(onBroadcastDocument).toHaveBeenLastCalledWith(null, null, "a2");
+  });
+
+  it("hides the download of a withheld item and lets only the chair change it", async () => {
+    const onChange = vi.fn();
+    const withheld = { ...pdf, download_allowed: false };
+    const downloads = { pendingItemId: null, errorItemId: null, error: null, onChange };
+    const { props, view } = setup("chair", { agenda: withMaterials, attachments: [withheld], broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true, agenda_item_id: "a2", panel: "attachments" }), onBroadcast: vi.fn(), onHandOver: vi.fn(), downloads });
+    expect(screen.queryByRole("link", { name: "تنزيل قائمة اللجنة.pdf" })).not.toBeInTheDocument();
+    expect(screen.getByText("التنزيل غير متاح لهذا البند؛ يُعرض داخل الغرفة.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: "السماح للمشاركين بتنزيل مرفقات هذا البند" }));
+    expect(onChange).toHaveBeenCalledWith("a2", true, 2);
+    view.rerender(<AgendaWorkspace {...props} downloads={{ ...downloads, pendingItemId: "a2" }} />);
+    expect(screen.getByRole("checkbox", { name: "السماح للمشاركين بتنزيل مرفقات هذا البند" })).toBeDisabled();
+    expect(screen.getByText("جارٍ حفظ إذن التنزيل…")).toBeInTheDocument();
+    view.rerender(<AgendaWorkspace {...props} downloads={{ ...downloads, errorItemId: "a2", error: "تغيّر إذن التنزيل من شاشة أخرى" }} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("تغيّر إذن التنزيل من شاشة أخرى");
+    view.rerender(<AgendaWorkspace {...props} session={sessionOf("member")} broadcast={broadcastOf({ agenda_item_id: "a2", panel: "attachments" })} />);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+});
+
+describe("AgendaWorkspace item timer", () => {
+  const timers = (overrides = {}) => ({
+    data: { server_now: "2026-10-16T08:07:32Z", timers: [{ agenda_item_id: "a1", planned_minutes: 5, discussion_started_at: "2026-10-16T08:00:00Z", discussion_ended_at: null, revision: 3, ...overrides }] },
+    clockOffsetMs: 0,
+  });
+  const planned = (onChange = vi.fn(), extra = {}) => ({ pendingItemId: null, errorItemId: null, error: null, onChange, ...extra });
+
+  it("shows every screen how long the item has been discussed, and the overrun", () => {
+    vi.useFakeTimers({ now: new Date("2026-10-16T08:07:32Z"), shouldAdvanceTime: true });
+    try {
+      setup("member", { timers: timers(), broadcast: broadcastOf(), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+      const timer = screen.getByRole("timer");
+      expect(timer).toHaveAccessibleName("تجاوزت المناقشة الوقت المحدد بـ 02:32");
+      expect(timer).toHaveTextContent("07:32");
+      expect(timer).toHaveTextContent("من 5 دقيقة");
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("lets only the chair plan the item's duration, with its pending and failure states", async () => {
+    const onChange = vi.fn();
+    const { props, view } = setup("chair", { timers: timers(), plannedMinutes: planned(onChange), broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "المدة المقررة" }), "15");
+    expect(onChange).toHaveBeenCalledWith("a1", 15, 3);
+    view.rerender(<AgendaWorkspace {...props} plannedMinutes={planned(onChange, { pendingItemId: "a1" })} />);
+    expect(screen.getByRole("combobox", { name: "المدة المقررة" })).toBeDisabled();
+    expect(screen.getByText("جارٍ حفظ المدة…")).toBeInTheDocument();
+    view.rerender(<AgendaWorkspace {...props} plannedMinutes={planned(onChange, { errorItemId: "a1", error: "تغيّرت مدة البند من شاشة أخرى" })} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("تغيّرت مدة البند من شاشة أخرى");
+    view.rerender(<AgendaWorkspace {...props} broadcast={broadcastOf({ controller_role: "rapporteur", can_take_back: false })} session={sessionOf("rapporteur")} />);
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("shows the final duration of a finished discussion without counting on", () => {
+    setup("member", { timers: timers({ discussion_ended_at: "2026-10-16T08:04:00Z" }), broadcast: broadcastOf(), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    expect(screen.getByRole("timer")).toHaveTextContent("استغرقت المناقشة");
+    expect(screen.getByRole("timer")).toHaveTextContent("04:00");
+  });
+});
+
 describe("DecisionComposerDialog editing a saved decision", () => {
   const item: AgendaDiscussionItem = { id: "a1", agenda_order: 1, agenda_status: "discussed", topic: { id: "t1", title_ar: "خطة البرنامج" } };
   const decision: Decision = { id: "d1", decision_no: "ق-1", agenda_item_id: "a1", decision_status: "ready_for_approval", decision_text: "اعتماد الخطة كما وردت.", updated_at: "2026-10-09T10:05:00Z", can_edit_text: true };
@@ -254,5 +411,93 @@ describe("ReasonDialog", () => {
     expect(screen.getByLabelText("سبب تأجيل البند")).toHaveValue("استكمال الدراسة");
     await userEvent.click(screen.getByRole("button", { name: "تأجيل" }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AgendaWorkspace referral", () => {
+  const referrals = (rows: Array<Record<string, unknown>> = []) => ({
+    referrals: rows.map((row) => ({ agenda_item_id: "a1", referral_id: "f1", to_unit_id: "u9", to_unit_name_ar: "لجنة الخطط", reason: "يحتاج دراسة اللجنة", status: "pending" as const, referred_at: "2026-10-16T09:00:00Z", ...row })),
+    destinations: [{ id: "u9", name_ar: "لجنة الخطط" }],
+  });
+
+  it("offers the chair a referral of the item under discussion", async () => {
+    const onRequestReferral = vi.fn();
+    setup("chair", { referrals: referrals(), onRequestReferral, broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    await userEvent.click(within(screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" })).getByRole("button", { name: "إحالة البند" }));
+    expect(onRequestReferral).toHaveBeenCalledWith(expect.objectContaining({ id: "a1" }));
+  });
+
+  it("offers no referral to a manager who is not the chair", () => {
+    setup("chair", { referrals: referrals(), onRequestReferral: vi.fn(), broadcast: broadcastOf({ controller_role: "rapporteur", viewer_controls: true, can_hand_over: false, can_return: true }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    expect(screen.queryByRole("button", { name: "إحالة البند" })).not.toBeInTheDocument();
+  });
+
+  it("shows every screen where the item went, and no vote on it", () => {
+    setup("chair", { agenda: [{ ...first, agenda_status: "discussed", voting_available_now: true }, second], referrals: referrals([{}]), onRequestReferral: vi.fn(), broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    const dock = screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" });
+    expect(within(dock).queryByRole("button", { name: "فتح التصويت للأعضاء" })).not.toBeInTheDocument();
+    expect(within(dock).getByText("أُحيل البند إلى لجنة الخطط، بانتظار قبولها.")).toBeInTheDocument();
+    expect(within(screen.getByRole("navigation", { name: "جدول الأعمال" })).getByText("محال إلى لجنة الخطط")).toBeInTheDocument();
+  });
+});
+
+describe("ReferralDialog", () => {
+  const units = [{ id: "u9", name_ar: "لجنة الخطط" }];
+
+  it("explains what is missing, keeps the choice on failure and closes on success", async () => {
+    const onClose = vi.fn();
+    const onSubmit = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const { rerender } = render(<ReferralDialog topicTitle="خطة البرنامج" destinations={units} busy={false} onClose={onClose} onSubmit={onSubmit} />);
+    const confirm = screen.getByRole("button", { name: "إحالة البند" });
+    expect(confirm).toBeDisabled();
+    expect(screen.getByText("اختر الجهة المحال إليها.")).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("الجهة المحال إليها"), "u9");
+    expect(screen.getByText("اكتب سبب الإحالة بخمسة أحرف على الأقل.")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("سبب الإحالة"), "يحتاج دراسة اللجنة");
+    await userEvent.click(confirm);
+    expect(onSubmit).toHaveBeenCalledWith("u9", "يحتاج دراسة اللجنة");
+    expect(onClose).not.toHaveBeenCalled();
+    rerender(<ReferralDialog topicTitle="خطة البرنامج" destinations={units} busy={false} error="تغيّر البند من شاشة أخرى، فحُدّثت الشاشة. أعد المحاولة." onClose={onClose} onSubmit={onSubmit} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("تغيّر البند من شاشة أخرى");
+    expect(screen.getByLabelText("الجهة المحال إليها")).toHaveValue("u9");
+    expect(screen.getByLabelText("سبب الإحالة")).toHaveValue("يحتاج دراسة اللجنة");
+    await userEvent.click(screen.getByRole("button", { name: "إحالة البند" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the pending state and blocks a second submission", () => {
+    render(<ReferralDialog topicTitle="خطة البرنامج" destinations={units} busy onClose={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /جارٍ الإحالة/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "إلغاء" })).toBeDisabled();
+  });
+
+  it("says so when no unit can receive the item", () => {
+    render(<ReferralDialog topicTitle="خطة البرنامج" destinations={[]} busy={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByText("لا توجد جهة نشطة أخرى يُحال إليها البند.")).toBeInTheDocument();
+  });
+});
+
+describe("AgendaWorkspace assignments", () => {
+  const data = { viewer: { can_issue: true, can_propose: false }, assignments: [], options: { users: [{ id: "u2", name_ar: "د. هدى" }], units: [{ id: "g1", name_ar: "عمادة القبول" }] } };
+  const assignments = (onCreate = vi.fn(async () => true)) => ({ data, activity: { key: null, errorKey: null, error: null }, onCreate, onConfirm: vi.fn(), onWithdraw: vi.fn() });
+  const approvedRound: VotingRound = { id: "r1", agenda_item_id: "a1", status: "closed", result: "approved", closed_at: "2026-10-16T09:00:00Z" };
+  const decision: Decision = { id: "d1", decision_no: "DEC-2026-000014", agenda_item_id: "a1", decision_status: "ready_for_approval", decision_text: "اعتماد الخطة." };
+
+  it("opens the assignments under the item's decision and sends them for that item", async () => {
+    const onCreate = vi.fn(async () => true);
+    setup("chair", { agenda: [{ ...first, agenda_status: "discussed" }, second], rounds: [approvedRound], decisions: [decision], assignments: assignments(onCreate) });
+    const section = screen.getByRole("region", { name: "التكليفات" });
+    await userEvent.type(within(section).getByLabelText("عنوان التكليف"), "إبلاغ عمادة القبول");
+    await userEvent.selectOptions(within(section).getByLabelText("المكلَّف"), "unit:g1");
+    await userEvent.selectOptions(within(section).getByLabelText("المتابع"), "u2");
+    await userEvent.click(within(section).getByRole("button", { name: "إصدار التكليف" }));
+    expect(onCreate).toHaveBeenCalledWith("a1", { title: "إبلاغ عمادة القبول", userId: null, unitId: "g1", dueDate: null, followUpId: "u2", requiresEvidence: false });
+  });
+
+  it("offers no assignment before the decision is drafted, nor a form on the presentation screen", () => {
+    const { props, view } = setup("chair", { assignments: assignments() });
+    expect(screen.queryByRole("region", { name: "التكليفات" })).not.toBeInTheDocument();
+    view.rerender(<AgendaWorkspace {...props} agenda={[{ ...first, agenda_status: "discussed" }, second]} rounds={[approvedRound]} decisions={[decision]} presenting />);
+    expect(screen.queryByRole("form", { name: "تكليف جديد" })).not.toBeInTheDocument();
   });
 });

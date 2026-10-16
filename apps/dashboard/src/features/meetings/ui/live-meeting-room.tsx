@@ -9,7 +9,7 @@ import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { cn } from "@/shared/lib/utils";
-import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
+import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingAssignment, MeetingAssignments, MeetingItemTimers, MeetingReferrals, NewAssignment, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
 import type { MeetingTopicAttachment } from "../model/meeting";
 import { AttendanceQrDialog } from "./attendance-qr-dialog";
 import { ChairAttendanceConsole } from "./chair-attendance-console";
@@ -19,8 +19,11 @@ import { AgendaWorkspace } from "./stage/agenda-workspace";
 import type { DiscussionStatus } from "./stage/discussion-summary";
 import { MemberVoteCard, type VoteValue } from "./stage/member-vote-card";
 import { ReasonDialog } from "./stage/reason-dialog";
+import { NEW_ASSIGNMENT_KEY, type AssignmentActivity } from "./stage/item-assignments";
+import { ReferralDialog } from "./stage/referral-dialog";
 import { RoomStage } from "./stage/room-stage";
 import { RoomTopBar } from "./stage/room-top-bar";
+import { useMeetingBroadcast } from "./stage/use-meeting-broadcast";
 import { useRoomTheme } from "./stage/use-room-theme";
 
 type MeetingDetail = { agenda_items?: AgendaDiscussionItem[]; status_history?: Array<{ to_status: string; changed_at: string }> };
@@ -40,6 +43,14 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const roomRef = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<RoomTab>("attendance");
   const [presenting, setPresenting] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [assignments, setAssignments] = useState<MeetingAssignments | null>(null);
+  const [assignmentActivity, setAssignmentActivity] = useState<AssignmentActivity>({ key: null, errorKey: null, error: null });
+  const [referrals, setReferrals] = useState<MeetingReferrals | null>(null);
+  const [referralItem, setReferralItem] = useState<AgendaDiscussionItem | null>(null);
+  const [itemTimers, setItemTimers] = useState<{ data: MeetingItemTimers | null; clockOffsetMs: number }>({ data: null, clockOffsetMs: 0 });
+  const [plannedState, setPlannedState] = useState<{ pendingItemId: string | null; errorItemId: string | null; error: string | null }>({ pendingItemId: null, errorItemId: null, error: null });
+  const [downloadState, setDownloadState] = useState<{ pendingItemId: string | null; errorItemId: string | null; error: string | null }>({ pendingItemId: null, errorItemId: null, error: null });
   const [session, setSession] = useState<LiveMeetingSession | null>(null);
   const [agenda, setAgenda] = useState<AgendaDiscussionItem[]>([]);
   const [startedAt, setStartedAt] = useState<string | null>(null);
@@ -49,6 +60,10 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [topicAttachments, setTopicAttachments] = useState<MeetingTopicAttachment[]>([]);
   const [topicHistory, setTopicHistory] = useState<Record<string, TopicGovernanceHistory>>({});
   const historyLoadedForMeeting = useRef<string | null>(null);
+  // The member cards are reloaded only when the roster or someone's attendance changes.
+  const profilesLoadedFor = useRef<string | null>(null);
+  const [profiles, setProfiles] = useState<MemberProfiles | null>(null);
+  const [profilesError, setProfilesError] = useState<string | null>(null);
   const loadInFlight = useRef(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [checkIn, setCheckIn] = useState<CheckInToken | null>(null);
@@ -77,9 +92,13 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     };
   }, [meetingId, refreshInterval]);
 
+  // While the session runs, every screen follows the broadcast of whoever controls it.
+  const live = useMeetingBroadcast(meetingId, session?.meeting.status === "in_progress");
+
   // Leaving full screen with the browser's own key also leaves presentation mode.
   useEffect(() => {
     function onFullscreenChange() {
+      setFullscreen(Boolean(document.fullscreenElement));
       if (!document.fullscreenElement) setPresenting(false);
     }
     document.addEventListener("fullscreenchange", onFullscreenChange);
@@ -118,6 +137,30 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       setDecisions(meetingDecisions ?? []);
       setRounds(meetingRounds ?? []);
       setTopicAttachments(attachments ?? []);
+      // The timers are read with every refresh; without them the room works as before.
+      await liveMeetingRpc<MeetingItemTimers>("list_meeting_item_timers_v2", { p_meeting_id: meetingId })
+        .then((data) => setItemTimers({ data, clockOffsetMs: Date.parse(data.server_now) - Date.now() }))
+        .catch(() => setItemTimers((current) => current));
+      // Referrals too: without them the room shows no referral and offers none.
+      await liveMeetingRpc<MeetingReferrals>("list_meeting_referrals_v2", { p_meeting_id: meetingId })
+        .then(setReferrals)
+        .catch(() => setReferrals((current) => current));
+      // And assignments: without them the decision shows no assignment section.
+      await liveMeetingRpc<MeetingAssignments>("list_meeting_assignments_v2", { p_meeting_id: meetingId })
+        .then(setAssignments)
+        .catch(() => setAssignments((current) => current));
+      const rosterKey = `${meetingId}|${live.attendance.map((record) => `${record.user_id}:${record.status}:${record.verification_status ?? ""}`).join(",")}`;
+      if (profilesLoadedFor.current !== rosterKey) {
+        profilesLoadedFor.current = rosterKey;
+        try {
+          setProfiles(await liveMeetingRpc<MemberProfiles>("list_meeting_member_profiles_v2", { p_meeting_id: meetingId }));
+          setProfilesError(null);
+        } catch (error) {
+          // The table still works without the cards; the failure is shown in the card the viewer opens.
+          profilesLoadedFor.current = null;
+          setProfilesError(messageOf(error, "تعذر تحميل بطاقات الأعضاء. أعد المحاولة بعد قليل."));
+        }
+      }
       if (historyLoadedForMeeting.current !== meetingId) {
         const topicIds = [...new Set((detail.agenda_items ?? []).map((item) => item.topic?.id).filter((id): id is string => Boolean(id)))];
         const entries = await Promise.all(topicIds.map(async (topicId) => {
@@ -220,6 +263,70 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     else if (document.fullscreenElement) void document.exitFullscreen?.()?.catch(() => undefined);
   }
 
+  async function runAssignment(key: string, action: () => Promise<unknown>, fallback: string) {
+    setAssignmentActivity({ key, errorKey: null, error: null });
+    try {
+      await action();
+      await load(true);
+      setAssignmentActivity({ key: null, errorKey: null, error: null });
+      return true;
+    } catch (error) {
+      setAssignmentActivity({ key: null, errorKey: key, error: messageOf(error, fallback) });
+      await load(true);
+      return false;
+    }
+  }
+
+  const assignmentActions = {
+    onCreate: (agendaItemId: string, input: NewAssignment) => runAssignment(NEW_ASSIGNMENT_KEY, () => liveMeetingRpc("propose_meeting_assignment_v2", {
+      p_agenda_item_id: agendaItemId, p_title: input.title, p_description: null,
+      p_assigned_user_id: input.userId, p_assigned_unit_id: input.unitId, p_due_date: input.dueDate,
+      p_follow_up_user_id: input.followUpId, p_requires_evidence: input.requiresEvidence,
+    }), "تعذر حفظ التكليف."),
+    onConfirm: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => liveMeetingRpc("confirm_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر اعتماد التكليف."),
+    onWithdraw: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => liveMeetingRpc("withdraw_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر سحب التكليف."),
+  };
+
+  function submitReferral(toUnitId: string, reason: string) {
+    if (!referralItem) return Promise.resolve(false);
+    // The item as the room last read it: a change from another screen is refused, not overwritten.
+    const item = agenda.find((row) => row.id === referralItem.id) ?? referralItem;
+    return perform(
+      () => liveMeetingRpc("refer_agenda_item_v2", { p_agenda_item_id: item.id, p_to_unit_id: toUnitId, p_reason: reason, p_expected_updated_at: item.updated_at }),
+      "أُحيل البند، وينتظر قبول الجهة المحال إليها.",
+    );
+  }
+
+  async function setPlannedMinutes(agendaItemId: string, minutes: number | null, revision: number) {
+    setPlannedState({ pendingItemId: agendaItemId, errorItemId: null, error: null });
+    try {
+      await liveMeetingRpc("set_agenda_item_planned_minutes_v2", { p_agenda_item_id: agendaItemId, p_minutes: minutes, p_expected_revision: revision });
+      await load(true);
+      setPlannedState({ pendingItemId: null, errorItemId: null, error: null });
+    } catch (error) {
+      setPlannedState({ pendingItemId: null, errorItemId: agendaItemId, error: messageOf(error, "تعذر حفظ مدة البند.") });
+      await load(true);
+    }
+  }
+
+  async function setItemDownloads(agendaItemId: string, allowed: boolean, revision: number) {
+    setDownloadState({ pendingItemId: agendaItemId, errorItemId: null, error: null });
+    try {
+      await liveMeetingRpc("set_agenda_item_downloads_v2", { p_agenda_item_id: agendaItemId, p_allowed: allowed, p_expected_revision: revision });
+      await load(true);
+      setDownloadState({ pendingItemId: null, errorItemId: null, error: null });
+    } catch (error) {
+      setDownloadState({ pendingItemId: null, errorItemId: agendaItemId, error: messageOf(error, "تعذر حفظ إذن التنزيل.") });
+      await load(true);
+    }
+  }
+
+  function toggleFullscreen() {
+    // A member may fill the screen with the meeting; the browser may refuse, and the room still works.
+    if (document.fullscreenElement) void document.exitFullscreen?.()?.catch(() => undefined);
+    else void roomRef.current?.requestFullscreen?.()?.catch(() => undefined);
+  }
+
   if (loading) return <div className="grid min-h-96 place-items-center font-sans"><p role="status" className="m-0 text-q-ui font-bold text-q-text-2">جارٍ تجهيز غرفة الاجتماع…</p></div>;
   if (!session) return <div className="flex flex-col items-start gap-3 font-sans"><InlineMessage tone="error">{loadError ?? "تعذر تحميل بيانات الجلسة. أعد المحاولة من صفحة الاجتماعات."}</InlineMessage><Button variant="secondary" onClick={() => void load()}>إعادة المحاولة</Button></div>;
 
@@ -227,8 +334,11 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const rapporteur = session.viewer.mode === "rapporteur";
   const pendingVotes = myVotes.filter((vote) => !vote.has_voted);
   const dialogError = notice?.kind === "error" ? notice.text : null;
-  const activeTab: RoomTab = presenting ? "agenda" : tab;
-  const tabs: Array<{ value: RoomTab; label: string; count?: number }> = [
+  // Once the roster is locked a member has nothing else to open: their screen follows the broadcast.
+  const followsBroadcast = Boolean(live.broadcast?.active && !live.broadcast.viewer_controls)
+    && session.viewer.mode === "member" && !session.viewer.can_manage_voting && session.meeting.attendance_locked;
+  const activeTab: RoomTab = presenting || followsBroadcast ? "agenda" : tab;
+  const tabs: Array<{ value: RoomTab; label: string; count?: number }> = followsBroadcast ? [] : [
     ...(session.viewer.is_roster_member ? [{ value: "my-attendance" as const, label: "حضوري الشخصي" }] : []),
     ...(operator ? [{ value: "attendance" as const, label: "إدارة الحضور" }] : []),
     { value: "agenda", label: "جدول الأعمال والتصويت", count: pendingVotes.length },
@@ -236,7 +346,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
 
   const ballots = pendingVotes.map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy} onCast={(roundId: string, value: VoteValue, note: string | null) => void perform(() => liveMeetingRpc("cast_vote", { p_voting_round_id: roundId, p_vote_value: value, p_vote_note: note }), "تم تسجيل صوتك وملاحظتك بسرية.")} />);
   const steering = session.viewer.mode !== "member" || session.viewer.can_manage_voting;
-  const stageProps = { session, agenda, rounds, decisions };
+  const stageProps = { session, agenda, rounds, decisions, referrals: referrals?.referrals, profiles, profilesError };
 
   return (
     <div
@@ -247,7 +357,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
         (theme.dark || presenting) && "rounded-q-card bg-q-bg p-3 sm:p-4",
         // One fixed screen for whoever steers the meeting; the columns scroll inside it.
         steering && activeTab === "agenda" && "lg:h-[calc(100dvh-9.5rem)] lg:min-h-[640px]",
-        presenting && "lg:h-dvh",
+        (presenting || fullscreen) && "lg:h-dvh overflow-y-auto",
       )}
     >
       {notice && !presenting && <InlineMessage tone={notice.kind === "success" ? "success" : "error"} className="sticky top-2 z-40 border border-q-border text-q-ui shadow-lg">{notice.text}</InlineMessage>}
@@ -258,6 +368,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
         dark={theme.dark}
         onToggleTheme={theme.toggle}
         presentation={session.viewer.can_manage_session ? { active: presenting, onToggle: togglePresentation } : undefined}
+        fullscreen={session.viewer.can_manage_session ? undefined : { active: fullscreen, onToggle: toggleFullscreen }}
       />
 
       {presenting && pendingVotes.length > 0 && <InlineMessage tone="info">لديك تصويت مفتوح. أنهِ وضع العرض لتسجيل صوتك دون أن يظهر على الشاشة.</InlineMessage>}
@@ -308,8 +419,20 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           decisions={decisions}
           busy={busy}
           presenting={presenting}
+          broadcast={live.broadcast}
+          broadcastPending={live.pending}
+          broadcastError={live.error}
+          onBroadcast={live.choose}
+          onHandOver={(toRole) => void live.handOver(toRole)}
+          onBroadcastDocument={live.openDocument}
+          timers={itemTimers}
+          plannedMinutes={{ ...plannedState, onChange: (itemId, minutes, revision) => void setPlannedMinutes(itemId, minutes, revision) }}
+          downloads={{ ...downloadState, onChange: (itemId, allowed, revision) => void setItemDownloads(itemId, allowed, revision) }}
           onUpdateDiscussion={updateDiscussion}
           onRequestPostpone={(item) => { setNotice(null); setReasonRequest({ kind: "postpone", item }); }}
+          referrals={referrals}
+          assignments={{ data: assignments, activity: assignmentActivity, ...assignmentActions }}
+          onRequestReferral={(item) => { setNotice(null); setReferralItem(item); }}
           onOpenRound={(item) => void perform(() => liveMeetingRpc("open_voting_round", { p_agenda_item_id: item.id, p_expected_meeting_updated_at: session.meeting.updated_at }), "فُتحت جولة التصويت لهذا البند.")}
           onCloseRound={(round) => void perform(() => liveMeetingRpc("close_voting_round", { p_voting_round_id: round.id, p_reason: "إغلاق الجولة بعد اكتمال التصويت." }), "أُغلقت الجولة وحُسبت النتيجة.")}
           onCreateDecision={(round, item) => { setNotice(null); setDecisionDraft({ round, item }); }}
@@ -322,6 +445,16 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
 
       {decisionDraft && <DecisionComposerDialog key={decisionDraft.decision?.id ?? decisionDraft.item.id} item={decisionDraft.item} round={decisionDraft.round} decision={decisionDraft.decision} busy={busy} error={dialogError} isRapporteur={rapporteur} onClose={() => setDecisionDraft(null)} onSubmit={submitDecision} />}
 
+      {referralItem && (
+        <ReferralDialog
+          topicTitle={referralItem.topic?.title_ar ?? "البند"}
+          destinations={referrals?.destinations ?? []}
+          busy={busy}
+          error={dialogError}
+          onClose={() => setReferralItem(null)}
+          onSubmit={submitReferral}
+        />
+      )}
       {reasonRequest?.kind === "postpone" && (
         <ReasonDialog
           title="تأجيل البند"

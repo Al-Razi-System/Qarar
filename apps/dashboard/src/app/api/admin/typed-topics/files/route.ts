@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getQararEnv, qararRpc, qararRpcV2, requireQararSession } from "@/shared/api/qarar-server";
+import { MEETING_DOWNLOAD_WITHHELD } from "@/shared/security/meeting-downloads";
 import { getDashboardOrigin, rejectUntrustedMutation } from "@/shared/security/request-guards";
 import { detectAllowedUploadMime, extensionForUploadMime, inspectMultipartRequestSize, MAX_UPLOAD_BYTES } from "@/shared/security/upload-security";
 import { scanUploadForMalware } from "@/shared/security/upload-malware-scan";
@@ -36,16 +37,18 @@ export async function POST(request:Request){
 export async function GET(request:Request){try{
  await requireQararSession();const query=new URL(request.url).searchParams,id=query.get("submissionId")??"",file=query.get("fileId")??"";
  if(!uuid(id)||!uuid(file))return NextResponse.json({error:{message:"المرفق غير صالح."}},{status:400});
- let details:{path:string;mime_type:string};const meeting=query.get("meetingId");
+ let details:{path:string;mime_type:string};const meeting=query.get("meetingId");let downloadWithheld=false;
  if(meeting){
   if(!uuid(meeting))return NextResponse.json({error:{message:"الاجتماع غير صالح."}},{status:400});
-  const attachments=await qararRpc<{id:string;file_url:string;mime_type:string}[]>("list_meeting_topic_attachments",{p_meeting_id:meeting});
+  const attachments=await qararRpc<{id:string;file_url:string;mime_type:string;download_allowed?:boolean}[]>("list_meeting_topic_attachments",{p_meeting_id:meeting});
   const found=attachments.find(a=>{const stored=new URL(a.file_url);return a.id===file&&stored.pathname==="/api/admin/typed-topics/files"&&stored.searchParams.get("submissionId")===id&&stored.searchParams.get("fileId")===file;});
   if(!found||!["application/pdf","image/png","image/jpeg","application/vnd.openxmlformats-officedocument.wordprocessingml.document"].includes(found.mime_type))return NextResponse.json({error:{message:"المرفق غير مرتبط بجدول أعمال هذا الاجتماع."}},{status:403});
-  details={path:`topic-preparations/${id}/${file}${extensionForUploadMime(found.mime_type as Parameters<typeof extensionForUploadMime>[0])}`,mime_type:found.mime_type};
+  details={path:`topic-preparations/${id}/${file}${extensionForUploadMime(found.mime_type as Parameters<typeof extensionForUploadMime>[0])}`,mime_type:found.mime_type};downloadWithheld=found.download_allowed===false;
  }else{const result=await qararRpcV2<Envelope<{path:string;mime_type:string}>>("get_typed_submission_file_v2",{p_request_id:id,p_file_id:file});if(!result.ok)return rejected(result);details=result.data;}
+ // The chair may withhold downloads for an agenda item: through the meeting, its files are then shown inline only.
+ const inline=query.get("disposition")==="inline"&&(details.mime_type==="application/pdf"||details.mime_type.startsWith("image/"));
+ if(downloadWithheld&&!inline)return NextResponse.json({error:{message:MEETING_DOWNLOAD_WITHHELD}},{status:403});
  const env=await getQararEnv();const response=await fetch(`${env.SUPABASE_URL}/storage/v1/object/qarar-evidence/${details.path}`,{headers:{apikey:env.SERVICE_ROLE_KEY,Authorization:`Bearer ${env.SERVICE_ROLE_KEY}`},cache:"no-store"});
  if(!response.ok||!response.body)return NextResponse.json({error:{message:"المرفق غير موجود."}},{status:404});
- const inline=query.get("disposition")==="inline"&&(details.mime_type==="application/pdf"||details.mime_type.startsWith("image/"));
  return new NextResponse(response.body,{headers:{"Content-Type":details.mime_type,"Content-Disposition":inline?"inline":"attachment","X-Content-Type-Options":"nosniff","Cache-Control":"private, no-store"}});
  }catch(error){return failure(error);}}

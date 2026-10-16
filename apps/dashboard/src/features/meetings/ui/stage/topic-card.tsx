@@ -10,12 +10,13 @@ import { SegmentedControl } from "@/shared/ui/segmented-control";
 import type { AgendaItemFlow, AgendaItemState } from "../../model/agenda-flow";
 import type { AgendaDiscussionItem, Decision, LiveMeetingSession, TopicGovernanceHistory } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
-import { TopicAttachmentsPanel } from "../topic-attachments-panel";
+import { TopicAttachmentsPanel, type DownloadControl } from "../topic-attachments-panel";
 import { VoteResultPanel } from "../vote-result-panel";
 import { DiscussionSummary, type UpdateDiscussion } from "./discussion-summary";
+import { DocumentViewer } from "./document-viewer";
 import { hasTopicHistory, TopicHistory } from "./topic-history";
 
-type ReferenceTab = "instructions" | "attachments" | "history";
+export type ReferenceTab = "instructions" | "attachments" | "history";
 
 type Props = {
   item: AgendaDiscussionItem;
@@ -36,21 +37,54 @@ type Props = {
   ballot?: ReactNode;
   /** A member sees the item the council is on; the chair's card scrolls inside its column. */
   className?: string;
+  /** The broadcast panel; when given, the card shows it instead of its own choice. */
+  panel?: ReferenceTab | null;
+  /** Given to the broadcast's controller: choosing a panel broadcasts it. */
+  onPanelChange?: (panel: ReferenceTab) => void;
+  /** Why this viewer cannot choose a panel (they follow the broadcast). */
+  panelLockedReason?: string | null;
+  /** The broadcast file and page; when given, the card shows it instead of its own choice. */
+  document?: { attachmentId: string | null; page: number } | null;
+  /** Given to the broadcast's controller: opening, turning and closing reach every screen. */
+  onDocumentChange?: (attachment: MeetingTopicAttachment | null, page: number | null) => void;
+  /** Who shows the file, for a viewer who follows the broadcast. */
+  controllerName?: string;
+  /** The chair's decision on downloading this item's files. */
+  downloads?: DownloadControl;
+  /** The item's discussion timer, under its badges. */
+  timer?: ReactNode;
+  /** The decision's assignments, under the decision. */
+  assignments?: ReactNode;
 };
 
 /**
  * Everything the council needs on one agenda item: its guidance, its files and
  * what earlier councils decided, then the vote and the rapporteur's summary.
  */
-export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className }: Props) {
+export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads, timer, assignments }: Props) {
   const [chosenTab, setChosenTab] = useState<ReferenceTab | null>(null);
+  const [localDocument, setLocalDocument] = useState<{ attachmentId: string | null; page: number } | null>(null);
+  // Without a broadcast the card keeps its own open file; with one, the broadcast decides.
+  const shownDocument = document !== undefined ? document : localDocument;
+  const openFile = shownDocument?.attachmentId ? attachments.find((attachment) => attachment.id === shownDocument.attachmentId) ?? null : null;
+  const steersDocument = document === undefined || Boolean(onDocumentChange);
+  function changeDocument(attachment: MeetingTopicAttachment | null, page: number | null) {
+    if (document === undefined) setLocalDocument(attachment ? { attachmentId: attachment.id, page: page ?? 1 } : null);
+    else onDocumentChange?.(attachment, page);
+  }
   const instructions = item.discussion_instructions?.trim() ?? "";
   const tabs: Array<{ value: ReferenceTab; label: string }> = [
     ...(instructions ? [{ value: "instructions" as const, label: "التعليمات" }] : []),
     ...(attachments.length ? [{ value: "attachments" as const, label: `المرفقات (${attachments.length})` }] : []),
     ...(hasTopicHistory(history) ? [{ value: "history" as const, label: "القرارات السابقة" }] : []),
   ];
-  const tab = tabs.some((entry) => entry.value === chosenTab) ? chosenTab : tabs[0]?.value ?? null;
+  const wanted = panel !== undefined ? panel : chosenTab;
+  const tab = tabs.some((entry) => entry.value === wanted) ? wanted : tabs[0]?.value ?? null;
+  const locked = Boolean(panelLockedReason);
+  function choose(next: ReferenceTab) {
+    if (onPanelChange) onPanelChange(next);
+    else setChosenTab(next);
+  }
 
   const manager = session.viewer.can_manage_voting && !presenting;
   const role = presenting ? "member" : session.viewer.mode;
@@ -72,6 +106,7 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
           {item.workflow_step_name_ar && <Badge tone="neutral">{item.workflow_step_name_ar}</Badge>}
           {flow.decision && <Badge tone="success">{flow.decision.decision_no}</Badge>}
         </div>
+        {timer}
       </header>
 
       {ballot}
@@ -80,14 +115,41 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
         <p className="m-0 rounded-q-control bg-q-surface-2 p-3 text-q-ui text-q-text-2">لا تعليمات ولا مرفقات ولا قرارات سابقة مسجلة لهذا الموضوع.</p>
       ) : (
         <div className="flex flex-col gap-3">
-          {tabs.length > 1 && tab && <SegmentedControl label="مواد الموضوع" options={tabs} value={tab} onChange={setChosenTab} />}
+          {tabs.length > 1 && tab && (
+            <div className="flex flex-col gap-1">
+              <SegmentedControl label="مواد الموضوع" options={tabs} value={tab} onChange={choose} disabled={locked} />
+              {locked && <p className="m-0 text-q-caption text-q-text-2">{panelLockedReason}</p>}
+            </div>
+          )}
           {tab === "instructions" && (
             <section aria-label="تعليمات المناقشة" className="q-instructions rounded-q-control border-s-4 border-q-primary bg-q-surface-2 p-4">
               <h3 className="m-0 text-q-ui font-bold text-q-link">تعليمات المناقشة</h3>
               <InstructionContent value={instructions} />
             </section>
           )}
-          {tab === "attachments" && <TopicAttachmentsPanel meetingId={session.meeting.id} attachments={attachments} />}
+          {tab === "attachments" && (
+            <div className="flex flex-col gap-3">
+              {openFile && shownDocument && (
+                <DocumentViewer
+                  meetingId={session.meeting.id}
+                  attachment={openFile}
+                  page={shownDocument.page}
+                  controls={steersDocument}
+                  controllerName={controllerName}
+                  onPage={(page) => changeDocument(openFile, page)}
+                  onClose={() => changeDocument(null, null)}
+                />
+              )}
+              <TopicAttachmentsPanel
+                meetingId={session.meeting.id}
+                attachments={attachments}
+                onView={steersDocument ? (attachment) => changeDocument(attachment, 1) : undefined}
+                viewingId={openFile?.id ?? null}
+                downloads={presenting ? undefined : downloads}
+                followsBroadcast={!steersDocument}
+              />
+            </div>
+          )}
           {tab === "history" && history && <TopicHistory history={history} />}
         </div>
       )}
@@ -113,6 +175,8 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
           {canEditDecision && <p className="m-0 text-q-caption text-q-text-2">يعدّل النص رئيس المجلس والمقرر إلى اعتماد المحضر.</p>}
         </section>
       )}
+
+      {decision && assignments}
 
       <DiscussionSummary key={item.id} item={item} votingFinished={Boolean(flow.closed)} role={role} busy={busy} draft={summaryDraft} onDraftChange={onSummaryDraftChange} onUpdate={onUpdateDiscussion} />
     </Card>

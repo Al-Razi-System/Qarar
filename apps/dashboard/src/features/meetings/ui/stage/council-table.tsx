@@ -19,6 +19,8 @@ type Props = {
   children: ReactNode;
   /** The small table beside a member's topic. */
   compact?: boolean;
+  /** When given, each seat opens that member's card. */
+  onOpenSeat?: (seat: StageSeat) => void;
 };
 
 /**
@@ -26,7 +28,7 @@ type Props = {
  * the meeting is shown in its middle. On narrow screens, or with many members,
  * the seats are listed in a grid under the table instead of around it.
  */
-export function CouncilTable({ seats, children, compact = false }: Props) {
+export function CouncilTable({ seats, children, compact = false, onOpenSeat }: Props) {
   const orbit = seats.length > 0 && seats.length <= MAX_ORBIT_SEATS;
   return (
     <div className={cn("relative", orbit && (compact ? "aspect-[1/1.02]" : "md:mx-auto md:aspect-[6/5] md:max-h-full md:max-w-full md:min-h-[440px] lg:h-full lg:min-h-[480px]"))}>
@@ -58,7 +60,15 @@ export function CouncilTable({ seats, children, compact = false }: Props) {
               className={cn(orbit && (compact ? "absolute -translate-x-1/2 -translate-y-1/2" : "md:absolute md:-translate-x-1/2 md:-translate-y-1/2"))}
               style={orbit ? orbitPosition(index, seats.length, compact) : undefined}
             >
-              <MemberSeat name={seat.name} status={seat.status} roleLabel={seat.roleLabel} chair={seat.chair} size={compact ? "sm" : "md"} />
+              <MemberSeat
+                name={seat.name}
+                status={seat.status}
+                roleLabel={seat.roleLabel}
+                chair={seat.chair}
+                photoUrl={seat.photoUrl}
+                size={compact ? "sm" : "md"}
+                onOpen={onOpenSeat ? () => onOpenSeat(seat) : undefined}
+              />
             </li>
           ))}
         </ul>

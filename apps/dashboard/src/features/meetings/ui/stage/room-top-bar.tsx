@@ -49,13 +49,15 @@ type Props = {
   onToggleTheme: () => void;
   /** Given to whoever runs the session: shows the room on the hall screen without controls. */
   presentation?: { active: boolean; onToggle: () => void };
+  /** Given to everyone else: fills the screen with the meeting they follow. */
+  fullscreen?: { active: boolean; onToggle: () => void };
 };
 
 /**
  * One compact bar above the room: the meeting, the live clock, the quorum and
  * who is looking. Everything else on the screen belongs to the meeting itself.
  */
-export function RoomTopBar({ session, startedAt, dark, onToggleTheme, presentation }: Props) {
+export function RoomTopBar({ session, startedAt, dark, onToggleTheme, presentation, fullscreen }: Props) {
   const now = useNow(Boolean(startedAt));
   const clock = elapsedClock(startedAt, now);
   const manager = session.viewer.can_manage_session;
@@ -98,6 +100,11 @@ export function RoomTopBar({ session, startedAt, dark, onToggleTheme, presentati
           <button type="button" onClick={onToggleTheme} aria-pressed={dark} className={barButton}>
             {dark ? "الوضع الفاتح" : "الوضع الليلي"}
           </button>
+          {fullscreen && (
+            <button type="button" onClick={fullscreen.onToggle} aria-pressed={fullscreen.active} className={barButton}>
+              {fullscreen.active ? "الخروج من ملء الشاشة" : "ملء الشاشة"}
+            </button>
+          )}
           {presentation && (
             <button type="button" onClick={presentation.onToggle} aria-pressed={presentation.active} className={barButton}>
               {presentation.active ? "إنهاء وضع العرض" : "وضع العرض على الشاشة"}
