@@ -3,6 +3,13 @@ const { rpc, rpcV2 } = vi.hoisted(() => ({ rpc: vi.fn(), rpcV2: vi.fn() }));
 vi.mock("@/shared/api/qarar-server", () => ({ qararRpc: rpc, qararRpcV2: rpcV2 }));
 import { POST } from "./route";
 afterEach(() => vi.resetAllMocks());
+it("saves meeting data and its quorum in one V2 transaction", async () => {
+  rpcV2.mockResolvedValue({ id: "meeting-1", quorum_percentage: 30 });
+  const params = { p_action: "create", p_values: { p_title_ar: "اجتماع تجريبي" }, p_quorum_percentage: 30 };
+  expect((await POST(request("save_meeting_with_quorum_v2", params))).status).toBe(200);
+  expect(rpcV2).toHaveBeenCalledWith("save_meeting_with_quorum_v2", params);
+  expect(rpc).not.toHaveBeenCalled();
+});
 function request(contract: string, params: unknown = {}) {
   return new Request("http://localhost/api/admin/meetings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contract, params }) });
 }

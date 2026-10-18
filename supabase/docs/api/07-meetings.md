@@ -127,3 +127,9 @@ in `12-contract-reference.md`. They do not start a meeting or send invitations.
 - `update_meeting_series_recurrence`: changes the recurrence from an editable
   anchor occurrence and updates later draft/scheduled dates. Started/completed
   occurrences are not rescheduled. Returns the number changed.
+# نصاب الاجتماع المستقل (V2)
+
+`api_v2.save_meeting_with_quorum_v2(p_action text, p_values jsonb, p_quorum_percentage integer default null)`
+يحفظ بيانات الاجتماع ونصابه ذرياً. `p_action`: `create` أو `series` أو `update`؛ `p_values` يحتوي معاملات عقد V1 المقابل (`create_meeting`/`create_meeting_series`/`update_meeting`) بأسمائها نفسها.
+النسبة اختيارية بين 1 و100، وغيابها يستخدم 51٪ مستقلًا عن المجلس. القائم يحتفظ بنسبته السابقة عند ترقية المخطط. `get_meeting_detail` يعيد `quorum_percentage`.
+إنشاء الاجتماع يحتاج `meetings.create` في جهة الاجتماع؛ التعديل يحتاج `meetings.manage` ورمز `p_expected_updated_at`، ويقتصر على المسودة والمجدول قبل تثبيت الحضور. الإيصال السابق لا يغير النسبة؛ نسبة مختلفة على الإيصال نفسه ترفض بـ40001. تُدقق النسبة السابقة والجديدة في `meetings.quorum.set`. لا يُعطل النصاب بترك الحقل فارغاً.

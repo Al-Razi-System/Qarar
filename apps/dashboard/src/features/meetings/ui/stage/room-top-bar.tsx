@@ -85,6 +85,7 @@ export function RoomTopBar({ session, startedAt, dark, onToggleTheme, presentati
           <div className="flex flex-col leading-tight">
             <span className="text-q-ui font-bold">{met ? "النصاب مكتمل" : "النصاب غير مكتمل"}</span>
             <span className="text-q-caption opacity-80">{present} حاضرون من {eligible}</span>
+            {quorum && <span className="text-q-caption opacity-80">المطلوب {Math.ceil(eligible * quorum.required_percentage / 100)} من {eligible} · النصاب {quorum.required_percentage}٪</span>}
           </div>
         </div>
         <div className="flex flex-col leading-tight">

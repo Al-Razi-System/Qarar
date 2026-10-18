@@ -14,6 +14,7 @@ import {
 } from "../model/meeting";
 import { Button } from "@/shared/ui/button";
 import { AdministrativeInput } from "@/shared/ui/administrative-field";
+import { MeetingQuorumField } from "./meeting-quorum-field";
 import { meetingScheduleLabel } from "../model/meeting-schedule";
 import { localDateKey, meetingOperationalGroup } from "../model/meeting-operational-state";
 import { MeetingAgendaPanel } from "./meeting-agenda-panel";
@@ -300,7 +301,10 @@ export function MeetingsWorkspace() {
     const fd = new FormData(event.currentTarget);
     setCreating(true); setNotice(null);
     try {
-      await rpc("update_meeting", {
+      await rpc("save_meeting_with_quorum_v2", {
+        p_action: "update",
+        p_quorum_percentage: fd.get("quorum_percentage") ? Number(fd.get("quorum_percentage")) : null,
+        p_values: {
         p_meeting_id: selected.id,
         p_title_ar: fd.get("title_ar"),
         p_scheduled_date: fd.get("scheduled_date"),
@@ -311,6 +315,7 @@ export function MeetingsWorkspace() {
         p_title_en: selected.title_en ?? null,
         p_meeting_type_id: fd.get("meeting_type_id"),
         p_expected_updated_at: selected.updated_at ?? null,
+        },
       });
       const currentSeries = series.find((item) => item.occurrences.some((occurrence) => occurrence.meeting_id === selected.id));
       if (!selected.planned_window_start && currentSeries) {
@@ -462,17 +467,22 @@ export function MeetingsWorkspace() {
         p_location_type: fd.get("location_type") || "onsite",
         p_location_details: fd.get("location_details") || null,
       };
-      const created: { id: string; occurrences?: Array<{ id: string }> } = recurring ? await rpc<{ id: string; occurrences: Array<{ id: string }> }>("create_meeting_series", {
+      const values = recurring ? {
         ...common,
         p_first_date: fd.get("scheduled_date"),
         p_frequency: fd.get("frequency"),
         p_interval_count: Number(fd.get("interval_count") || 1),
         p_occurrence_count: Number(fd.get("occurrence_count") || 2),
-      }) : await rpc<{ id: string }>("create_meeting", {
+      } : {
         ...common,
         p_scheduled_date: fd.get("scheduled_date"),
         p_title_en: null,
         p_client_request_id: crypto.randomUUID(),
+      };
+      const created = await rpc<{ id: string; occurrences?: Array<{ id: string }> }>("save_meeting_with_quorum_v2", {
+        p_action: recurring ? "series" : "create",
+        p_values: values,
+        p_quorum_percentage: fd.get("quorum_percentage") ? Number(fd.get("quorum_percentage")) : null,
       });
       setCreateModal(false);
       setRecurring(false);
@@ -704,6 +714,7 @@ export function MeetingsWorkspace() {
             <div className="grid overflow-y-auto gap-4 p-6">
               {notice?.kind === "error" && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{notice.text}</p>}
               <p className="text-xs leading-6 text-slate-500">يُحدد وقت البداية والنهاية عند تجهيز الدعوات، وليس عند إنشاء الاجتماع.</p>
+              <MeetingQuorumField disabled={creating}/>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">المجلس أو الجهة *</span><select required name="governance_unit_id" disabled={meetingOptionsLoading || !(meetingOptions?.meeting_units?.length)} className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs outline-none focus:border-[#0066cc] disabled:cursor-not-allowed disabled:bg-[#f4f7fa]"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الجهات…" : meetingOptions?.meeting_units?.length ? "اختر المجلس أو الجهة" : "لا توجد جهة متاحة ضمن صلاحياتك"}</option>{meetingOptions?.meeting_units?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name_ar}</option>)}</select><small className="mt-1 block text-[10px] text-[#718196]">تظهر الجهات التي تملك صلاحية إنشاء اجتماع فيها فقط.</small></label>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">نوع الاجتماع *</span><select required name="meeting_type_id" value={selectedMeetingTypeId} onChange={(event) => { const meetingTypeId = event.target.value; setSelectedMeetingTypeId(meetingTypeId); const meetingType = meetingOptions?.meeting_types?.find((type) => type.id === meetingTypeId); if (meetingType?.name_ar.includes("دوري")) setRecurring(true); }} disabled={meetingOptionsLoading || !(meetingOptions?.meeting_types?.length)} className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs outline-none focus:border-[#0066cc] disabled:cursor-not-allowed disabled:bg-[#f4f7fa]"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الأنواع…" : meetingOptions?.meeting_types?.length ? "اختر نوع الاجتماع" : "لا توجد أنواع اجتماعات نشطة"}</option>{meetingOptions?.meeting_types?.map((type) => <option key={type.id} value={type.id}>{type.name_ar}</option>)}</select><small className="mt-1 block text-[10px] text-[#718196]">عند اختيار «اجتماع دوري» ستظهر إعدادات دورة الانعقاد تلقائياً.</small></label>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">عنوان الاجتماع *</span><input required name="title_ar" placeholder="مثال: الاجتماع الثالث لمجلس القسم" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs outline-none focus:border-[#0066cc]" /></label>
@@ -730,6 +741,8 @@ export function MeetingsWorkspace() {
           <form onSubmit={handleUpdate} className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#e7edf3] px-6 py-5"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e7f2ff] text-[#0066cc]"><Pencil size={19}/></span><div><h2 className="text-base font-black text-[#0a1330]">تعديل إعدادات الاجتماع</h2><p className="text-xs text-[#718196]">متاح للمسودة والاجتماع المجدول قبل بدء الجلسة.</p></div></div><button type="button" onClick={() => setEditModal(false)} aria-label="إغلاق"><X size={20}/></button></div>
             <div className="grid gap-4 overflow-y-auto p-6">
+              {notice?.kind === "error" && <p role="alert" className="text-q-ui text-q-danger">{notice.text}</p>}
+              <MeetingQuorumField defaultValue={selected.quorum_percentage} disabled={creating}/>
               <div className="rounded-xl bg-[#f5f9fd] px-4 py-3 text-xs font-bold text-[#40566f]">المجلس: {selected.unit_name_ar ?? selected.governance_unit_name_ar ?? "—"}</div>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">نوع الاجتماع *</span><select required name="meeting_type_id" defaultValue={selected.meeting_type_id} onChange={(event) => { const type = meetingOptions?.meeting_types?.find((item) => item.id === event.target.value); setEditRecurring(Boolean(type?.name_ar.includes("دوري"))); }} className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs">{meetingOptions?.meeting_types?.map((type) => <option key={type.id} value={type.id}>{type.name_ar}</option>)}</select></label>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">اسم الاجتماع *</span><input required name="title_ar" defaultValue={selected.title_ar} className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs"/></label>
