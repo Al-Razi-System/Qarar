@@ -12,6 +12,7 @@ type Props = {
   page: number;
   /** Whoever controls the broadcast turns pages and closes the file; everyone else follows. */
   controls: boolean;
+  expanded?: boolean;
   /** Who opened the file, for a follower. */
   controllerName?: string;
   onPage?: (page: number) => void;
@@ -22,7 +23,7 @@ type Props = {
  * A meeting file shown inside the room. PDF files open on the broadcast page
  * and images as they are; the controller's page turns reach every screen.
  */
-export function DocumentViewer({ meetingId, attachment, page, controls, controllerName, onPage, onClose }: Props) {
+export function DocumentViewer({ meetingId, attachment, page, controls, controllerName, onPage, onClose, expanded = false }: Props) {
   const [pageDraft, setPageDraft] = useState<{ base: number; value: string } | null>(null);
   const pdf = attachment.mime_type === "application/pdf";
   const image = attachment.mime_type.startsWith("image/");
@@ -70,7 +71,7 @@ export function DocumentViewer({ meetingId, attachment, page, controls, controll
       </header>
       {pdf && (
         // The page is part of the address, so a page turn reloads the file on every screen at that page.
-        <iframe key={page} title={attachment.file_name} src={`${source}#page=${page}&toolbar=0&navpanes=0`} className="h-[70vh] min-h-96 w-full rounded-q-control border-0 bg-q-surface-2 lg:h-[60vh]" />
+        <iframe key={page} title={attachment.file_name} src={`${source}#page=${page}&toolbar=0&navpanes=0`} className={expanded ? "h-[calc(100dvh-16rem)] min-h-48 w-full rounded-q-control border-0 bg-q-surface-2" : "h-[60vh] min-h-64 w-full rounded-q-control border-0 bg-q-surface-2"} />
       )}
       {image && (
         // eslint-disable-next-line @next/next/no-img-element -- a private, authenticated file; the image optimizer cannot fetch it.

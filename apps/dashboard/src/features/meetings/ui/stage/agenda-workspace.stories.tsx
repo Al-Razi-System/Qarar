@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
 import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingBroadcast, MeetingAssignments, MeetingItemTimers, MeetingReferrals, MemberProfiles, VotingRound } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { AgendaWorkspace } from "./agenda-workspace";
@@ -9,7 +10,7 @@ import { RoomTopBar } from "./room-top-bar";
 import { useRoomTheme } from "./use-room-theme";
 
 /** The agenda side of the live room as each role sees it, under the council-table scene. */
-type RoomProps = { mode: "chair" | "rapporteur" | "member"; agenda: AgendaDiscussionItem[]; rounds: VotingRound[]; decisions?: Decision[]; presenting?: boolean; voting?: boolean; referred?: boolean; referring?: boolean; assigning?: boolean };
+type RoomProps = { mode: "chair" | "rapporteur" | "member"; agenda: AgendaDiscussionItem[]; rounds: VotingRound[]; decisions?: Decision[]; presenting?: boolean; voting?: boolean; referred?: boolean; referring?: boolean; assigning?: boolean; documentOpen?: boolean };
 
 const names = ["د. منصور", "د. هدى", "د. خالد", "د. ريم", "د. فهد", "د. نورة", "د. ماجد", "د. أمل", "د. سامي"];
 const attendance: Attendance[] = names.map((name, index) => ({ id: `att-${index}`, user_id: `u${index}`, full_name_ar: name, status: "present", verification_status: "verified", updated_at: "2026-10-10T08:00:00Z" }));
@@ -65,7 +66,7 @@ function session(mode: RoomProps["mode"]): LiveMeetingSession {
   };
 }
 
-const instructions = "يعرض رئيس القسم مبررات الخطة ومقارنتها بالخطة السابقة، ثم تُناقش الساعات المعتمدة والمتطلبات السابقة قبل التصويت.";
+const instructions = "### مبررات الخطة\n\nيعرض رئيس القسم مبررات الخطة ومقارنتها بالخطة السابقة.\n\n- الساعات المعتمدة\n- المتطلبات السابقة\n\n<strong>تُراجع المستندات قبل التصويت.</strong>";
 const discussing: AgendaDiscussionItem[] = [
   { id: "a1", agenda_order: 1, agenda_status: "discussed", discussion_notes: "اعتُمد المحضر السابق دون ملاحظات.", topic: { id: "t1", title_ar: "محضر الاجتماع السابق" } },
   { id: "a2", agenda_order: 2, agenda_status: "under_discussion", requires_voting: true, workflow_step_name_ar: "توصية مجلس الكلية", discussion_instructions: instructions, topic: { id: "t2", title_ar: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي" } },
@@ -112,19 +113,21 @@ const SESSION_STARTED_AT = "2026-10-15T08:00:00Z";
 /** Read once when the stories load, so the timers show the same scene on every render. */
 const FIXED_NOW = Date.parse(new Date().toISOString());
 
-function Room({ mode, agenda, rounds, decisions = [], presenting = false, voting: hasBallot = false, referred = false, referring = false, assigning = false }: RoomProps) {
+function Room({ mode, agenda, rounds, decisions = [], presenting = false, voting: hasBallot = false, referred = false, referring = false, assigning = false, documentOpen = false }: RoomProps) {
   const theme = useRoomTheme();
+  const [broadcast, setBroadcast] = useState<MeetingBroadcast>(() => ({ ...broadcastFor(mode, "a2"), ...(documentOpen ? { panel: "attachments", attachment_id: "f1", page: 1 } : {}) }));
   const live = session(mode);
   const noop = () => undefined;
   return (
-    <div data-theme={theme.dark ? "dark" : undefined} className={`flex flex-col gap-3 font-sans text-q-text ${theme.dark ? "rounded-q-card bg-q-bg p-4" : ""} ${mode !== "member" ? "lg:h-[860px]" : ""}`}>
+    <div data-theme={theme.dark ? "dark" : undefined} className={`flex flex-col gap-3 bg-q-bg p-3 font-sans text-q-text ${mode !== "member" ? "lg:h-[860px]" : ""}`}>
       <RoomTopBar session={live} startedAt={SESSION_STARTED_AT} dark={theme.dark} onToggleTheme={theme.toggle} presentation={mode === "chair" ? { active: presenting, onToggle: noop } : undefined} fullscreen={mode === "chair" ? undefined : { active: false, onToggle: noop }} />
       <div className="min-h-0 flex-1">
         <AgendaWorkspace session={live} agenda={agenda} attachments={attachments} topicHistory={{}} rounds={rounds} decisions={decisions} busy={false} presenting={presenting}
           stage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} referrals={referralsFor(referred).referrals} profiles={profiles(mode)} />}
           compactStage={<RoomStage session={live} agenda={agenda} rounds={rounds} decisions={decisions} profiles={profiles(mode)} compact />}
           ballot={hasBallot ? <MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي", has_voted: false }} busy={false} onCast={noop} /> : undefined}
-          broadcast={broadcastFor(mode, assigning ? "a2" : null)} onBroadcast={noop} onHandOver={noop}
+          broadcast={broadcast} onBroadcast={(agenda_item_id, panel) => setBroadcast(current => ({ ...current, agenda_item_id, panel }))} onHandOver={noop}
+          onBroadcastDocument={(attachment_id, page) => setBroadcast(current => ({ ...current, attachment_id, page }))}
           timers={{ data: timers, clockOffsetMs: TIMERS_AT - FIXED_NOW }}
           plannedMinutes={{ pendingItemId: null, errorItemId: null, error: null, onChange: noop }}
           referrals={referralsFor(referred)} onRequestReferral={noop}
@@ -153,3 +156,4 @@ export const MemberDecisionSaved: Story = { name: "العضو: القرار ال
 export const RapporteurSummary: Story = { name: "المقرر: الملخص النهائي", args: { mode: "rapporteur", agenda: voting, rounds: [closedRound] } };
 export const MemberVoting: Story = { name: "العضو: بطاقة التصويت", args: { mode: "member", agenda: voting, rounds: [openRound], voting: true } };
 export const Presentation: Story = { name: "وضع العرض على الشاشة", args: { mode: "chair", agenda: voting, rounds: [openRound], presenting: true } };
+export const MemberDocument: Story = { name: "العضو: مرفق مبثوث قابل للتكبير", args: { mode: "member", agenda: discussing, rounds: [], documentOpen: true } };

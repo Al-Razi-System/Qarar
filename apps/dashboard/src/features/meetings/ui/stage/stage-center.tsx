@@ -107,7 +107,7 @@ export function StageCenter({ phase, compact = false }: { phase: StagePhase; com
     return (
       <div className="flex flex-col items-center gap-2 text-center">
         <span className="text-q-ui font-bold">قيد المناقشة</span>
-        <span className={compact ? "text-q-caption font-bold" : "text-q-h2 font-bold"}>{titleOf(phase) ?? "بند جدول الأعمال"}</span>
+        <span title={titleOf(phase) ?? undefined} className={compact ? "line-clamp-3 text-q-caption font-bold" : "line-clamp-4 text-q-h3 font-bold"}>{titleOf(phase) ?? "بند جدول الأعمال"}</span>
       </div>
     );
   }
@@ -125,7 +125,7 @@ export function StageCenter({ phase, compact = false }: { phase: StagePhase; com
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <span className="text-q-ui font-bold">{title ? "البند التالي" : "لا بنود في جدول الأعمال"}</span>
-      {title && <span className="text-q-h2 font-bold">{title}</span>}
+      {title && <span title={title} className={compact ? "line-clamp-3 text-q-caption font-bold" : "line-clamp-4 text-q-h3 font-bold"}>{title}</span>}
     </div>
   );
 }

@@ -8,9 +8,9 @@ export const MAX_ORBIT_SEATS = 14;
 
 function orbitPosition(index: number, count: number, compact: boolean) {
   const angle = (-90 + (index * 360) / count) * (Math.PI / 180);
-  const [rx, ry] = compact ? [41, 40] : [45, 41];
+  const [rx, ry] = compact ? [38, 36] : [42, 35];
   // Each seat's name sits under its avatar, so the orbit is lifted a little to keep the bottom names inside the table's box.
-  const cy = compact ? 50 : 46;
+  const cy = compact ? 50 : 48;
   return { left: `${(50 + rx * Math.cos(angle)).toFixed(2)}%`, top: `${(cy + ry * Math.sin(angle)).toFixed(2)}%` };
 }
 
@@ -37,10 +37,10 @@ export function CouncilTable({ seats, children, compact = false, onOpenSeat }: P
           "q-stage grid place-items-center rounded-q-card p-6",
           compact ? "min-h-0" : "min-h-56",
           orbit && compact && "absolute inset-x-[19%] inset-y-[21%] rounded-[50%] p-2",
-          orbit && !compact && "md:absolute md:inset-x-[16%] md:top-[16%] md:bottom-[24%] md:min-h-0 md:rounded-[50%] md:p-0",
+          orbit && !compact && "md:absolute md:inset-x-[16%] md:top-[24%] md:bottom-[24%] md:min-h-0 md:rounded-[50%] md:p-0",
         )}
       >
-        <div className={cn("w-full", orbit && "md:max-w-[64%]")} aria-live="polite">{children}</div>
+        <div className={cn("w-full min-w-0 overflow-hidden", orbit && !compact && "md:max-w-[70%]")} aria-live="polite">{children}</div>
       </div>
       {seats.length === 0 ? (
         <p className="m-0 mt-4 text-center font-sans text-q-ui text-q-text-2">لم يُسجَّل أعضاء في سجل حضور هذا الاجتماع بعد.</p>

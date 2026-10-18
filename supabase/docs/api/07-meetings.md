@@ -53,6 +53,13 @@ dates, meeting numbers, and lifecycle statuses.
 authorized meeting reader or roster participant, so the same evidence remains available before,
 during, and after the meeting.
 
+Download metadata preserves `download_allowed` as the participant policy and adds
+`viewer_download_allowed` as the effective permission for the authenticated caller.
+An active `council_chair` membership in this meeting's council retains downloading
+even when participant downloads are disabled. Rapporteurs, administrators without
+that contextual chair role, and other council chairs receive no exception. Both
+file routes enforce the effective server permission; inline viewing is unchanged.
+
 ## Update Meeting
 
 Permission: `meetings.manage`. Allowed only in `draft` or `scheduled`.

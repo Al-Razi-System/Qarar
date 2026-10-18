@@ -71,10 +71,10 @@ export async function GET(request: Request) {
   if (!topicId || !path.startsWith(`topics/${topicId}/`) || path.includes("..")) return NextResponse.json({ error: { message: "مسار الملف غير صالح." } }, { status: 400 });
   let downloadWithheld = false;
   if (meetingId) {
-    const attachments = await qararRpc<Array<{ topic_id: string; file_url: string; download_allowed?: boolean }>>("list_meeting_topic_attachments", { p_meeting_id: meetingId });
+    const attachments = await qararRpc<Array<{ topic_id: string; file_url: string; download_allowed?: boolean; viewer_download_allowed?: boolean }>>("list_meeting_topic_attachments", { p_meeting_id: meetingId });
     const found = attachments.find((attachment) => attachment.topic_id === topicId && new URL(attachment.file_url).searchParams.get("path") === path);
     if (!found) return NextResponse.json({ error: { message: "المرفق غير مرتبط بجدول أعمال هذا الاجتماع." } }, { status: 403 });
-    downloadWithheld = found.download_allowed === false;
+    downloadWithheld = (found.viewer_download_allowed ?? found.download_allowed) === false;
   } else {
     await qararRpc("get_topic_detail", { p_topic_id: topicId });
   }

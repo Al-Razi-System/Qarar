@@ -90,6 +90,8 @@ export type MeetingTopicAttachment = {
   agenda_item_id?: string;
   /** False when the chair withheld downloads for the item; the file is then shown inside the room only. */
   download_allowed?: boolean;
+  /** Effective viewer permission; a contextual chair retains access independently of participant policy. */
+  viewer_download_allowed?: boolean;
   /** The revision of that decision, sent back when the chair changes it. */
   download_revision?: number;
 };

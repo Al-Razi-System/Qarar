@@ -133,14 +133,14 @@ describe("AgendaWorkspace", () => {
       expect(handlers.onEditDecision).toHaveBeenCalledWith(saved, done, closed);
     });
 
-    it("offers no edit on the hall screen", () => {
+    it("keeps the chair's decision action on the hall screen", () => {
       setup("chair", { agenda: [done], rounds: [closed], decisions: [saved], presenting: true });
       expect(screen.getByRole("region", { name: "القرار" })).toHaveTextContent("اعتماد الخطة كما وردت.");
-      expect(screen.queryByRole("button", { name: "تعديل القرار" })).not.toBeInTheDocument();
+      expect(within(screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" })).getByRole("button", { name: "تعديل القرار" })).toBeInTheDocument();
     });
   });
 
-  it("shows no controls to a member, a rapporteur or the hall screen", () => {
+  it("shows no controls to a member or rapporteur, but keeps the chair's next step in presentation", () => {
     const member = setup("member");
     expect(screen.queryByRole("region", { name: "شريط تحكم رئيس المجلس" })).not.toBeInTheDocument();
     member.view.unmount();
@@ -148,8 +148,19 @@ describe("AgendaWorkspace", () => {
     expect(screen.queryByRole("region", { name: "شريط تحكم رئيس المجلس" })).not.toBeInTheDocument();
     rapporteur.view.unmount();
     setup("chair", { presenting: true });
-    expect(screen.queryByRole("region", { name: "شريط تحكم رئيس المجلس" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "قبل إنهاء الجلسة" })).not.toBeInTheDocument();
+  });
+
+  it("lets a following member enlarge the broadcast guidance without changing the broadcast", async () => {
+    const onBroadcast = vi.fn();
+    setup("member", { agenda: withMaterials, broadcast: broadcastOf({ agenda_item_id: "a1" }), onBroadcast });
+    await userEvent.click(screen.getByRole("button", { name: "تكبير التعليمات" }));
+    const enlarged = screen.getByRole("dialog", { name: "تعليمات المناقشة — خطة البرنامج" });
+    expect(within(enlarged).getByText("ابدأ بعرض مبررات البرنامج")).toBeInTheDocument();
+    await userEvent.click(within(enlarged).getByRole("button", { name: "إغلاق العرض الموسع" }));
+    expect(onBroadcast).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("leaves who voted to the seats around the table, without repeating it in the topic", () => {
@@ -318,6 +329,15 @@ describe("AgendaWorkspace documents", () => {
 });
 
 describe("AgendaWorkspace item timer", () => {
+  it("keeps the chair's download link while the participant switch remains off", () => {
+    setup("chair", { agenda: withMaterials,
+      attachments: [{ ...files[0], agenda_item_id: "a2", download_allowed: false, viewer_download_allowed: true }],
+      broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true, agenda_item_id: "a2", panel: "attachments" }),
+      downloads: { pendingItemId: null, errorItemId: null, error: null, onChange: vi.fn() },
+    });
+    expect(screen.getByRole("link", { name: "تنزيل قائمة اللجنة.pdf" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "السماح للمشاركين بتنزيل مرفقات هذا البند" })).not.toBeChecked();
+  });
   const timers = (overrides = {}) => ({
     data: { server_now: "2026-10-16T08:07:32Z", timers: [{ agenda_item_id: "a1", planned_minutes: 5, discussion_started_at: "2026-10-16T08:00:00Z", discussion_ended_at: null, revision: 3, ...overrides }] },
     clockOffsetMs: 0,

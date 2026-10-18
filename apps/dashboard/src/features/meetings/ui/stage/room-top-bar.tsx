@@ -32,14 +32,14 @@ function QuorumRing({ present, eligible, met }: { present: number; eligible: num
   const fraction = eligible > 0 ? Math.min(1, present / eligible) : 0;
   return (
     <svg width="34" height="34" viewBox="0 0 36 36" aria-hidden="true" className="-rotate-90 shrink-0">
-      <circle cx="18" cy="18" r={RING_RADIUS} fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" className="text-q-on-header" />
+      <circle cx="18" cy="18" r={RING_RADIUS} fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" className="text-q-text-2" />
       <circle cx="18" cy="18" r={RING_RADIUS} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round"
-        strokeDasharray={`${RING_LENGTH * fraction} ${RING_LENGTH}`} className={met ? "text-q-stage-yes" : "text-q-live-on-header"} />
+        strokeDasharray={`${RING_LENGTH * fraction} ${RING_LENGTH}`} className={met ? "text-q-success" : "text-q-warning"} />
     </svg>
   );
 }
 
-const barButton = "min-h-11 shrink-0 rounded-q-control border border-q-on-header/40 bg-transparent px-3 font-sans text-q-caption font-bold text-q-on-header hover:bg-q-on-header/10";
+const barButton = "min-h-11 shrink-0 rounded-q-control border border-q-border bg-q-surface px-3 font-sans text-q-caption font-bold text-q-link hover:bg-q-surface-2";
 
 type Props = {
   session: LiveMeetingSession;
@@ -47,7 +47,7 @@ type Props = {
   startedAt?: string | null;
   dark: boolean;
   onToggleTheme: () => void;
-  /** Given to whoever runs the session: shows the room on the hall screen without controls. */
+  /** Hall view keeps the chair's next-step controls, but never their private ballot. */
   presentation?: { active: boolean; onToggle: () => void };
   /** Given to everyone else: fills the screen with the meeting they follow. */
   fullscreen?: { active: boolean; onToggle: () => void };
@@ -71,11 +71,11 @@ export function RoomTopBar({ session, startedAt, dark, onToggleTheme, presentati
   const checkedIn = myAttendance?.verification_status === "verified" && ["present", "late"].includes(myAttendance.status);
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-q-card bg-q-header px-4 py-3 font-sans text-q-on-header sm:px-6">
+    <header className="relative z-20 flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-q-card border border-q-border border-t-4 border-t-q-primary bg-q-surface px-4 py-3 font-sans text-q-text sm:px-6">
       <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
         <h1 className="m-0 min-w-0 text-q-h3 font-bold">{session.meeting.title_ar}</h1>
-        <span className="inline-flex items-center gap-2 rounded-full border border-q-live-on-header px-3 py-1 text-q-caption font-bold text-q-live-on-header" role="status" aria-label={clock ? `جلسة حية منذ ${clock}` : "جلسة حية"}>
-          <span aria-hidden="true" className="q-live-dot inline-block h-2 w-2 rounded-full bg-q-live-on-header" />
+        <span className="inline-flex items-center gap-2 rounded-full bg-q-live-soft px-3 py-1 text-q-caption font-bold text-q-live" role="status" aria-label={clock ? `جلسة حية منذ ${clock}` : "جلسة حية"}>
+          <span aria-hidden="true" className="q-live-dot inline-block h-2 w-2 rounded-full bg-q-live" />
           مباشر{clock && <> · <span dir="ltr">{clock}</span></>}
         </span>
       </div>

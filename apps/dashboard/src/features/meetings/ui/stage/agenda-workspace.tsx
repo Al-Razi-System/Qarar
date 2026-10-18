@@ -110,7 +110,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
   const flows = Object.fromEntries(ordered.map((item) => [item.id, itemFlow(item, session, rounds, decisions, referred)]));
   const states: Record<string, AgendaItemState> = Object.fromEntries(ordered.map((item) => [item.id, agendaItemState(item, flows[item.id])]));
   const flow = flows[selected.id];
-  const manager = session.viewer.can_manage_voting && !presenting;
+  const manager = session.viewer.can_manage_voting;
   const blockers = manager ? completionBlockers(session, ordered, rounds, decisions, referred) : [];
   // Only the council's chair decides on downloads and referrals; the broadcast tells the room who that is.
   const viewerIsChair = Boolean(live && (live.can_hand_over || live.can_take_back));
@@ -207,9 +207,9 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
 
   if (follower) {
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex h-full min-h-0 flex-col gap-3">
         {bar}
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
+        <div className="grid min-h-0 items-start gap-4 lg:flex-1 lg:overflow-y-auto lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
           <div className="min-w-0">{topic}</div>
           <aside aria-label="طاولة المجلس وجدول الأعمال" className="flex min-w-0 flex-col gap-4">
             {compactStage && (
@@ -227,14 +227,14 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
 
   // The broadcast bar heads the agenda column: it governs the navigation listed under it.
   return (
-    <div className="grid gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[15rem_minmax(0,1fr)_minmax(20rem,24rem)]">
-      <div className="order-2 flex min-w-0 flex-col gap-3 lg:order-none lg:min-h-0 lg:overflow-y-auto">
+    <div className={`grid gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_minmax(20rem,24rem)] ${presenting && manager ? "pb-64 lg:pb-0" : ""}`}>
+      <div className="order-2 flex min-w-0 flex-col gap-3 lg:col-span-2 lg:max-h-36 lg:overflow-y-auto xl:order-none xl:col-span-1 xl:max-h-none xl:min-h-0">
         {bar}
         {timeline}
       </div>
       <div className="order-1 flex min-w-0 flex-col gap-3 lg:order-none lg:min-h-0">
-        {stage && <div className="min-h-0 lg:flex-1">{stage}</div>}
-        {manager && <ControlDock item={selected} actions={actions} note={note} busy={busy} blockers={blockers} onAction={run} onComplete={onComplete} />}
+        {stage && <div className="min-h-0 lg:flex-1 lg:overflow-y-auto">{stage}</div>}
+        {manager && <ControlDock pinned={presenting} item={selected} actions={actions} note={note} busy={busy} blockers={blockers} onAction={run} onComplete={onComplete} />}
       </div>
       <div className="order-3 min-w-0 lg:order-none lg:min-h-0 lg:overflow-y-auto">{topic}</div>
     </div>

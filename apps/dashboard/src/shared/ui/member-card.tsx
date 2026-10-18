@@ -55,8 +55,8 @@ export function MemberCard({ member, fallbackName, unavailable, loading = false,
   const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
   const photo = member?.photoUrl && failedPhoto !== member.photoUrl ? member.photoUrl : null;
   return (
-    <Dialog title={`بطاقة ${name}`} onClose={onClose} footer={<Button variant="secondary" onClick={onClose}>إغلاق</Button>}>
-      <div className="flex items-center gap-4">
+    <Dialog title={`بطاقة ${name}`} scrollContent onClose={onClose} footer={<Button variant="secondary" onClick={onClose}>إغلاق</Button>}>
+      <div className="flex items-center gap-4 rounded-q-card border border-q-border bg-q-surface-2 p-4">
         <div aria-hidden={photo ? undefined : true} className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-q-border-strong bg-q-seat text-q-h2 font-bold text-q-text">
           {photo
             ? <Image unoptimized src={photo} alt={`صورة ${name}`} width={80} height={80} onError={() => setFailedPhoto(photo)} className="h-full w-full object-cover" />
@@ -66,7 +66,7 @@ export function MemberCard({ member, fallbackName, unavailable, loading = false,
           <p className="m-0 text-q-h3 font-bold">{name}</p>
           {member?.roleLabel && (
             <p className="m-0 text-q-ui font-bold text-q-link">
-              {member.roleLabel}{member.membershipTitle ? ` · ${member.membershipTitle}` : ""}
+              {member.roleLabel}{member.membershipTitle && member.membershipTitle.trim() !== member.roleLabel.trim() ? ` · ${member.membershipTitle}` : ""}
             </p>
           )}
           {member?.jobTitle && <p className="m-0 text-q-ui text-q-text-2">{member.jobTitle}</p>}
@@ -75,9 +75,9 @@ export function MemberCard({ member, fallbackName, unavailable, loading = false,
       {loading && !member && <p role="status" className="m-0 mt-4 text-q-ui text-q-text-2">جارٍ تحميل بطاقة العضو…</p>}
       {unavailable && <p role="alert" className="m-0 mt-4 rounded-q-control bg-q-warning-soft p-3 text-q-ui font-bold text-q-warning">{unavailable}</p>}
       {member && (
-        <dl className="m-0 mt-4">
+        <dl className="m-0 break-words">
           {member.employer && <Row label="جهة العمل">{member.employer}</Row>}
-          {member.email && <Row label="البريد الإلكتروني"><a dir="ltr" href={`mailto:${member.email}`} className="text-q-link underline-offset-4 hover:underline">{member.email}</a></Row>}
+          {member.email && <Row label="البريد الإلكتروني"><a dir="ltr" href={`mailto:${member.email}`} className="inline-block max-w-full break-all text-q-link underline-offset-4 hover:underline">{member.email}</a></Row>}
           {member.mobile
             ? <Row label="الجوال"><a dir="ltr" href={`tel:${member.mobile}`} className="text-q-link underline-offset-4 hover:underline">{member.mobile}</a></Row>
             : !mobileVisible && <Row label="الجوال"><span className="font-normal text-q-text-2">يظهر لرئيس المجلس ومقرره فقط.</span></Row>}

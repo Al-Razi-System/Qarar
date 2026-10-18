@@ -5,6 +5,12 @@ vi.mock("@/shared/security/upload-malware-scan",()=>({scanUploadForMalware:async
 vi.mock("@/shared/security/upload-security",async importOriginal=>({...await importOriginal<typeof import("@/shared/security/upload-security")>(),inspectMultipartRequestSize:async()=>"ok"}));
 import {GET,POST} from "./route";
 afterEach(()=>{vi.clearAllMocks();vi.unstubAllGlobals();vi.unstubAllEnvs();});
+it("uses the chair's contextual server download permission independently of the participant policy",async()=>{
+ rpc.mockResolvedValue([{id,file_url:`https://example.test/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}`,mime_type:"application/pdf",download_allowed:false,viewer_download_allowed:true}]);
+ vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response("pdf")));
+ const response=await GET(new Request(`http://localhost/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}&meetingId=${id}&disposition=attachment`));
+ expect(response.status).toBe(200);expect(response.headers.get("Content-Disposition")).toBe("attachment");
+});
 const id="79000000-0000-0000-0000-000000000011";
 it("does not download storage when contextual authorization fails",async()=>{
  rpc.mockResolvedValue({ok:false,error_code:"MODEL_PERMISSION_DENIED",message_ar:"المرفق غير متاح",trace_id:"trace"});const fetchMock=vi.fn();vi.stubGlobal("fetch",fetchMock);

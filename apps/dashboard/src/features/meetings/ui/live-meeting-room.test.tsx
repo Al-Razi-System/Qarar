@@ -1,4 +1,4 @@
-import { act, render } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LiveMeetingRoom } from "./live-meeting-room";
 
@@ -6,7 +6,7 @@ const { liveMeetingRpc } = vi.hoisted(() => ({ liveMeetingRpc: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 vi.mock("../api/live-meeting-client", () => ({ liveMeetingRpc }));
-vi.mock("@/features/topics/api/topics-client", () => ({ topicsRpc: vi.fn() }));
+vi.mock("@/features/topics/api/topics-client", () => ({ topicsRpc: vi.fn(async (contract: string) => contract === "get_topic_meeting_history" ? [] : null) }));
 
 describe("LiveMeetingRoom polling", () => {
   afterEach(() => {
@@ -25,6 +25,46 @@ describe("LiveMeetingRoom polling", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
     expect(liveMeetingRpc).toHaveBeenCalledTimes(6);
 
+    view.unmount();
+  });
+
+  it("waits for an older poll and then refreshes again after a successful discussion mutation", async () => {
+    vi.useFakeTimers();
+    let detailReads = 0;
+    let timerReads = 0;
+    let releasePoll!: () => void;
+    let discussed = false;
+    const session = {
+      viewer: { user_id: "chair", full_name_ar: "الرئيس", mode: "chair", can_manage_session: true, can_manage_voting: true, can_complete_session: true },
+      meeting: { id: "m", title_ar: "اجتماع التزامن", status: "in_progress", attendance_locked: true },
+      attendance: [], my_attendance: null, quorum: { eligible_members: 3, present_members: 3, quorum_status: "met" }, open_voting_rounds: [],
+    };
+    liveMeetingRpc.mockImplementation(async (contract: string) => {
+      if (contract === "get_meeting_session_detail") return session;
+      if (contract === "get_meeting_detail") {
+        detailReads++;
+        return { agenda_items: [{ id: "a", agenda_order: 1, agenda_status: discussed ? "discussed" : "under_discussion", requires_voting: true, voting_available_now: true, topic: { id: "t", title_ar: "الخطة" } }] };
+      }
+      if (contract === "list_meeting_item_timers_v2") {
+        if (++timerReads === 2) await new Promise<void>(resolve => { releasePoll = resolve; });
+        return { server_now: new Date().toISOString(), timers: [] };
+      }
+      if (contract === "list_meeting_referrals_v2") return { referrals: [], destinations: [] };
+      if (contract === "list_meeting_assignments_v2") return { assignments: [], viewer: {}, options: null };
+      if (contract === "list_meeting_member_profiles_v2") return { members: [], mobile_visible: false };
+      if (contract === "update_agenda_discussion") { discussed = true; return {}; }
+      return [];
+    });
+    const view = render(<LiveMeetingRoom meetingId="m" />);
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(detailReads).toBe(2);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" })); });
+    expect(discussed).toBe(true);
+    expect(detailReads).toBe(2);
+    await act(async () => { releasePoll(); });
+    expect(detailReads).toBe(3);
+    expect(screen.getByRole("button", { name: "فتح التصويت للأعضاء" })).toBeInTheDocument();
     view.unmount();
   });
 });

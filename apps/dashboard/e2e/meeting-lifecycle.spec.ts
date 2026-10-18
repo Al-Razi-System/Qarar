@@ -148,8 +148,8 @@ test.beforeAll(async ({}, testInfo) => {
       (id,organization_id,meeting_no,governance_unit_id,title_ar,scheduled_date,created_by_user_id,status)
       values ('${ids.meeting}','${base.organizationId}','MTG-E2E-${suffix}','${ids.unit}','اجتماع Playwright الشامل',current_date,'${base.userId}','ready_to_start');
     insert into qarar_meetings.agenda_items
-      (id,organization_id,meeting_id,topic_id,agenda_order)
-      values ('${ids.agenda}','${base.organizationId}','${ids.meeting}','${ids.topic}',1);
+      (id,organization_id,meeting_id,topic_id,agenda_order,discussion_instructions_override)
+      values ('${ids.agenda}','${base.organizationId}','${ids.meeting}','${ids.topic}',1,E'### مراجعة المستندات\n\n- راجع الخطة\n\n<strong>قبل التصويت</strong>');
   `;
   execFileSync("docker", ["exec", databaseTarget.container, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "supabase_admin", "-d", databaseTarget.database, "-c", sql]);
   lifecycle = {
@@ -197,6 +197,7 @@ async function openAgenda(page: Page) {
 
 async function vote(page: Page, followsBroadcast = false) {
   await page.reload();
+  await expect(page.getByRole("heading", { name: "اجتماع Playwright الشامل" })).toBeVisible({ timeout: 30_000 });
   if (followsBroadcast) {
     await expect(page.getByRole("region", { name: "بث الجلسة" })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "أقسام غرفة الاجتماع" })).toHaveCount(0);
@@ -259,9 +260,16 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     await openAgenda(chair.page);
     await chair.page.getByRole("button", { name: "بدء المناقشة" }).click();
     await expect(chair.page.getByText("بدأت مناقشة البند.")).toBeVisible();
+    await chair.page.getByRole("button", { name: "وضع العرض على الشاشة" }).click();
+    await expect(chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" })).toBeInViewport();
+    await chair.page.getByRole("button", { name: "تكبير التعليمات" }).click();
+    await expect(chair.page.getByRole("dialog").getByRole("heading", { name: "مراجعة المستندات" })).toBeVisible();
+    await chair.page.getByRole("button", { name: "إغلاق العرض الموسع" }).click();
+    // The chair can advance without exiting the hall view; no vote choices are exposed there.
     await expect(chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" })).toBeInViewport();
     await chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" }).click();
     await expect(chair.page.getByText("تم حفظ الملخص النهائي للبند بنجاح.")).toBeVisible();
+    await chair.page.getByRole("button", { name: "إنهاء وضع العرض", exact: true }).click();
     await chair.page.getByRole("button", { name: "فتح التصويت للأعضاء" }).click();
     const closeVote = chair.page.getByRole("button", { name: "إغلاق التصويت واحتساب النتيجة" });
     await expect(closeVote).toBeDisabled();
@@ -273,6 +281,7 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     await vote(chair.page);
     await member.page.goto("about:blank");
     await chair.page.reload();
+    await expect(chair.page.getByRole("heading", { name: "اجتماع Playwright الشامل" })).toBeVisible({ timeout: 30_000 });
     await openAgenda(chair.page);
     await expect(chair.page.getByRole("img", { name: "صوّت 3 من 3", exact: true })).toBeVisible();
     await expect(closeVote).toBeEnabled();

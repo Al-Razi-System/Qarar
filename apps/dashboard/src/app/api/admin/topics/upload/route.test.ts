@@ -47,3 +47,11 @@ it("denies a file absent from the meeting's agenda before reading storage", asyn
   expect((await GET(request("inline"))).status).toBe(403);
   expect(fetchMock).not.toHaveBeenCalled();
 });
+
+it("keeps the chair's server-authorized download even when participant downloads are off", async () => {
+  rpc.mockResolvedValue([{ topic_id: topicId, file_url: fileUrl, download_allowed: false, viewer_download_allowed: true }]);
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("pdf")));
+  const response = await GET(request("attachment"));
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Content-Disposition")).toBe("attachment");
+});

@@ -40,10 +40,10 @@ export async function GET(request:Request){try{
  let details:{path:string;mime_type:string};const meeting=query.get("meetingId");let downloadWithheld=false;
  if(meeting){
   if(!uuid(meeting))return NextResponse.json({error:{message:"الاجتماع غير صالح."}},{status:400});
-  const attachments=await qararRpc<{id:string;file_url:string;mime_type:string;download_allowed?:boolean}[]>("list_meeting_topic_attachments",{p_meeting_id:meeting});
+  const attachments=await qararRpc<{id:string;file_url:string;mime_type:string;download_allowed?:boolean;viewer_download_allowed?:boolean}[]>("list_meeting_topic_attachments",{p_meeting_id:meeting});
   const found=attachments.find(a=>{const stored=new URL(a.file_url);return a.id===file&&stored.pathname==="/api/admin/typed-topics/files"&&stored.searchParams.get("submissionId")===id&&stored.searchParams.get("fileId")===file;});
   if(!found||!["application/pdf","image/png","image/jpeg","application/vnd.openxmlformats-officedocument.wordprocessingml.document"].includes(found.mime_type))return NextResponse.json({error:{message:"المرفق غير مرتبط بجدول أعمال هذا الاجتماع."}},{status:403});
-  details={path:`topic-preparations/${id}/${file}${extensionForUploadMime(found.mime_type as Parameters<typeof extensionForUploadMime>[0])}`,mime_type:found.mime_type};downloadWithheld=found.download_allowed===false;
+  details={path:`topic-preparations/${id}/${file}${extensionForUploadMime(found.mime_type as Parameters<typeof extensionForUploadMime>[0])}`,mime_type:found.mime_type};downloadWithheld=(found.viewer_download_allowed??found.download_allowed)===false;
  }else{const result=await qararRpcV2<Envelope<{path:string;mime_type:string}>>("get_typed_submission_file_v2",{p_request_id:id,p_file_id:file});if(!result.ok)return rejected(result);details=result.data;}
  // The chair may withhold downloads for an agenda item: through the meeting, its files are then shown inline only.
  const inline=query.get("disposition")==="inline"&&(details.mime_type==="application/pdf"||details.mime_type.startsWith("image/"));

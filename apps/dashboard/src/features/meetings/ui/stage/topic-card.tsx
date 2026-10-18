@@ -6,6 +6,7 @@ import { cn } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
+import { Dialog } from "@/shared/ui/dialog";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
 import type { AgendaItemFlow, AgendaItemState } from "../../model/agenda-flow";
 import type { AgendaDiscussionItem, Decision, LiveMeetingSession, TopicGovernanceHistory } from "../../model/live-meeting";
@@ -63,6 +64,7 @@ type Props = {
  */
 export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads, timer, assignments }: Props) {
   const [chosenTab, setChosenTab] = useState<ReferenceTab | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const [localDocument, setLocalDocument] = useState<{ attachmentId: string | null; page: number } | null>(null);
   // Without a broadcast the card keeps its own open file; with one, the broadcast decides.
   const shownDocument = document !== undefined ? document : localDocument;
@@ -91,6 +93,20 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
   const decision = flow.decision;
   const canEditDecision = Boolean(decision?.can_edit_text) && !presenting;
 
+  const materials = <>
+    {tab === "instructions" && <section aria-label="تعليمات المناقشة" className="q-instructions rounded-q-control border-s-4 border-q-primary bg-q-surface-2 p-4">
+      <h3 className="m-0 text-q-ui font-bold text-q-link">تعليمات المناقشة</h3>
+      <InstructionContent value={instructions} />
+    </section>}
+    {tab === "attachments" && <div className="flex min-h-0 flex-col gap-3">
+      {openFile && shownDocument && <DocumentViewer meetingId={session.meeting.id} attachment={openFile} page={shownDocument.page} controls={steersDocument} controllerName={controllerName} onPage={(page) => changeDocument(openFile, page)} onClose={() => changeDocument(null, null)} expanded={expanded} />}
+      <TopicAttachmentsPanel meetingId={session.meeting.id} attachments={attachments} compact={!expanded}
+        onView={steersDocument ? (attachment) => changeDocument(attachment, 1) : undefined}
+        viewingId={openFile?.id ?? null} downloads={presenting ? undefined : downloads} followsBroadcast={!steersDocument} />
+    </div>}
+    {tab === "history" && history && <TopicHistory history={history} />}
+  </>;
+
   return (
     <Card live={state.tone === "live"} role="region" aria-label="الموضوع المعروض" className={cn("flex min-w-0 flex-col gap-4", className)}>
       <header className="flex flex-col gap-2">
@@ -99,7 +115,7 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
           {item.topic?.category_name_ar && <span className="text-q-link">{item.topic.category_name_ar}</span>}
           {item.topic?.topic_no && <span dir="ltr" className="font-normal text-q-text-2">{item.topic.topic_no}</span>}
         </div>
-        <h2 className="m-0 text-q-h2 font-bold">{item.topic?.title_ar ?? "بند جدول الأعمال"}</h2>
+        <h2 className="m-0 break-words text-q-h3 font-bold">{item.topic?.title_ar ?? "بند جدول الأعمال"}</h2>
         {item.topic?.submitted_by_name_ar && <p className="m-0 text-q-caption text-q-text-2">مقدم من {item.topic.submitted_by_name_ar}</p>}
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={state.tone}>{state.label}</Badge>
@@ -121,36 +137,15 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
               {locked && <p className="m-0 text-q-caption text-q-text-2">{panelLockedReason}</p>}
             </div>
           )}
-          {tab === "instructions" && (
-            <section aria-label="تعليمات المناقشة" className="q-instructions rounded-q-control border-s-4 border-q-primary bg-q-surface-2 p-4">
-              <h3 className="m-0 text-q-ui font-bold text-q-link">تعليمات المناقشة</h3>
-              <InstructionContent value={instructions} />
-            </section>
-          )}
-          {tab === "attachments" && (
-            <div className="flex flex-col gap-3">
-              {openFile && shownDocument && (
-                <DocumentViewer
-                  meetingId={session.meeting.id}
-                  attachment={openFile}
-                  page={shownDocument.page}
-                  controls={steersDocument}
-                  controllerName={controllerName}
-                  onPage={(page) => changeDocument(openFile, page)}
-                  onClose={() => changeDocument(null, null)}
-                />
-              )}
-              <TopicAttachmentsPanel
-                meetingId={session.meeting.id}
-                attachments={attachments}
-                onView={steersDocument ? (attachment) => changeDocument(attachment, 1) : undefined}
-                viewingId={openFile?.id ?? null}
-                downloads={presenting ? undefined : downloads}
-                followsBroadcast={!steersDocument}
-              />
-            </div>
-          )}
-          {tab === "history" && history && <TopicHistory history={history} />}
+          {tab && <Button variant="secondary" className="self-start" onClick={() => setExpanded(true)}>
+            {tab === "instructions" ? "تكبير التعليمات" : tab === "attachments" ? "تكبير المرفقات" : "تكبير القرارات السابقة"}
+          </Button>}
+          {!expanded && materials}
+          {expanded && <Dialog size="full" title={`${tab === "instructions" ? "تعليمات المناقشة" : tab === "attachments" ? "مرفقات الموضوع" : "القرارات السابقة"} — ${item.topic?.title_ar ?? "بند جدول الأعمال"}`} onClose={() => setExpanded(false)}
+            footer={<Button variant="secondary" onClick={() => setExpanded(false)}>إغلاق العرض الموسع</Button>}>
+            {locked && <p className="m-0 text-q-caption text-q-text-2">{panelLockedReason}</p>}
+            {materials}
+          </Dialog>}
         </div>
       )}
 

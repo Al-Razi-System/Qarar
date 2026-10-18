@@ -48,7 +48,7 @@ export function TopicAttachmentsPanel({ meetingId, attachments, compact = false,
       {downloads?.error && <p role="alert" className="m-0 text-q-caption font-bold text-q-danger">{downloads.error}</p>}
       <ul className={`m-0 grid list-none gap-2 p-0 ${compact ? "" : "sm:grid-cols-2"}`}>
         {attachments.map((attachment) => {
-          const downloadable = attachment.download_allowed !== false;
+          const downloadable = (attachment.viewer_download_allowed ?? attachment.download_allowed) !== false;
           const viewable = attachment.mime_type === "application/pdf" || attachment.mime_type.startsWith("image/");
           const viewing = attachment.id === viewingId;
           return (

@@ -12,7 +12,7 @@ type Props = {
   closeDisabled?: boolean;
   /** Actions, rendered in a row at the bottom. Put the error message here, beside them. */
   footer?: ReactNode;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "full";
   /** Keep the header and actions visible for long editors on narrow screens. */
   scrollContent?: boolean;
   children: ReactNode;
@@ -37,7 +37,7 @@ export function Dialog({ title, description, onClose, closeDisabled = false, foo
 
   return (
     <div
-      className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-q-scrim p-4"
+      className={cn("fixed inset-0 z-[80] grid place-items-center bg-q-scrim", size === "full" ? "overflow-hidden" : "overflow-y-auto p-4")}
       onMouseDown={(event) => { if (event.target === event.currentTarget && !closeDisabled) onClose(); }}
     >
       <div
@@ -45,7 +45,7 @@ export function Dialog({ title, description, onClose, closeDisabled = false, foo
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className={cn("w-full rounded-q-card border border-q-border bg-q-surface font-sans text-q-text shadow-2xl", size === "lg" ? "max-w-2xl" : "max-w-lg", scrollContent && "flex max-h-[calc(100dvh-2rem)] flex-col")}
+        className={cn("w-full border border-q-border bg-q-surface font-sans text-q-text shadow-2xl", size === "full" ? "flex h-dvh min-h-0 flex-col" : "rounded-q-card", size === "lg" ? "max-w-2xl" : size === "md" ? "max-w-lg" : "", scrollContent && size !== "full" && "flex max-h-[calc(100dvh-2rem)] flex-col")}
       >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-q-border p-5">
           <div className="min-w-0">
@@ -62,7 +62,7 @@ export function Dialog({ title, description, onClose, closeDisabled = false, foo
             <span aria-hidden="true">×</span>
           </button>
         </header>
-        <div className={cn("flex flex-col gap-4 p-5",scrollContent&&"min-h-0 overflow-y-auto")}>{children}</div>
+        <div className={cn("flex flex-col gap-4 p-5", (scrollContent || size === "full") && "min-h-0 overflow-y-auto", size === "full" && "flex-1")}>{children}</div>
         {footer && <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-q-border p-5">{footer}</footer>}
       </div>
     </div>

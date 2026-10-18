@@ -4,7 +4,7 @@
 -- Impact map: docs/engineering/impact/MEETING_DOCUMENT_VIEWER_AR.md
 begin;
 create extension if not exists pgtap;
-select plan(21);
+select plan(29);
 
 insert into public.organizations(id,code,name_ar) values
 ('a2000000-0000-0000-0000-000000000001','s101','Broadcast'),
@@ -32,7 +32,7 @@ insert into public.roles(id,organization_id,code,name_ar,role_scope) values
 ('a2000000-0000-0000-0000-000000000033','a2000000-0000-0000-0000-000000000001','s101_member','Member','governance_unit');
 insert into public.permissions(organization_id,code,module,action,context_scope,name_ar)
 select 'a2000000-0000-0000-0000-000000000001',v.code,split_part(v.code,'.',1),split_part(v.code,'.',2),'governance_unit',v.code
-from (values ('meetings.manage'),('attendance.read'),('attendance.manage'),('attendance.verify'),('attendance.lock'),('quorum.read'),('quorum.manage')) v(code)
+from (values ('meetings.read'),('meetings.manage'),('attendance.read'),('attendance.manage'),('attendance.verify'),('attendance.lock'),('quorum.read'),('quorum.manage')) v(code)
 on conflict (organization_id,code) do nothing;
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select 'a2000000-0000-0000-0000-000000000001','a2000000-0000-0000-0000-000000000031',id
@@ -42,7 +42,7 @@ insert into public.role_permissions(organization_id,role_id,permission_id)
 select 'a2000000-0000-0000-0000-000000000001',r.role_id,p.id
 from public.permissions p
 cross join (values ('a2000000-0000-0000-0000-000000000032'::uuid),('a2000000-0000-0000-0000-000000000033'::uuid)) r(role_id)
-where p.organization_id='a2000000-0000-0000-0000-000000000001' and p.code in ('attendance.read','quorum.read');
+where p.organization_id='a2000000-0000-0000-0000-000000000001' and p.code in ('meetings.read','attendance.read','quorum.read');
 insert into public.memberships(id,organization_id,user_id,governance_unit_id,role_id) values
 ('a2000000-0000-0000-0000-000000000061','a2000000-0000-0000-0000-000000000001','a2000000-0000-0000-0000-000000000011','a2000000-0000-0000-0000-000000000022','a2000000-0000-0000-0000-000000000031'),
 ('a2000000-0000-0000-0000-000000000062','a2000000-0000-0000-0000-000000000001','a2000000-0000-0000-0000-000000000012','a2000000-0000-0000-0000-000000000022','a2000000-0000-0000-0000-000000000032'),
@@ -93,15 +93,18 @@ select is((pg_temp.s101_file()->>'download_revision')::integer,0,'an undecided i
 select is((api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',false,0)->>'attachments_downloadable')::boolean,
   false,'the chair withholds downloads for an item');
 select is((pg_temp.s101_file()->>'download_allowed')::boolean,false,'the list reports the withheld download');
+select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,true,'the chair retains downloading while participants are blocked');
 select is(pg_temp.s101_download_audits(),1::bigint,'the decision is audited');
 select throws_ok($$ select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,0) $$,
   '40001',null,'a stale revision is refused instead of overwriting the decision');
 
 -- Only the chair decides.
 select pg_temp.s101_as('a2000000-0000-0000-0000-000000000012');
+select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,false,'the rapporteur does not inherit the chair download exception');
 select throws_ok($$ select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,1) $$,
   '42501',null,'the rapporteur cannot change the download permission');
 select pg_temp.s101_as('a2000000-0000-0000-0000-000000000015');
+select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,false,'a global administrator does not inherit the chair download exception');
 select throws_ok($$ select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,1) $$,
   '42501',null,'a system administrator cannot change the download permission');
 select pg_temp.s101_as('a2000000-0000-0000-0000-000000000016');
@@ -129,9 +132,23 @@ select is((api_v2.set_meeting_broadcast_document_v2('a2000000-0000-0000-0000-000
 
 -- Members follow; they cannot open or close a document.
 select pg_temp.s101_as('a2000000-0000-0000-0000-000000000013');
+select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,false,'a member cannot download a withheld file');
 select is(pg_temp.s101_state()->>'attachment_id','a2000000-0000-0000-0000-0000000000a1','a member reads the open document');
 select throws_ok($$ select api_v2.set_meeting_broadcast_document_v2('a2000000-0000-0000-0000-000000000081',null,null,2) $$,
   '42501',null,'a member cannot close the broadcast document');
+
+-- The exception is an active council role, not a cached roster/chair identity.
+reset role;
+update qarar_iam.memberships set membership_status='inactive'
+where id='a2000000-0000-0000-0000-000000000061';
+set local role authenticated;
+select pg_temp.s101_as('a2000000-0000-0000-0000-000000000011');
+select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,false,'a revoked chair loses the exception even with an attendance record');
+reset role;
+update qarar_iam.memberships set membership_status='active'
+where id='a2000000-0000-0000-0000-000000000061';
+set local role authenticated;
+select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,true,'restoring the active chair role restores the exception');
 
 -- Moving to another item closes the document; closing it keeps the item.
 select pg_temp.s101_as('a2000000-0000-0000-0000-000000000011');
@@ -141,6 +158,10 @@ select api_v2.set_meeting_broadcast_document_v2('a2000000-0000-0000-0000-0000000
 select is(api_v2.set_meeting_broadcast_document_v2('a2000000-0000-0000-0000-000000000081',null,null,4)->>'agenda_item_id',
   'a2000000-0000-0000-0000-000000000091','closing the document keeps the item on screen');
 select is(pg_temp.s101_state()->>'page',null,'a closed document has no page');
+select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,1);
+select is((pg_temp.s101_file()->>'download_allowed')::boolean,true,'the participant policy can be restored independently');
+select pg_temp.s101_as('a2000000-0000-0000-0000-000000000013');
+select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,true,'a member regains download access when the chair allows it');
 
 select * from finish();
 rollback;

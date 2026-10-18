@@ -65,6 +65,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [profiles, setProfiles] = useState<MemberProfiles | null>(null);
   const [profilesError, setProfilesError] = useState<string | null>(null);
   const loadInFlight = useRef(false);
+  const loadFinished = useRef<Promise<void> | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [checkIn, setCheckIn] = useState<CheckInToken | null>(null);
   /** The decision dialog: drafting from an approved round, or editing a saved decision's text. */
@@ -105,9 +106,18 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, []);
 
-  async function load(silent = false) {
-    if (loadInFlight.current) return;
+  async function load(silent = false, afterMutation = false): Promise<void> {
+    if (loadInFlight.current) {
+      // A poll may predate the mutation: never mistake it for its fresh result.
+      if (afterMutation) {
+        await loadFinished.current;
+        return load(silent, true);
+      }
+      return;
+    }
     loadInFlight.current = true;
+    let finish!: () => void;
+    loadFinished.current = new Promise<void>((resolve) => { finish = resolve; });
     if (!silent) setLoading(true);
     try {
       if (!silent) setLoadError(null);
@@ -179,6 +189,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       else setNotice({ kind: "error", text });
     } finally {
       loadInFlight.current = false;
+      finish();
       if (!silent) setLoading(false);
     }
   }
@@ -189,7 +200,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     try {
       await action();
       setNotice({ kind: "success", text: success });
-      await load(true);
+      await load(true, true);
       return true;
     } catch (error) {
       setNotice({ kind: "error", text: messageOf(error, "تعذر تنفيذ العملية.") });
@@ -204,7 +215,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     try {
       const result = await liveMeetingRpc<CheckInToken>("create_checkin_session", { p_meeting_id: meetingId, p_valid_for_minutes: 15 });
       setCheckIn(result);
-      await load(true);
+      await load(true, true);
     } catch (error) { setNotice({ kind: "error", text: messageOf(error, "تعذر إنشاء رمز الحضور.") }); }
     finally { setBusy(false); }
   }
@@ -267,12 +278,12 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     setAssignmentActivity({ key, errorKey: null, error: null });
     try {
       await action();
-      await load(true);
+      await load(true, true);
       setAssignmentActivity({ key: null, errorKey: null, error: null });
       return true;
     } catch (error) {
       setAssignmentActivity({ key: null, errorKey: key, error: messageOf(error, fallback) });
-      await load(true);
+      await load(true, true);
       return false;
     }
   }
@@ -301,11 +312,11 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     setPlannedState({ pendingItemId: agendaItemId, errorItemId: null, error: null });
     try {
       await liveMeetingRpc("set_agenda_item_planned_minutes_v2", { p_agenda_item_id: agendaItemId, p_minutes: minutes, p_expected_revision: revision });
-      await load(true);
+      await load(true, true);
       setPlannedState({ pendingItemId: null, errorItemId: null, error: null });
     } catch (error) {
       setPlannedState({ pendingItemId: null, errorItemId: agendaItemId, error: messageOf(error, "تعذر حفظ مدة البند.") });
-      await load(true);
+      await load(true, true);
     }
   }
 
@@ -313,11 +324,11 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     setDownloadState({ pendingItemId: agendaItemId, errorItemId: null, error: null });
     try {
       await liveMeetingRpc("set_agenda_item_downloads_v2", { p_agenda_item_id: agendaItemId, p_allowed: allowed, p_expected_revision: revision });
-      await load(true);
+      await load(true, true);
       setDownloadState({ pendingItemId: null, errorItemId: null, error: null });
     } catch (error) {
       setDownloadState({ pendingItemId: null, errorItemId: agendaItemId, error: messageOf(error, "تعذر حفظ إذن التنزيل.") });
-      await load(true);
+      await load(true, true);
     }
   }
 
@@ -353,14 +364,14 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       ref={roomRef}
       data-theme={theme.dark ? "dark" : undefined}
       className={cn(
-        "flex flex-col gap-3 font-sans text-q-text",
+        "flex flex-col gap-3 bg-q-bg font-sans text-q-text",
         (theme.dark || presenting) && "rounded-q-card bg-q-bg p-3 sm:p-4",
         // One fixed screen for whoever steers the meeting; the columns scroll inside it.
-        steering && activeTab === "agenda" && "lg:h-[calc(100dvh-9.5rem)] lg:min-h-[640px]",
-        (presenting || fullscreen) && "lg:h-dvh overflow-y-auto",
+        steering && activeTab === "agenda" && "lg:h-[calc(100dvh-9.5rem)]",
+        (presenting || fullscreen) && "h-dvh overflow-hidden p-3 sm:p-4 lg:h-dvh",
       )}
     >
-      {notice && !presenting && <InlineMessage tone={notice.kind === "success" ? "success" : "error"} className="sticky top-2 z-40 border border-q-border text-q-ui shadow-lg">{notice.text}</InlineMessage>}
+      {notice && <InlineMessage tone={notice.kind === "success" ? "success" : "error"} className="shrink-0 border border-q-border text-q-ui">{notice.text}</InlineMessage>}
 
       <RoomTopBar
         session={session}
@@ -395,7 +406,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       )}
 
       {activeTab === "my-attendance" ? (
-        <MemberCheckInCard meetingId={meetingId} attendance={session.my_attendance} canCheckIn={session.viewer.can_self_check_in} onCompleted={async (text) => { setNotice({ kind: "success", text }); await load(true); }} />
+        <MemberCheckInCard meetingId={meetingId} attendance={session.my_attendance} canCheckIn={session.viewer.can_self_check_in} onCompleted={async (text) => { setNotice({ kind: "success", text }); await load(true, true); }} />
       ) : activeTab === "attendance" && operator ? (
         <ChairAttendanceConsole
           session={session}
@@ -407,7 +418,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           onLock={() => void perform(() => liveMeetingRpc("lock_attendance_roster", { p_meeting_id: meetingId, p_expected_updated_at: session.meeting.updated_at }), "تم تثبيت سجل الحضور واعتماد النصاب.")}
         />
       ) : (
-        <div className="min-h-0 flex-1"><AgendaWorkspace
+        <div className={cn("min-h-0 flex-1", (presenting || fullscreen) && "overflow-y-auto")}><AgendaWorkspace
           stage={<RoomStage {...stageProps} />}
           compactStage={<RoomStage {...stageProps} compact />}
           ballot={ballots.length ? <div className="flex flex-col gap-3">{ballots}</div> : undefined}
