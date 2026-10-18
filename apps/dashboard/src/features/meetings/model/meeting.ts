@@ -13,6 +13,7 @@ export type MeetingCapabilities = {
 };
 
 export type Meeting = {
+  quorum_percentage?: number;
   id: string;
   meeting_no?: string | null;
   title_ar: string;
