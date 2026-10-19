@@ -9,8 +9,8 @@ select is(
     from qarar_architecture.api_contract_registry
     where api_version = 'v1'
   ),
-  229,
-  'the reviewed api_v1 registry contains 229 contracts (kept equal to 13_modular_architecture_test)'
+  233,
+  'the reviewed api_v1 registry contains 233 contracts (kept equal to 13_modular_architecture_test)'
 );
 
 select is(
@@ -19,7 +19,7 @@ select is(
     from qarar_architecture.api_release_registry
     where api_version = 'v1'
   ),
-  229,
+  233,
   'the api_v1 release metadata matches the reviewed registry count'
 );
 
