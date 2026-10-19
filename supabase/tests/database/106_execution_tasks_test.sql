@@ -4,7 +4,7 @@
 -- Impact map: docs/engineering/impact/EXECUTION_TASKS_AR.md
 begin;
 create extension if not exists pgtap;
-select plan(33);
+select plan(34);
 
 insert into public.organizations(id,code,name_ar) values
 ('a7000000-0000-0000-0000-000000000001','s106','Execution'),
@@ -100,7 +100,8 @@ select is((api_v2.update_task_progress_v2('a7000000-0000-0000-0000-0000000000b1'
 select throws_ok($$ select api_v2.submit_task_completion_v2('a7000000-0000-0000-0000-0000000000b1','Done',pg_temp.s106_token('a7000000-0000-0000-0000-0000000000b1')) $$,'23514',null,'a task that requires evidence is not submitted without it');
 select throws_ok($$ select api_v2.add_task_evidence_v2('a7000000-0000-0000-0000-0000000000b1','missing.pdf','tasks/a7000000-0000-0000-0000-0000000000b1/missing.pdf','application/pdf',2048,null) $$,'23514',null,'evidence must exist in the private store');
 select throws_ok($$ select api_v2.add_task_evidence_v2('a7000000-0000-0000-0000-0000000000b1','evidence.pdf','tasks/a7000000-0000-0000-0000-0000000000b2/evidence.pdf','application/pdf',2048,null) $$,'22023',null,'evidence belongs under its own task''s path');
-select ok(api_v2.add_task_evidence_v2('a7000000-0000-0000-0000-0000000000b1','evidence.pdf','tasks/a7000000-0000-0000-0000-0000000000b1/evidence.pdf','application/pdf',2048,'Signed plan') ? 'id','the assignee attaches evidence');
+select ok(api_v2.add_task_evidence_v2('a7000000-0000-0000-0000-0000000000b1','evidence.pdf','tasks/a7000000-0000-0000-0000-0000000000b1/evidence.pdf','application/pdf',2048,null) ? 'id','the assignee attaches evidence without the optional description');
+select is(api_v2.get_task_v2('a7000000-0000-0000-0000-0000000000b1')->'evidence'->0->>'description','','an omitted optional evidence description is stored safely');
 select is(api_v2.submit_task_completion_v2('a7000000-0000-0000-0000-0000000000b1','Done',pg_temp.s106_token('a7000000-0000-0000-0000-0000000000b1'))->>'status','submitted','the assignee submits the task for verification');
 select throws_ok($$ select api_v2.remove_task_evidence_v2((api_v2.get_task_v2('a7000000-0000-0000-0000-0000000000b1')->'evidence'->0->>'id')::uuid) $$,'23514',null,'evidence is frozen once submitted');
 

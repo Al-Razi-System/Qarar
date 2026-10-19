@@ -113,7 +113,7 @@ export function TaskDetailPanel({ task, pending, error, onAction }: Props) {
     if (viewer.is_executor && open) {
       return viewer.can_submit
         ? { title: "سلّم الإنجاز حين تنتهي", body: `يتحقق منه ${task.follow_up_user_name_ar ?? "المتابع"} أو رئيس المجلس أو مسؤول الحوكمة.` }
-        : { title: "أكمل العمل ثم سلّمه", body: "حدّث نسبة الإنجاز وأرفق ما يثبته، ثم سلّمه للتحقق." };
+        : { title: "أكمل العمل ثم سلّمه", body: "نفّذ الخطوات الثلاث التالية؛ تصل المهمة إلى 100% بعد اعتماد المتابع." };
     }
     if (task.status === "submitted" && viewer.is_executor) return { title: "بانتظار التحقق", body: "سُلّمت المهمة، وتنتظر تحقق المتابع أو رئيس المجلس أو مسؤول الحوكمة." };
     return { title: "للاطلاع", body: "تتابع هذه المهمة؛ يحدّث المنفّذ إنجازها ويتحقق منها المتابع." };
@@ -152,6 +152,14 @@ export function TaskDetailPanel({ task, pending, error, onAction }: Props) {
           <p className="m-0 text-q-h3 font-bold">{nextStep.title}</p>
           <p className="m-0 text-q-ui text-q-text-2">{nextStep.body}</p>
         </div>
+
+        {viewer.is_executor && open && (
+          <ol className="m-0 grid list-inside list-decimal gap-2 rounded-q-control bg-q-surface px-3 py-3 text-q-ui sm:grid-cols-3">
+            <li>حدّث نسبة الإنجاز</li>
+            <li>أرفق دليل الإنجاز {task.requires_evidence ? "المطلوب" : "إن وُجد"}</li>
+            <li>اضغط «تسليم الإنجاز للتحقق»</li>
+          </ol>
+        )}
 
         {error && <InlineMessage tone="error">{error}</InlineMessage>}
 

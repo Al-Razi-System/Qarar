@@ -123,6 +123,13 @@ describe("TaskDetailPanel", () => {
 
   it("explains why the executor cannot submit yet, and uploads evidence", async () => {
     render(<TaskDetailPanel task={detail()} pending={null} error={null} onAction={onAction} />);
+    const next = screen.getByRole("region", { name: "خطوتك التالية" });
+    expect(within(next).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "حدّث نسبة الإنجاز",
+      "أرفق دليل الإنجاز المطلوب",
+      "اضغط «تسليم الإنجاز للتحقق»",
+    ]);
+    expect(next).toHaveTextContent("تصل المهمة إلى 100% بعد اعتماد المتابع");
     expect(screen.getByRole("button", { name: "تسليم الإنجاز للتحقق" })).toBeDisabled();
     expect(screen.getByText("تتطلب هذه المهمة دليل إنجاز؛ أرفق ملفاً قبل التسليم.")).toBeInTheDocument();
     const form = screen.getByRole("form", { name: "إرفاق دليل" });
