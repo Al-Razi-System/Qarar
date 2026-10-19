@@ -177,8 +177,20 @@ returns required/actual percentages, eligible/present counts, status, and snapsh
 }
 ```
 
-Actions are `postpone` and `cancel`. The action is rejected when quorum is met. It changes meeting
-state and appends status history and audit atomically.
+Actions are `postpone`, `cancel`, and `continue`. The action is rejected when quorum is met.
+Postponement/cancellation change state and append history and audit atomically.
+`continue` additionally requires an active contextual `council_chair` role in this council,
+not administrative mode or a rapporteur. It stores an immutable authorization/reason/quorum
+snapshot in `meeting.quorum_continuation`, keeps the meeting `in_progress` and quorum
+`not_met`, and writes audit. An optimistic meeting token and a meeting row lock serialize
+this choice against postponement, voting and completion. No automatic/grandfathered exceptions.
+`get_meeting_session_detail.viewer.can_decide_quorum` is the authoritative UI capability.
+Until this choice is made, discussion cannot begin or advance when quorum is missing.
+The live room immediately asks the chair after attendance locks (also for existing sessions).
+Every decision returned by `list_meeting_decisions` includes the meeting's immutable
+`quorum_continuation` provenance. Generated minutes carry an explicit insufficient-quorum
+warning; submission refuses text that omits that warning. Other vote/summary/approval
+requirements are unchanged.
 
 ## Member Cards (v2)
 
@@ -342,7 +354,8 @@ An assignment is an execution task tied to the decision drafted for an agenda it
 ## Open Voting
 
 `open_voting_round` accepts `p_agenda_item_id` and `p_expected_meeting_updated_at`.
-The meeting must be `in_progress`, attendance must be locked, and quorum must be `met`. The server
+The meeting must be `in_progress`, attendance must be locked, and quorum must be `met` or
+the chair must have explicitly recorded `quorum_continuation` as described above. The server
 snapshots active members currently verified as `present` or `late`; later governed overrides do not
 alter that round's electorate.
 
@@ -457,7 +470,7 @@ action only then.
 | Meeting/session state error | Reload detail and disable invalid controls |
 | Vote already cast | Mark the round completed for this member |
 | Round not open | Remove it from the member's open-vote list |
-| Quorum not met | Disable voting and show failed-quorum actions to authorized users |
+| Quorum not met | Ask the contextual chair to postpone or explicitly continue; keep the warning and quorum evidence |
 | Check-in token invalid/expired | Ask the member to scan the current QR |
 | Pending verification | Do not count the member toward quorum yet |
 | Unresolved roster | Disable roster lock and highlight unresolved members |

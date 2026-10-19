@@ -160,6 +160,7 @@ export type LiveMeetingSession = {
     mode: "chair" | "rapporteur" | "member";
     is_roster_member: boolean;
     can_manage_session: boolean;
+    can_decide_quorum?: boolean;
     can_operate_attendance: boolean;
     can_create_checkin: boolean;
     can_verify_attendance: boolean;
@@ -178,6 +179,7 @@ export type LiveMeetingSession = {
     updated_at: string;
     attendance_locked: boolean;
     attendance_locked_at?: string | null;
+    quorum_continuation?: QuorumContinuation | null;
   };
   attendance: Attendance[];
   my_attendance: Attendance | null;
@@ -193,6 +195,7 @@ export type LiveMeetingSession = {
 };
 
 export type MyVote = { voting_round_id: string; title_ar: string; has_voted: boolean };
+export type QuorumContinuation = { authorized_by: string; authorized_at: string; reason: string; quorum: NonNullable<LiveMeetingSession["quorum"]> };
 export type Decision = {
   id: string;
   decision_no: string;
@@ -203,6 +206,7 @@ export type Decision = {
   updated_at?: string;
   /** Whether this viewer may edit the text now, as decided by the server. */
   can_edit_text?: boolean;
+  quorum_continuation?: QuorumContinuation | null;
 };
 
 export type TopicMeetingHistory = {

@@ -58,8 +58,10 @@ describe("chairActions", () => {
 
   it("explains why voting cannot open before attendance is locked or without a quorum", () => {
     const ready = item({ agenda_status: "discussed", voting_available_now: true });
-    expect(kinds(ready, session({ attendance_locked: false })).actions[0].disabledReason).toBe("ثبّت سجل الحضور أولاً لفتح التصويت.");
-    expect(kinds(ready, session({}, "not_met")).actions[0].disabledReason).toBe("النصاب غير مكتمل، فلا يُفتح التصويت.");
+    expect(kinds(ready, session({ attendance_locked: false }))).toEqual({ actions: [], note: "ثبّت سجل الحضور قبل بدء المناقشة." });
+    expect(kinds(ready, session({}, "not_met"))).toEqual({ actions: [], note: "بانتظار اختيار رئيس المجلس: تأجيل الاجتماع أو المتابعة بنصاب غير مكتمل." });
+    const allowed = session({ quorum_continuation: { authorized_by: "chair", authorized_at: "2026-10-19", reason: "قرار موثق", quorum: {} } }, "not_met");
+    expect(kinds(ready, allowed).actions[0]).toEqual({ kind: "open_round", label: "فتح التصويت للأعضاء", disabledReason: undefined });
   });
 
   it("opens the vote only after the discussion, and says why when the route cannot be voted on", () => {

@@ -30,6 +30,15 @@ try {
     const next = page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" });
     await expect(next).toBeVisible();
     await next.scrollIntoViewIfNeeded();
+    const overlaps = await page.getByTestId("council-table-surface").evaluate(surface => {
+      const table = surface.getBoundingClientRect();
+      const scene = surface.parentElement.parentElement;
+      return [...scene.querySelectorAll("li")].filter(seat => {
+        const rect = seat.getBoundingClientRect();
+        return rect.left < table.right && rect.right > table.left && rect.top < table.bottom && rect.bottom > table.top;
+      }).length;
+    });
+    if (overlaps) throw Error(`Seats overlap the table at ${width}`);
     const box = await next.boundingBox();
     if (width >= 1024 && box.y + box.height > 1000) throw Error(`Chair next action offscreen at ${width}`);
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error(`Horizontal overflow ${width}`);
@@ -44,6 +53,14 @@ try {
     await dialog.getByRole("button", { name: "إغلاق العرض الموسع" }).click();
     results.push({ width, dark, chair: true, expanded: true });
   }
+  // The available scene is much shorter inside the actual application's shell.
+  await page.setViewportSize({ width: 1440, height: 720 });
+  await page.goto(`${base}/iframe.html?id=${story("ChairDiscussion")}&viewMode=story`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" })).toBeVisible();
+  await page.getByRole("heading", { name: "مجلس الكلية · الاجتماع الدوري الثالث" }).evaluate(heading => { heading.closest("header").parentElement.style.height = "680px"; });
+  const shortAction = await page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" }).boundingBox();
+  if (shortAction.y + shortAction.height > 720) throw Error("Next action clipped at short desktop height");
+  await page.screenshot({ path: "/tmp/qarar-display-chair-short-desktop.png" });
   for (const width of [1440, 390]) for (const dark of [false, true]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await page.goto(`${base}/iframe.html?id=${story("MemberDocument")}&viewMode=story`, { waitUntil: "domcontentloaded" });

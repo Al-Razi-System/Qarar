@@ -83,6 +83,12 @@ select is(jsonb_array_length(api_v2.list_meeting_item_timers_v2('a3000000-0000-0
 select ok((api_v2.list_meeting_item_timers_v2('a3000000-0000-0000-0000-000000000081')->>'server_now') is not null,'the server tells screens its own time');
 
 select api_v1.open_meeting_session('a3000000-0000-0000-0000-000000000081',pg_temp.s102_meeting_token());
+-- Discussion starts only after the preparation/attendance boundary.
+select pg_temp.s102_as('a3000000-0000-0000-0000-000000000015');
+select api_v1.verify_attendance(a.id,'present','Verified test attendance',a.updated_at)
+from public.attendance_records a where a.meeting_id='a3000000-0000-0000-0000-000000000081';
+select pg_temp.s102_as('a3000000-0000-0000-0000-000000000011');
+select api_v1.lock_attendance_roster('a3000000-0000-0000-0000-000000000081',pg_temp.s102_meeting_token());
 
 -- Starting the discussion starts the timer; ending it stops the timer.
 select api_v1.update_agenda_discussion('a3000000-0000-0000-0000-000000000091','under_discussion',null,pg_temp.s102_item_token('a3000000-0000-0000-0000-000000000091'));

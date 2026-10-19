@@ -111,6 +111,10 @@ export function chairActions(
   let note: string | null = null;
   const refer: ChairAction = { kind: "refer", label: "إحالة البند" };
 
+  if (!session.meeting.attendance_locked || (!quorumMet(session) && !session.meeting.quorum_continuation)) {
+    return { actions: [], note: session.meeting.attendance_locked ? "بانتظار اختيار رئيس المجلس: تأجيل الاجتماع أو المتابعة بنصاب غير مكتمل." : "ثبّت سجل الحضور قبل بدء المناقشة." };
+  }
+
   if (status === "pending") actions.push({ kind: "start", label: "بدء المناقشة" });
 
   if (flow.referral) {
@@ -141,7 +145,7 @@ export function chairActions(
       label: "فتح التصويت للأعضاء",
       disabledReason: unavailable
         ? item.voting_unavailable_reason ?? "لا يُفتح التصويت على هذا البند الآن."
-        : !session.meeting.attendance_locked ? "ثبّت سجل الحضور أولاً لفتح التصويت." : !quorumMet(session) ? "النصاب غير مكتمل، فلا يُفتح التصويت." : undefined,
+        : !session.meeting.attendance_locked ? "ثبّت سجل الحضور أولاً لفتح التصويت." : !quorumMet(session) && !session.meeting.quorum_continuation ? "النصاب غير مكتمل؛ يلزم قرار الرئيس أولًا." : undefined,
     });
     if (unavailable) actions.push({ kind: "postpone", label: "تأجيل البند" });
     if (options.canRefer) actions.push(refer);
@@ -158,7 +162,7 @@ export function chairActions(
 export function completionBlockers(session: LiveMeetingSession, ordered: AgendaDiscussionItem[], rounds: VotingRound[], decisions: Decision[], referrals: ItemReferral[] = []) {
   const blockers: string[] = [];
   if (!session.meeting.attendance_locked) blockers.push("تثبيت سجل الحضور.");
-  if (!quorumMet(session)) blockers.push("اكتمال النصاب النظامي للاجتماع.");
+  if (!quorumMet(session) && !session.meeting.quorum_continuation) blockers.push("اكتمال النصاب أو قرار الرئيس بالمتابعة بنصاب غير مكتمل.");
 
   ordered.forEach((item) => {
     const label = `البند ${item.agenda_order} «${item.topic?.title_ar ?? "موضوع الاجتماع"}»`;

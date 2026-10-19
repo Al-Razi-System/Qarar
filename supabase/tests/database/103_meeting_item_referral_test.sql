@@ -109,6 +109,12 @@ select pg_temp.s103_as('a4000000-0000-0000-0000-000000000011');
 select throws_ok($$ select api_v2.refer_agenda_item_v2('a4000000-0000-0000-0000-000000000091','a4000000-0000-0000-0000-000000000023','Needs the committee study',pg_temp.s103_item_token('a4000000-0000-0000-0000-000000000091')) $$,'23514',null,'no item is referred before the session opens');
 
 select api_v1.open_meeting_session('a4000000-0000-0000-0000-000000000081',pg_temp.s103_meeting_token());
+-- Keep the preceding stage real: resolve and lock attendance before discussion.
+select pg_temp.s103_as('a4000000-0000-0000-0000-000000000015');
+select api_v1.verify_attendance(a.id,'present','Verified test attendance',a.updated_at)
+from public.attendance_records a where a.meeting_id='a4000000-0000-0000-0000-000000000081';
+select pg_temp.s103_as('a4000000-0000-0000-0000-000000000011');
+select api_v1.lock_attendance_roster('a4000000-0000-0000-0000-000000000081',pg_temp.s103_meeting_token());
 
 -- The chair reads the units an item may go to.
 select ok((select bool_or(d->>'id'='a4000000-0000-0000-0000-000000000023') from jsonb_array_elements(api_v2.list_meeting_referrals_v2('a4000000-0000-0000-0000-000000000081')->'destinations') d),'the chair sees the active units an item may go to');

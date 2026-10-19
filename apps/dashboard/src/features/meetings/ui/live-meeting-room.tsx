@@ -13,6 +13,7 @@ import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, Me
 import type { MeetingTopicAttachment } from "../model/meeting";
 import { AttendanceQrDialog } from "./attendance-qr-dialog";
 import { ChairAttendanceConsole } from "./chair-attendance-console";
+import { QuorumDecisionGate } from "./quorum-decision-gate";
 import { DecisionComposerDialog } from "./decision-composer-dialog";
 import { MemberCheckInCard } from "./member-check-in-card";
 import { AgendaWorkspace } from "./stage/agenda-workspace";
@@ -404,6 +405,12 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           ))}
         </nav>
       )}
+
+      <QuorumDecisionGate session={session} busy={busy} onChoose={async (action, reason) => {
+        const saved = await perform(() => liveMeetingRpc("apply_quorum_failure", { p_meeting_id: meetingId, p_action: action, p_reason: reason, p_expected_updated_at: session.meeting.updated_at }), action === "postpone" ? "أُجل الاجتماع لعدم اكتمال النصاب." : "سُجل قرار المتابعة بنصاب غير مكتمل وسيظهر في القرارات والمحضر.");
+        if (saved && action === "postpone") router.push("/admin/meetings");
+        return saved;
+      }} />
 
       {activeTab === "my-attendance" ? (
         <MemberCheckInCard meetingId={meetingId} attendance={session.my_attendance} canCheckIn={session.viewer.can_self_check_in} onCompleted={async (text) => { setNotice({ kind: "success", text }); await load(true, true); }} />

@@ -167,6 +167,7 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
             {canEditDecision && <Button variant="secondary" disabled={busy} onClick={() => onEditDecision(decision)}>تعديل القرار</Button>}
           </div>
           <p className="m-0 whitespace-pre-line text-q-body">{decision.decision_text}</p>
+          {decision.quorum_continuation && <p className="m-0 text-q-caption font-bold text-q-warning">اتُخذ هذا القرار في اجتماع بنصاب غير مكتمل. السبب: {decision.quorum_continuation.reason}</p>}
           {canEditDecision && <p className="m-0 text-q-caption text-q-text-2">يعدّل النص رئيس المجلس والمقرر إلى اعتماد المحضر.</p>}
         </section>
       )}

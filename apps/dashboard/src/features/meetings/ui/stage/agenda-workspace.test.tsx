@@ -66,7 +66,8 @@ describe("AgendaWorkspace", () => {
     const dock = screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" });
     await userEvent.click(within(dock).getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" }));
     expect(handlers.onUpdateDiscussion).toHaveBeenCalledWith(first, "discussed", null);
-    await userEvent.click(within(dock).getByRole("button", { name: "تأجيل البند" }));
+    await userEvent.click(within(dock).getByRole("button", { name: "خيارات أخرى للبند" }));
+    await userEvent.click(screen.getByRole("button", { name: "تأجيل البند" }));
     expect(handlers.onRequestPostpone).toHaveBeenCalledWith(first);
     expect(handlers.onUpdateDiscussion).toHaveBeenCalledTimes(1);
   });
@@ -87,7 +88,7 @@ describe("AgendaWorkspace", () => {
 
   it("keeps ending the session disabled and lists what is left on request", async () => {
     setup("chair");
-    expect(screen.getByRole("button", { name: "إنهاء الجلسة والانتقال إلى إعداد المحضر" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "إنهاء الجلسة والانتقال إلى إعداد المحضر" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "قبل إنهاء الجلسة" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /ما بقي قبل الإنهاء/ }));
     const left = screen.getByRole("region", { name: "قبل إنهاء الجلسة" });
@@ -443,7 +444,8 @@ describe("AgendaWorkspace referral", () => {
   it("offers the chair a referral of the item under discussion", async () => {
     const onRequestReferral = vi.fn();
     setup("chair", { referrals: referrals(), onRequestReferral, broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
-    await userEvent.click(within(screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" })).getByRole("button", { name: "إحالة البند" }));
+    await userEvent.click(within(screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" })).getByRole("button", { name: "خيارات أخرى للبند" }));
+    await userEvent.click(screen.getByRole("button", { name: "إحالة البند" }));
     expect(onRequestReferral).toHaveBeenCalledWith(expect.objectContaining({ id: "a1" }));
   });
 
