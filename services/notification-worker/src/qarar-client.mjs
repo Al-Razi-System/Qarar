@@ -16,6 +16,22 @@ export class QararClient {
     return response.json();
   }
 
+  claimEvents(workerId, lockToken, limit = 10) {
+    return this.rpc("service_claim_notification_outbox", { p_worker_id: workerId, p_lock_token: lockToken, p_limit: limit, p_lease_seconds: 60 });
+  }
+  getDispatchContext(eventId, lockToken) {
+    return this.rpc("service_get_notification_dispatch_context", { p_event_id: eventId, p_lock_token: lockToken });
+  }
+  materializeDelivery(eventId, lockToken, templateCode, destination, variables) {
+    return this.rpc("service_materialize_notification_delivery", { p_event_id: eventId, p_lock_token: lockToken, p_channel: "whatsapp", p_template_code: templateCode, p_template_version: "v1", p_destination: destination, p_variables: variables });
+  }
+  skipDelivery(eventId, lockToken, templateCode, reasonCode) {
+    return this.rpc("service_skip_notification_delivery", { p_event_id: eventId, p_lock_token: lockToken, p_channel: "whatsapp", p_template_code: templateCode, p_template_version: "v1", p_reason_code: reasonCode });
+  }
+  failEvent(eventId, lockToken, errorCode) {
+    return this.rpc("service_fail_notification_outbox", { p_event_id: eventId, p_lock_token: lockToken, p_error: errorCode });
+  }
+
   claimDeliveries(workerId, lockToken, limit = 10) {
     return this.rpc("service_claim_notification_deliveries", { p_worker_id: workerId, p_lock_token: lockToken, p_channel: "whatsapp", p_limit: limit, p_lease_seconds: 60 });
   }
