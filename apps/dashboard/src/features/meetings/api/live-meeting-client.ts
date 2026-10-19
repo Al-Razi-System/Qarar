@@ -1,4 +1,4 @@
-export async function liveMeetingRpc<T>(contract: string, params: Record<string, unknown> = {}) {
+export async function liveMeetingRpc<T>(contract: string, params: Record<string, unknown> = {}, options: { signal?: AbortSignal } = {}) {
   const response = await fetch("/api/admin/meetings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -7,6 +7,7 @@ export async function liveMeetingRpc<T>(contract: string, params: Record<string,
     // finish sending them when the user navigates instead of resetting the
     // Route Handler connection mid-request.
     keepalive: true,
+    ...(options.signal ? { signal: options.signal } : {}),
   });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error?.message ?? "تعذر تنفيذ العملية.");

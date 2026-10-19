@@ -28,8 +28,6 @@ export function votingStream({ initial, read, subscribe, signal, onError, pollMs
       let stopped = false; let reading = false; let queued = false;
       let previous = JSON.stringify(initial);
       const send = (value: string) => { if (!stopped) controller.enqueue(encoder.encode(value)); };
-      let interval: ReturnType<typeof setInterval>;
-      let deadline: ReturnType<typeof setTimeout>;
       let unsubscribe = () => {};
       close = () => {
         if (stopped) return;
@@ -51,10 +49,11 @@ export function votingStream({ initial, read, subscribe, signal, onError, pollMs
           if (queued && !stopped) { queued = false; void refresh(); }
         }
       }
+      const interval = setInterval(() => { void refresh(); }, pollMs);
+      const deadline = setTimeout(close, maxMs);
       send(`retry: 1000\nevent: voting\ndata: ${previous}\n\n`);
       unsubscribe = subscribe(() => { void refresh(); });
-      interval = setInterval(() => { void refresh(); }, pollMs);
-      deadline = setTimeout(close, maxMs);
+      if (stopped) unsubscribe();
       signal.addEventListener("abort", close, { once: true });
       if (signal.aborted) close();
     },

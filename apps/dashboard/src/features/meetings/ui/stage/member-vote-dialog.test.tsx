@@ -4,6 +4,12 @@ import { MemberVoteCard } from "./member-vote-card";
 
 const vote = { voting_round_id: "r1", title_ar: "اعتماد الميزانية السنوية", has_voted: false };
 describe("private voting dialog", () => {
+  it("explains a lost live connection inside the dialog, not behind its backdrop", () => {
+    render(<MemberVoteCard vote={vote} busy unavailableReason="انقطع تحديث التصويت؛ أعد الاتصال." onCast={vi.fn()} />);
+    expect(screen.getByRole("dialog")).toHaveTextContent("انقطع تحديث التصويت؛ أعد الاتصال.");
+    expect(screen.getByRole("button", { name: "تأكيد التصويت" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "لاحقًا" })).toBeEnabled();
+  });
   it("opens as a dialog and requires deliberate confirmation, not a choice click", async () => {
     const cast = vi.fn().mockResolvedValue(true);
     render(<MemberVoteCard vote={vote} busy={false} onCast={cast} />);

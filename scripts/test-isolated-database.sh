@@ -7,12 +7,16 @@ case "$test_container" in
   *) echo 'Refusing non-isolated database target' >&2; exit 1 ;;
 esac
 test_role=${DB_SUPER_USER:-supabase_admin}
+test_database=${DB_NAME:-postgres}
+case "$test_database" in
+  ''|*[!a-zA-Z0-9_]*) echo 'Invalid isolated database name' >&2; exit 1 ;;
+esac
 test_failures=0
 test_files=0
 for test_file in supabase/tests/database/*.sql; do
   test_files=$((test_files + 1))
   if test_output=$(docker exec -i "$test_container" psql -X -U "$test_role" \
-    -d postgres -v ON_ERROR_STOP=1 < "$test_file" 2>&1) \
+    -d "$test_database" -v ON_ERROR_STOP=1 < "$test_file" 2>&1) \
     && ! printf '%s\n' "$test_output" | rg -q 'not ok|Looks like you'; then
     echo "PASS $test_file"
   else

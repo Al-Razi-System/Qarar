@@ -38,6 +38,18 @@ try {
     const button = await assignment.getByRole("button", { name: "إصدار التكليف" }).boundingBox();
     if (button.y + button.height > (width === 390 ? 844 : 900)) throw Error("Assignment action outside dialog viewport");
     results.push({ width, dark, assignmentDialog: true });
+    await assignment.getByRole("button", { name: "إغلاق", exact: true }).click();
+    await page.getByRole("button", { name: "تفاصيل الموضوع ومساره" }).click();
+    const context = page.getByRole("dialog", { name: /تفاصيل الموضوع ومساره/ });
+    await expect(context.getByRole("heading", { name: "وصف المقترح" })).toBeVisible();
+    await expect(context.getByText("المرحلة الحالية", { exact: true })).toBeVisible();
+    const headerBefore = await context.locator("header").boundingBox();
+    await context.locator("header + div").evaluate(element => { element.scrollTop = element.scrollHeight; });
+    await expect(context.getByText("أوصى مجلس القسم باعتماد المقترح وإحالته لمجلس الكلية.")).toBeVisible();
+    const header = await context.locator("header").boundingBox();
+    if (header.y !== headerBefore.y || header.y > 4) throw Error("Topic context header scrolled out");
+    await page.screenshot({ path: `/tmp/qarar-topic-context-${width}-${dark ? "dark" : "light"}.png` });
+    results.push({ width, dark, topicContext: true });
   }
   if (errors.length) throw Error(errors.join("\n"));
   console.log(JSON.stringify({ ok: true, results }));

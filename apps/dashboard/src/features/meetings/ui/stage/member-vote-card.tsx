@@ -13,10 +13,10 @@ export type VoteValue = "approve" | "reject" | "abstain";
 
 const NOTE_LIMIT = 2000;
 
-type Props = { vote: MyVote; busy: boolean; onCast: (roundId: string, value: VoteValue, note: string | null) => Promise<boolean> | void };
+type Props = { vote: MyVote; busy: boolean; unavailableReason?: string | null; onCast: (roundId: string, value: VoteValue, note: string | null) => Promise<boolean> | void };
 
 /** The member's ballot for one open round: three large choices and an optional note. */
-export function MemberVoteCard({ vote, busy, onCast }: Props) {
+export function MemberVoteCard({ vote, busy, unavailableReason, onCast }: Props) {
   const [note, setNote] = useState("");
   const [open, setOpen] = useState(true);
   const [choice, setChoice] = useState<VoteValue | null>(null);
@@ -46,10 +46,12 @@ export function MemberVoteCard({ vote, busy, onCast }: Props) {
       <p className="m-0 text-q-ui font-bold">التصويت مفتوح · {vote.title_ar}</p>
       <Button onClick={() => setOpen(true)}>أدلِ بصوتك</Button>
     </Card>
-    {open && <Dialog title="التصويت على البند" description="اختر موقفك ثم أكّد إرساله. إغلاق النافذة لا يسجل صوتًا." size="lg" scrollContent closeDisabled={busy || pending} onClose={() => setOpen(false)}
+    {open && <Dialog title="التصويت على البند" description="اختر موقفك ثم أكّد إرساله. إغلاق النافذة لا يسجل صوتًا." size="lg" scrollContent closeDisabled={pending} onClose={() => setOpen(false)}
       footer={<>
         {error && <InlineMessage tone="error">{error}</InlineMessage>}
-        <Button variant="secondary" disabled={busy || pending} onClick={() => setOpen(false)}>لاحقًا</Button>
+        {unavailableReason && <InlineMessage tone="error">{unavailableReason}</InlineMessage>}
+        {busy && !pending && !unavailableReason && <p role="status" className="m-0 text-q-caption text-q-text-2">انتظر اكتمال الإجراء الجاري في الاجتماع قبل التصويت.</p>}
+        <Button variant="secondary" disabled={pending} onClick={() => setOpen(false)}>لاحقًا</Button>
         <Button disabled={busy || !choice || Boolean(error)} pending={pending} pendingLabel="جارٍ تسجيل صوتك…" onClick={() => void cast()}>تأكيد التصويت</Button>
       </>}>
       <div className="flex flex-wrap items-start justify-between gap-3">

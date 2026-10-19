@@ -1,4 +1,5 @@
 -- Impact: docs/engineering/impact/MEETING_QUORUM_AR.md
+-- Integrated after 20261019010000; no shared environment ran the former draft.
 begin;
 alter table qarar_meetings.meetings add column quorum_percentage integer;
 -- Preserve every existing meeting, including those already in progress.

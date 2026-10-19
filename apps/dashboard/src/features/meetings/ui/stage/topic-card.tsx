@@ -17,6 +17,7 @@ import { VoteResultPanel } from "../vote-result-panel";
 import { DiscussionSummary, type UpdateDiscussion } from "./discussion-summary";
 import { DocumentViewer } from "./document-viewer";
 import { hasTopicHistory, TopicHistory } from "./topic-history";
+import { TopicContextDialog } from "./topic-context-dialog";
 
 export type ReferenceTab = "instructions" | "attachments" | "history";
 
@@ -66,6 +67,7 @@ type Props = {
 export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads, timer, assignments }: Props) {
   const [chosenTab, setChosenTab] = useState<ReferenceTab | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
   const [localDocument, setLocalDocument] = useState<{ attachmentId: string | null; page: number } | null>(null);
   // Without a broadcast the card keeps its own open file; with one, the broadcast decides.
   const shownDocument = document !== undefined ? document : localDocument;
@@ -124,7 +126,9 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
           {flow.decision && <Badge tone="success">{flow.decision.decision_no}</Badge>}
         </div>
         {timer}
+        {item.topic?.context && <Button variant="secondary" className="self-start" onClick={() => setContextOpen(true)}>تفاصيل الموضوع ومساره</Button>}
       </header>
+      {contextOpen && item.topic?.context && <TopicContextDialog title={item.topic.title_ar} context={item.topic.context} onClose={() => setContextOpen(false)} />}
 
       {ballot}
 

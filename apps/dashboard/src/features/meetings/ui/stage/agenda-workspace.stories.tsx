@@ -69,7 +69,11 @@ function session(mode: RoomProps["mode"]): LiveMeetingSession {
 const instructions = "### مبررات الخطة\n\nيعرض رئيس القسم مبررات الخطة ومقارنتها بالخطة السابقة.\n\n- الساعات المعتمدة\n- المتطلبات السابقة\n\n<strong>تُراجع المستندات قبل التصويت.</strong>";
 const discussing: AgendaDiscussionItem[] = [
   { id: "a1", agenda_order: 1, agenda_status: "discussed", discussion_notes: "اعتُمد المحضر السابق دون ملاحظات.", topic: { id: "t1", title_ar: "محضر الاجتماع السابق" } },
-  { id: "a2", agenda_order: 2, agenda_status: "under_discussion", requires_voting: true, workflow_step_name_ar: "توصية مجلس الكلية", discussion_instructions: instructions, topic: { id: "t2", title_ar: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي" } },
+  { id: "a2", agenda_order: 2, agenda_status: "under_discussion", requires_voting: true, workflow_step_name_ar: "توصية مجلس الكلية", discussion_instructions: instructions, topic: { id: "t2", title_ar: "اعتماد الخطة الدراسية لبرنامج الذكاء الاصطناعي", context: {
+    description: "### وصف المقترح\n\nتحديث الخطة الدراسية ومراجعة المتطلبات السابقة، وفق احتياجات البرنامج والمخرجات التعليمية.",
+    route: [{ id: "step1", name_ar: "مراجعة القسم", sequence_no: 1, unit_name_ar: "مجلس القسم", status: "completed", current: false, acted_at: null }, { id: "step2", name_ar: "توصية الكلية", sequence_no: 2, unit_name_ar: "مجلس الكلية", status: "active", current: true, acted_at: null }],
+    previous_decisions: [{ id: "previous1", decision_no: "DEC-2026-000010", decision_text: "أوصى مجلس القسم باعتماد المقترح وإحالته لمجلس الكلية.", meeting_title_ar: "اجتماع مجلس القسم", meeting_no: "MTG-2026-000010", meeting_date: "2026-10-10", unit_name_ar: "مجلس القسم" }],
+  } } },
   { id: "a3", agenda_order: 3, agenda_status: "pending", topic: { id: "t3", title_ar: "تشكيل لجنة المناقشة" } },
 ];
 const voting = discussing.map((item) => item.id === "a2" ? { ...item, agenda_status: "discussed" } : item);

@@ -134,7 +134,15 @@ export type AgendaDiscussionItem = {
     topic_no?: string | null;
     category_name_ar?: string | null;
     submitted_by_name_ar?: string | null;
+    context?: MeetingTopicContext;
   };
+};
+
+/** Meeting-authorized read model; no raw workflow snapshots or private vote data. */
+export type MeetingTopicContext = {
+  description: string | null;
+  route: Array<{ id: string; name_ar: string | null; sequence_no: number; unit_name_ar: string | null; status: string; current: boolean; acted_at: string | null }>;
+  previous_decisions: Array<{ id: string; decision_no: string; decision_text: string; meeting_title_ar: string; meeting_no: string; meeting_date: string; unit_name_ar: string | null }>;
 };
 
 export type VotingRound = {

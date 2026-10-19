@@ -218,7 +218,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   async function castVote(roundId: string, value: VoteValue, note: string | null) {
     setNotice(null);
     try {
-      const result = await liveMeetingRpc<{ accepted: boolean }>("cast_vote", { p_voting_round_id: roundId, p_vote_value: value, p_vote_note: note });
+      const result = await liveMeetingRpc<{ accepted: boolean }>("cast_vote", { p_voting_round_id: roundId, p_vote_value: value, p_vote_note: note }, { signal: AbortSignal.timeout(20_000) });
       if (result.accepted !== true) throw new Error("Vote acknowledgement missing");
       voting.acknowledge(roundId);
       setMyVotes(current => current.map(vote => vote.voting_round_id === roundId ? { ...vote, has_voted: true } : vote));
@@ -391,7 +391,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     { value: "agenda", label: "جدول الأعمال والتصويت", count: pendingVotes.length },
   ];
 
-  const ballots = pendingVotes.slice(0, 1).map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy || Boolean(voting.error)} onCast={castVote} />);
+  const ballots = pendingVotes.slice(0, 1).map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy || Boolean(voting.error)} unavailableReason={voting.error} onCast={castVote} />);
   const steering = session.viewer.mode !== "member" || session.viewer.can_manage_voting;
   const stageProps = { session, agenda, rounds, decisions, referrals: referrals?.referrals, profiles, profilesError };
 
