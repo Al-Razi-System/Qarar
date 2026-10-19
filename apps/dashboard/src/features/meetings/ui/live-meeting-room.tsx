@@ -26,6 +26,7 @@ import { RoomStage } from "./stage/room-stage";
 import { RoomTopBar } from "./stage/room-top-bar";
 import { useMeetingBroadcast } from "./stage/use-meeting-broadcast";
 import { useRoomTheme } from "./stage/use-room-theme";
+import { useLiveVoting } from "./use-live-voting";
 
 type MeetingDetail = { agenda_items?: AgendaDiscussionItem[]; status_history?: Array<{ to_status: string; changed_at: string }> };
 
@@ -46,18 +47,23 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [presenting, setPresenting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [assignments, setAssignments] = useState<MeetingAssignments | null>(null);
+  const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
   const [assignmentActivity, setAssignmentActivity] = useState<AssignmentActivity>({ key: null, errorKey: null, error: null });
   const [referrals, setReferrals] = useState<MeetingReferrals | null>(null);
   const [referralItem, setReferralItem] = useState<AgendaDiscussionItem | null>(null);
   const [itemTimers, setItemTimers] = useState<{ data: MeetingItemTimers | null; clockOffsetMs: number }>({ data: null, clockOffsetMs: 0 });
   const [plannedState, setPlannedState] = useState<{ pendingItemId: string | null; errorItemId: string | null; error: string | null }>({ pendingItemId: null, errorItemId: null, error: null });
   const [downloadState, setDownloadState] = useState<{ pendingItemId: string | null; errorItemId: string | null; error: string | null }>({ pendingItemId: null, errorItemId: null, error: null });
-  const [session, setSession] = useState<LiveMeetingSession | null>(null);
+  const [sessionRecord, setSession] = useState<LiveMeetingSession | null>(null);
   const [agenda, setAgenda] = useState<AgendaDiscussionItem[]>([]);
   const [startedAt, setStartedAt] = useState<string | null>(null);
-  const [myVotes, setMyVotes] = useState<MyVote[]>([]);
+  const [roomVotes, setMyVotes] = useState<MyVote[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
-  const [rounds, setRounds] = useState<VotingRound[]>([]);
+  const [roomRounds, setRounds] = useState<VotingRound[]>([]);
+  const voting = useLiveVoting(meetingId, sessionRecord?.meeting.status === "in_progress");
+  const rounds = voting.snapshot?.rounds ?? roomRounds;
+  const myVotes = voting.snapshot?.votes ?? roomVotes;
+  const session = sessionRecord && voting.snapshot ? { ...sessionRecord, open_voting_rounds: rounds.filter(round => round.status === "open") } : sessionRecord;
   const [topicAttachments, setTopicAttachments] = useState<MeetingTopicAttachment[]>([]);
   const [topicHistory, setTopicHistory] = useState<Record<string, TopicGovernanceHistory>>({});
   const historyLoadedForMeeting = useRef<string | null>(null);
@@ -78,6 +84,13 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [busy, setBusy] = useState(false);
 
   const refreshRoom = useEffectEvent((silent: boolean) => load(silent));
+  const votingStructure = voting.snapshot?.rounds.map(round => `${round.id}:${round.status}`).join("|") ?? null;
+  const previousVotingStructure = useRef<string | null>(null);
+  useEffect(() => {
+    const previous = previousVotingStructure.current;
+    previousVotingStructure.current = votingStructure;
+    if (votingStructure !== null && previous !== null && previous !== votingStructure) void refreshRoom(true);
+  }, [votingStructure]);
   const refreshInterval = checkIn || session?.open_voting_rounds.length ? 3_000 : 10_000;
 
   useEffect(() => {
@@ -157,9 +170,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
         .then(setReferrals)
         .catch(() => setReferrals((current) => current));
       // And assignments: without them the decision shows no assignment section.
-      await liveMeetingRpc<MeetingAssignments>("list_meeting_assignments_v2", { p_meeting_id: meetingId })
-        .then(setAssignments)
-        .catch(() => setAssignments((current) => current));
+      await refreshAssignments();
       const rosterKey = `${meetingId}|${live.attendance.map((record) => `${record.user_id}:${record.status}:${record.verification_status ?? ""}`).join(",")}`;
       if (profilesLoadedFor.current !== rosterKey) {
         profilesLoadedFor.current = rosterKey;
@@ -192,6 +203,30 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       loadInFlight.current = false;
       finish();
       if (!silent) setLoading(false);
+    }
+  }
+
+  async function refreshAssignments() {
+    try {
+      setAssignments(await liveMeetingRpc<MeetingAssignments>("list_meeting_assignments_v2", { p_meeting_id: meetingId }));
+      setAssignmentsError(null);
+    } catch (error) {
+      setAssignmentsError(messageOf(error, "تعذر تحميل التكليفات. أعد المحاولة لعرضها وإضافتها."));
+    }
+  }
+
+  async function castVote(roundId: string, value: VoteValue, note: string | null) {
+    setNotice(null);
+    try {
+      const result = await liveMeetingRpc<{ accepted: boolean }>("cast_vote", { p_voting_round_id: roundId, p_vote_value: value, p_vote_note: note });
+      if (result.accepted !== true) throw new Error("Vote acknowledgement missing");
+      voting.acknowledge(roundId);
+      setMyVotes(current => current.map(vote => vote.voting_round_id === roundId ? { ...vote, has_voted: true } : vote));
+      setNotice({ kind: "success", text: "تم تسجيل صوتك وملاحظتك بسرية." });
+      return true;
+    } catch (error) {
+      setNotice({ kind: "error", text: messageOf(error, "لم يتأكد تسجيل صوتك. تحقّق من حالة التصويت قبل إعادة المحاولة.") });
+      return false;
     }
   }
 
@@ -356,7 +391,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     { value: "agenda", label: "جدول الأعمال والتصويت", count: pendingVotes.length },
   ];
 
-  const ballots = pendingVotes.map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy} onCast={(roundId: string, value: VoteValue, note: string | null) => void perform(() => liveMeetingRpc("cast_vote", { p_voting_round_id: roundId, p_vote_value: value, p_vote_note: note }), "تم تسجيل صوتك وملاحظتك بسرية.")} />);
+  const ballots = pendingVotes.slice(0, 1).map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy || Boolean(voting.error)} onCast={castVote} />);
   const steering = session.viewer.mode !== "member" || session.viewer.can_manage_voting;
   const stageProps = { session, agenda, rounds, decisions, referrals: referrals?.referrals, profiles, profilesError };
 
@@ -373,6 +408,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       )}
     >
       {notice && <InlineMessage tone={notice.kind === "success" ? "success" : "error"} className="shrink-0 border border-q-border text-q-ui">{notice.text}</InlineMessage>}
+      {voting.error && <InlineMessage tone="error">{voting.error}<Button variant="secondary" onClick={voting.reconnect}>إعادة الاتصال بالتصويت</Button></InlineMessage>}
 
       <RoomTopBar
         session={session}
@@ -449,7 +485,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           onUpdateDiscussion={updateDiscussion}
           onRequestPostpone={(item) => { setNotice(null); setReasonRequest({ kind: "postpone", item }); }}
           referrals={referrals}
-          assignments={{ data: assignments, activity: assignmentActivity, ...assignmentActions }}
+          assignments={{ data: assignments, error: assignmentsError, onRetry: () => void refreshAssignments(), activity: assignmentActivity, ...assignmentActions }}
           onRequestReferral={(item) => { setNotice(null); setReferralItem(item); }}
           onOpenRound={(item) => void perform(() => liveMeetingRpc("open_voting_round", { p_agenda_item_id: item.id, p_expected_meeting_updated_at: session.meeting.updated_at }), "فُتحت جولة التصويت لهذا البند.")}
           onCloseRound={(round) => void perform(() => liveMeetingRpc("close_voting_round", { p_voting_round_id: round.id, p_reason: "إغلاق الجولة بعد اكتمال التصويت." }), "أُغلقت الجولة وحُسبت النتيجة.")}
@@ -520,4 +556,4 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   );
 }
 
-function messageOf(error: unknown, fallback: string) { return error instanceof Error ? error.message : fallback; }
+function messageOf(error: unknown, fallback: string) { return error instanceof Error && /[\u0600-\u06ff]/.test(error.message) ? error.message : fallback; }

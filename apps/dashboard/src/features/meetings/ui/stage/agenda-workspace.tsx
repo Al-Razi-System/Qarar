@@ -2,6 +2,8 @@
 
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { Card } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
+import { InlineMessage } from "@/shared/ui/inline-message";
 import { activeAgendaItemId, agendaItemState, chairActions, completionBlockers, itemFlow, sortAgenda, type AgendaItemState, type ChairAction } from "../../model/agenda-flow";
 import type { AgendaDiscussionItem, Decision, LiveMeetingSession, MeetingBroadcast, MeetingAssignment, MeetingAssignments, MeetingItemTimers, MeetingReferrals, NewAssignment, TopicGovernanceHistory, VotingRound } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
@@ -51,6 +53,8 @@ type Props = {
   /** The meeting's assignments and their actions; without them the room works as before. */
   assignments?: {
     data: MeetingAssignments | null;
+    error?: string | null;
+    onRetry?: () => void;
     activity: AssignmentActivity;
     onCreate: (agendaItemId: string, input: NewAssignment) => Promise<boolean>;
     onConfirm: (assignment: MeetingAssignment) => void;
@@ -79,6 +83,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
   const currentId = activeAgendaItemId(session, ordered, rounds, decisions, referred);
   const [picked, setPicked] = useState<{ whileCurrent: string | null; itemId: string } | null>(null);
   const [summaryDrafts, setSummaryDrafts] = useState<Record<string, string>>({});
+  const [assignmentEditorItemId, setAssignmentEditorItemId] = useState<string | null>(null);
 
   // When the council moves on (a decision saved, the next discussion started),
   // the controller's broadcast moves with it, as the chair's own pick did before.
@@ -149,8 +154,11 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
     />
   ) : null;
 
-  const assignmentList = assignments?.data ? (
+  const assignmentList = assignments?.error ? <InlineMessage tone="error">{assignments.error}<Button variant="secondary" onClick={assignments.onRetry}>إعادة تحميل التكليفات</Button></InlineMessage> : assignments?.data ? (
     <ItemAssignments
+      key={`assignments-${selected.id}`}
+      editorOpen={assignmentEditorItemId === selected.id}
+      onEditorChange={(open) => setAssignmentEditorItemId(open ? selected.id : null)}
       assignments={assignments.data.assignments.filter((row) => row.agenda_item_id === selected.id)}
       viewer={assignments.data.viewer}
       options={presenting ? null : assignments.data.options}
@@ -159,7 +167,10 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
       onConfirm={assignments.onConfirm}
       onWithdraw={assignments.onWithdraw}
     />
-  ) : null;
+  ) : assignments ? <p role="status" className="m-0 text-q-caption text-q-text-2">جارٍ تحميل التكليفات…</p> : null;
+  const decisionTools = flow.decision && !presenting && assignments ? <div className="flex flex-wrap items-center gap-2">
+    {assignments.error ? <><span className="text-q-caption text-q-danger">{assignments.error}</span><Button variant="secondary" onClick={assignments.onRetry}>إعادة تحميل التكليفات</Button></> : assignments.data && (assignments.data.viewer.can_issue || assignments.data.viewer.can_propose) && assignments.data.options && <Button variant="secondary" disabled={busy} onClick={() => setAssignmentEditorItemId(selected.id)}>{assignments.data.viewer.can_issue ? "إضافة تكليف" : "اقتراح تكليف"}</Button>}
+  </div> : null;
 
   const topic = (
     <TopicCard
@@ -234,7 +245,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
       </div>
       <div className="order-1 flex min-w-0 flex-col gap-3 lg:order-none lg:min-h-0">
         {stage && <div className="min-h-0 lg:flex-1 lg:overflow-y-auto">{stage}</div>}
-        {manager && <ControlDock pinned={presenting} item={selected} actions={actions} note={note} busy={busy} blockers={blockers} onAction={run} onComplete={onComplete} />}
+        {manager && <ControlDock pinned={presenting} item={selected} actions={actions} note={note} busy={busy} blockers={blockers} onAction={run} onComplete={onComplete} decisionTools={decisionTools} />}
       </div>
       <div className="order-3 min-w-0 lg:order-none lg:min-h-0 lg:overflow-y-auto">{topic}</div>
     </div>

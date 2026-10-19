@@ -5,6 +5,7 @@ import { isJsonObject, readJsonObject } from "@/shared/security/json-body";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
 import { apiError, apiSuccess, requestId } from "@/shared/api/response";
 import { logEvent } from "@/shared/observability/logger";
+import { notifyVotingMutation } from "@/features/meetings/server/voting-events";
 
 const contracts = new Set([
   "search_meetings", "create_meeting", "create_meeting_series", "create_meeting_series_from_existing", "list_meeting_series", "update_meeting_series_recurrence", "get_meeting_detail", "get_completed_meeting_record", "list_meeting_topic_attachments", "update_meeting",
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: { message: "معاملات العملية غير صالحة." } }, { status: 400 });
     }
     const data = await (contract.endsWith("_v2") ? qararRpcV2<unknown>(contract, params ?? {}) : qararRpc<unknown>(contract, params ?? {}));
+    notifyVotingMutation(contract, params ?? {}, data);
     return apiSuccess(data, id);
   } catch (error) {
     const safeError = safeAdminError(error, "تعذر تنفيذ العملية.", 500);

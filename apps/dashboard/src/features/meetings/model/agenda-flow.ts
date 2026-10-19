@@ -35,6 +35,12 @@ export function latestClosedRound(rounds: VotingRound[], agendaItemId: string) {
   return [...rounds].reverse().find((round) => round.agenda_item_id === agendaItemId && round.status === "closed") ?? null;
 }
 
+/** Same readiness used by the finish guard: preliminary text must be saved after the result. */
+export function finalSummaryReady(item: AgendaDiscussionItem, closed?: VotingRound | null) {
+  if ((item.discussion_notes ?? "").trim().length < 5) return false;
+  return !(closed?.closed_at && item.updated_at && Date.parse(item.updated_at) < Date.parse(closed.closed_at));
+}
+
 export function itemFlow(item: AgendaDiscussionItem, session: LiveMeetingSession, rounds: VotingRound[], decisions: Decision[], referrals: ItemReferral[] = []): AgendaItemFlow {
   const open = rounds.find((round) => round.agenda_item_id === item.id && round.status === "open")
     ?? session.open_voting_rounds.find((round) => round.agenda_item_id === item.id)
@@ -57,7 +63,7 @@ export function activeAgendaItemId(session: LiveMeetingSession, ordered: AgendaD
   const blocked = ordered.find((item) => {
     const closed = latestClosedRound(rounds, item.id);
     return !["discussed", "postponed"].includes(item.agenda_status ?? "pending")
-      || (item.discussion_notes ?? "").trim().length < 5
+      || !finalSummaryReady(item, closed)
       || (item.requires_voting && item.agenda_status !== "postponed" && !closed && !isReferred(item, referrals))
       || (closed?.result === "approved" && !decisions.some((decision) => decision.agenda_item_id === item.id));
   });

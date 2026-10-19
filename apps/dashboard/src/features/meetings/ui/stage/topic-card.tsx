@@ -9,6 +9,7 @@ import { Card } from "@/shared/ui/card";
 import { Dialog } from "@/shared/ui/dialog";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
 import type { AgendaItemFlow, AgendaItemState } from "../../model/agenda-flow";
+import { finalSummaryReady } from "../../model/agenda-flow";
 import type { AgendaDiscussionItem, Decision, LiveMeetingSession, TopicGovernanceHistory } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { TopicAttachmentsPanel, type DownloadControl } from "../topic-attachments-panel";
@@ -127,6 +128,20 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
 
       {ballot}
 
+      {decision && (
+        <section aria-label="القرار" className="flex flex-col gap-2 rounded-q-control border border-q-border bg-q-surface-2 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="m-0 text-q-ui font-bold">القرار {decision.decision_no}</h3>
+            {canEditDecision && <Button variant="secondary" disabled={busy} onClick={() => onEditDecision(decision)}>تعديل القرار</Button>}
+          </div>
+          <p className="m-0 whitespace-pre-line text-q-body">{decision.decision_text}</p>
+          {decision.quorum_continuation && <p className="m-0 text-q-caption font-bold text-q-warning">اتُخذ هذا القرار في اجتماع بنصاب غير مكتمل. السبب: {decision.quorum_continuation.reason}</p>}
+          {canEditDecision && <p className="m-0 text-q-caption text-q-text-2">هذا النص الرسمي للقرار؛ يعدّله الرئيس والمقرر إلى اعتماد المحضر. ملخص المناقشة مستقل عنه.</p>}
+        </section>
+      )}
+      {decision && assignments}
+      <DiscussionSummary key={item.id} item={item} votingFinished={Boolean(flow.closed)} finalNeedsConfirmation={!finalSummaryReady(item, flow.closed)} role={role} busy={busy} draft={summaryDraft} onDraftChange={onSummaryDraftChange} onUpdate={onUpdateDiscussion} />
+
       {tabs.length === 0 ? (
         <p className="m-0 rounded-q-control bg-q-surface-2 p-3 text-q-ui text-q-text-2">لا تعليمات ولا مرفقات ولا قرارات سابقة مسجلة لهذا الموضوع.</p>
       ) : (
@@ -160,21 +175,6 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
         </section>
       )}
 
-      {decision && (
-        <section aria-label="القرار" className="flex flex-col gap-2 rounded-q-control border border-q-border bg-q-surface-2 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="m-0 text-q-ui font-bold">القرار {decision.decision_no}</h3>
-            {canEditDecision && <Button variant="secondary" disabled={busy} onClick={() => onEditDecision(decision)}>تعديل القرار</Button>}
-          </div>
-          <p className="m-0 whitespace-pre-line text-q-body">{decision.decision_text}</p>
-          {decision.quorum_continuation && <p className="m-0 text-q-caption font-bold text-q-warning">اتُخذ هذا القرار في اجتماع بنصاب غير مكتمل. السبب: {decision.quorum_continuation.reason}</p>}
-          {canEditDecision && <p className="m-0 text-q-caption text-q-text-2">يعدّل النص رئيس المجلس والمقرر إلى اعتماد المحضر.</p>}
-        </section>
-      )}
-
-      {decision && assignments}
-
-      <DiscussionSummary key={item.id} item={item} votingFinished={Boolean(flow.closed)} role={role} busy={busy} draft={summaryDraft} onDraftChange={onSummaryDraftChange} onUpdate={onUpdateDiscussion} />
     </Card>
   );
 }

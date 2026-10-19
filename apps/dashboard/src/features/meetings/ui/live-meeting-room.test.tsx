@@ -12,6 +12,7 @@ describe("LiveMeetingRoom polling", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("does not start another refresh batch while the current batch is pending", async () => {
@@ -26,6 +27,41 @@ describe("LiveMeetingRoom polling", () => {
     expect(liveMeetingRpc).toHaveBeenCalledTimes(6);
 
     view.unmount();
+  });
+
+  it("updates participation even while a full room refresh is blocked", async () => {
+    vi.useFakeTimers();
+    class Source extends EventTarget {
+      static current: Source;
+      close = vi.fn(); onerror = null;
+      constructor() { super(); Source.current = this; }
+    }
+    vi.stubGlobal("EventSource", Source);
+    let timerReads = 0; let release!: () => void;
+    const session = { viewer: { user_id: "chair", full_name_ar: "الرئيس", mode: "chair", can_manage_session: true, can_manage_voting: true }, meeting: { id: "m", title_ar: "اجتماع التزامن", status: "in_progress", attendance_locked: true }, attendance: [], my_attendance: null, quorum: { quorum_status: "met" }, open_voting_rounds: [] };
+    liveMeetingRpc.mockImplementation(async (contract: string) => {
+      if (contract === "get_meeting_session_detail") return session;
+      if (contract === "get_meeting_detail") return { agenda_items: [{ id: "a", agenda_order: 1, agenda_status: "discussed", requires_voting: true, topic: { id: "t", title_ar: "الخطة" } }] };
+      if (contract === "list_meeting_item_timers_v2") {
+        if (++timerReads === 2) await new Promise<void>(resolve => { release = resolve; });
+        return { server_now: new Date().toISOString(), timers: [] };
+      }
+      if (contract === "list_meeting_referrals_v2") return { referrals: [], destinations: [] };
+      if (contract === "list_meeting_assignments_v2") return { assignments: [], viewer: {}, options: null };
+      if (contract === "list_meeting_member_profiles_v2") return { members: [], mobile_visible: false };
+      return [];
+    });
+    const view = render(<LiveMeetingRoom meetingId="m" />);
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(timerReads).toBe(2);
+    await act(async () => { Source.current.dispatchEvent(new MessageEvent("voting", { data: JSON.stringify({ rounds: [{ id: "r", agenda_item_id: "a", status: "open", eligible_voter_count: 3, votes_cast_count: 2 }], votes: [] }) })); });
+    expect(screen.getByRole("button", { name: "إغلاق التصويت واحتساب النتيجة" })).toBeDisabled();
+    expect(screen.getByText("بانتظار تصويت 1 من الأعضاء المؤهلين قبل الإغلاق.")).toBeInTheDocument();
+    await act(async () => { Source.current.dispatchEvent(new MessageEvent("voting", { data: JSON.stringify({ rounds: [{ id: "r", agenda_item_id: "a", status: "open", eligible_voter_count: 3, votes_cast_count: 3 }], votes: [] }) })); });
+    expect(screen.getByRole("button", { name: "إغلاق التصويت واحتساب النتيجة" })).toBeEnabled();
+    expect(timerReads).toBe(2);
+    await act(async () => { release(); }); view.unmount();
   });
 
   it("waits for an older poll and then refreshes again after a successful discussion mutation", async () => {

@@ -205,7 +205,8 @@ async function vote(page: Page, followsBroadcast = false) {
     await openAgenda(page);
   }
   await expect(page.getByText("تصويت مفتوح لك الآن")).toBeVisible();
-  await page.getByRole("button", { name: "موافق", exact: true }).click();
+  await page.getByRole("radio", { name: "موافق", exact: true }).click();
+  await page.getByRole("button", { name: "تأكيد التصويت", exact: true }).click();
   await expect(page.getByText("تم تسجيل صوتك وملاحظتك بسرية.")).toBeVisible();
 }
 

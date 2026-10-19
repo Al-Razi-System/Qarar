@@ -1,4 +1,5 @@
 import type { SeatStatus } from "@/shared/ui/member-seat";
+import { finalSummaryReady } from "./agenda-flow";
 import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MemberProfile, VotingRound } from "./live-meeting";
 
 export type StageSeat = {
@@ -49,6 +50,7 @@ function attendanceSeatStatus(record: Attendance): SeatStatus {
 function isUnfinished(item: AgendaDiscussionItem, rounds: VotingRound[], decisions: Decision[], referredItemIds: string[]) {
   const closed = latestClosedRound(rounds, item.id);
   return !FINISHED_AGENDA_STATES.includes(item.agenda_status ?? "pending")
+    || !finalSummaryReady(item, closed)
     || (item.requires_voting === true && item.agenda_status !== "postponed" && !closed && !referredItemIds.includes(item.id))
     || (closed?.result === "approved" && !decisions.some((decision) => decision.agenda_item_id === item.id));
 }

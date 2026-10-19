@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { cn } from "@/shared/lib/utils";
@@ -18,6 +18,7 @@ type Props = {
   onAction: (action: ChairAction) => void;
   onComplete: () => void;
   pinned?: boolean;
+  decisionTools?: ReactNode;
 };
 
 /**
@@ -26,7 +27,7 @@ type Props = {
  * disabled with the reason written beside it. What still stops the session
  * from ending is one click away instead of a list on the screen.
  */
-export function ControlDock({ item, actions, note, busy, blockers, onAction, onComplete, pinned = false }: Props) {
+export function ControlDock({ item, actions, note, busy, blockers, onAction, onComplete, pinned = false, decisionTools }: Props) {
   const [showBlockers, setShowBlockers] = useState(false);
   const [showAlternatives, setShowAlternatives] = useState(false);
   const reason = actions.find((action) => action.disabledReason)?.disabledReason ?? null;
@@ -53,10 +54,14 @@ export function ControlDock({ item, actions, note, busy, blockers, onAction, onC
           {!busy && !reason && note && <span className="text-q-ui text-q-text-2">{note}</span>}
         </div>
       </div>
+      {decisionTools}
       <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-q-border pt-3">
         {blockers.length === 0 && <Button className="max-w-full whitespace-normal text-start" variant="secondary" disabled={busy} onClick={onComplete}>إنهاء الجلسة والانتقال إلى إعداد المحضر</Button>}
         {blockers.length > 0 && (
+          <>
+          {(actions.length === 0 || actions[0]?.kind === "edit_decision") && <p className="m-0 w-full text-q-caption text-q-warning">الخطوة المتبقية: {blockers[0]}{blockers[0].includes("ملخص") && " يحفظه مقرر المجلس من بطاقة البند."}</p>}
           <Button variant="ghost" onClick={() => setShowBlockers(true)}>ما بقي قبل الإنهاء ({blockers.length})</Button>
+          </>
         )}
       </div>
       {showAlternatives && <Dialog title="خيارات أخرى للبند" description="بدائل للخطوة الحالية، ولا تغيّر ترتيب بقية البنود." onClose={() => setShowAlternatives(false)}>

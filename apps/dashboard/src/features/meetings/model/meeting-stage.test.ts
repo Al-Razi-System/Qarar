@@ -24,7 +24,7 @@ function sessionOf(overrides: { mode?: "chair" | "rapporteur" | "member"; locked
 }
 
 const item = (id: string, order: number, extra: Partial<AgendaDiscussionItem> = {}): AgendaDiscussionItem => ({
-  id, agenda_order: order, agenda_status: "pending", topic: { id: `t-${id}`, title_ar: `موضوع ${order}` }, ...extra,
+  id, agenda_order: order, agenda_status: "pending", discussion_notes: "ملخص نهائي محفوظ", topic: { id: `t-${id}`, title_ar: `موضوع ${order}` }, ...extra,
 });
 
 describe("deriveMeetingStage seats", () => {

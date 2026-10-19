@@ -204,14 +204,16 @@ describe("MemberVoteCard", () => {
     const onCast = vi.fn();
     render(<MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "خطة البرنامج", has_voted: false }} busy={false} onCast={onCast} />);
     expect(screen.getByText("تصويت مفتوح لك الآن")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "إضافة ملاحظة اختيارية" }));
     await userEvent.type(screen.getByLabelText("ملاحظة مع التصويت"), "  مع تحفظ  ");
-    await userEvent.click(screen.getByRole("button", { name: "موافق" }));
+    await userEvent.click(screen.getByRole("radio", { name: "موافق" }));
+    await userEvent.click(screen.getByRole("button", { name: "تأكيد التصويت" }));
     expect(onCast).toHaveBeenCalledWith("r1", "approve", "مع تحفظ");
   });
 
   it("blocks every choice while a vote is being recorded", () => {
     render(<MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "خطة البرنامج", has_voted: false }} busy onCast={vi.fn()} />);
-    for (const name of ["موافق", "غير موافق", "ممتنع"]) expect(screen.getByRole("button", { name })).toBeDisabled();
+    for (const name of ["موافق", "غير موافق", "ممتنع"]) expect(screen.getByRole("radio", { name })).toBeDisabled();
   });
 });
 
@@ -509,6 +511,7 @@ describe("AgendaWorkspace assignments", () => {
     const onCreate = vi.fn(async () => true);
     setup("chair", { agenda: [{ ...first, agenda_status: "discussed" }, second], rounds: [approvedRound], decisions: [decision], assignments: assignments(onCreate) });
     const section = screen.getByRole("region", { name: "التكليفات" });
+    await userEvent.click(within(screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" })).getByRole("button", { name: "إضافة تكليف" }));
     await userEvent.type(within(section).getByLabelText("عنوان التكليف"), "إبلاغ عمادة القبول");
     await userEvent.selectOptions(within(section).getByLabelText("المكلَّف"), "unit:g1");
     await userEvent.selectOptions(within(section).getByLabelText("المتابع"), "u2");
@@ -521,5 +524,14 @@ describe("AgendaWorkspace assignments", () => {
     expect(screen.queryByRole("region", { name: "التكليفات" })).not.toBeInTheDocument();
     view.rerender(<AgendaWorkspace {...props} agenda={[{ ...first, agenda_status: "discussed" }, second]} rounds={[approvedRound]} decisions={[decision]} presenting />);
     expect(screen.queryByRole("form", { name: "تكليف جديد" })).not.toBeInTheDocument();
+  });
+
+  it("shows a load failure and retry instead of silently hiding assignments", async () => {
+    const onRetry = vi.fn();
+    setup("chair", { agenda: [{ ...first, agenda_status: "discussed" }], rounds: [approvedRound], decisions: [decision], assignments: { ...assignments(), data: null, error: "تعذر تحميل التكليفات.", onRetry } });
+    const dock = screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" });
+    expect(within(dock).getByText("تعذر تحميل التكليفات.")).toBeInTheDocument();
+    await userEvent.click(within(dock).getByRole("button", { name: "إعادة تحميل التكليفات" }));
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 });

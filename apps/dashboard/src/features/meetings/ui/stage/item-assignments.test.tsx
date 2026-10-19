@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { MeetingAssignment, MeetingAssignments } from "../../model/live-meeting";
@@ -15,10 +15,19 @@ const row = (patch: Partial<MeetingAssignment> = {}): MeetingAssignment => ({
 function setup(viewer: MeetingAssignments["viewer"], assignments: MeetingAssignment[] = [], extra: Partial<Parameters<typeof ItemAssignments>[0]> = {}) {
   const handlers = { onCreate: vi.fn(async () => true), onConfirm: vi.fn(), onWithdraw: vi.fn() };
   const props = { assignments, viewer, options: viewer.can_issue || viewer.can_propose ? options : null, activity: idle, ...handlers, ...extra };
-  return { handlers, props, view: render(<ItemAssignments {...props} />) };
+  const view = render(<ItemAssignments {...props} />);
+  const add = screen.queryByRole("button", { name: "إضافة تكليف" }) ?? screen.queryByRole("button", { name: "اقتراح تكليف" });
+  if (add) fireEvent.click(add);
+  return { handlers, props, view };
 }
 
 describe("ItemAssignments", () => {
+  it("offers a clear entry and opens the form in a dialog instead of burying it", () => {
+    render(<ItemAssignments assignments={[]} viewer={{ can_issue: true, can_propose: false }} options={options} activity={idle} onCreate={vi.fn()} onConfirm={vi.fn()} onWithdraw={vi.fn()} />);
+    expect(screen.queryByRole("form")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "إضافة تكليف" }));
+    expect(screen.getByRole("dialog", { name: "إضافة تكليف" })).toBeInTheDocument();
+  });
   it("lets the chair issue an assignment, explaining what is missing first", async () => {
     const { handlers } = setup({ can_issue: true, can_propose: false });
     const issue = screen.getByRole("button", { name: "إصدار التكليف" });
@@ -100,4 +109,3 @@ describe("ItemAssignments", () => {
     expect(view.container).toBeEmptyDOMElement();
   });
 });
-
