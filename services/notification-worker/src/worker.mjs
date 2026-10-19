@@ -18,8 +18,13 @@ export async function runDeliveryBatch({ client, provider, workerId = randomUUID
       results.push({ id: delivery.id, status: "accepted" });
     } catch (error) {
       const known = error instanceof ProviderError;
+      if (known && error.ambiguous) {
+        await client.markDeliveryAmbiguous(delivery.id, delivery.lock_token, error.code, provider.code);
+        results.push({ id: delivery.id, status: "ambiguous", retryable: false, ambiguous: true });
+        continue;
+      }
       await client.failDelivery(delivery.id, delivery.lock_token, known ? error.code : "WORKER_UNEXPECTED", provider.code, known ? error.httpStatus : null);
-      results.push({ id: delivery.id, status: "failed", retryable: known && error.retryable, ambiguous: known && error.ambiguous });
+      results.push({ id: delivery.id, status: "failed", retryable: known && error.retryable, ambiguous: false });
     }
   }
   return results;

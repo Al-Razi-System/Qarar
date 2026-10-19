@@ -41,4 +41,7 @@ export class QararClient {
   failDelivery(deliveryId, lockToken, errorCode, providerCode, httpStatus) {
     return this.rpc("service_fail_notification_delivery", { p_delivery_id: deliveryId, p_lock_token: lockToken, p_error_code: errorCode, p_provider_code: providerCode, p_http_status: httpStatus });
   }
+  markDeliveryAmbiguous(deliveryId, lockToken, errorCode, providerCode) {
+    return this.rpc("service_mark_notification_delivery_ambiguous", { p_delivery_id: deliveryId, p_lock_token: lockToken, p_error_code: errorCode, p_provider_code: providerCode });
+  }
 }

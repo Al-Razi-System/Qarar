@@ -6,7 +6,7 @@ export class OpenWAProvider {
   code = "openwa";
   channel = "whatsapp";
 
-  constructor({ baseUrl, sessionId, apiKey, timeoutMs = 10_000, fetchImpl = fetch }) {
+  constructor({ baseUrl, sessionId, apiKey, timeoutMs = 45_000, fetchImpl = fetch }) {
     const parsed = new URL(baseUrl);
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new TypeError("OpenWA URL must use HTTP or HTTPS");
     if (!sessionId || !apiKey) throw new TypeError("OpenWA session and API key are required");
