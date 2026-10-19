@@ -4,9 +4,15 @@ export function templateFor(context) {
   const role = context.payload?.recipient_role;
   switch (context.event_type) {
     case "meeting.invitation.requested": return "meeting_invitation";
+    case "meeting.reminder.due": return "meeting_reminder";
+    case "meeting.cycle.due_soon": return "meeting_cycle_due_soon";
+    case "meeting.cycle.overdue": return "meeting_cycle_overdue";
     case "execution.task.created": return role === "follower" ? "task_created_follower" : "task_created_assignee";
     case "execution.task.due_soon": return "task_due_soon";
     case "execution.task.overdue": return "task_overdue";
+    case "execution.task.submitted": return "task_submitted";
+    case "execution.task.returned": return "task_returned";
+    case "execution.task.completed": return "task_completed";
     default: return null;
   }
 }

@@ -5,6 +5,8 @@ import { normalizeE164, runDispatchBatch, templateFor } from "../src/dispatcher.
 test("maps business events without provider knowledge",()=>{
   assert.equal(templateFor({event_type:"meeting.invitation.requested",payload:{}}),"meeting_invitation");
   assert.equal(templateFor({event_type:"execution.task.created",payload:{recipient_role:"follower"}}),"task_created_follower");
+  assert.equal(templateFor({event_type:"meeting.cycle.overdue",payload:{}}),"meeting_cycle_overdue");
+  assert.equal(templateFor({event_type:"execution.task.submitted",payload:{}}),"task_submitted");
   assert.equal(templateFor({event_type:"unknown",payload:{}}),null);
   assert.equal(normalizeE164("+967 77 123 4567"),"+967771234567");
   assert.equal(normalizeE164("0771234567"),null);
