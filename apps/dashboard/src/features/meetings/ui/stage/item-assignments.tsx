@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
-import type { MeetingAssignment, MeetingAssignments, NewAssignment } from "../../model/live-meeting";
+import type { AssignmentUserOption, MeetingAssignment, MeetingAssignments, NewAssignment } from "../../model/live-meeting";
 
 /** What is running now, so its button shows pending and the others wait. */
 export type AssignmentActivity = { key: string | null; errorKey: string | null; error: string | null };
@@ -17,11 +17,109 @@ type Props = {
   activity: AssignmentActivity;
   /** Resolves true when the assignment was saved; the form then clears. */
   onCreate: (input: NewAssignment) => Promise<boolean>;
+  onSearchUsers?: (query: string) => Promise<AssignmentUserOption[]>;
   onConfirm: (assignment: MeetingAssignment) => void;
   onWithdraw: (assignment: MeetingAssignment) => void;
   editorOpen?: boolean;
   onEditorChange?: (open: boolean) => void;
 };
+
+type PersonPickerProps = {
+  label: string;
+  value: string;
+  initial: AssignmentUserOption[];
+  disabled: boolean;
+  onChange: (value: string) => void;
+  onSearch: (query: string) => Promise<AssignmentUserOption[]>;
+  units?: Array<{ id: string; name_ar: string }>;
+  onUnitChange?: (value: string) => void;
+};
+
+function AssignmentPersonPicker({ label, value, initial, disabled, onChange, onSearch, units = [], onUnitChange }: PersonPickerProps) {
+  const selected = initial.find((user) => user.id === value);
+  const [query, setQuery] = useState(selected?.name_ar ?? "");
+  const [results, setResults] = useState<AssignmentUserOption[]>(initial);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const request = useRef(0);
+
+  useEffect(() => {
+    const text = query.trim();
+    if (text.length < 2) return;
+    const current = ++request.current;
+    const timer = window.setTimeout(() => {
+      void onSearch(text).then((users) => {
+        if (request.current !== current) return;
+        setResults(Array.from(new Map([...initial.filter((user) => user.name_ar.includes(text) || user.email?.includes(text)), ...users].map((user) => [user.id, user])).values()));
+        setError(null);
+      }).catch(() => {
+        if (request.current !== current) return;
+        setResults([]);
+        setError("تعذر البحث عن المستخدمين. أعد المحاولة.");
+      }).finally(() => {
+        if (request.current === current) setLoading(false);
+      });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [initial, onSearch, query]);
+
+  return (
+    <div className="relative flex flex-col gap-1 text-q-caption font-bold text-q-text">
+      <label>
+        {label}
+        <input
+          value={query}
+          disabled={disabled}
+          autoComplete="off"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-label={`البحث عن ${label}`}
+          aria-expanded={open}
+          aria-controls={`${label}-results`}
+          onFocus={() => setOpen(true)}
+          onChange={(event) => {
+            const next = event.target.value;
+            setQuery(next);
+            onChange("");
+            setOpen(true);
+            setError(null);
+            setResults(initial.filter((user) => !next.trim() || user.name_ar.includes(next.trim()) || user.email?.includes(next.trim())));
+            setLoading(next.trim().length >= 2);
+            if (next.trim().length < 2) request.current += 1;
+          }}
+          className="mt-1 h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-normal text-q-text"
+          placeholder="اكتب حرفين من الاسم أو البريد…"
+        />
+      </label>
+      {open && !disabled && (
+        <div id={`${label}-results`} role="listbox" className="absolute inset-x-0 top-full z-20 mt-1 max-h-52 overflow-y-auto rounded-q-control border border-q-border bg-q-surface p-1 shadow-q-card">
+          {units.filter((unit) => !query.trim() || unit.name_ar.includes(query.trim())).map((unit) => (
+            <button type="button" role="option" aria-selected={false} aria-label={unit.name_ar} key={`unit-${unit.id}`} onMouseDown={(event) => event.preventDefault()} onClick={() => { onChange(""); onUnitChange?.(unit.id); setQuery(unit.name_ar); setOpen(false); }} className="flex w-full flex-col items-start rounded-q-control px-3 py-2 text-start text-q-ui font-bold text-q-text hover:bg-q-surface-2">
+              <span>{unit.name_ar}</span><span className="text-q-caption font-normal text-q-text-2">جهة تنظيمية</span>
+            </button>
+          ))}
+          {error ? <p role="alert" className="m-0 px-3 py-2 font-normal text-q-danger">{error}</p> : results.map((user) => (
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === user.id}
+              key={user.id}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => { onChange(user.id); setQuery(user.name_ar); setOpen(false); }}
+              className="flex w-full flex-col items-start rounded-q-control px-3 py-2 text-start text-q-ui font-bold text-q-text hover:bg-q-surface-2"
+            >
+              <span>{user.name_ar}</span>
+              {(user.job_title || user.email) && <span className="text-q-caption font-normal text-q-text-2">{user.job_title ?? user.email}</span>}
+            </button>
+          ))}
+          {loading && <p role="status" className="m-0 px-3 py-2 font-normal text-q-text-2">جارٍ البحث في جميع مستخدمي الجامعة…</p>}
+          {!loading && !error && results.length === 0 && units.filter((unit) => !query.trim() || unit.name_ar.includes(query.trim())).length === 0 && <p className="m-0 px-3 py-2 font-normal text-q-text-2">لا توجد نتائج مطابقة.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const dateFormat = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { day: "numeric", month: "long", year: "numeric" });
 const today = () => new Date().toLocaleDateString("en-CA");
@@ -44,12 +142,13 @@ function stateOf(assignment: MeetingAssignment): { label: string; tone: "warning
  * The decision's assignments. The chair's become execution tasks at once;
  * the rapporteur's wait for the chair. Everyone in the room reads them.
  */
-export function ItemAssignments({ assignments, viewer, options, activity, onCreate, onConfirm, onWithdraw, editorOpen, onEditorChange }: Props) {
+export function ItemAssignments({ assignments, viewer, options, activity, onCreate, onSearchUsers, onConfirm, onWithdraw, editorOpen, onEditorChange }: Props) {
   const [localOpen, setLocalOpen] = useState(false);
   const open = editorOpen ?? localOpen;
   function changeOpen(next: boolean) { if (onEditorChange) onEditorChange(next); else setLocalOpen(next); }
   const [title, setTitle] = useState("");
-  const [assignee, setAssignee] = useState("");
+  const [assigneeUser, setAssigneeUser] = useState("");
+  const [assigneeUnit, setAssigneeUnit] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [followUp, setFollowUp] = useState("");
   const [requiresEvidence, setRequiresEvidence] = useState(false);
@@ -57,20 +156,20 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
   const [confirmingWithdraw, setConfirmingWithdraw] = useState<string | null>(null);
   const busy = activity.key !== null;
   const canWrite = (viewer.can_issue || viewer.can_propose) && options !== null;
+  const searchUsers = onSearchUsers ?? (async () => options?.users ?? []);
   const missing = title.trim().length < 5 ? "اكتب عنوان التكليف بخمسة أحرف على الأقل."
-    : !assignee ? "اختر المكلَّف."
+    : !assigneeUser && !assigneeUnit ? "اختر المكلَّف."
     : !followUp ? "اختر متابع التكليف؛ هو من يتحقق من إنجازه."
     : null;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (missing || busy) return;
-    const [kind, id] = assignee.split(":");
     const saved = await onCreate({
-      title: title.trim(), userId: kind === "user" ? id : null, unitId: kind === "unit" ? id : null,
+      title: title.trim(), userId: assigneeUser || null, unitId: assigneeUnit || null,
       dueDate: dueDate || null, followUpId: followUp, requiresEvidence,
     });
-    if (saved) { setTitle(""); setAssignee(""); setDueDate(""); setFollowUp(""); setRequiresEvidence(false); }
+    if (saved) { setTitle(""); setAssigneeUser(""); setAssigneeUnit(""); setDueDate(""); setFollowUp(""); setRequiresEvidence(false); }
   }
 
   if (assignments.length === 0 && !canWrite) return null;
@@ -140,19 +239,7 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
             />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
-              المكلَّف
-              <select
-                value={assignee}
-                disabled={busy}
-                onChange={(event) => setAssignee(event.target.value)}
-                className="h-11 rounded-q-control border border-q-border bg-q-surface px-2 text-q-ui font-normal text-q-text"
-              >
-                <option value="">اختر عضواً أو جهة</option>
-                {options.users.length > 0 && <optgroup label="أعضاء الاجتماع">{options.users.map((user) => <option key={user.id} value={`user:${user.id}`}>{user.name_ar}</option>)}</optgroup>}
-                {options.units.length > 0 && <optgroup label="الجهات">{options.units.map((unit) => <option key={unit.id} value={`unit:${unit.id}`}>{unit.name_ar}</option>)}</optgroup>}
-              </select>
-            </label>
+            <AssignmentPersonPicker label="المكلَّف" value={assigneeUser} initial={options.users} disabled={busy} units={options.units} onUnitChange={setAssigneeUnit} onChange={(id) => { setAssigneeUser(id); if (id) setAssigneeUnit(""); }} onSearch={searchUsers} />
             <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
               موعد الإنجاز (اختياري)
               <input
@@ -164,18 +251,7 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
                 className="h-11 rounded-q-control border border-q-border bg-q-surface px-2 text-q-ui font-normal text-q-text"
               />
             </label>
-            <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
-              المتابع
-              <select
-                value={followUp}
-                disabled={busy}
-                onChange={(event) => setFollowUp(event.target.value)}
-                className="h-11 rounded-q-control border border-q-border bg-q-surface px-2 text-q-ui font-normal text-q-text"
-              >
-                <option value="">اختر من يتابع التنفيذ</option>
-                {options.users.map((user) => <option key={user.id} value={user.id}>{user.name_ar}</option>)}
-              </select>
-            </label>
+            <AssignmentPersonPicker label="المتابع" value={followUp} initial={options.users} disabled={busy} onChange={setFollowUp} onSearch={searchUsers} />
             <label className="flex min-h-11 items-center gap-2 self-end text-q-ui text-q-text">
               <input type="checkbox" checked={requiresEvidence} disabled={busy} onChange={(event) => setRequiresEvidence(event.target.checked)} className="h-5 w-5 accent-q-primary" />
               يتطلب أدلة إنجاز

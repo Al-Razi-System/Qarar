@@ -64,10 +64,10 @@ from public.permissions p
 cross join (values ('b1000000-0000-0000-0000-000000000031'::uuid),('b1000000-0000-0000-0000-000000000034'::uuid)) r(role_id)
 where p.organization_id='b1000000-0000-0000-0000-000000000001'
   and p.code in ('meetings.manage','attendance.read','attendance.manage','quorum.read','quorum.manage','voting.read','voting.manage','voting.cast','attendance.check_in','attendance.verify','attendance.override','attendance.lock','topics.read','agenda.manage','decisions.read');
--- The rapporteur manages the agenda but not the meeting.
+-- The rapporteur is contextual council leadership without a copied agenda permission.
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select 'b1000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000032',id
-from public.permissions where organization_id='b1000000-0000-0000-0000-000000000001' and code in ('attendance.read','quorum.read','voting.read','voting.cast','attendance.check_in','topics.read','agenda.manage','decisions.read');
+from public.permissions where organization_id='b1000000-0000-0000-0000-000000000001' and code in ('attendance.read','quorum.read','voting.read','voting.cast','attendance.check_in','topics.read','decisions.read');
 -- A member reads decisions and votes, nothing more.
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select 'b1000000-0000-0000-0000-000000000001','b1000000-0000-0000-0000-000000000033',id
@@ -85,7 +85,7 @@ insert into public.agenda_items(id,organization_id,meeting_id,topic_id,agenda_or
 ('b1000000-0000-0000-0000-000000000091','b1000000-0000-0000-0000-000000000001',
  'b1000000-0000-0000-0000-000000000081','b1000000-0000-0000-0000-000000000071',1);
 
-create temporary table s109_state(round_id uuid, decision_id uuid, minutes_updated_at timestamptz, draft text);
+create temporary table s109_state(round_id uuid, decision_id uuid, item_updated_at timestamptz, minutes_updated_at timestamptz, draft text);
 insert into s109_state default values;
 grant select,insert,update,delete on s109_state to authenticated;
 
@@ -120,6 +120,12 @@ select is(api_v1.get_meeting_session_detail('b1000000-0000-0000-0000-00000000008
 select throws_ok($$select api_v1.apply_quorum_failure('b1000000-0000-0000-0000-000000000081','continue','استكمال الاختبار بقرار الرئيس',(select updated_at from public.meetings where id='b1000000-0000-0000-0000-000000000081'))$$,'23514',null,'continuation cannot be silently replaced');
 select lives_ok($$select api_v1.update_agenda_discussion('b1000000-0000-0000-0000-000000000091','under_discussion','افتتاح المناقشة وتسجيل الملاحظات',(select updated_at from public.agenda_items where id='b1000000-0000-0000-0000-000000000091'))$$,'discussion now allowed');
 select lives_ok($$select api_v1.update_agenda_discussion('b1000000-0000-0000-0000-000000000091','discussed','ملخص المناقشة النهائي بعد اكتمالها',(select updated_at from public.agenda_items where id='b1000000-0000-0000-0000-000000000091'))$$,'discussion ends before vote');
+update s109_state set item_updated_at=(select updated_at from public.agenda_items where id='b1000000-0000-0000-0000-000000000091');
+set local "request.jwt.claims"='{"sub":"b1000000-0000-0000-0000-000000000012","role":"authenticated"}';
+select lives_ok($$select api_v1.update_agenda_discussion('b1000000-0000-0000-0000-000000000091','discussed','ملخص المقرر السياقي دون صلاحية إدارية منسوخة',(select item_updated_at from s109_state))$$,'contextual rapporteur saves the summary');
+set local "request.jwt.claims"='{"sub":"b1000000-0000-0000-0000-000000000013","role":"authenticated"}';
+select throws_ok($$select api_v1.update_agenda_discussion('b1000000-0000-0000-0000-000000000091','discussed','محاولة عضو غير مخول',(select updated_at from public.agenda_items where id='b1000000-0000-0000-0000-000000000091'))$$,'42501',null,'ordinary member cannot save the summary');
+set local "request.jwt.claims"='{"sub":"b1000000-0000-0000-0000-000000000011","role":"authenticated"}';
 select lives_ok($$update s109_state set round_id=(api_v1.open_voting_round('b1000000-0000-0000-0000-000000000091',(select updated_at from public.meetings where id='b1000000-0000-0000-0000-000000000081'))->>'voting_round_id')::uuid$$,'vote opens with recorded exception');
 select lives_ok($$select api_v1.cast_vote((select round_id from s109_state),'approve',null)$$,'only eligible present member votes');
 select lives_ok($$select api_v1.close_voting_round((select round_id from s109_state),'اكتمل تصويت الحاضرين')$$,'vote closes normally');

@@ -349,6 +349,8 @@ An assignment is an execution task tied to the decision drafted for an agenda it
 
 `list_meeting_assignments_v2(p_meeting_id)` returns `viewer` (`can_issue`, `can_propose`), `assignments` (with assignee and follow-up names, `requires_evidence`, `action_no` and `action_status`), and `options` (the meeting's roster and the active units). `options` is filled for the chair and the rapporteur only. Read authority is the same as Session Detail.
 
+`search_meeting_assignment_options_v2(p_meeting_id, p_query, p_limit default 20)` searches active users in the caller's organization by Arabic name, email, employee number or job title. It is available only to the active chair and rapporteur of the live meeting, requires at least two query characters, returns at most 20 minimal user records (`id`, `name_ar`, `email`, `job_title`), and never searches another tenant. It supports assigning or following a decision task by any university user rather than only the meeting roster.
+
 **Execution rule.** `qarar_execution.check_action_item_creation` still refuses a task for a decision that is not approved (`23514`, Arabic message). The one exception is a task whose `meeting_assignment_id` is an assignment the chair issued for that very decision, while the decision is `ready_for_approval`. When a decision becomes `rejected`, the session's unfinished tasks are cancelled.
 
 ## Open Voting

@@ -9,7 +9,7 @@ import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { cn } from "@/shared/lib/utils";
-import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MeetingAssignment, MeetingAssignments, MeetingItemTimers, MeetingReferrals, NewAssignment, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
+import type { AgendaDiscussionItem, AssignmentUserOption, Attendance, Decision, LiveMeetingSession, MeetingAssignment, MeetingAssignments, MeetingItemTimers, MeetingReferrals, NewAssignment, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
 import type { MeetingTopicAttachment } from "../model/meeting";
 import { AttendanceQrDialog } from "./attendance-qr-dialog";
 import { ChairAttendanceConsole } from "./chair-attendance-console";
@@ -271,7 +271,22 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     void submitAttendance(record, status, null);
   }
 
-  function updateDiscussion(item: AgendaDiscussionItem, status: DiscussionStatus, notes: string | null) {
+  async function updateDiscussion(item: AgendaDiscussionItem, status: DiscussionStatus, notes: string | null) {
+    // Saving the rapporteur's summary owns its feedback inside the summary card.
+    // Do not duplicate the same failure at the top of the room.
+    if (status === item.agenda_status) {
+      setBusy(true);
+      setNotice(null);
+      try {
+        await liveMeetingRpc("update_agenda_discussion", { p_agenda_item_id: item.id, p_status: status, p_discussion_notes: notes, p_expected_updated_at: item.updated_at });
+        await load(true, true);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setBusy(false);
+      }
+    }
     return perform(() => liveMeetingRpc("update_agenda_discussion", { p_agenda_item_id: item.id, p_status: status, p_discussion_notes: notes, p_expected_updated_at: item.updated_at }), status === "under_discussion" ? "بدأت مناقشة البند." : status === "discussed" ? "تم حفظ الملخص النهائي للبند بنجاح." : "أُجل البند مع توثيق السبب.");
   }
 
@@ -325,6 +340,10 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   }
 
   const assignmentActions = {
+    onSearchUsers: async (query: string) => {
+      const result = await liveMeetingRpc<{ users: AssignmentUserOption[] }>("search_meeting_assignment_options_v2", { p_meeting_id: meetingId, p_query: query, p_limit: 20 });
+      return result.users;
+    },
     onCreate: (agendaItemId: string, input: NewAssignment) => runAssignment(NEW_ASSIGNMENT_KEY, () => liveMeetingRpc("propose_meeting_assignment_v2", {
       p_agenda_item_id: agendaItemId, p_title: input.title, p_description: null,
       p_assigned_user_id: input.userId, p_assigned_unit_id: input.unitId, p_due_date: input.dueDate,
@@ -380,6 +399,8 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const operator = session.viewer.can_operate_attendance;
   const rapporteur = session.viewer.mode === "rapporteur";
   const pendingVotes = myVotes.filter((vote) => !vote.has_voted);
+  const hasActiveVoting = rounds.some((round) => round.status === "open") || pendingVotes.length > 0 || session.open_voting_rounds.length > 0;
+  const activeVotingError = hasActiveVoting ? voting.error : null;
   const dialogError = notice?.kind === "error" ? notice.text : null;
   // Once the roster is locked a member has nothing else to open: their screen follows the broadcast.
   const followsBroadcast = Boolean(live.broadcast?.active && !live.broadcast.viewer_controls)
@@ -391,7 +412,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     { value: "agenda", label: "جدول الأعمال والتصويت", count: pendingVotes.length },
   ];
 
-  const ballots = pendingVotes.slice(0, 1).map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy || Boolean(voting.error)} unavailableReason={voting.error} onCast={castVote} />);
+  const ballots = pendingVotes.slice(0, 1).map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy || Boolean(activeVotingError)} unavailableReason={activeVotingError} onCast={castVote} />);
   const steering = session.viewer.mode !== "member" || session.viewer.can_manage_voting;
   const stageProps = { session, agenda, rounds, decisions, referrals: referrals?.referrals, profiles, profilesError };
 
@@ -408,7 +429,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       )}
     >
       {notice && <InlineMessage tone={notice.kind === "success" ? "success" : "error"} className="shrink-0 border border-q-border text-q-ui">{notice.text}</InlineMessage>}
-      {voting.error && <InlineMessage tone="error">{voting.error}<Button variant="secondary" onClick={voting.reconnect}>إعادة الاتصال بالتصويت</Button></InlineMessage>}
+      {activeVotingError && <InlineMessage tone="error">{activeVotingError}<Button variant="secondary" onClick={voting.reconnect}>إعادة الاتصال بالتصويت</Button></InlineMessage>}
 
       <RoomTopBar
         session={session}

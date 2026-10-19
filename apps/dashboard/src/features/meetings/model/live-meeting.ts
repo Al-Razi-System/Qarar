@@ -104,9 +104,11 @@ export type MeetingAssignment = {
 export type MeetingAssignments = {
   viewer: { can_issue: boolean; can_propose: boolean };
   assignments: MeetingAssignment[];
-  /** For the chair and the rapporteur only: the roster and the active units. */
-  options: { users: Array<{ id: string; name_ar: string }>; units: Array<{ id: string; name_ar: string }> } | null;
+  /** For the chair and the rapporteur only: initial suggestions and active units. */
+  options: { users: AssignmentUserOption[]; units: Array<{ id: string; name_ar: string }> } | null;
 };
+
+export type AssignmentUserOption = { id: string; name_ar: string; email?: string | null; job_title?: string | null };
 
 export type NewAssignment = { title: string; userId: string | null; unitId: string | null; dueDate: string | null; followUpId: string; requiresEvidence: boolean };
 

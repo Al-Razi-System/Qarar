@@ -4,7 +4,7 @@
 -- Impact map: docs/engineering/impact/MEETING_ASSIGNMENT_AR.md
 begin;
 create extension if not exists pgtap;
-select plan(32);
+select plan(38);
 
 insert into public.organizations(id,code,name_ar) values
 ('a5000000-0000-0000-0000-000000000001','s104','Assignment'),
@@ -13,12 +13,14 @@ insert into auth.users(id,email) values
 ('a5000000-0000-0000-0000-000000000011','chair@s104.test'),
 ('a5000000-0000-0000-0000-000000000012','rapporteur@s104.test'),
 ('a5000000-0000-0000-0000-000000000013','member@s104.test'),
+('a5000000-0000-0000-0000-000000000014','planner@s104.test'),
 ('a5000000-0000-0000-0000-000000000015','admin@s104.test'),
 ('a5000000-0000-0000-0000-000000000016','other@s104b.test');
 insert into public.users(id,organization_id,email,full_name_ar,is_system_admin) values
 ('a5000000-0000-0000-0000-000000000011','a5000000-0000-0000-0000-000000000001','chair@s104.test','Council Chair',false),
 ('a5000000-0000-0000-0000-000000000012','a5000000-0000-0000-0000-000000000001','rapporteur@s104.test','Council Rapporteur',false),
 ('a5000000-0000-0000-0000-000000000013','a5000000-0000-0000-0000-000000000001','member@s104.test','Council Member',false),
+('a5000000-0000-0000-0000-000000000014','a5000000-0000-0000-0000-000000000001','planner@s104.test','University Planner',false),
 ('a5000000-0000-0000-0000-000000000015','a5000000-0000-0000-0000-000000000001','admin@s104.test','System Admin',true),
 ('a5000000-0000-0000-0000-000000000016','a5000000-0000-0000-0000-000000000002','other@s104b.test','Other Tenant User',false);
 insert into public.governance_unit_types(id,organization_id,code,name_ar) values
@@ -153,14 +155,21 @@ select throws_ok($$ select pg_temp.s104_raw_task((select id from s104_ids where 
 
 -- Who reads what.
 select is(jsonb_array_length(api_v2.list_meeting_assignments_v2('a5000000-0000-0000-0000-000000000081')->'options'->'users'),3,'the chair chooses among the meeting''s roster');
+select is(api_v2.search_meeting_assignment_options_v2('a5000000-0000-0000-0000-000000000081','Planner',20)->'users'->0->>'id','a5000000-0000-0000-0000-000000000014','chair finds an active university user outside the council');
+select is(jsonb_array_length(api_v2.search_meeting_assignment_options_v2('a5000000-0000-0000-0000-000000000081','p',20)->'users'),0,'one letter does not enumerate the university directory');
+select pg_temp.s104_as('a5000000-0000-0000-0000-000000000012');
+select is(api_v2.search_meeting_assignment_options_v2('a5000000-0000-0000-0000-000000000081','planner@s104',20)->'users'->0->>'name_ar','University Planner','rapporteur searches by email without IAM administration permission');
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000013');
+select throws_ok($$ select api_v2.search_meeting_assignment_options_v2('a5000000-0000-0000-0000-000000000081','Planner',20) $$,'42501',null,'member cannot search the university directory from assignments');
 select is(pg_temp.s104_assignment((select id from s104_ids where name='chair'))->>'assigned_user_name_ar','Council Member','a member reads the assignments');
 select is(api_v2.list_meeting_assignments_v2('a5000000-0000-0000-0000-000000000081')->'options','null'::jsonb,'a member is offered no choices');
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000016');
+select throws_ok($$ select api_v2.search_meeting_assignment_options_v2('a5000000-0000-0000-0000-000000000081','Planner',20) $$,'P0002',null,'another tenant cannot search this meeting assignment directory');
 select throws_ok($$ select api_v2.list_meeting_assignments_v2('a5000000-0000-0000-0000-000000000081') $$,'P0002',null,'another tenant cannot read the assignments');
 
 -- Rejecting the decision later cancels the tasks the session issued.
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000011');
+select throws_ok($$ select api_v2.search_meeting_assignment_options_v2('a5000000-0000-0000-0000-000000000081','Planner',21) $$,'22023',null,'search limit is bounded');
 select pg_temp.s104_reject_decision();
 select is(pg_temp.s104_task((select id from s104_ids where name='chair'))->>'status','cancelled','a rejected decision cancels the session''s tasks');
 

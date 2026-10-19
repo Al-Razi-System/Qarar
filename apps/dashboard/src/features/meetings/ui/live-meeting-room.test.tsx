@@ -103,4 +103,28 @@ describe("LiveMeetingRoom polling", () => {
     expect(screen.getByRole("button", { name: "فتح التصويت للأعضاء" })).toBeInTheDocument();
     view.unmount();
   });
+
+  it("does not show a stale voting connection warning after every round has closed", async () => {
+    class Source extends EventTarget {
+      static current: Source;
+      close = vi.fn(); onerror: (() => void) | null = null;
+      constructor() { super(); Source.current = this; }
+    }
+    vi.stubGlobal("EventSource", Source);
+    const session = { viewer: { user_id: "chair", full_name_ar: "الرئيس", mode: "chair", can_manage_session: true, can_manage_voting: true }, meeting: { id: "m", title_ar: "اجتماع", status: "in_progress", attendance_locked: true }, attendance: [], my_attendance: null, quorum: { quorum_status: "met" }, open_voting_rounds: [] };
+    liveMeetingRpc.mockImplementation(async (contract: string) => {
+      if (contract === "get_meeting_session_detail") return session;
+      if (contract === "get_meeting_detail") return { agenda_items: [{ id: "a", agenda_order: 1, agenda_status: "discussed", topic: { id: "t", title_ar: "الخطة" } }] };
+      if (contract === "list_meeting_item_timers_v2") return { server_now: new Date().toISOString(), timers: [] };
+      if (contract === "list_meeting_referrals_v2") return { referrals: [], destinations: [] };
+      if (contract === "list_meeting_assignments_v2") return { assignments: [], viewer: {}, options: null };
+      if (contract === "list_meeting_member_profiles_v2") return { members: [], mobile_visible: false };
+      return [];
+    });
+    const view = render(<LiveMeetingRoom meetingId="m" />);
+    await act(async () => Promise.resolve());
+    await act(async () => Source.current.onerror?.());
+    expect(screen.queryByText(/انقطع تحديث التصويت/)).not.toBeInTheDocument();
+    view.unmount();
+  });
 });

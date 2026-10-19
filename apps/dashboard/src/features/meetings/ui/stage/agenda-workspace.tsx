@@ -5,7 +5,7 @@ import { Card } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { activeAgendaItemId, agendaItemState, chairActions, completionBlockers, itemFlow, sortAgenda, type AgendaItemState, type ChairAction } from "../../model/agenda-flow";
-import type { AgendaDiscussionItem, Decision, LiveMeetingSession, MeetingBroadcast, MeetingAssignment, MeetingAssignments, MeetingItemTimers, MeetingReferrals, NewAssignment, TopicGovernanceHistory, VotingRound } from "../../model/live-meeting";
+import type { AgendaDiscussionItem, AssignmentUserOption, Decision, LiveMeetingSession, MeetingBroadcast, MeetingAssignment, MeetingAssignments, MeetingItemTimers, MeetingReferrals, NewAssignment, TopicGovernanceHistory, VotingRound } from "../../model/live-meeting";
 import type { MeetingTopicAttachment } from "../../model/meeting";
 import { AgendaTimeline } from "./agenda-timeline";
 import { BroadcastBar } from "./broadcast-bar";
@@ -57,6 +57,7 @@ type Props = {
     onRetry?: () => void;
     activity: AssignmentActivity;
     onCreate: (agendaItemId: string, input: NewAssignment) => Promise<boolean>;
+    onSearchUsers?: (query: string) => Promise<AssignmentUserOption[]>;
     onConfirm: (assignment: MeetingAssignment) => void;
     onWithdraw: (assignment: MeetingAssignment) => void;
   };
@@ -164,6 +165,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
       options={presenting ? null : assignments.data.options}
       activity={assignments.activity}
       onCreate={(input) => assignments.onCreate(selected.id, input)}
+      onSearchUsers={assignments.onSearchUsers}
       onConfirm={assignments.onConfirm}
       onWithdraw={assignments.onWithdraw}
     />

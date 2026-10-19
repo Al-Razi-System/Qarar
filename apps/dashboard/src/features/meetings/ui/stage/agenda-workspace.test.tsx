@@ -126,10 +126,12 @@ describe("AgendaWorkspace", () => {
       expect(handlers.onEditDecision).toHaveBeenCalledWith(saved, done, closed);
     });
 
-    it("can be edited from the chair's dock, keeping the note of what happened", async () => {
+    it("offers the chair one decision editor in the dock without duplicating it in the topic", async () => {
       const { handlers } = setup("chair", { agenda: [done], rounds: [closed], decisions: [saved] });
       const dock = screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" });
       expect(dock).toHaveTextContent("ق-1 · تم إنشاء القرار.");
+      expect(within(screen.getByRole("region", { name: "القرار" })).queryByRole("button", { name: "تعديل القرار" })).not.toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: "تعديل القرار" })).toHaveLength(1);
       await userEvent.click(within(dock).getByRole("button", { name: "تعديل القرار" }));
       expect(handlers.onEditDecision).toHaveBeenCalledWith(saved, done, closed);
     });
@@ -513,8 +515,10 @@ describe("AgendaWorkspace assignments", () => {
     const section = screen.getByRole("region", { name: "التكليفات" });
     await userEvent.click(within(screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" })).getByRole("button", { name: "إضافة تكليف" }));
     await userEvent.type(within(section).getByLabelText("عنوان التكليف"), "إبلاغ عمادة القبول");
-    await userEvent.selectOptions(within(section).getByLabelText("المكلَّف"), "unit:g1");
-    await userEvent.selectOptions(within(section).getByLabelText("المتابع"), "u2");
+    await userEvent.type(within(section).getByLabelText("البحث عن المكلَّف"), "عمادة");
+    await userEvent.click(screen.getByRole("option", { name: "عمادة القبول" }));
+    await userEvent.type(within(section).getByLabelText("البحث عن المتابع"), "هدى");
+    await userEvent.click(screen.getByRole("option", { name: "د. هدى" }));
     await userEvent.click(within(section).getByRole("button", { name: "إصدار التكليف" }));
     expect(onCreate).toHaveBeenCalledWith("a1", { title: "إبلاغ عمادة القبول", userId: null, unitId: "g1", dueDate: null, followUpId: "u2", requiresEvidence: false });
   });

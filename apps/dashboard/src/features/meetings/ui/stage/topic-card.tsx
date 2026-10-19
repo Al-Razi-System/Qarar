@@ -94,7 +94,9 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
   const manager = session.viewer.can_manage_voting && !presenting;
   const role = presenting ? "member" : session.viewer.mode;
   const decision = flow.decision;
-  const canEditDecision = Boolean(decision?.can_edit_text) && !presenting;
+  // The chair already has the contextual action in the control dock. Keeping a
+  // second identical button in the decision card made the next step ambiguous.
+  const canEditDecision = Boolean(decision?.can_edit_text) && !presenting && session.viewer.mode !== "chair";
 
   const materials = <>
     {tab === "instructions" && <section aria-label="تعليمات المناقشة" className="q-instructions rounded-q-control border-s-4 border-q-primary bg-q-surface-2 p-4">

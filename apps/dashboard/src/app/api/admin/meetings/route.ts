@@ -18,7 +18,7 @@ const contracts = new Set([
   "set_meeting_broadcast_document_v2", "set_agenda_item_downloads_v2",
   "list_meeting_item_timers_v2", "set_agenda_item_planned_minutes_v2",
   "list_meeting_referrals_v2", "refer_agenda_item_v2",
-  "list_meeting_assignments_v2", "propose_meeting_assignment_v2", "confirm_meeting_assignment_v2", "withdraw_meeting_assignment_v2",
+  "list_meeting_assignments_v2", "search_meeting_assignment_options_v2", "propose_meeting_assignment_v2", "confirm_meeting_assignment_v2", "withdraw_meeting_assignment_v2",
   "create_checkin_session", "revoke_checkin_session", "self_check_in",
   "override_attendance", "verify_attendance", "recalculate_meeting_quorum",
   "apply_quorum_failure", "get_attendance_history",
