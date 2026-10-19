@@ -125,20 +125,32 @@ describe("TaskDetailPanel", () => {
     render(<TaskDetailPanel task={detail()} pending={null} error={null} onAction={onAction} />);
     const next = screen.getByRole("region", { name: "خطوتك التالية" });
     expect(within(next).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
-      "حدّث نسبة الإنجاز",
+      "حدّث نسبة الإنجاز إن أردت توثيق تقدم جديد",
       "أرفق دليل الإنجاز المطلوب",
-      "اضغط «تسليم الإنجاز للتحقق»",
+      "سلّم ما أنجزته للتحقق بأي نسبة حالية",
     ]);
+    expect(next).toHaveTextContent("لا يلزم رفع النسبة إلى 90%");
     expect(next).toHaveTextContent("تصل المهمة إلى 100% بعد اعتماد المتابع");
+    expect(within(next).queryByRole("button", { name: "تسليم الإنجاز للتحقق" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "تسليم الإنجاز للتحقق" })).toBeDisabled();
     expect(screen.getByText("تتطلب هذه المهمة دليل إنجاز؛ أرفق ملفاً قبل التسليم.")).toBeInTheDocument();
     const form = screen.getByRole("form", { name: "إرفاق دليل" });
+    const submission = screen.getByRole("group", { name: "تسليم الإنجاز" });
+    expect(form.compareDocumentPosition(submission) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(form).getByRole("button", { name: "إرفاق الدليل" })).toBeDisabled();
     const file = new File(["%PDF"], "plan.pdf", { type: "application/pdf" });
     await userEvent.upload(within(form).getByLabelText(/الملف/), file);
     await userEvent.type(within(form).getByLabelText("وصف الدليل (اختياري)"), "الخطة الموقعة");
     await userEvent.click(within(form).getByRole("button", { name: "إرفاق الدليل" }));
     expect(onAction).toHaveBeenCalledWith({ kind: "upload", file, description: "الخطة الموقعة" });
+  });
+
+  it("allows the executor to submit partial completion without inflating progress", async () => {
+    render(<TaskDetailPanel task={detail({ progress_percent: 25, evidence: [{ id: "e1", file_name: "partial.pdf", mime_type: "application/pdf", description: "", uploaded_at: "2026-10-20T09:00:00Z", uploaded_by_name_ar: "المنفذ", file_size_bytes: 10 }], viewer: viewer({ can_submit: true, submit_blocked_reason: null }) })} pending={null} error={null} onAction={onAction} />);
+    const next = screen.getByRole("region", { name: "خطوتك التالية" });
+    expect(next).toHaveTextContent("يمكنك تسليم ما وصلت إليه الآن بنسبة 25%");
+    await userEvent.click(screen.getByRole("button", { name: "تسليم الإنجاز للتحقق" }));
+    expect(onAction).toHaveBeenCalledWith({ kind: "submit", note: "" });
   });
 
   it("asks a verifier for a reason before returning the task", async () => {
@@ -167,7 +179,7 @@ describe("TaskDetailPanel", () => {
   it("names the viewer's next step and saves progress picked from quick choices", async () => {
     render(<TaskDetailPanel task={detail({ viewer: viewer({ can_submit: true, submit_blocked_reason: null }) })} pending={null} error="تعذر الحفظ." onAction={onAction} />);
     const next = screen.getByRole("region", { name: "خطوتك التالية" });
-    expect(next).toHaveTextContent("سلّم الإنجاز حين تنتهي");
+    expect(next).toHaveTextContent("الإنجاز جاهز للتسليم");
     expect(within(next).getByRole("alert")).toHaveTextContent("تعذر الحفظ.");
     expect(screen.getByRole("list", { name: "مسار المهمة" })).toHaveTextContent("تنفيذ: الآن");
     const form = screen.getByRole("form", { name: "تحديث الإنجاز" });

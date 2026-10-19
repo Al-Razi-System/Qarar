@@ -112,8 +112,8 @@ export function TaskDetailPanel({ task, pending, error, onAction }: Props) {
     if (viewer.can_start) return { title: "ابدأ التنفيذ", body: "يرى المتابع أن التنفيذ بدأ، وتُفتح لك نسبة الإنجاز والأدلة." };
     if (viewer.is_executor && open) {
       return viewer.can_submit
-        ? { title: "سلّم الإنجاز حين تنتهي", body: `يتحقق منه ${task.follow_up_user_name_ar ?? "المتابع"} أو رئيس المجلس أو مسؤول الحوكمة.` }
-        : { title: "أكمل العمل ثم سلّمه", body: "نفّذ الخطوات الثلاث التالية؛ تصل المهمة إلى 100% بعد اعتماد المتابع." };
+        ? { title: "الإنجاز جاهز للتسليم", body: `يمكنك تسليم ما وصلت إليه الآن بنسبة ${task.progress_percent}%؛ يتحقق منه ${task.follow_up_user_name_ar ?? "المتابع"} أو رئيس المجلس أو مسؤول الحوكمة.` }
+        : { title: "أكمل العمل ثم سلّمه", body: "لا يلزم رفع النسبة إلى 90%؛ أرفق الدليل المطلوب ثم سلّم ما أنجزته. تصل المهمة إلى 100% بعد اعتماد المتابع." };
     }
     if (task.status === "submitted" && viewer.is_executor) return { title: "بانتظار التحقق", body: "سُلّمت المهمة، وتنتظر تحقق المتابع أو رئيس المجلس أو مسؤول الحوكمة." };
     return { title: "للاطلاع", body: "تتابع هذه المهمة؛ يحدّث المنفّذ إنجازها ويتحقق منها المتابع." };
@@ -155,9 +155,9 @@ export function TaskDetailPanel({ task, pending, error, onAction }: Props) {
 
         {viewer.is_executor && open && (
           <ol className="m-0 grid list-inside list-decimal gap-2 rounded-q-control bg-q-surface px-3 py-3 text-q-ui sm:grid-cols-3">
-            <li>حدّث نسبة الإنجاز</li>
+            <li>حدّث نسبة الإنجاز إن أردت توثيق تقدم جديد</li>
             <li>أرفق دليل الإنجاز {task.requires_evidence ? "المطلوب" : "إن وُجد"}</li>
-            <li>اضغط «تسليم الإنجاز للتحقق»</li>
+            <li>سلّم ما أنجزته للتحقق بأي نسبة حالية</li>
           </ol>
         )}
 
@@ -165,19 +165,6 @@ export function TaskDetailPanel({ task, pending, error, onAction }: Props) {
 
         {viewer.can_start && (
           <div><Button pending={pending === "start"} pendingLabel="جارٍ البدء…" disabled={busy} onClick={() => void run({ kind: "start" })}>بدء التنفيذ</Button></div>
-        )}
-
-        {viewer.is_executor && open && !viewer.can_start && (
-          <div aria-label="تسليم الإنجاز" role="group" className="flex flex-col gap-3">
-            {viewer.can_submit && <TextArea label="ملاحظة التسليم (اختيارية)" value={submitNote} maxLength={2000} disabled={busy} onChange={(event) => setSubmitNote(event.target.value)} className="min-h-20" />}
-            <div className="flex flex-wrap items-center gap-3">
-              <Button disabled={busy || !viewer.can_submit} pending={pending === "submit"} pendingLabel="جارٍ التسليم…" onClick={() => void run({ kind: "submit", note: submitNote }, () => setSubmitNote(""))}>تسليم الإنجاز للتحقق</Button>
-              {viewer.submit_blocked_reason && <span className="text-q-caption font-bold text-q-warning">{viewer.submit_blocked_reason}</span>}
-              {!viewer.can_submit && task.requires_evidence && task.evidence.length === 0 && viewer.can_update && (
-                <a href={`#${evidenceId}`} className="text-q-caption font-bold text-q-link">انتقل إلى الأدلة</a>
-              )}
-            </div>
-          </div>
         )}
 
         {viewer.can_verify && (
@@ -306,6 +293,22 @@ export function TaskDetailPanel({ task, pending, error, onAction }: Props) {
               </form>
             )}
           </section>
+
+          {viewer.is_executor && open && !viewer.can_start && (
+            <section aria-label="إتمام المهمة" className="rounded-q-control border border-q-border bg-q-surface-2 p-4">
+              <div aria-label="تسليم الإنجاز" role="group" className="flex flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <h3 className="m-0 text-q-h3 font-bold">تسليم الإنجاز</h3>
+                  <p className="m-0 text-q-ui text-q-text-2">هذه هي الخطوة الأخيرة للمنفّذ. بعد التسليم تنتقل المهمة إلى المتابع للتحقق.</p>
+                </div>
+                {viewer.can_submit && <TextArea label="ملاحظة التسليم (اختيارية)" value={submitNote} maxLength={2000} disabled={busy} onChange={(event) => setSubmitNote(event.target.value)} className="min-h-20" />}
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button disabled={busy || !viewer.can_submit} pending={pending === "submit"} pendingLabel="جارٍ التسليم…" onClick={() => void run({ kind: "submit", note: submitNote }, () => setSubmitNote(""))}>تسليم الإنجاز للتحقق</Button>
+                  {viewer.submit_blocked_reason && <span className="text-q-caption font-bold text-q-warning">{viewer.submit_blocked_reason}</span>}
+                </div>
+              </div>
+            </section>
+          )}
         </div>
 
         <aside className="flex min-w-0 flex-col gap-5">
