@@ -17,7 +17,7 @@ test("materializes a valid recipient and skips a missing number",async()=>{
   const events=[{id:"e1",lock_token:"l1"},{id:"e2",lock_token:"l2"}];
   const client={
     claimEvents:async()=>events,
-    getDispatchContext:async id=>id==="e1"?{event_type:"execution.task.created",recipient_active:true,mobile:"+967771234567",payload:{recipient_role:"assignee",action_no:"TSK-1",title_ar:"مهمة"}}:{event_type:"execution.task.created",recipient_active:true,mobile:null,payload:{recipient_role:"follower"}},
+    getDispatchContext:async id=>id==="e1"?{event_type:"execution.task.created",recipient_active:true,recipient_name_ar:"أحمد علي",mobile:"+967771234567",payload:{recipient_role:"assignee",action_no:"TSK-1",title_ar:"مهمة"}}:{event_type:"execution.task.created",recipient_active:true,mobile:null,payload:{recipient_role:"follower"}},
     materializeDelivery:async(...args)=>calls.push(["materialize",...args]),
     skipDelivery:async(...args)=>calls.push(["skip",...args]),
     failEvent:async(...args)=>calls.push(["fail",...args])
@@ -26,6 +26,7 @@ test("materializes a valid recipient and skips a missing number",async()=>{
   assert.deepEqual(result.map(x=>x.status),["queued","skipped"]);
   assert.equal(calls[0][0],"materialize");
   assert.equal(calls[0][3],"task_created_assignee");
+  assert.equal(calls[0][5].recipient_name_ar,"أحمد علي");
   assert.equal(calls[1][0],"skip");
   assert.equal(calls.some(x=>x[0]==="fail"),false);
 });

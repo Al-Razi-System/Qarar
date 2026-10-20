@@ -42,7 +42,10 @@ export async function runDispatchBatch({ client, workerId = randomUUID(), limit 
         results.push({ id: event.id, status: "skipped" });
         continue;
       }
-      await client.materializeDelivery(event.id, event.lock_token, templateCode, destination, context.payload);
+      await client.materializeDelivery(event.id, event.lock_token, templateCode, destination, {
+        ...context.payload,
+        recipient_name_ar: context.recipient_name_ar
+      });
       results.push({ id: event.id, status: "queued" });
     } catch (error) {
       await client.failEvent(event.id, event.lock_token, "DISPATCH_FAILED");

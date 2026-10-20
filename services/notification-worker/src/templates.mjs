@@ -1,32 +1,100 @@
-const templates = Object.freeze({
-  meeting_invitation: ({ title_ar, meeting_title, scheduled_date, start_time }) =>
-    `دعوة اجتماع\n${required(title_ar ?? meeting_title, "عنوان الاجتماع")}\nالتاريخ: ${required(scheduled_date, "تاريخ الاجتماع")}${start_time ? `\nالوقت: ${start_time}` : ""}`,
-  meeting_reminder: ({ title_ar, scheduled_date, start_time }) =>
-    `تذكير بموعد اجتماع\n${required(title_ar, "عنوان الاجتماع")}\nالتاريخ: ${required(scheduled_date, "تاريخ الاجتماع")}${start_time ? `\nالوقت: ${start_time}` : ""}`,
-  meeting_cycle_due_soon: ({ title_ar, planned_window_end }) =>
-    `تنبيه بقرب انتهاء فترة دورة الاجتماع\n${required(title_ar, "عنوان الاجتماع")}\nتنتهي الفترة في: ${required(planned_window_end, "نهاية الفترة")}`,
-  meeting_cycle_overdue: ({ title_ar, planned_window_end }) =>
-    `تنبيه: انتهت فترة دورة الاجتماع دون تحديد الموعد\n${required(title_ar, "عنوان الاجتماع")}\nانتهت الفترة في: ${required(planned_window_end, "نهاية الفترة")}`,
-  task_created_assignee: ({ action_no, title_ar, due_date }) =>
-    `تم إسناد تكليف جديد إليك\n${required(action_no, "رقم التكليف")} — ${required(title_ar, "عنوان التكليف")}${due_date ? `\nموعد الإنجاز: ${due_date}` : ""}`,
-  task_created_follower: ({ action_no, title_ar, due_date }) =>
-    `أُضيف تكليف جديد إلى متابعتك\n${required(action_no, "رقم التكليف")} — ${required(title_ar, "عنوان التكليف")}${due_date ? `\nموعد الإنجاز: ${due_date}` : ""}`,
-  task_due_soon: ({ action_no, title_ar, due_date }) =>
-    `تذكير بقرب استحقاق التكليف\n${required(action_no, "رقم التكليف")} — ${required(title_ar, "عنوان التكليف")}\nموعد الإنجاز: ${required(due_date, "موعد الإنجاز")}`,
-  task_overdue: ({ action_no, title_ar, due_date }) =>
-    `تنبيه: تجاوز التكليف موعده\n${required(action_no, "رقم التكليف")} — ${required(title_ar, "عنوان التكليف")}\nكان موعد الإنجاز: ${required(due_date, "موعد الإنجاز")}`,
-  task_submitted: ({ action_no, title_ar }) =>
-    `تم تسليم تكليف لمراجعتك\n${required(action_no, "رقم التكليف")} — ${required(title_ar, "عنوان التكليف")}`,
-  task_returned: ({ action_no, title_ar }) =>
-    `أُعيد التكليف لاستكماله\n${required(action_no, "رقم التكليف")} — ${required(title_ar, "عنوان التكليف")}`,
-  task_completed: ({ action_no, title_ar }) =>
-    `اكتمل اعتماد إنجاز التكليف\n${required(action_no, "رقم التكليف")} — ${required(title_ar, "عنوان التكليف")}`
+const FOOTER = "_نظام قرار - جامعة الرازي_";
+const RIYADH_DATE = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", {
+  weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Riyadh"
 });
 
-function required(value, label) {
-  if (typeof value !== "string" || value.trim() === "") throw new TypeError(`${label} مطلوب للقالب`);
-  return value.trim();
+function clean(value) {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
 }
+
+function required(value, label) {
+  const result = clean(value);
+  if (!result) throw new TypeError(`${label} مطلوب للقالب`);
+  return result;
+}
+
+function formatDate(value, label) {
+  const raw = required(value, label);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new TypeError(`${label} غير صالح للقالب`);
+  const parsed = new Date(`${raw}T12:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) throw new TypeError(`${label} غير صالح للقالب`);
+  return RIYADH_DATE.format(parsed);
+}
+
+function formatTime(value) {
+  const match = clean(value)?.match(/^(\d{2}):(\d{2})/);
+  if (!match || Number(match[1]) > 23) return null;
+  const hour = Number(match[1]);
+  return `${String(hour % 12 || 12).padStart(2, "0")}:${match[2]} ${hour < 12 ? "ص" : "م"}`;
+}
+
+const recipient = value => clean(value) ? `مرحبًا ${clean(value)}،` : "مرحبًا،";
+const field = (label, value) => clean(value) ? `*${label}:* ${clean(value)}` : null;
+
+function compactDescription(value) {
+  const shown = clean(value)?.replace(/\s+/g, " ");
+  if (!shown) return null;
+  return shown.length <= 360 ? shown : `${shown.slice(0, 357)}…`;
+}
+
+function location(variables) {
+  if (clean(variables.location_details)) return clean(variables.location_details);
+  return ({ onsite: "حضوري", physical: "حضوري", online: "عن بُعد", hybrid: "هجين" })[clean(variables.location_type)] ?? null;
+}
+
+function schedule(startValue, endValue) {
+  const start = formatTime(startValue);
+  const end = formatTime(endValue);
+  return start && end ? `${start} – ${end}` : start;
+}
+
+function message(title, greeting, intro, fields, action) {
+  return [`*قرار | ${title}*`, "", greeting, intro, "", ...fields.filter(Boolean), "", action, "", FOOTER]
+    .filter((line, index, lines) => line !== "" || (index > 0 && lines[index - 1] !== ""))
+    .join("\n");
+}
+
+function meetingFields(variables, cycle = false) {
+  const fields = [
+    field("الاجتماع", required(variables.title_ar ?? variables.meeting_title, "عنوان الاجتماع")),
+    field("الرقم المرجعي", variables.meeting_no),
+    field("المجلس", variables.governance_unit_name_ar)
+  ];
+  if (cycle) {
+    fields.push(field("بداية الفترة", variables.planned_window_start ? formatDate(variables.planned_window_start, "بداية الفترة") : null));
+    fields.push(field("نهاية الفترة", formatDate(variables.planned_window_end, "نهاية الفترة")));
+  } else {
+    fields.push(field("التاريخ", formatDate(variables.scheduled_date, "تاريخ الاجتماع")));
+    fields.push(field("الوقت", schedule(variables.start_time, variables.end_time)));
+    fields.push(field("المكان", location(variables)));
+  }
+  return fields;
+}
+
+function taskFields(variables, role, dueLabel = "موعد الإنجاز") {
+  return [
+    field("التكليف", required(variables.title_ar, "عنوان التكليف")),
+    field("رقم التكليف", required(variables.action_no, "رقم التكليف")),
+    field("القرار المرتبط", variables.decision_no),
+    field("صفتك", role),
+    field(dueLabel, variables.due_date ? formatDate(variables.due_date, "موعد الإنجاز") : null),
+    field("ملخص التكليف", compactDescription(variables.description ?? variables.description_ar))
+  ];
+}
+
+const templates = Object.freeze({
+  meeting_invitation: variables => message("دعوة اجتماع", recipient(variables.recipient_name_ar), "ندعوك لحضور الاجتماع التالي:", meetingFields(variables), "يرجى الدخول إلى نظام قرار للاطلاع على جدول الأعمال وتأكيد حضورك."),
+  meeting_reminder: variables => message("تذكير باجتماع", recipient(variables.recipient_name_ar), "نذكّرك بقرب موعد الاجتماع التالي:", meetingFields(variables), "يرجى التأكد من جاهزيتك والاطلاع على جدول الأعمال قبل الموعد."),
+  meeting_cycle_due_soon: variables => message("قرب انتهاء دورة اجتماع", recipient(variables.recipient_name_ar), "اقتربت نهاية فترة الاجتماع ولم يُثبت موعده بعد:", meetingFields(variables, true), "يرجى تحديد موعد الاجتماع في نظام قرار قبل انتهاء الفترة."),
+  meeting_cycle_overdue: variables => message("انتهاء دورة اجتماع", recipient(variables.recipient_name_ar), "انتهت فترة الاجتماع التالية دون تثبيت موعد:", meetingFields(variables, true), "يرجى مراجعة الاجتماع في نظام قرار وتحديد الإجراء المناسب."),
+  task_created_assignee: variables => message("تكليف جديد", recipient(variables.recipient_name_ar), "تم إسناد تكليف جديد إليك:", taskFields(variables, "المكلّف بالتنفيذ"), "يرجى الدخول إلى نظام قرار للاطلاع على التفاصيل وبدء التنفيذ."),
+  task_created_follower: variables => message("متابعة تكليف جديد", recipient(variables.recipient_name_ar), "أُضيف تكليف جديد إلى قائمة متابعتك:", taskFields(variables, "المتابع"), "يرجى متابعة تقدم التنفيذ من خلال نظام قرار."),
+  task_due_soon: variables => message("قرب استحقاق تكليف", recipient(variables.recipient_name_ar), "اقترب موعد إنجاز التكليف التالي:", taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ"), "يرجى تحديث نسبة الإنجاز وإرفاق الأدلة المطلوبة في نظام قرار."),
+  task_overdue: variables => message("تكليف متأخر", recipient(variables.recipient_name_ar), "تجاوز التكليف التالي موعد إنجازه:", taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ", "موعد الإنجاز السابق"), "يرجى تحديث حالة التكليف واتخاذ الإجراء اللازم في نظام قرار."),
+  task_submitted: variables => message("تكليف بانتظار التحقق", recipient(variables.recipient_name_ar), "سلّم المكلّف إنجاز التكليف التالي للمراجعة:", taskFields(variables, "المتابع"), "يرجى مراجعة الإنجاز والأدلة واتخاذ قرار التحقق في نظام قرار."),
+  task_returned: variables => message("إعادة تكليف للاستكمال", recipient(variables.recipient_name_ar), "أُعيد التكليف التالي إليك لاستكماله:", taskFields(variables, "المكلّف بالتنفيذ"), "يرجى مراجعة ملاحظات المتابع واستكمال المطلوب في نظام قرار."),
+  task_completed: variables => message("اكتمال تكليف", recipient(variables.recipient_name_ar), "تم اعتماد إنجاز التكليف التالي:", taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ"), "يمكنك الاطلاع على سجل الإنجاز الكامل في نظام قرار.")
+});
 
 export function renderTemplate(templateCode, variables) {
   const render = templates[templateCode];

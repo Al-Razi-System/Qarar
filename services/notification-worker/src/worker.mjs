@@ -3,10 +3,13 @@ import { ProviderError } from "./provider.mjs";
 import { renderTemplate } from "./templates.mjs";
 
 export async function runDeliveryBatch({ client, provider, workerId = randomUUID(), limit = 10 }) {
-  const lockToken = randomUUID();
-  const deliveries = await client.claimDeliveries(workerId, lockToken, limit);
   const results = [];
-  for (const delivery of deliveries) {
+  for (let index = 0; index < limit; index += 1) {
+    // Claim only the message being sent. A batch-wide lease can expire for the
+    // later messages while the provider is still processing earlier ones.
+    const deliveries = await client.claimDeliveries(workerId, randomUUID(), 1);
+    if (deliveries.length === 0) break;
+    const delivery = deliveries[0];
     try {
       const text = renderTemplate(delivery.template_code, delivery.variables);
       const accepted = await provider.send({
@@ -14,7 +17,8 @@ export async function runDeliveryBatch({ client, provider, workerId = randomUUID
         destinationDigits: delivery.destination.replace(/^\+/, ""),
         text
       });
-      await client.completeDelivery(delivery.id, delivery.lock_token, accepted.providerCode, accepted.providerMessageId);
+      const completion = await client.completeDelivery(delivery.id, delivery.lock_token, accepted.providerCode, accepted.providerMessageId);
+      if (completion?.accepted !== true) throw new ProviderError("DELIVERY_RECEIPT_CONFLICT", "تعذر تثبيت قبول الرسالة.", { retryable: false, ambiguous: true });
       results.push({ id: delivery.id, status: "accepted" });
     } catch (error) {
       const known = error instanceof ProviderError;
