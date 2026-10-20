@@ -36,6 +36,11 @@ export async function runDispatchBatch({ client, workerId = randomUUID(), limit 
         results.push({ id: event.id, status: "unsupported" });
         continue;
       }
+      if (context.channel_enabled === false || context.event_enabled === false) {
+        await client.skipDelivery(event.id, event.lock_token, templateCode, context.channel_enabled === false ? "CHANNEL_DISABLED" : "EVENT_DISABLED");
+        results.push({ id: event.id, status: "disabled" });
+        continue;
+      }
       const destination = normalizeE164(context.mobile);
       if (!context.recipient_active || !destination) {
         await client.skipDelivery(event.id, event.lock_token, templateCode, context.recipient_active ? "DESTINATION_INVALID" : "RECIPIENT_INACTIVE");
@@ -44,7 +49,9 @@ export async function runDispatchBatch({ client, workerId = randomUUID(), limit 
       }
       await client.materializeDelivery(event.id, event.lock_token, templateCode, destination, {
         ...context.payload,
-        recipient_name_ar: context.recipient_name_ar
+        recipient_name_ar: context.recipient_name_ar,
+        custom_intro: context.custom_intro,
+        custom_action: context.custom_action
       });
       results.push({ id: event.id, status: "queued" });
     } catch (error) {

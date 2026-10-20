@@ -54,3 +54,8 @@ test("optional legacy metadata is omitted without leaking UUID labels", () => {
   assert.equal(text.includes("null"), false);
   assert.equal(text.endsWith(footer), true);
 });
+
+test("custom copy preserves authoritative details and the fixed footer",()=>{
+  const text=renderTemplate("meeting_invitation",{recipient_name_ar:"تركي",title_ar:"مجلس الجامعة",meeting_no:"MTG-9",scheduled_date:"2026-10-21",custom_intro:"يسرّنا دعوتك:",custom_action:"نرجو تأكيد الحضور."});
+  assert.match(text,/يسرّنا دعوتك/);assert.match(text,/MTG-9/);assert.match(text,/نرجو تأكيد الحضور/);assert.equal(text.endsWith(footer),true);
+});

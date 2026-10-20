@@ -30,3 +30,11 @@ test("materializes a valid recipient and skips a missing number",async()=>{
   assert.equal(calls[1][0],"skip");
   assert.equal(calls.some(x=>x[0]==="fail"),false);
 });
+
+test("skips a disabled channel before materializing",async()=>{
+  const calls=[];
+  const client={claimEvents:async()=>[{id:"e1",lock_token:"l1"}],getDispatchContext:async()=>({event_type:"meeting.invitation.requested",payload:{},recipient_active:true,mobile:"+967771234567",channel_enabled:false,event_enabled:true}),skipDelivery:async(...args)=>calls.push(args),failEvent:async()=>{throw new Error("unexpected")}};
+  const result=await runDispatchBatch({client});
+  assert.equal(result[0].status,"disabled");
+  assert.equal(calls[0][3],"CHANNEL_DISABLED");
+});

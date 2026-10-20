@@ -54,6 +54,8 @@ function message(title, greeting, intro, fields, action) {
     .join("\n");
 }
 
+const custom = (value, fallback) => clean(value) ?? fallback;
+
 function meetingFields(variables, cycle = false) {
   const fields = [
     field("الاجتماع", required(variables.title_ar ?? variables.meeting_title, "عنوان الاجتماع")),
@@ -83,17 +85,17 @@ function taskFields(variables, role, dueLabel = "موعد الإنجاز") {
 }
 
 const templates = Object.freeze({
-  meeting_invitation: variables => message("دعوة اجتماع", recipient(variables.recipient_name_ar), "ندعوك لحضور الاجتماع التالي:", meetingFields(variables), "يرجى الدخول إلى نظام قرار للاطلاع على جدول الأعمال وتأكيد حضورك."),
-  meeting_reminder: variables => message("تذكير باجتماع", recipient(variables.recipient_name_ar), "نذكّرك بقرب موعد الاجتماع التالي:", meetingFields(variables), "يرجى التأكد من جاهزيتك والاطلاع على جدول الأعمال قبل الموعد."),
-  meeting_cycle_due_soon: variables => message("قرب انتهاء دورة اجتماع", recipient(variables.recipient_name_ar), "اقتربت نهاية فترة الاجتماع ولم يُثبت موعده بعد:", meetingFields(variables, true), "يرجى تحديد موعد الاجتماع في نظام قرار قبل انتهاء الفترة."),
-  meeting_cycle_overdue: variables => message("انتهاء دورة اجتماع", recipient(variables.recipient_name_ar), "انتهت فترة الاجتماع التالية دون تثبيت موعد:", meetingFields(variables, true), "يرجى مراجعة الاجتماع في نظام قرار وتحديد الإجراء المناسب."),
-  task_created_assignee: variables => message("تكليف جديد", recipient(variables.recipient_name_ar), "تم إسناد تكليف جديد إليك:", taskFields(variables, "المكلّف بالتنفيذ"), "يرجى الدخول إلى نظام قرار للاطلاع على التفاصيل وبدء التنفيذ."),
-  task_created_follower: variables => message("متابعة تكليف جديد", recipient(variables.recipient_name_ar), "أُضيف تكليف جديد إلى قائمة متابعتك:", taskFields(variables, "المتابع"), "يرجى متابعة تقدم التنفيذ من خلال نظام قرار."),
-  task_due_soon: variables => message("قرب استحقاق تكليف", recipient(variables.recipient_name_ar), "اقترب موعد إنجاز التكليف التالي:", taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ"), "يرجى تحديث نسبة الإنجاز وإرفاق الأدلة المطلوبة في نظام قرار."),
-  task_overdue: variables => message("تكليف متأخر", recipient(variables.recipient_name_ar), "تجاوز التكليف التالي موعد إنجازه:", taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ", "موعد الإنجاز السابق"), "يرجى تحديث حالة التكليف واتخاذ الإجراء اللازم في نظام قرار."),
-  task_submitted: variables => message("تكليف بانتظار التحقق", recipient(variables.recipient_name_ar), "سلّم المكلّف إنجاز التكليف التالي للمراجعة:", taskFields(variables, "المتابع"), "يرجى مراجعة الإنجاز والأدلة واتخاذ قرار التحقق في نظام قرار."),
-  task_returned: variables => message("إعادة تكليف للاستكمال", recipient(variables.recipient_name_ar), "أُعيد التكليف التالي إليك لاستكماله:", taskFields(variables, "المكلّف بالتنفيذ"), "يرجى مراجعة ملاحظات المتابع واستكمال المطلوب في نظام قرار."),
-  task_completed: variables => message("اكتمال تكليف", recipient(variables.recipient_name_ar), "تم اعتماد إنجاز التكليف التالي:", taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ"), "يمكنك الاطلاع على سجل الإنجاز الكامل في نظام قرار.")
+  meeting_invitation: variables => message("دعوة اجتماع", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"ندعوك لحضور الاجتماع التالي:"), meetingFields(variables), custom(variables.custom_action,"يرجى الدخول إلى نظام قرار للاطلاع على جدول الأعمال وتأكيد حضورك.")),
+  meeting_reminder: variables => message("تذكير باجتماع", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"نذكّرك بقرب موعد الاجتماع التالي:"), meetingFields(variables), custom(variables.custom_action,"يرجى التأكد من جاهزيتك والاطلاع على جدول الأعمال قبل الموعد.")),
+  meeting_cycle_due_soon: variables => message("قرب انتهاء دورة اجتماع", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"اقتربت نهاية فترة الاجتماع ولم يُثبت موعده بعد:"), meetingFields(variables, true), custom(variables.custom_action,"يرجى تحديد موعد الاجتماع في نظام قرار قبل انتهاء الفترة.")),
+  meeting_cycle_overdue: variables => message("انتهاء دورة اجتماع", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"انتهت فترة الاجتماع التالية دون تثبيت موعد:"), meetingFields(variables, true), custom(variables.custom_action,"يرجى مراجعة الاجتماع في نظام قرار وتحديد الإجراء المناسب.")),
+  task_created_assignee: variables => message("تكليف جديد", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"تم إسناد تكليف جديد إليك:"), taskFields(variables, "المكلّف بالتنفيذ"), custom(variables.custom_action,"يرجى الدخول إلى نظام قرار للاطلاع على التفاصيل وبدء التنفيذ.")),
+  task_created_follower: variables => message("متابعة تكليف جديد", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"أُضيف تكليف جديد إلى قائمة متابعتك:"), taskFields(variables, "المتابع"), custom(variables.custom_action,"يرجى متابعة تقدم التنفيذ من خلال نظام قرار.")),
+  task_due_soon: variables => message("قرب استحقاق تكليف", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"اقترب موعد إنجاز التكليف التالي:"), taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ"), custom(variables.custom_action,"يرجى تحديث نسبة الإنجاز وإرفاق الأدلة المطلوبة في نظام قرار.")),
+  task_overdue: variables => message("تكليف متأخر", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"تجاوز التكليف التالي موعد إنجازه:"), taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ", "موعد الإنجاز السابق"), custom(variables.custom_action,"يرجى تحديث حالة التكليف واتخاذ الإجراء اللازم في نظام قرار.")),
+  task_submitted: variables => message("تكليف بانتظار التحقق", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"سلّم المكلّف إنجاز التكليف التالي للمراجعة:"), taskFields(variables, "المتابع"), custom(variables.custom_action,"يرجى مراجعة الإنجاز والأدلة واتخاذ قرار التحقق في نظام قرار.")),
+  task_returned: variables => message("إعادة تكليف للاستكمال", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"أُعيد التكليف التالي إليك لاستكماله:"), taskFields(variables, "المكلّف بالتنفيذ"), custom(variables.custom_action,"يرجى مراجعة ملاحظات المتابع واستكمال المطلوب في نظام قرار.")),
+  task_completed: variables => message("اكتمال تكليف", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"تم اعتماد إنجاز التكليف التالي:"), taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ"), custom(variables.custom_action,"يمكنك الاطلاع على سجل الإنجاز الكامل في نظام قرار."))
 });
 
 export function renderTemplate(templateCode, variables) {

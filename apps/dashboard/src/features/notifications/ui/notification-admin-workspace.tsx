@@ -1,80 +1,46 @@
 "use client";
 
-import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, MessageSquareText, RefreshCcw, Send, Settings2, type LucideIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangle, CheckCircle2, Clock3, MessageSquareText, RefreshCcw, Send, Settings2, ShieldCheck, type LucideIcon } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
+import { TextArea } from "@/shared/ui/text-area";
 
-type Delivery = {
-  id: string; recipient_name_ar: string; destination_masked: string | null;
-  template_code: string; template_label: string; status_key: "accepted" | "queued" | "skipped" | "needs_review";
-  status_label: string; error_message: string | null; created_at: string; accepted_at: string | null;
-};
+type Delivery={id:string;recipient_name_ar:string;destination_masked:string|null;template_code:string;template_label:string;status_key:"accepted"|"queued"|"skipped"|"needs_review";status_label:string;error_message:string|null;created_at:string;accepted_at:string|null};
+type TemplateSetting={code:string;label:string;description:string;enabled:boolean;custom_intro:string|null;custom_action:string|null};
+type Policy={whatsapp_enabled:boolean;meeting_reminder_days:number;task_due_soon_days:number;version:number;updated_at:string|null};
+export type NotificationWorkspaceData={channel:{code:string;label:string;connection_evidence:"messages_accepted"|"not_verified";last_accepted_at:string|null};summary:{total:number;accepted:number;queued:number;needs_review:number;skipped:number};deliveries:Delivery[];policy:Policy;templates:TemplateSetting[]};
+const tabs=[{value:"overview",label:"نظرة عامة"},{value:"templates",label:"القوالب"},{value:"deliveries",label:"سجل الإرسال"},{value:"settings",label:"الإعدادات"}] as const;
+const defaults:Record<string,[string,string]>={meeting_invitation:["ندعوك لحضور الاجتماع التالي:","يرجى الدخول إلى نظام قرار للاطلاع على جدول الأعمال وتأكيد حضورك."],task_due_soon:["اقترب موعد إنجاز التكليف التالي:","يرجى تحديث نسبة الإنجاز وإرفاق الأدلة المطلوبة في نظام قرار."]};
+const dateTime=(value:string|null)=>value?new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Riyadh"}).format(new Date(value)):"لا يوجد";
+const statusTone=(status:Delivery["status_key"]):"success"|"warning"|"danger"|"neutral"=>status==="accepted"?"success":status==="needs_review"?"danger":status==="queued"?"warning":"neutral";
 
-export type NotificationWorkspaceData = {
-  channel: { code: string; label: string; connection_evidence: "messages_accepted" | "not_verified"; last_accepted_at: string | null };
-  summary: { total: number; accepted: number; queued: number; needs_review: number; skipped: number };
-  deliveries: Delivery[];
-};
+function NumberField({label,value,onChange}:{label:string;value:number;onChange:(value:number)=>void}){return <label className="block"><span className="mb-2 block text-q-ui font-bold">{label}</span><span className="flex items-center gap-3 rounded-q-control border border-q-border-strong bg-q-surface px-4"><input aria-label={label} className="min-h-12 min-w-0 flex-1 bg-transparent text-q-ui outline-none" type="number" min={0} max={30} value={value} onChange={event=>onChange(Number(event.target.value))}/><span className="text-q-caption text-q-text-2">يوم</span></span></label>}
 
-const templates = [
-  ["دعوة اجتماع", "دعوة العضو مع رقم الاجتماع والمجلس والتاريخ والوقت والمكان."],
-  ["تذكير باجتماع", "تذكير قبل الموعد مع تفاصيل الاجتماع المعتمدة."],
-  ["قرب انتهاء دورة اجتماع", "تنبيه قيادة المجلس قبل انتهاء نافذة الدورة."],
-  ["انتهاء دورة اجتماع", "تنبيه قيادة المجلس عند انتهاء النافذة دون تثبيت موعد."],
-  ["تكليف جديد", "إشعار المكلّف برقم التكليف والقرار والموعد والملخص."],
-  ["متابعة تكليف جديد", "إشعار المتابع بمسؤوليته عن متابعة التنفيذ."],
-  ["قرب استحقاق تكليف", "تذكير المكلّف والمتابع قبل موعد الإنجاز."],
-  ["تكليف متأخر", "تنبيه عند تجاوز موعد الإنجاز والتكليف ما زال مفتوحًا."],
-  ["تكليف بانتظار التحقق", "إشعار المتابع بعد تسليم المكلّف للأدلة."],
-  ["إعادة تكليف للاستكمال", "إشعار المكلّف بمراجعة الملاحظات واستكمال المطلوب."],
-  ["اكتمال تكليف", "إشعار اعتماد الإنجاز للمكلّف والمتابع."],
-] as const;
-
-const tabs = [
-  { value: "overview", label: "نظرة عامة" }, { value: "templates", label: "القوالب" },
-  { value: "deliveries", label: "سجل الإرسال" }, { value: "settings", label: "الإعدادات" },
-] as const;
-
-function dateTime(value: string | null) {
-  return value ? new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh" }).format(new Date(value)) : "لا يوجد";
+export function NotificationAdminWorkspace({initialData,loadError=null}:{initialData:NotificationWorkspaceData|null;loadError?:string|null}){
+ const [tab,setTab]=useState<(typeof tabs)[number]["value"]>("overview");
+ const [policy,setPolicy]=useState<Policy|null>(initialData?.policy??null);
+ const [items,setItems]=useState(initialData?.templates??[]);
+ const [selected,setSelected]=useState(initialData?.templates[0]?.code??"");
+ const [saving,setSaving]=useState(false);const [notice,setNotice]=useState<{tone:"success"|"error";text:string}|null>(null);
+ const current=useMemo(()=>items.find(item=>item.code===selected)??items[0],[items,selected]);
+ if(!initialData||!policy)return <Card><InlineMessage tone="error">{loadError??"تعذر تحميل إعدادات الإشعارات."}</InlineMessage><Button className="mt-4" variant="secondary" onClick={()=>window.location.reload()}><RefreshCcw aria-hidden size={18}/>إعادة المحاولة</Button></Card>;
+ const activePolicy=policy;
+ const {channel,summary,deliveries}=initialData;
+ const stats:Array<[string,number,LucideIcon]>=[["إجمالي المحاولات",summary.total,Send],["تم الإرسال",summary.accepted,CheckCircle2],["في الانتظار",summary.queued,Clock3],["تحتاج مراجعة",summary.needs_review,AlertTriangle]];
+ const updateCurrent=(patch:Partial<TemplateSetting>)=>setItems(value=>value.map(item=>item.code===current?.code?{...item,...patch}:item));
+ async function save(){setSaving(true);setNotice(null);try{const response=await fetch("/api/admin/notifications",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contract:"admin_save_notification_settings",params:{p_whatsapp_enabled:activePolicy.whatsapp_enabled,p_meeting_reminder_days:activePolicy.meeting_reminder_days,p_task_due_soon_days:activePolicy.task_due_soon_days,p_templates:items.map(({code,enabled,custom_intro,custom_action})=>({code,enabled,custom_intro,custom_action})),p_expected_version:activePolicy.version}})});const body=await response.json();if(!response.ok)throw new Error(body?.error?.message??"تعذر حفظ إعدادات الإشعارات.");setPolicy(value=>value&&({...value,...body.data}));setNotice({tone:"success",text:"تم حفظ إعدادات الإشعارات وتطبيقها."});}catch(error){setNotice({tone:"error",text:error instanceof Error?error.message:"تعذر حفظ إعدادات الإشعارات."});}finally{setSaving(false)}}
+ return <section className="space-y-5" aria-label="إدارة إشعارات واتساب"><SegmentedControl label="أقسام إدارة الإشعارات" options={tabs} value={tab} onChange={setTab} className="flex-wrap"/>
+ {tab==="overview"&&<Overview channel={channel} summary={summary} policy={policy} stats={stats}/>}
+ {tab==="templates"&&current&&<div className="grid gap-5 xl:grid-cols-[minmax(17rem,0.7fr)_minmax(0,1.5fr)]"><Card className="p-3"><div className="px-2 pb-3"><h2 className="text-q-h3 font-bold">أنواع الرسائل</h2><p className="mt-1 text-q-caption text-q-text-2">اختر رسالة واحدة لتحريرها ومعاينتها.</p></div><div className="space-y-2">{items.map(item=><button key={item.code} type="button" onClick={()=>setSelected(item.code)} aria-pressed={item.code===current.code} className={`w-full rounded-q-control border p-4 text-start transition ${item.code===current.code?"border-q-primary bg-q-primary-soft":"border-q-border bg-q-surface hover:bg-q-surface-2"}`}><span className="flex items-center justify-between gap-2"><strong className="text-q-ui">{item.label}</strong><Badge tone={item.enabled?"success":"neutral"}>{item.enabled?"مفعّل":"متوقف"}</Badge></span><span className="mt-1 block text-q-caption text-q-text-2">{item.description}</span></button>)}</div></Card><div className="space-y-5"><Card><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-q-caption font-bold text-q-link">تحرير القالب</p><h2 className="mt-1 text-q-h2 font-bold">{current.label}</h2></div><Button variant={current.enabled?"secondary":"primary"} onClick={()=>updateCurrent({enabled:!current.enabled})}>{current.enabled?"إيقاف هذا النوع":"تفعيل هذا النوع"}</Button></div><div className="mt-5 grid gap-4"><TextArea label="مقدمة الرسالة" maxLength={240} value={current.custom_intro??""} placeholder={defaults[current.code]?.[0]??"اكتب مقدمة مختصرة"} onChange={event=>updateCurrent({custom_intro:event.target.value||null})}/><TextArea label="التوجيه الختامي" maxLength={300} value={current.custom_action??""} placeholder={defaults[current.code]?.[1]??"اكتب الإجراء المطلوب"} onChange={event=>updateCurrent({custom_action:event.target.value||null})}/></div><div className="mt-5 rounded-q-control bg-q-surface-2 p-4"><div className="flex items-center gap-2 text-q-ui font-bold"><ShieldCheck aria-hidden className="text-q-success"/>حقول محمية من النظام</div><p className="mt-2 text-q-caption text-q-text-2">اسم المستلم، المرجع، التفاصيل والتذييل تضاف تلقائيًا ولا يمكن حذفها.</p></div></Card><Preview item={current}/></div></div>}
+ {tab==="deliveries"&&<Deliveries deliveries={deliveries}/>}
+ {tab==="settings"&&<div className="space-y-5"><div className="grid gap-5 lg:grid-cols-2"><Card><div className="flex items-start gap-3"><Settings2 aria-hidden className="text-q-link"/><div><h2 className="text-q-h3 font-bold">تشغيل القناة</h2><p className="mt-2 text-q-ui text-q-text-2">الإيقاف يمنع الرسائل الجديدة فقط، ولا يوقف أعمال قرار.</p></div></div><Button className="mt-5" variant={policy.whatsapp_enabled?"secondary":"primary"} onClick={()=>setPolicy({...policy,whatsapp_enabled:!policy.whatsapp_enabled})}>{policy.whatsapp_enabled?"إيقاف إشعارات واتساب":"تفعيل إشعارات واتساب"}</Button></Card><Card><h2 className="text-q-h3 font-bold">رقم الإرسال والربط</h2><p className="mt-2 text-q-ui text-q-text-2">تغيير رقم الإرسال يتم بربط جلسة واتساب جديدة ومسح رمز QR، وليس بكتابة رقم يدوي يمكن انتحالُه.</p><InlineMessage className="mt-4">الرقم مرتبط بجلسة الخدمة الخارجية، ولا تظهر أسرارها في المتصفح.</InlineMessage></Card></div><Card><h2 className="text-q-h3 font-bold">مواعيد التذكير</h2><div className="mt-5 grid gap-4 md:grid-cols-2"><NumberField label="التذكير بالاجتماع قبل" value={policy.meeting_reminder_days} onChange={value=>setPolicy({...policy,meeting_reminder_days:value})}/><NumberField label="التذكير بالتكليف قبل" value={policy.task_due_soon_days} onChange={value=>setPolicy({...policy,task_due_soon_days:value})}/></div></Card>{notice&&<InlineMessage tone={notice.tone}>{notice.text}</InlineMessage>}<div className="sticky bottom-4 flex flex-col gap-3 rounded-q-card border border-q-border bg-q-surface p-4 shadow-q-modal sm:flex-row sm:items-center sm:justify-between"><p className="text-q-caption text-q-text-2">يُحفظ التشغيل والمدد والقوالب في عملية واحدة.</p><Button disabled={saving} onClick={save}>{saving?"جارٍ الحفظ…":"حفظ إعدادات الإشعارات"}</Button></div></div>}
+ </section>
 }
 
-function statusTone(status: Delivery["status_key"]): "success" | "warning" | "danger" | "neutral" {
-  if (status === "accepted") return "success";
-  if (status === "needs_review") return "danger";
-  if (status === "queued") return "warning";
-  return "neutral";
-}
-
-export function NotificationAdminWorkspace({ initialData, loadError = null }: { initialData: NotificationWorkspaceData | null; loadError?: string | null }) {
-  const [tab, setTab] = useState<(typeof tabs)[number]["value"]>("overview");
-  if (!initialData) return <Card><InlineMessage tone="error">{loadError ?? "تعذر تحميل إعدادات الإشعارات."}</InlineMessage><Button className="mt-4" variant="secondary" onClick={() => window.location.reload()}><RefreshCcw aria-hidden size={18} />إعادة المحاولة</Button></Card>;
-  const { channel, summary, deliveries } = initialData;
-  const stats: Array<[string, number, LucideIcon]> = [["إجمالي المحاولات",summary.total,Send],["تم الإرسال",summary.accepted,CheckCircle2],["في الانتظار",summary.queued,Clock3],["تحتاج مراجعة",summary.needs_review,AlertTriangle]];
-  return <section className="space-y-5" aria-label="إدارة إشعارات واتساب">
-    <SegmentedControl label="أقسام إدارة الإشعارات" options={tabs} value={tab} onChange={setTab} className="flex-wrap" />
-
-    {tab === "overview" && <div className="space-y-5">
-      <Card className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-start gap-4"><span className="grid min-h-11 min-w-11 place-items-center rounded-q-control bg-q-success-soft text-q-success"><MessageSquareText aria-hidden /></span><div><h2 className="text-q-h3 font-bold">قناة واتساب</h2><p className="mt-1 text-q-ui text-q-text-2">{channel.connection_evidence === "messages_accepted" ? "توجد عمليات إرسال ناجحة" : "لم تُتحقق القناة بإرسال ناجح بعد"}</p><p className="mt-1 text-q-caption text-q-text-3">آخر قبول من الخدمة: {dateTime(channel.last_accepted_at)}</p></div></div>
-        <Badge tone={channel.connection_evidence === "messages_accepted" ? "success" : "warning"}>{channel.connection_evidence === "messages_accepted" ? "تم التحقق بالإرسال" : "بانتظار التحقق"}</Badge>
-      </Card>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map(([label,value,Icon])=><Card key={label}><div className="flex items-center justify-between"><div><p className="text-q-caption text-q-text-2">{label}</p><strong className="mt-2 block text-q-h2">{value}</strong></div><Icon aria-hidden className="text-q-link" /></div></Card>)}
-      </div>
-      {summary.needs_review > 0 && <InlineMessage tone="warning">توجد رسائل تحتاج مراجعة بشرية. لا تعِد إرسال الرسالة ذات النتيجة غير المؤكدة قبل التحقق من المستلم.</InlineMessage>}
-    </div>}
-
-    {tab === "templates" && <div className="grid gap-4 lg:grid-cols-2">
-      {templates.map(([name,description])=><Card key={name}><div className="flex items-start justify-between gap-3"><div><h2 className="text-q-h3 font-bold">{name}</h2><p className="mt-2 text-q-ui text-q-text-2">{description}</p></div><Badge tone="success">معتمد</Badge></div><div className="mt-4 rounded-q-control bg-q-surface-2 p-4 text-q-ui"><strong>*قرار | {name}*</strong><p className="mt-2 text-q-text-2">تعرض الرسالة بياناتها الفعلية من نظام قرار.</p><p className="mt-3 text-q-caption italic text-q-text-3">نظام قرار - جامعة الرازي</p></div></Card>)}
-    </div>}
-
-    {tab === "deliveries" && <Card className="overflow-hidden p-0"><div className="border-b border-q-border p-5"><h2 className="text-q-h3 font-bold">آخر عمليات الإرسال</h2><p className="mt-1 text-q-ui text-q-text-2">الأرقام مقنّعة، ولا تظهر مفاتيح الخدمة أو معرفات المزود.</p></div>{deliveries.length===0?<p className="p-8 text-center text-q-ui text-q-text-2">لا توجد عمليات إرسال حتى الآن.</p>:<div className="divide-y divide-q-border">{deliveries.map(delivery=><article key={delivery.id} className="grid gap-3 p-5 md:grid-cols-[1fr_auto] md:items-center"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-q-ui font-bold">{delivery.template_label}</h3><Badge tone={statusTone(delivery.status_key)}>{delivery.status_label}</Badge></div><p className="mt-2 text-q-ui text-q-text-2">{delivery.recipient_name_ar} · {delivery.destination_masked ?? "رقم غير متاح"}</p><p className="mt-1 text-q-caption text-q-text-3">أُنشئت في {dateTime(delivery.created_at)}</p>{delivery.error_message&&<InlineMessage tone="warning" className="mt-3">{delivery.error_message}</InlineMessage>}</div>{delivery.accepted_at&&<span className="text-q-caption text-q-success">قُبلت في {dateTime(delivery.accepted_at)}</span>}</article>)}</div>}</Card>}
-
-    {tab === "settings" && <div className="grid gap-5 lg:grid-cols-2"><Card><div className="flex items-start gap-3"><Settings2 aria-hidden className="text-q-link"/><div><h2 className="text-q-h3 font-bold">رقم الإرسال والربط</h2><p className="mt-2 text-q-ui text-q-text-2">تغيير رقم الإرسال يتم بربط جلسة واتساب جديدة ومسح رمز QR، وليس بكتابة رقم يدوي يمكن انتحالُه.</p></div></div><InlineMessage className="mt-4">ستضاف عملية الربط والفصل في الدفعة التالية بعقد خادم مدقق. لا تُعرض أسرار OpenWA في المتصفح.</InlineMessage></Card><Card><h2 className="text-q-h3 font-bold">سياسة الإشعارات</h2><p className="mt-2 text-q-ui text-q-text-2">الأنواع الحالية: دعوات الاجتماعات، تذكيرات الدورات، ودورة التكليف من الإنشاء حتى اكتمال الإنجاز.</p><InlineMessage className="mt-4">تحرير مدد التذكير وتعطيل نوع محدد سيُفعّل بعد إضافة عقد حفظ ذري وسجل تدقيق.</InlineMessage></Card></div>}
-  </section>;
-}
+function Overview({channel,summary,policy,stats}:{channel:NotificationWorkspaceData["channel"];summary:NotificationWorkspaceData["summary"];policy:Policy;stats:Array<[string,number,LucideIcon]>}){return <div className="space-y-5"><Card className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between"><div className="flex items-start gap-4"><span className="grid min-h-11 min-w-11 place-items-center rounded-q-control bg-q-success-soft text-q-success"><MessageSquareText aria-hidden/></span><div><h2 className="text-q-h3 font-bold">قناة واتساب</h2><p className="mt-1 text-q-ui text-q-text-2">{channel.connection_evidence==="messages_accepted"?"توجد عمليات إرسال ناجحة":"لم تُتحقق القناة بإرسال ناجح بعد"}</p><p className="mt-1 text-q-caption text-q-text-3">آخر قبول: {dateTime(channel.last_accepted_at)}</p></div></div><Badge tone={policy.whatsapp_enabled?"success":"neutral"}>{policy.whatsapp_enabled?"القناة مفعّلة":"القناة متوقفة"}</Badge></Card><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{stats.map(([label,value,Icon])=><Card key={label}><div className="flex items-center justify-between"><div><p className="text-q-caption text-q-text-2">{label}</p><strong className="mt-2 block text-q-h2">{value}</strong></div><Icon aria-hidden className="text-q-link"/></div></Card>)}</div>{summary.needs_review>0&&<InlineMessage tone="warning">توجد رسائل تحتاج مراجعة بشرية قبل إعادة الإرسال.</InlineMessage>}</div>}
+function Preview({item}:{item:TemplateSetting}){const [fallbackIntro,fallbackAction]=defaults[item.code]??["لديك تحديث جديد من نظام قرار:","يرجى مراجعة التفاصيل في نظام قرار."];return <Card><p className="text-q-caption font-bold text-q-link">معاينة فورية</p><div className="mt-3 rounded-q-card border border-q-border bg-q-surface-2 p-5 text-q-ui leading-8"><strong>قرار | {item.label}</strong><p className="mt-3">مرحبًا تركي القباني،</p><p>{item.custom_intro||fallbackIntro}</p><div className="my-3 border-y border-q-border py-3"><p><strong>الاجتماع:</strong> اجتماع مجلس الجامعة</p><p><strong>الرقم المرجعي:</strong> MTG-2026-000123</p><p><strong>التاريخ:</strong> الأربعاء، 21 أكتوبر 2026</p></div><p>{item.custom_action||fallbackAction}</p><p className="mt-4 text-q-caption italic text-q-text-3">نظام قرار - جامعة الرازي</p></div></Card>}
+function Deliveries({deliveries}:{deliveries:Delivery[]}){return <Card className="overflow-hidden p-0"><div className="border-b border-q-border p-5"><h2 className="text-q-h3 font-bold">آخر عمليات الإرسال</h2><p className="mt-1 text-q-ui text-q-text-2">الأرقام مقنّعة ولا تظهر مفاتيح الخدمة.</p></div>{deliveries.length===0?<p className="p-8 text-center text-q-ui text-q-text-2">لا توجد عمليات إرسال حتى الآن.</p>:<div className="divide-y divide-q-border">{deliveries.map(delivery=><article key={delivery.id} className="grid gap-3 p-5 md:grid-cols-[1fr_auto] md:items-center"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-q-ui font-bold">{delivery.template_label}</h3><Badge tone={statusTone(delivery.status_key)}>{delivery.status_label}</Badge></div><p className="mt-2 text-q-ui text-q-text-2">{delivery.recipient_name_ar} · {delivery.destination_masked??"رقم غير متاح"}</p>{delivery.error_message&&<InlineMessage tone="warning" className="mt-3">{delivery.error_message}</InlineMessage>}</div>{delivery.accepted_at&&<span className="text-q-caption text-q-success">قُبلت في {dateTime(delivery.accepted_at)}</span>}</article>)}</div>}</Card>}
