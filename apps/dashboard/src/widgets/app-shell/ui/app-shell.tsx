@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, BookOpenCheck, Building2, Calendar, ChevronDown, CircleHelp, ClipboardList, FileText, GitBranch, KeyRound, LayoutDashboard, ListChecks, LogOut, Menu, Search, Settings, ShieldCheck, Users, Workflow, X } from "lucide-react";
+import { Bell, BookOpenCheck, Building2, Calendar, ChevronDown, CircleHelp, ClipboardList, FileText, GitBranch, KeyRound, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquareText, Search, Settings, ShieldCheck, Users, Workflow, X } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { SelfAvatar } from "@/shared/ui/self-avatar";
 
@@ -30,6 +30,7 @@ const navGroups = [
   ]},
   { label: "إعدادات الاجتماعات", items: [
     { href: "/admin/settings/meeting-types", label: "أنواع الاجتماعات", icon: Calendar, adminOnly: true },
+    { href: "/admin/settings/notifications", label: "إشعارات واتساب", icon: MessageSquareText, adminOnly: true },
   ]},
 ];
 
