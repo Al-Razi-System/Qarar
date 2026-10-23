@@ -22,6 +22,8 @@ type Props = {
   onWithdraw: (assignment: MeetingAssignment) => void;
   editorOpen?: boolean;
   onEditorChange?: (open: boolean) => void;
+  /** The chair adds assignments from the control dock; the list then shows no button of its own. */
+  addFromDock?: boolean;
 };
 
 type PersonPickerProps = {
@@ -142,7 +144,7 @@ function stateOf(assignment: MeetingAssignment): { label: string; tone: "warning
  * The decision's assignments. The chair's become execution tasks at once;
  * the rapporteur's wait for the chair. Everyone in the room reads them.
  */
-export function ItemAssignments({ assignments, viewer, options, activity, onCreate, onSearchUsers, onConfirm, onWithdraw, editorOpen, onEditorChange }: Props) {
+export function ItemAssignments({ assignments, viewer, options, activity, onCreate, onSearchUsers, onConfirm, onWithdraw, editorOpen, onEditorChange, addFromDock = false }: Props) {
   const [localOpen, setLocalOpen] = useState(false);
   const open = editorOpen ?? localOpen;
   function changeOpen(next: boolean) { if (onEditorChange) onEditorChange(next); else setLocalOpen(next); }
@@ -177,7 +179,7 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
     <section aria-label="التكليفات" className="flex flex-col gap-3 border-t border-q-border pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="m-0 text-q-ui font-bold">التكليفات والمهام</h3>
-        {canWrite && <Button variant="secondary" disabled={busy} onClick={() => changeOpen(true)}>{viewer.can_issue ? "إضافة تكليف" : "اقتراح تكليف"}</Button>}
+        {canWrite && !addFromDock && <Button variant="secondary" disabled={busy} onClick={() => changeOpen(true)}>{viewer.can_issue ? "إضافة تكليف" : "اقتراح تكليف"}</Button>}
       </div>
       {canWrite && <p className="m-0 text-q-caption text-q-text-2">اختياري بعد القرار وقبل إنهاء الجلسة. يظهر التكليف في «مهامي» فور إصداره من الرئيس أو اعتماده لمقترح المقرر.</p>}
       {assignments.length === 0 ? (

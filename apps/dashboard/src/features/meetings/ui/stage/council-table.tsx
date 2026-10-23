@@ -24,7 +24,7 @@ export function CouncilTable({ seats, children, compact = false, onOpenSeat }: P
   return <div className="mx-auto flex w-full min-w-0 flex-col gap-4 p-2">
     {around ? <>
       {row(top)}
-      <div className={cn("grid items-stretch gap-2", compact ? "grid-cols-[4.5rem_minmax(0,1fr)_4.5rem]" : "grid-cols-[6rem_minmax(0,1fr)_6rem]")}>
+      <div className={cn("grid items-stretch gap-2", compact ? "grid-cols-[4.5rem_minmax(0,1fr)_4.5rem]" : "grid-cols-[4.5rem_minmax(0,1fr)_4.5rem] @md:grid-cols-[6rem_minmax(0,1fr)_6rem]")}>
         {row(left, true)}{table}{row(right, true)}
       </div>
       {row(bottom)}

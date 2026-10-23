@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { Expand, Info, Timer } from "lucide-react";
+import { OverflowMenu } from "@/shared/ui/overflow-menu";
+import { PlannedMinutesSelect, type PlannedMinutesControl } from "./item-timer";
 import { InstructionContent } from "@/shared/content/instruction-content";
 import { cn } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
@@ -58,16 +61,19 @@ type Props = {
   timer?: ReactNode;
   /** The decision's assignments, under the decision. */
   assignments?: ReactNode;
+  /** Given to the council's chair: plans the item's duration from the item's menu. */
+  durationPlan?: { minutes: number | null; control: PlannedMinutesControl };
 };
 
 /**
  * Everything the council needs on one agenda item: its guidance, its files and
  * what earlier councils decided, then the vote and the rapporteur's summary.
  */
-export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads, timer, assignments }: Props) {
+export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads, timer, assignments, durationPlan }: Props) {
   const [chosenTab, setChosenTab] = useState<ReferenceTab | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
+  const [durationOpen, setDurationOpen] = useState(false);
   const [localDocument, setLocalDocument] = useState<{ attachmentId: string | null; page: number } | null>(null);
   // Without a broadcast the card keeps its own open file; with one, the broadcast decides.
   const shownDocument = document !== undefined ? document : localDocument;
@@ -112,24 +118,37 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
     {tab === "history" && history && <TopicHistory history={history} />}
   </>;
 
+  const menuItems = [
+    ...(item.topic?.context ? [{ key: "context", label: "تفاصيل الموضوع ومساره", hint: "الوصف ومراحل المسار والقرارات السابقة", icon: <Info size={16} />, onSelect: () => setContextOpen(true) }] : []),
+    ...(durationPlan ? [{ key: "duration", label: "المدة المقررة", hint: durationPlan.minutes ? `${durationPlan.minutes} دقيقة` : "بلا تحديد", icon: <Timer size={16} />, onSelect: () => setDurationOpen(true) }] : []),
+  ];
+  const expandLabel = tab === "instructions" ? "تكبير التعليمات" : tab === "attachments" ? "تكبير المرفقات" : "تكبير القرارات السابقة";
+
   return (
-    <Card live={state.tone === "live"} role="region" aria-label="الموضوع المعروض" className={cn("flex min-w-0 flex-col gap-4", className)}>
+    <Card role="region" aria-label="الموضوع المعروض" className={cn("flex min-w-0 flex-col gap-4", className)}>
       <header className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-q-caption font-bold">
-          <span className={state.tone === "live" ? "text-q-live" : "text-q-text-2"}>البند {item.agenda_order} من {total}</span>
-          {item.topic?.category_name_ar && <span className="text-q-link">{item.topic.category_name_ar}</span>}
-          {item.topic?.topic_no && <span dir="ltr" className="font-normal text-q-text-2">{item.topic.topic_no}</span>}
+        <div className="flex items-start justify-between gap-3">
+          <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-q-caption font-bold">
+            <span className={state.tone === "live" ? "text-q-live" : "text-q-text-2"}>البند {item.agenda_order} من {total}</span>
+            {item.topic?.category_name_ar && <span className="text-q-link">{item.topic.category_name_ar}</span>}
+            {item.topic?.topic_no && <span dir="ltr" className="font-normal text-q-text-2">{item.topic.topic_no}</span>}
+          </p>
+          {menuItems.length > 0 && <OverflowMenu label="خيارات البند" items={menuItems} className="-mt-2" />}
         </div>
-        <h2 className="m-0 break-words text-q-h3 font-bold">{item.topic?.title_ar ?? "بند جدول الأعمال"}</h2>
+        <h2 className="m-0 break-words text-q-h3 font-bold leading-snug">{item.topic?.title_ar ?? "بند جدول الأعمال"}</h2>
         {item.topic?.submitted_by_name_ar && <p className="m-0 text-q-caption text-q-text-2">مقدم من {item.topic.submitted_by_name_ar}</p>}
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={state.tone}>{state.label}</Badge>
           {item.workflow_step_name_ar && <Badge tone="neutral">{item.workflow_step_name_ar}</Badge>}
           {flow.decision && <Badge tone="success">{flow.decision.decision_no}</Badge>}
         </div>
-        {timer}
-        {item.topic?.context && <Button variant="secondary" className="self-start" onClick={() => setContextOpen(true)}>تفاصيل الموضوع ومساره</Button>}
+        {timer && <div className="border-t border-q-border pt-2">{timer}</div>}
       </header>
+      {durationOpen && durationPlan && (
+        <Dialog title="المدة المقررة للبند" description="يقارن العدّاد مدة المناقشة بها، ويظهر التجاوز لكل الحاضرين." onClose={() => setDurationOpen(false)} footer={<Button variant="secondary" onClick={() => setDurationOpen(false)}>تم</Button>}>
+          <PlannedMinutesSelect plan={durationPlan.control} plannedMinutes={durationPlan.minutes} />
+        </Dialog>
+      )}
       {contextOpen && item.topic?.context && <TopicContextDialog title={item.topic.title_ar} context={item.topic.context} onClose={() => setContextOpen(false)} />}
 
       {ballot}
@@ -146,21 +165,24 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
         </section>
       )}
       {decision && assignments}
-      <DiscussionSummary key={item.id} item={item} votingFinished={Boolean(flow.closed)} finalNeedsConfirmation={!finalSummaryReady(item, flow.closed)} role={role} busy={busy} draft={summaryDraft} onDraftChange={onSummaryDraftChange} onUpdate={onUpdateDiscussion} />
 
       {tabs.length === 0 ? (
         <p className="m-0 rounded-q-control bg-q-surface-2 p-3 text-q-ui text-q-text-2">لا تعليمات ولا مرفقات ولا قرارات سابقة مسجلة لهذا الموضوع.</p>
       ) : (
         <div className="flex flex-col gap-3">
-          {tabs.length > 1 && tab && (
-            <div className="flex flex-col gap-1">
-              <SegmentedControl label="مواد الموضوع" options={tabs} value={tab} onChange={choose} disabled={locked} />
-              {locked && <p className="m-0 text-q-caption text-q-text-2">{panelLockedReason}</p>}
-            </div>
-          )}
-          {tab && <Button variant="secondary" className="self-start" onClick={() => setExpanded(true)}>
-            {tab === "instructions" ? "تكبير التعليمات" : tab === "attachments" ? "تكبير المرفقات" : "تكبير القرارات السابقة"}
-          </Button>}
+          <div className="flex flex-wrap items-center gap-2">
+            {tabs.length > 1 && tab && (
+              <div className="min-w-0 flex-1">
+                <SegmentedControl label="مواد الموضوع" options={tabs} value={tab} onChange={choose} disabled={locked} />
+              </div>
+            )}
+            {tab && (
+              <button type="button" onClick={() => setExpanded(true)} aria-label={expandLabel} title={expandLabel} className={cn("inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-q-control border border-q-border bg-q-surface px-3 font-sans text-q-caption font-bold text-q-link hover:bg-q-surface-2", tabs.length === 1 && "ms-auto")}>
+                <Expand size={16} aria-hidden="true" />تكبير
+              </button>
+            )}
+          </div>
+          {locked && <p className="m-0 text-q-caption text-q-text-2">{panelLockedReason}</p>}
           {!expanded && materials}
           {expanded && <Dialog size="full" title={`${tab === "instructions" ? "تعليمات المناقشة" : tab === "attachments" ? "مرفقات الموضوع" : "القرارات السابقة"} — ${item.topic?.title_ar ?? "بند جدول الأعمال"}`} onClose={() => setExpanded(false)}
             footer={<Button variant="secondary" onClick={() => setExpanded(false)}>إغلاق العرض الموسع</Button>}>
@@ -170,7 +192,7 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
         </div>
       )}
 
-      {flow.hasVoting && (
+      {flow.hasVoting && (flow.closed || !manager) && (
         <section aria-label="التصويت على البند" className="flex flex-col gap-3 border-t border-q-border pt-4">
           {flow.closed && <VoteResultPanel round={flow.closed} />}
           {!manager && !flow.closed && (
@@ -181,6 +203,7 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
         </section>
       )}
 
+      <DiscussionSummary key={item.id} item={item} votingFinished={Boolean(flow.closed)} finalNeedsConfirmation={!finalSummaryReady(item, flow.closed)} role={role} busy={busy} draft={summaryDraft} onDraftChange={onSummaryDraftChange} onUpdate={onUpdateDiscussion} />
     </Card>
   );
 }

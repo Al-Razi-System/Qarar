@@ -66,7 +66,7 @@ export function RoomStage({ session, agenda, rounds, decisions, referrals = [], 
   const { seats, phase } = deriveMeetingStage(session, agenda, rounds, decisions, profiles?.members, referrals.map((row) => row.agenda_item_id));
   const profile = openSeat ? profiles?.members.find((member) => member.user_id === openSeat.userId) : undefined;
   return (
-    <section aria-label="مشهد الاجتماع" className="font-sans text-q-text">
+    <section aria-label="مشهد الاجتماع" className={compact ? "font-sans text-q-text" : "@container h-full font-sans text-q-text"}>
       <CouncilTable seats={seats} compact={compact} onOpenSeat={setOpenSeat}>
         <div key={phase.kind} className="q-enter"><StageCenter phase={phase} compact={compact} /></div>
       </CouncilTable>

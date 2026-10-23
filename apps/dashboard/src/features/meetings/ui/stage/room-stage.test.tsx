@@ -56,16 +56,18 @@ const cards = (mobileVisible: boolean): MemberProfiles => ({
 describe("RoomStage", () => {
   beforeEach(() => window.localStorage.clear());
 
-  it("keeps the meeting title as a heading, the role label and the quorum", () => {
+  it("keeps the meeting title as a heading and the quorum, with the role label in the display menu", async () => {
     render(<RoomStage session={sessionOf("chair", three)} agenda={agenda} rounds={[]} decisions={[]} />);
     expect(screen.getByRole("heading", { name: "اجتماع مجلس الكلية الثالث" })).toBeInTheDocument();
-    expect(screen.getByText("لوحة رئيس المجلس")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "إعدادات العرض" }));
+    expect(within(screen.getByRole("menu", { name: "إعدادات العرض" })).getByText("لوحة رئيس المجلس")).toBeInTheDocument();
     expect(screen.getByText("النصاب مكتمل")).toBeInTheDocument();
     expect(screen.getByText("3 حاضرون من 3")).toBeInTheDocument();
   });
 
-  it.each([["rapporteur", "لوحة مقرر المجلس"], ["member", "بوابة عضو المجلس"]] as const)("labels the %s view", (mode, label) => {
+  it.each([["rapporteur", "لوحة مقرر المجلس"], ["member", "بوابة عضو المجلس"]] as const)("labels the %s view", async (mode, label) => {
     render(<RoomStage session={sessionOf(mode, three)} agenda={agenda} rounds={[]} decisions={[]} />);
+    await userEvent.click(screen.getByRole("button", { name: "إعدادات العرض" }));
     expect(screen.getByText(label)).toBeInTheDocument();
   });
 
@@ -125,9 +127,11 @@ describe("RoomStage", () => {
     const view = render(<RoomStage session={sessionOf("member", three)} agenda={agenda} rounds={[]} decisions={[]} />);
     const scene = screen.getByTestId("room");
     expect(scene).not.toHaveAttribute("data-theme");
-    await userEvent.click(screen.getByRole("button", { name: "الوضع الليلي" }));
+    await userEvent.click(screen.getByRole("button", { name: "إعدادات العرض" }));
+    await userEvent.click(screen.getByRole("menuitemcheckbox", { name: "الوضع الليلي" }));
     expect(scene).toHaveAttribute("data-theme", "dark");
-    expect(screen.getByRole("button", { name: "الوضع الفاتح" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(screen.getByRole("button", { name: "إعدادات العرض" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: "الوضع الليلي" })).toHaveAttribute("aria-checked", "true");
     view.unmount();
     render(<RoomStage session={sessionOf("member", three)} agenda={agenda} rounds={[]} decisions={[]} />);
     expect(screen.getByTestId("room")).toHaveAttribute("data-theme", "dark");

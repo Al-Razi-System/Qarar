@@ -10,7 +10,7 @@ describe("stage-specific chair controls", () => {
     expect(screen.queryByRole("button", { name: "إحالة البند" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "إنهاء الجلسة والانتقال إلى إعداد المحضر" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "خيارات أخرى للبند" }));
-    fireEvent.click(screen.getByRole("button", { name: "إحالة البند" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "إحالة البند" }));
     expect(action).toHaveBeenCalledWith(expect.objectContaining({ kind: "refer" }));
   });
 });
