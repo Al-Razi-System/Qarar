@@ -17,7 +17,7 @@ export class QararClient {
   }
 
   claimEvents(workerId, lockToken, limit = 10) {
-    return this.rpc("service_claim_notification_outbox", { p_worker_id: workerId, p_lock_token: lockToken, p_limit: limit, p_lease_seconds: 60 });
+    return this.rpc("service_claim_whatsapp_notification_outbox", { p_worker_id: workerId, p_lock_token: lockToken, p_limit: limit, p_lease_seconds: 60 });
   }
   getDispatchContext(eventId, lockToken) {
     return this.rpc("service_get_notification_dispatch_context", { p_event_id: eventId, p_lock_token: lockToken });

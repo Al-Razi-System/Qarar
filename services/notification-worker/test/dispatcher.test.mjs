@@ -9,7 +9,32 @@ test("maps business events without provider knowledge",()=>{
   assert.equal(templateFor({event_type:"execution.task.submitted",payload:{}}),"task_submitted");
   assert.equal(templateFor({event_type:"unknown",payload:{}}),null);
   assert.equal(normalizeE164("+967 77 123 4567"),"+967771234567");
-  assert.equal(normalizeE164("0771234567"),null);
+  assert.equal(normalizeE164("776464178"),"+967776464178");
+  assert.equal(normalizeE164("0776464178"),"+967776464178");
+  assert.equal(normalizeE164("771234567"),"+967771234567");
+  assert.equal(normalizeE164("14155552671"),null);
+  assert.equal(normalizeE164(null),null);
+});
+
+test("continues past missing recipients and normalizes local Yemeni mobiles",async()=>{
+  const calls=[];
+  const events=[{id:"missing",lock_token:"l1"},{id:"local",lock_token:"l2"}];
+  const client={
+    claimEvents:async()=>events,
+    getDispatchContext:async id=>id==="missing"
+      ?{event_type:"meeting.invitation.requested",recipient_active:true,mobile:null,payload:{meeting_no:"MTG-1"}}
+      :{event_type:"meeting.invitation.requested",recipient_active:true,mobile:"776464178",payload:{meeting_no:"MTG-1"}},
+    materializeDelivery:async(...args)=>calls.push(["materialize",...args]),
+    skipDelivery:async(...args)=>calls.push(["skip",...args]),
+    failEvent:async(...args)=>calls.push(["fail",...args])
+  };
+  const result=await runDispatchBatch({client,workerId:"w"});
+  assert.deepEqual(result.map(x=>x.status),["skipped","queued"]);
+  assert.equal(calls[0][0],"skip");
+  assert.equal(calls[0][4],"DESTINATION_INVALID");
+  assert.equal(calls[1][0],"materialize");
+  assert.equal(calls[1][4],"+967776464178");
+  assert.equal(calls.some(x=>x[0]==="fail"),false);
 });
 
 test("materializes a valid recipient and skips a missing number",async()=>{

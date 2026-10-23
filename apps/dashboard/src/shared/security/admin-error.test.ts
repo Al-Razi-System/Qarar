@@ -63,4 +63,15 @@ describe("safeAdminError", () => {
       status: 500,
     });
   });
+
+  it("يصنف مهلة قاعدة البيانات برسالة عامة آمنة قابلة للتخصيص عند المسار", () => {
+    expect(safeAdminError(
+      { status: 500, code: "57014", message: "canceling statement due to statement timeout" },
+      "تعذر تنفيذ العملية.",
+    )).toEqual({
+      code: "QUERY_TIMEOUT",
+      message: "استغرق تنفيذ الطلب وقتًا أطول من المتوقع. أعد المحاولة بعد لحظات.",
+      status: 503,
+    });
+  });
 });

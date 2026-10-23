@@ -12,7 +12,7 @@ type Props = {
   closeDisabled?: boolean;
   /** Actions, rendered in a row at the bottom. Put the error message here, beside them. */
   footer?: ReactNode;
-  size?: "md" | "lg" | "full";
+  size?: "md" | "lg" | "xl" | "full";
   /** Keep the header and actions visible for long editors on narrow screens. */
   scrollContent?: boolean;
   children: ReactNode;
@@ -45,7 +45,7 @@ export function Dialog({ title, description, onClose, closeDisabled = false, foo
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className={cn("w-full border border-q-border bg-q-surface font-sans text-q-text shadow-2xl", size === "full" ? "flex h-dvh min-h-0 flex-col" : "rounded-q-card", size === "lg" ? "max-w-2xl" : size === "md" ? "max-w-lg" : "", scrollContent && size !== "full" && "flex max-h-[calc(100dvh-2rem)] flex-col")}
+        className={cn("w-full border border-q-border bg-q-surface font-sans text-q-text shadow-2xl", size === "full" ? "flex h-dvh min-h-0 flex-col" : "rounded-q-card", size === "xl" ? "max-w-5xl" : size === "lg" ? "max-w-2xl" : size === "md" ? "max-w-lg" : "", scrollContent && size !== "full" && "flex max-h-[calc(100dvh-2rem)] flex-col")}
       >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-q-border p-5">
           <div className="min-w-0">

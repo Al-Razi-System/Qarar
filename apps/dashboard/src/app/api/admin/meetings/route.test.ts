@@ -43,3 +43,20 @@ it("notifies voting readers only after a successful write, never on rejection", 
     expect(wake).toHaveBeenCalledOnce();
   } finally { stop(); }
 });
+it("translates a database statement timeout into a safe actionable response", async () => {
+  rpc.mockRejectedValueOnce(Object.assign(new Error("canceling statement due to statement timeout"), {
+    code: "57014",
+    status: 500,
+  }));
+
+  const response = await POST(request("search_meetings"));
+  const payload = await response.json();
+
+  expect(response.status).toBe(503);
+  expect(payload.error).toMatchObject({
+    code: "QUERY_TIMEOUT",
+    message: "استغرق تحميل الاجتماعات وقتًا أطول من المتوقع. أعد المحاولة بعد لحظات.",
+  });
+  expect(payload.error.requestId).toEqual(expect.any(String));
+  expect(JSON.stringify(payload)).not.toContain("statement timeout");
+});

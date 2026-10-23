@@ -3,7 +3,7 @@
 -- Impact map: docs/engineering/impact/MEETING_VOTE_EVERY_ITEM_AR.md
 begin;
 create extension if not exists pgtap;
-select plan(26);
+select plan(29);
 
 insert into public.organizations(id,code,name_ar) values
 ('98000000-0000-0000-0000-000000000001','s98','Council Vote Route');
@@ -48,7 +48,8 @@ where p.organization_id='98000000-0000-0000-0000-000000000001'
 insert into public.memberships(id,organization_id,user_id,governance_unit_id,role_id) values
 ('98000000-0000-0000-0000-000000000061','98000000-0000-0000-0000-000000000001','98000000-0000-0000-0000-000000000011','98000000-0000-0000-0000-000000000022','98000000-0000-0000-0000-000000000031'),
 ('98000000-0000-0000-0000-000000000062','98000000-0000-0000-0000-000000000001','98000000-0000-0000-0000-000000000012','98000000-0000-0000-0000-000000000022','98000000-0000-0000-0000-000000000032'),
-('98000000-0000-0000-0000-000000000063','98000000-0000-0000-0000-000000000001','98000000-0000-0000-0000-000000000013','98000000-0000-0000-0000-000000000022','98000000-0000-0000-0000-000000000033');
+('98000000-0000-0000-0000-000000000063','98000000-0000-0000-0000-000000000001','98000000-0000-0000-0000-000000000013','98000000-0000-0000-0000-000000000022','98000000-0000-0000-0000-000000000033'),
+('98000000-0000-0000-0000-000000000064','98000000-0000-0000-0000-000000000001','98000000-0000-0000-0000-000000000011','98000000-0000-0000-0000-000000000023','98000000-0000-0000-0000-000000000031');
 
 -- Five topics. T1-T4 follow a council route the way the route designer writes
 -- it (one step per council, approved/rejected outcomes); T5 is a legacy topic.
@@ -115,7 +116,9 @@ where i.topic_id=t.id and t.organization_id='98000000-0000-0000-0000-00000000000
 set local session_replication_role=origin;
 
 insert into public.meetings(id,organization_id,meeting_no,governance_unit_id,title_ar,scheduled_date,created_by_user_id,status) values
-('98000000-0000-0000-0000-000000000081','98000000-0000-0000-0000-000000000001','MTG-S98-1','98000000-0000-0000-0000-000000000022','Faculty Council Meeting',current_date,'98000000-0000-0000-0000-000000000011','ready_to_start');
+('98000000-0000-0000-0000-000000000081','98000000-0000-0000-0000-000000000001','MTG-S98-1','98000000-0000-0000-0000-000000000022','Faculty Council Meeting',current_date,'98000000-0000-0000-0000-000000000011','ready_to_start'),
+('98000000-0000-0000-0000-000000000082','98000000-0000-0000-0000-000000000001','MTG-S98-2','98000000-0000-0000-0000-000000000023','University Council Draft',current_date + 1,'98000000-0000-0000-0000-000000000011','draft'),
+('98000000-0000-0000-0000-000000000083','98000000-0000-0000-0000-000000000001','MTG-S98-3','98000000-0000-0000-0000-000000000022','Faculty Council Draft',current_date + 1,'98000000-0000-0000-0000-000000000011','draft');
 insert into public.agenda_items(id,organization_id,meeting_id,topic_id,agenda_order)
 select ('98000000-0000-0000-0000-00000000009'||n)::uuid,'98000000-0000-0000-0000-000000000001','98000000-0000-0000-0000-000000000081',
  ('98000000-0000-0000-0000-00000000007'||n)::uuid,n
@@ -187,6 +190,17 @@ select lives_ok($$select api_v1.close_voting_round((select round_id from s98_sta
 select is((pg_temp.s98_step('98000000-0000-0000-0000-0000000001f1')).outcome_code,'approved','the council step closes with the approved outcome');
 select is((pg_temp.s98_step('98000000-0000-0000-0000-0000000001f2')).status,'active','the next council step opens');
 select is((pg_temp.s98_topic('98000000-0000-0000-0000-000000000071')).current_workflow_step_id,'98000000-0000-0000-0000-0000000001f2'::uuid,'the topic now waits at the next council');
+select is((pg_temp.s98_topic('98000000-0000-0000-0000-000000000071')).current_unit_id,'98000000-0000-0000-0000-000000000023'::uuid,'the topic is atomically assigned to the council owning the next active step');
+select is(
+  (select count(*) from jsonb_array_elements(api_v1.search_eligible_agenda_topics('98000000-0000-0000-0000-000000000082',null,25,0)->'items') item where item->>'id'='98000000-0000-0000-0000-000000000071'),
+  1::bigint,
+  'the approved topic appears in the next council agenda suggestions'
+);
+select is(
+  (select count(*) from jsonb_array_elements(api_v1.search_eligible_agenda_topics('98000000-0000-0000-0000-000000000083',null,25,0)->'items') item where item->>'id'='98000000-0000-0000-0000-000000000071'),
+  0::bigint,
+  'the routed topic no longer appears in the previous council agenda suggestions'
+);
 -- The approved item's decision is drafted, as before this change.
 select api_v1.create_decision_from_voting_round((select round_id from s98_state),'The council recommends the programme plan to the university.',true);
 

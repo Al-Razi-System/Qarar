@@ -85,7 +85,9 @@ type TopicAttachment = { id: string; file_name: string; file_url: string; descri
 type RequirementStatus = { code: string; name: string; type: string; mandatory: boolean; timing: string; status: "pending" | "fulfilled" | "waived"; note?: string | null; attachment_id?: string | null };
 type RequirementsStatus = { items: RequirementStatus[]; missing_mandatory: number; ready_for_review: boolean };
 type RegulationReference = { id: string; label: string; reference_type: string; is_primary: boolean; policy_name?: string; version_no?: number; item_code?: string | null; item_title?: string | null };
-type TopicMeetingHistory = { agenda_item_id: string; agenda_status: string; discussion_notes?: string | null; meeting: { id: string; meeting_no?: string; title: string; status: string; scheduled_date?: string; unit_name?: string }; voting_rounds: Array<{ id: string; round_number: number; status: string; result?: string | null; eligible_voter_count?: number; approve_count?: number; reject_count?: number; abstain_count?: number; opened_at?: string; closed_at?: string | null }>; decisions: Array<{ id: string; decision_no: string; decision_text: string; decision_status: string; requires_approval: boolean; issued_at?: string | null }> };
+type TopicMinute = { id: string; status: string; content?: string | null; submitted_at?: string | null; approved_at?: string | null; updated_at?: string | null };
+type TopicMeetingHistory = { agenda_item_id: string; agenda_status: string; discussion_notes?: string | null; meeting: { id: string; meeting_no?: string; title: string; status: string; scheduled_date?: string; unit_name?: string }; minutes?: TopicMinute | null; voting_rounds: Array<{ id: string; round_number: number; status: string; result?: string | null; eligible_voter_count?: number; approve_count?: number; reject_count?: number; abstain_count?: number; opened_at?: string; closed_at?: string | null }>; decisions: Array<{ id: string; decision_no: string; decision_text: string; decision_status: string; requires_approval: boolean; issued_at?: string | null }> };
+type TopicActivity = { id: string; source: "status_history" | "audit"; action: string; entity_type: string; entity_id?: string | null; occurred_at?: string; actor_name_ar?: string | null; from_status?: string | null; to_status?: string | null; summary?: string | null };
 type PriorRouteAttachment = { id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number };
 type PriorRouteStep = { id: string; sequence_no: number; step_title: string; responsible_unit_name_ar?: string | null; meeting_date: string; meeting_reference?: string | null; decision_type: string; decision_text: string; bypass_reason: string; attachments: PriorRouteAttachment[] };
 type PriorRouteRequest = { id: string; topic_id: string; status: string; is_requester: boolean; submitted_at?: string | null; reviewed_at?: string | null; review_comment?: string | null; steps: PriorRouteStep[] };
@@ -115,6 +117,27 @@ const statusLabels: Record<string, string> = {
 const priorityLabels: Record<string, string> = { low: "منخفضة", medium: "متوسطة", high: "عالية", urgent: "عاجلة" };
 const decisionTypeLabels: Record<string, string> = { approved: "موافقة", recommended: "توصية بالموافقة", rejected: "رفض", deferred: "تأجيل", returned: "إعادة للاستكمال" };
 const activityReasonLabels: Record<string, string> = { "topic created": "تم إنشاء الموضوع" };
+const activityActionLabels: Record<string, string> = {
+  "topics.create": "إنشاء الموضوع",
+  "topics.prepare.submit": "استكمال بيانات التقديم",
+  "agenda.item.add": "إدراج الموضوع في جدول الأعمال",
+  "agenda.instructions.update": "تحديث تعليمات مناقشة البند",
+  "meetings.agenda.discussion.complete": "اكتمال مناقشة البند",
+  "agenda.discussion.update": "تحديث خلاصة المناقشة",
+  "voting.open": "فتح التصويت",
+  "voting.close": "إغلاق التصويت وتثبيت النتيجة",
+  "decision.create_from_vote": "إنشاء قرار من نتيجة التصويت",
+  "decisions.create_for_outcome": "صياغة قرار المجلس",
+  "decisions.approve_with_minutes": "اعتماد القرار مع المحضر",
+  "topics.referral.request": "إحالة الموضوع",
+  "meetings.agenda.referred": "إحالة بند الاجتماع",
+  "minutes.draft.save": "حفظ مسودة المحضر",
+  "minutes.submit": "إرسال المحضر للمصادقة",
+  "minutes.approval.respond": "تسجيل مصادقة على المحضر",
+  "governance.topic.current_unit.repaired": "مواءمة المجلس الحالي مع مرحلة المسار",
+  "meetings.agenda.downloads": "تحديث صلاحية تنزيل مرفقات البند",
+  "meetings.agenda.planned_minutes": "تحديد المدة المقررة للبند",
+};
 
 function topicDisplayStatus(topicStatus: string, priorRouteRequest: PriorRouteRequest | null, typedReady = false) {
   if (priorRouteRequest?.status === "draft") {
@@ -191,6 +214,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
   const [requirementsStatus, setRequirementsStatus] = useState<RequirementsStatus | null>(null);
   const [regulationReferences, setRegulationReferences] = useState<RegulationReference[]>([]);
   const [meetingHistory, setMeetingHistory] = useState<TopicMeetingHistory[]>([]);
+  const [activityTimeline, setActivityTimeline] = useState<TopicActivity[]>([]);
   const [priorRouteRequest, setPriorRouteRequest] = useState<PriorRouteRequest | null>(null);
   const [attachmentBusy, setAttachmentBusy] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("summary");
@@ -202,7 +226,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
   useEffect(() => {
     let alive = true;
     async function load() {
-      setLoading(true); setNotice(null);setReadErrors([]);setPreview(null);setWorkflow(null);setReferrals([]);setAttachments([]);setRegulationReferences([]);setMeetingHistory([]);setPriorRouteRequest(null);
+      setLoading(true); setNotice(null);setReadErrors([]);setPreview(null);setWorkflow(null);setReferrals([]);setAttachments([]);setRegulationReferences([]);setMeetingHistory([]);setActivityTimeline([]);setPriorRouteRequest(null);
       try {
         const detail = await rpc<TopicDetail>("get_topic_detail", { p_topic_id: topicId });
         if (!alive) return;
@@ -215,6 +239,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
           rpc<RequirementsStatus>("get_topic_requirements_status", { p_topic_id: topicId }).then((data) => { if (alive) setRequirementsStatus(data); }).catch(() => undefined),
           rpc<RegulationReference[]>("list_topic_regulation_references", { p_topic_id: topicId }).then((data) => { if (alive) setRegulationReferences(data ?? []); }).catch(() => undefined),
           rpc<TopicMeetingHistory[]>("get_topic_meeting_history", { p_topic_id: topicId }).then((data) => { if (alive) setMeetingHistory(data ?? []); }).catch(failed("اجتماعات الموضوع")),
+          rpc<TopicActivity[]>("get_topic_activity_timeline", { p_topic_id: topicId }).then((data) => { if (alive) setActivityTimeline(data ?? []); }).catch(failed("سجل النشاط والتدقيق")),
           rpc<PriorRouteRequest | null>("get_topic_prior_route_request", { p_topic_id: topicId }).then((data) => { if (alive) setPriorRouteRequest(data); }).catch(failed("أدلة المسار السابق")),
         ];
         if (detail.policy_id && detail.policy_version_id && detail.policy_item_id && detail.policy_scope_assignment_id && detail.current_unit_id && detail.category_id) {
@@ -357,7 +382,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
       {activeTab === "workflow" && <Workflow workflow={workflow} priorRouteRequest={priorRouteRequest} />}
       {activeTab === "referrals" && <Referrals referrals={referrals} />}
       {activeTab === "decisions" && <Decisions preview={preview} meetings={meetingHistory} priorRouteRequest={priorRouteRequest} />}
-      {activeTab === "activity" && <ActivityLog items={topic.history ?? []} priorRouteRequest={priorRouteRequest} topicCreatedAt={topic.created_at} typedTopic={Boolean(topic.topic_type_version_id)} />}
+      {activeTab === "activity" && <ActivityLog items={activityTimeline} priorRouteRequest={priorRouteRequest} topicCreatedAt={topic.created_at} typedTopic={Boolean(topic.topic_type_version_id)} />}
     </section>
   </div>;
 }
@@ -487,18 +512,32 @@ function Decisions({ preview, meetings, priorRouteRequest }: { preview: Regulati
         <div><p className="text-[10px] font-black text-[#61758c]">جولات التصويت</p>{entry.voting_rounds.length ? <div className="mt-2 space-y-2">{entry.voting_rounds.map((round) => <div key={round.id} className="rounded-xl border border-[#e5edf4] p-3 text-[10px] text-[#536980]"><div className="flex justify-between gap-2"><strong>الجولة {round.round_number}</strong><span>{round.result ? decisionTypeLabels[round.result] ?? "نتيجة مسجلة" : statusLabels[round.status] ?? "حالة التصويت غير معرّفة"}</span></div>{round.status === "closed" ? <p className="mt-2">موافق: {round.approve_count ?? 0} · رافض: {round.reject_count ?? 0} · ممتنع: {round.abstain_count ?? 0} · المؤهلون: {round.eligible_voter_count ?? 0}</p> : <p className="mt-2">تظهر نتيجة الجولة وأعداد الأصوات بعد إغلاق التصويت.</p>}</div>)}</div> : <p className="mt-2 rounded-xl bg-[#fafcfe] p-3 text-[10px] text-[#7a8b9e]">لم تُفتح جولة تصويت بعد.</p>}</div>
         <div><p className="text-[10px] font-black text-[#61758c]">القرارات الصادرة</p>{entry.decisions.length ? <div className="mt-2 space-y-2">{entry.decisions.map((decision) => <div key={decision.id} className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3"><div className="flex justify-between gap-2 text-[10px] font-black text-emerald-800"><span>{decision.decision_no}</span><span>{statusLabels[decision.decision_status] ?? "حالة القرار غير معرّفة"}</span></div><p className="mt-2 text-[11px] leading-6 text-[#35546a]">{decision.decision_text}</p></div>)}</div> : <p className="mt-2 rounded-xl bg-[#fafcfe] p-3 text-[10px] text-[#7a8b9e]">لم يصدر قرار بعد.</p>}</div>
       </div>
+      {entry.minutes && <section className="border-t border-q-border bg-q-surface-2 p-4" aria-label={`محضر ${entry.meeting.title}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div><h4 className="text-q-ui font-black text-q-text">محضر المجلس السابق</h4><p className="mt-1 text-q-caption text-q-text-3">{entry.meeting.unit_name || "المجلس المختص"} · {entry.meeting.meeting_no || "اجتماع موثق"}</p></div>
+          <span className={`rounded-q-pill px-3 py-1 text-q-caption font-black ${entry.minutes.status === "approved" ? "bg-q-success-soft text-q-success" : "bg-q-warning-soft text-q-warning"}`}>{entry.minutes.status === "approved" ? "محضر معتمد" : "المحضر قيد الاعتماد"}</span>
+        </div>
+        {entry.minutes.content ? <div className="mt-3 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-q-control border border-q-border bg-q-surface p-4 text-q-ui leading-7 text-q-text-2">{entry.minutes.content}</div> : <InlineMessage className="mt-3" tone="warning">يظهر النص الرسمي للمحضر بعد اكتمال المصادقة واعتماده.</InlineMessage>}
+        <p className="mt-2 text-q-caption text-q-text-3">{entry.minutes.approved_at ? `اعتمد في ${dateLabel(entry.minutes.approved_at)}` : `آخر تحديث ${dateLabel(entry.minutes.updated_at)}`}</p>
+      </section>}
     </article>)}</div> : priorCouncils.length === 0 ? <EmptyState icon={hasResults ? Vote : Gavel} title="لم يُدرج الموضوع في اجتماع بعد" description="بعد إدراج الموضوع في اجتماع ومناقشته، ستظهر هنا الجلسة وجولات التصويت والقرارات الناتجة." /> : null}
   </div>;
 }
 
-function ActivityLog({ items, priorRouteRequest, topicCreatedAt, typedTopic }: { items: ActivityItem[]; priorRouteRequest: PriorRouteRequest | null; topicCreatedAt?: string; typedTopic?: boolean }) {
+function ActivityLog({ items, priorRouteRequest, topicCreatedAt, typedTopic }: { items: TopicActivity[]; priorRouteRequest: PriorRouteRequest | null; topicCreatedAt?: string; typedTopic?: boolean }) {
   const priorCouncils = groupPriorRouteCouncils(priorRouteRequest?.steps ?? []);
   if (!items.length && !priorRouteRequest) return <EmptyState icon={Activity} title="لا يوجد نشاط مسجل بعد" description="سيظهر هنا سجل إنشاء الموضوع وتغير حالته والإجراءات المصرح بها." />;
   return <div className="space-y-6"><SectionTitle icon={Activity} title="سجل النشاط والتدقيق" description="سجل زمني غير قابل للتعديل لتغيرات الموضوع وإجراءاته." /><div className="space-y-3">
     {priorRouteRequest && <div className="flex gap-3 rounded-2xl border border-[#cfe3f4] bg-[#f8fbff] p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#0877df]"/><div><p className="text-xs font-black text-[#203952]">تسجيل مسار سابق لـ {priorCouncils.length} {priorCouncils.length === 1 ? "مجلس" : "مجالس"}</p><p className="mt-1 text-[11px] leading-6 text-[#62758c]">{priorCouncils.map((council) => council.responsible_unit_name_ar || council.step_title).join("، ")}</p><p className="mt-2 text-[10px] text-[#8797a9]">{dateLabel(topicCreatedAt)} · {priorRouteRequest.status === "approved" ? "اعتمدت الأدلة وأغلقت المراحل السابقة" : priorRouteRequest.status === "submitted" ? "أرسلت الأدلة للمراجعة المستقلة" : "حُفظت كمسودة تحتاج استكمال"}</p></div></div>}
     {priorRouteRequest?.submitted_at && <div className="flex gap-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600"/><div><p className="text-xs font-black text-[#203952]">إرسال أدلة المسار السابق للمراجعة</p><p className="mt-1 text-[11px] leading-6 text-[#62758c]">اكتملت مرفقات المجالس السابقة وأُحيلت إلى مراجع مستقل.</p><p className="mt-2 text-[10px] text-[#8797a9]">{dateLabel(priorRouteRequest.submitted_at)}</p></div></div>}
     {priorRouteRequest?.reviewed_at && <div className="flex gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-600"/><div><p className="text-xs font-black text-[#203952]">{priorRouteRequest.status === "approved" ? "اعتماد أدلة المجالس السابقة" : "إعادة أدلة المجالس السابقة للتصحيح"}</p>{priorRouteRequest.review_comment && <p className="mt-1 text-[11px] leading-6 text-[#62758c]">{priorRouteRequest.review_comment}</p>}<p className="mt-2 text-[10px] text-[#8797a9]">{dateLabel(priorRouteRequest.reviewed_at)}</p></div></div>}
-    {items.map((item) => <div key={item.id} className="flex gap-3 rounded-2xl border border-[#e6edf4] p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#0066cc]"/><div><p className="text-xs font-black text-[#203952]">{item.from_status ? `${statusLabels[item.from_status] ?? "الحالة السابقة"} ← ` : ""}{typedTopic && item.to_status === "new" ? "تم تقديم الموضوع" : statusLabels[item.to_status] ?? "تحديث حالة الموضوع"}</p>{item.change_reason && <p className="mt-1 text-[11px] leading-6 text-[#62758c]">{activityReasonLabels[item.change_reason] ?? item.change_reason}</p>}<p className="mt-2 text-[10px] text-[#8797a9]">{item.changed_by_name_ar || "النظام"} · {dateLabel(item.changed_at)}</p></div></div>)}
+    {items.map((item) => {
+      const title = item.source === "status_history"
+        ? (typedTopic && item.to_status === "new" ? "تم تقديم الموضوع" : `${item.from_status ? `${statusLabels[item.from_status] ?? "الحالة السابقة"} ← ` : ""}${item.to_status ? statusLabels[item.to_status] ?? "تحديث حالة الموضوع" : "تحديث حالة الموضوع"}`)
+        : activityActionLabels[item.action] ?? "إجراء موثق على الموضوع";
+      const summary = item.summary ? activityReasonLabels[item.summary] ?? item.summary : null;
+      return <div key={item.id} className="flex gap-3 rounded-q-card border border-q-border bg-q-surface p-4"><span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-q-primary"/><div><p className="text-q-ui font-black text-q-text">{title}</p>{summary && <p className="mt-1 text-q-ui leading-6 text-q-text-2">{summary}</p>}<p className="mt-2 text-q-caption text-q-text-3">{item.actor_name_ar || "النظام"} · {dateLabel(item.occurred_at)}</p></div></div>;
+    })}
   </div></div>;
 }
 

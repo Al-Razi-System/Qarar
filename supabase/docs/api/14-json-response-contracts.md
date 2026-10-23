@@ -149,7 +149,12 @@ TopicHistory = {
 | `list_topic_attachments` | `TopicAttachment[]` with `{id,file_name,file_url,mime_type,file_size_bytes,description?,created_at}` |
 | `add_topic_attachment` | The six-argument overload returns `{id}`; the requirement-linked overload returns `{id,requirement_code?}` |
 | `remove_topic_attachment` | `{id,deleted:true}` |
-| `get_topic_meeting_history` | `TopicMeetingHistory[]`, each with agenda state, nested meeting, voting rounds, and decisions |
+| `get_topic_meeting_history` | `TopicMeetingHistory[]`, each with agenda state, nested meeting, nullable approved `minutes`, voting rounds, and decisions |
+| `get_topic_activity_timeline` | `TopicActivity[]` ordered chronologically with `{id,source,action,entity_type,entity_id?,occurred_at,actor_user_id?,actor_name_ar?,from_status?,to_status?,summary?}` |
+| `admin_get_notification_workspace` | `{summary,settings,connection,templates,deliveries}` for the current organization |
+| `admin_save_notification_settings` | `{settings,version}` after an atomic optimistic-concurrency save |
+| `admin_begin_notification_test` | `{delivery_id,completion_token,status}` for the auditable test delivery |
+| `admin_finish_notification_test` | `{delivery_id,status,accepted}` after recording the provider result once |
 
 ## Meetings and Agenda
 

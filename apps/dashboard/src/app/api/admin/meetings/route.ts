@@ -33,6 +33,10 @@ const contracts = new Set([
   "respond_meeting_minutes_approval", "generate_meeting_minutes_draft",
   "sign_meeting_minutes_approval",
 ]);
+const cancellableReadContracts = new Set([
+  "search_meetings", "list_meeting_series", "get_meeting_detail", "get_completed_meeting_record",
+  "list_meeting_topic_attachments", "get_sprint02_form_options", "search_eligible_agenda_topics", "get_meeting_readiness",
+]);
 
 export async function POST(request: Request) {
   const id = requestId(request);
@@ -50,11 +54,16 @@ export async function POST(request: Request) {
     if (params !== undefined && !isJsonObject(params)) {
       return NextResponse.json({ error: { message: "معاملات العملية غير صالحة." } }, { status: 400 });
     }
-    const data = await (contract.endsWith("_v2") ? qararRpcV2<unknown>(contract, params ?? {}) : qararRpc<unknown>(contract, params ?? {}));
+    const data = await (contract.endsWith("_v2")
+      ? qararRpcV2<unknown>(contract, params ?? {})
+      : qararRpc<unknown>(contract, params ?? {}, cancellableReadContracts.has(contract) ? { signal: request.signal } : {}));
     notifyVotingMutation(contract, params ?? {}, data);
     return apiSuccess(data, id);
   } catch (error) {
     const safeError = safeAdminError(error, "تعذر تنفيذ العملية.", 500);
+    const message = safeError.code === "QUERY_TIMEOUT" && parsedBody.value.contract === "search_meetings"
+      ? "استغرق تحميل الاجتماعات وقتًا أطول من المتوقع. أعد المحاولة بعد لحظات."
+      : safeError.message;
     logEvent(safeError.status < 500 ? "warn" : "error", "meeting.operation.failed", {
       request_id: id,
       contract: typeof parsedBody.value.contract === "string" ? parsedBody.value.contract : "unknown",
@@ -63,6 +72,6 @@ export async function POST(request: Request) {
       upstreamCode: typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined,
       message: error instanceof Error ? error.message : String(error),
     });
-    return apiError(safeError.message, safeError.status, safeError.code, id);
+    return apiError(message, safeError.status, safeError.code, id);
   }
 }

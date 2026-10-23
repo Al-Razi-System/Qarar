@@ -17,9 +17,20 @@ export function templateFor(context) {
   }
 }
 
+const ARABIC_DIGITS = new Map([
+  ["٠","0"],["١","1"],["٢","2"],["٣","3"],["٤","4"],
+  ["٥","5"],["٦","6"],["٧","7"],["٨","8"],["٩","9"],
+  ["۰","0"],["۱","1"],["۲","2"],["۳","3"],["۴","4"],
+  ["۵","5"],["۶","6"],["۷","7"],["۸","8"],["۹","9"]
+]);
+
 export function normalizeE164(value) {
   if (typeof value !== "string") return null;
-  const compact = value.trim().replace(/[\s()-]/g, "");
+  let compact = [...value.trim()].map(character=>ARABIC_DIGITS.get(character)??character).join("").replace(/[\s().-]/g, "");
+  if (compact.startsWith("00")) compact=`+${compact.slice(2)}`;
+  if (/^9677[0-9]{8}$/.test(compact)) compact=`+${compact}`;
+  if (/^07[0-9]{8}$/.test(compact)) compact=`+967${compact.slice(1)}`;
+  if (/^7[0-9]{8}$/.test(compact)) compact=`+967${compact}`;
   return /^\+[1-9][0-9]{7,14}$/.test(compact) ? compact : null;
 }
 

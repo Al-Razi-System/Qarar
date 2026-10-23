@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useEffectEvent, useState } from "react";
+import { useDeferredValue, useEffect, useEffectEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -19,11 +19,14 @@ import { meetingScheduleLabel } from "../model/meeting-schedule";
 import { localDateKey, meetingOperationalGroup } from "../model/meeting-operational-state";
 import { MeetingAgendaPanel } from "./meeting-agenda-panel";
 import { ScheduledAgendaSuggestions } from "./scheduled-agenda-suggestions";
-import {SubmittedAgendaSuggestions} from "./submitted-agenda-suggestions";
+import {AgendaCandidateCard} from "./submitted-agenda-suggestions";
 import {AgendaInstructionsDialog} from "./agenda-instructions-dialog";
+import {AgendaCandidateDetailsDialog} from "./agenda-candidate-details-dialog";
 import { CompletedMeetingSummary } from "./completed-meeting-summary";
 import { MeetingMinutesWorkspace } from "./meeting-minutes-workspace";
 import { InvitationTimingDialog } from "./invitation-timing-dialog";
+import { InlineMessage } from "@/shared/ui/inline-message";
+import { Dialog } from "@/shared/ui/dialog";
 
 type Notice = { kind: "success" | "error"; text: string };
 type MeetingSeries = {
@@ -41,18 +44,6 @@ function meetingErrorMessage(error: unknown, fallback: string) {
     return "لا يمكن تعديل جدول الأعمال بعد بدء الاجتماع. اختر اجتماعًا في حالة مسودة أو مجدولًا.";
   }
   return message;
-}
-
-function minutesStatusLabel(status?: string | null) {
-  if (status === "approved") return "محضر معتمد";
-  if (status === "ready_for_approval") return "محضر بانتظار المصادقة";
-  if (status === "draft") return "مسودة محضر";
-  return status ? `حالة المحضر: ${status}` : null;
-}
-
-function truncateText(value?: string | null, max = 150) {
-  if (!value) return "";
-  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
 const meetingGroups = [
@@ -97,9 +88,12 @@ export function MeetingsWorkspace() {
   const [series, setSeries] = useState<MeetingSeries[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [selected, setSelected] = useState<MeetingDetail | null>(null);
   const [instructionTarget,setInstructionTarget]=useState<{topicId:string;title:string;text:string;updatedAt?:string}|null>(null);
+  const [candidateTarget,setCandidateTarget]=useState<AgendaCandidate|null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [createModal, setCreateModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -113,7 +107,7 @@ export function MeetingsWorkspace() {
   const [meetingOptions, setMeetingOptions] = useState<MeetingFormOptions | null>(null);
   const [meetingOptionsLoading, setMeetingOptionsLoading] = useState(false);
   const [agendaCandidates, setAgendaCandidates] = useState<AgendaCandidate[]>([]);
-  const [agendaActionNotice,setAgendaActionNotice]=useState<{kind:"error"|"success";text:string}|null>(null);
+  const [agendaSearchNotice,setAgendaSearchNotice]=useState<string|null>(null);
   const [eligibleAgendaCount, setEligibleAgendaCount] = useState<number | null>(null);
   const [agendaLoading, setAgendaLoading] = useState(false);
   const [agendaModal, setAgendaModal] = useState(false);
@@ -128,31 +122,53 @@ export function MeetingsWorkspace() {
   const [minutesText, setMinutesText] = useState("");
   const [readiness, setReadiness] = useState<MeetingReadiness | null>(null);
   const [topicAttachments, setTopicAttachments] = useState<MeetingTopicAttachment[]>([]);
+  const listRequestRef = useRef<AbortController | null>(null);
+  const lastListSuccessAtRef = useRef(0);
   const today = localDateKey();
 
-  async function loadMeetings() {
-    setLoading(true); setNotice(null);
+  async function loadMeetings(options: { background?: boolean } = {}) {
+    listRequestRef.current?.abort();
+    const controller = new AbortController();
+    listRequestRef.current = controller;
+    if (options.background) setRefreshing(true);
+    else setLoading(true);
+    setLoadError(null);
     try {
+      const seriesRequest = rpc<MeetingSeries[]>("list_meeting_series", {}, { signal: controller.signal, timeoutMs: 12_000 })
+        .catch(() => []);
       const result = await rpc<{ items: Meeting[]; total: number }>("search_meetings", {
         p_query: deferredQuery.trim() || null, p_status: null, p_unit_id: null,
         p_from_date: fromDate || null, p_to_date: toDate || null, p_limit: 50, p_offset: 0,
-      });
+      }, { signal: controller.signal, timeoutMs: 12_000 });
+      if (controller.signal.aborted) return;
       setMeetings(result.items ?? []);
       setTotal(result.total ?? 0);
-      try { setSeries(await rpc<MeetingSeries[]>("list_meeting_series")); } catch { setSeries([]); }
+      lastListSuccessAtRef.current = Date.now();
+      setLoading(false);
       const nextMeetings = result.items ?? [];
       if (!nextMeetings.length || (selected && !nextMeetings.some((meeting) => meeting.id === selected.id))) {
         setSelected(null);
       }
+      const nextSeries = await seriesRequest;
+      if (!controller.signal.aborted) setSeries(nextSeries);
     } catch (err) {
-      setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر التحميل." });
+      if ((err as { name?: string }).name === "AbortError") return;
+      controller.abort();
+      const message = err instanceof Error ? err.message : "تعذر تحميل الاجتماعات.";
+      const requestId = typeof err === "object" && err !== null && "requestId" in err && typeof err.requestId === "string"
+        ? err.requestId
+        : null;
+      setLoadError(requestId ? `${message} مرجع المتابعة: ${requestId}` : message);
     } finally {
-      setLoading(false);
+      if (listRequestRef.current === controller) {
+        listRequestRef.current = null;
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }
 
   async function openDetail(meetingId: string) {
-    setAgendaActionNotice(null);
     setDetailLoading(true); setNotice(null);
     try {
       const detail = await rpc<MeetingDetail>("get_meeting_detail", { p_meeting_id: meetingId });
@@ -382,7 +398,7 @@ export function MeetingsWorkspace() {
 
   async function loadAgendaCandidates(queryOverride?: string) {
     if (!selected) return;
-    setAgendaLoading(true);
+    setAgendaLoading(true);setAgendaSearchNotice(null);
     try {
       const result = await rpc<{ items: AgendaCandidate[]; total?: number; locked?: boolean }>("search_eligible_agenda_topics", {
         p_meeting_id: selected.id, p_query: (queryOverride ?? agendaQuery).trim() || null, p_limit: 30, p_offset: 0,
@@ -391,7 +407,9 @@ export function MeetingsWorkspace() {
       setEligibleAgendaCount(result.total ?? 0);
       if (result.locked) setNotice({ kind: "error", text: "جدول الأعمال مقفل لأن الاجتماع بدأ. يمكن التعديل فقط في حالة مسودة أو مجدول." });
     } catch (err) {
-      setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر تحميل الموضوعات المؤهلة." });
+      const message=meetingErrorMessage(err,"تعذر تحميل الموضوعات المؤهلة. تحقق من الاتصال ثم أعد المحاولة.");
+      setAgendaSearchNotice(message);
+      setNotice({ kind: "error", text: message });
     } finally { setAgendaLoading(false); }
   }
 
@@ -413,15 +431,13 @@ export function MeetingsWorkspace() {
       setNotice({ kind: "error", text: "لا يمكن إضافة موضوعات بعد بدء الاجتماع. اختر اجتماعًا في حالة مسودة أو مجدولًا." });
       return;
     }
-    setDetailLoading(true); setNotice(null);setAgendaActionNotice(null);
+    setDetailLoading(true); setNotice(null);
     try {
       await rpc("add_agenda_item", { p_meeting_id: selected.id, p_topic_id: topicId, p_is_exception: false, p_exception_reason: null });
       await openDetail(selected.id); await loadAgendaCandidates();
       setNotice({ kind: "success", text: "تمت إضافة الموضوع إلى جدول الأعمال." });
-      setAgendaActionNotice({kind:"success",text:"تم إدراج الموضوع في هذا الاجتماع. لا يعد الإدراج قبولًا للموضوع."});
     } catch (err) {
       setNotice({ kind: "error", text: meetingErrorMessage(err, "تعذر إضافة الموضوع.") });
-      setAgendaActionNotice({kind:"error",text:meetingErrorMessage(err,"تعذر إدراج الموضوع. حدّث المقترحات ثم أعد المحاولة.")});
     } finally { setDetailLoading(false); }
   }
 
@@ -501,12 +517,16 @@ export function MeetingsWorkspace() {
 
   const loadMeetingsOnFilterChange = useEffectEvent(loadMeetings);
   useEffect(() => {
-    const timer = window.setTimeout(() => void loadMeetingsOnFilterChange(), 0);
-    return () => window.clearTimeout(timer);
+    const timer = window.setTimeout(() => void loadMeetingsOnFilterChange(), 250);
+    return () => {
+      window.clearTimeout(timer);
+      listRequestRef.current?.abort();
+    };
   }, [deferredQuery, fromDate, toDate]);
 
   const refreshWorkspaceOnReturn = useEffectEvent(() => {
-    void loadMeetings();
+    if (listRequestRef.current || Date.now() - lastListSuccessAtRef.current < 30_000) return;
+    void loadMeetings({ background: true });
     if (selected?.id) void openDetail(selected.id);
   });
   useEffect(() => {
@@ -522,6 +542,14 @@ export function MeetingsWorkspace() {
 
   return (
     <div className="space-y-5">
+      {loadError && (
+        <div className="space-y-2">
+          <InlineMessage tone="error">{loadError}</InlineMessage>
+          <Button variant="secondary" onClick={() => void loadMeetings()} disabled={loading}>
+            إعادة تحميل الاجتماعات
+          </Button>
+        </div>
+      )}
       {notice && (
         <div className={`flex items-center gap-2 rounded-xl border p-3 text-xs font-bold ${notice.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>
           {notice.kind === "success" ? <Check size={15} /> : <AlertCircle size={15} />} {notice.text}
@@ -560,6 +588,7 @@ export function MeetingsWorkspace() {
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(420px,.78fr)_minmax(0,1.22fr)]">
         {/* Meetings List */}
         <div className="rounded-2xl border border-[#e2e9f1] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
+          {refreshing && !loading && <p role="status" className="m-3 rounded-q-control bg-q-surface-2 px-3 py-2 text-q-caption text-q-text-2">جارٍ تحديث الاجتماعات في الخلفية…</p>}
           {loading ? (
             <div className="grid min-h-[350px] place-items-center"><LoaderCircle className="animate-spin text-[#0066cc]" size={28} /></div>
           ) : meetings.length === 0 ? (
@@ -619,14 +648,13 @@ export function MeetingsWorkspace() {
               </div>
 
               {selected.capabilities?.can_manage_agenda && <ScheduledAgendaSuggestions items={selected.scheduled_suggestions ?? []}/>}
-              {selected.capabilities?.can_manage_agenda && isAgendaEditable(selected.status) && selected.submitted_suggestions && <SubmittedAgendaSuggestions items={selected.submitted_suggestions.items} total={selected.submitted_suggestions.total} busy={detailLoading} onAdd={(id)=>void addAgendaItem(id)} onReview={selected.capabilities?.can_edit_topic_instructions?item=>setInstructionTarget({topicId:item.id,title:item.title_ar,text:item.discussion_instructions??""}):undefined} onMore={()=>void openAgendaModal()} notice={agendaActionNotice}/>}
               {["closed", "archived"].includes(selected.status) ? <CompletedMeetingSummary meeting={selected} attachments={topicAttachments} /> : <MeetingAgendaPanel
                 meetingId={selected.id}
                 items={selected.agenda_items ?? []}
                 attachments={topicAttachments}
-                editable={Boolean(selected.capabilities?.can_manage_agenda)}
+                editable={Boolean(selected.capabilities?.can_manage_agenda && isAgendaEditable(selected.status))}
                 busy={detailLoading}
-                eligibleCount={eligibleAgendaCount}
+                eligibleCount={eligibleAgendaCount ?? selected.submitted_suggestions?.total ?? 0}
                 onAdd={() => void openAgendaModal()}
                 onMove={(index, direction) => void moveAgendaItem(index, direction)}
                 onRemove={(id) => void removeAgendaItem(id)}
@@ -656,51 +684,20 @@ export function MeetingsWorkspace() {
         </div> : <div className="hidden min-h-[360px] place-items-center rounded-2xl border border-dashed border-[#cdddea] bg-gradient-to-b from-white to-[#f7fbff] p-8 text-center xl:grid xl:sticky xl:top-4"><div><span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#eaf4ff] text-[#0877d6]"><CalendarDays size={28}/></span><h2 className="mt-4 text-sm font-black text-[#173652]">اختر اجتماعاً لعرض تفاصيله</h2><p className="mx-auto mt-2 max-w-xs text-[10px] leading-6 text-[#718399]">اضغط على أي بطاقة من القائمة، وستظهر هنا بيانات الموعد وجدول الأعمال والجاهزية والإجراءات المتاحة دون الانتقال إلى أسفل الصفحة.</p></div></div>}
       </div>
 
-      {agendaModal && selected && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#081630]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="إضافة موضوع إلى جدول الأعمال">
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-[#e7edf3] px-6 py-5">
-              <div><h2 className="text-base font-black text-[#0a1330]">إضافة موضوع إلى جدول الأعمال</h2><p className="mt-1 text-xs text-[#718196]">تظهر الموضوعات المطابقة للجهة وحالة المسار فقط.</p></div>
-              <button type="button" onClick={() => setAgendaModal(false)} className="rounded-lg p-2 text-[#73849a] hover:bg-[#f2f6fa] hover:text-[#0a1330]" aria-label="إغلاق"><X size={19} /></button>
-            </div>
-            <div className="p-6">
-              <div className="flex gap-2 rounded-xl border border-[#dce7f0] bg-[#fafcfe] p-1.5">
-                <input autoFocus value={agendaQuery} onChange={(event) => setAgendaQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void loadAgendaCandidates(); }} placeholder="ابحث باسم الموضوع أو رقمه" className="h-9 min-w-0 flex-1 bg-transparent px-2 text-xs outline-none" />
-                <button type="button" onClick={() => void loadAgendaCandidates()} disabled={agendaLoading} className="rounded-lg bg-[#0066cc] px-4 text-xs font-bold text-white disabled:opacity-50">بحث</button>
-              </div>
-              <div className="mt-4 max-h-[45vh] space-y-2 overflow-y-auto">
-                {agendaLoading ? <div className="grid min-h-36 place-items-center"><LoaderCircle className="animate-spin text-[#0066cc]" size={24} /></div> : agendaCandidates.length ? agendaCandidates.map((topic) => {
-                  const sourceLabel = [topic.source_unit_name_ar, topic.source_meeting_no].filter(Boolean).join(" · ");
-                  const sourceMinutesLabel = minutesStatusLabel(topic.source_minutes_status);
-                  return (
-                    <div key={topic.id} className="rounded-2xl border border-[#d7e7f5] bg-[#fbfdff] p-4 shadow-[0_10px_24px_rgba(14,52,89,.055)]">
-                      <div className="flex flex-wrap items-start gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-2 flex flex-wrap gap-1.5">
-                            {topic.topic_no && <span className="rounded-full bg-[#eaf4ff] px-2.5 py-1 text-[9px] font-black text-[#0877d1]">{topic.topic_no}</span>}
-                            {topic.priority && <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[9px] font-black text-orange-700">{topic.priority}</span>}
-                            {sourceMinutesLabel && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-black text-emerald-700">{sourceMinutesLabel}</span>}
-                            {topic.source_decision_no && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black text-slate-700">{topic.source_decision_no}</span>}
-                          </div>
-                          <h3 className="text-sm font-black leading-6 text-[#0a1330]">{topic.title_ar}</h3>
-                          {topic.current_step && <p className="mt-1 text-[10px] font-bold text-[#0066cc]">الخطوة الحالية: {topic.current_step}</p>}
-                          {sourceLabel && <p className="mt-2 text-[10px] font-bold text-[#60748a]">مرحل من: {sourceLabel}</p>}
-                          {topic.source_decision_text && <p className="mt-2 rounded-xl border border-[#e3edf6] bg-white px-3 py-2 text-[10px] leading-5 text-[#40566f]">القرار السابق: {truncateText(topic.source_decision_text)}</p>}
-                        </div>
-                        <Button disabled={detailLoading} onClick={()=>{if(selected.capabilities?.can_edit_topic_instructions){setAgendaModal(false);setInstructionTarget({topicId:topic.id,title:topic.title_ar,text:topic.discussion_instructions??""});}else void addAgendaItem(topic.id);}}>{selected.capabilities?.can_edit_topic_instructions?"مراجعة التعليمات والإدراج":"إضافة إلى الجدول"}</Button>
-                      </div>
-                    </div>
-                  );
-                }) : <div className="rounded-2xl border border-dashed border-[#caddec] bg-[#fbfdff] p-8 text-center"><Search className="mx-auto text-[#84a4c2]" size={28} /><h3 className="mt-3 text-sm font-black text-[#193451]">لا توجد موضوعات مؤهلة حاليًا</h3><div className="mx-auto mt-3 max-w-lg rounded-xl bg-[#f5f9fd] p-3 text-right text-[10px] leading-6 text-[#60748a]"><p>يظهر الموضوع هنا عندما:</p><p>1. تكون الخطوة موجهة إلى مجلس هذا الاجتماع وحالة الموضوع قابلة للإدراج.</p><p>2. يكون محضر الاجتماع السابق معتمدًا إذا كان الموضوع مرحلًا من مجلس آخر.</p><p>3. لا يكون الموضوع عالقًا في حالة إدراج لاجتماع سابق أو مدرجًا في اجتماع آخر مفتوح.</p></div><Link href="/admin/topics" className="mt-3 inline-flex rounded-xl bg-[#0066cc] px-4 py-2 text-[11px] font-bold text-white">فتح الموضوعات والتحقق من المسار</Link></div>}
-              </div>
-            </div>
-            <div className="flex justify-end border-t border-[#e7edf3] bg-[#fbfcfe] px-6 py-4"><button type="button" onClick={() => setAgendaModal(false)} className="rounded-xl border border-[#dbe5ef] px-4 py-2 text-xs font-bold text-[#52647a]">إغلاق</button></div>
+      {agendaModal && selected && <Dialog title="الموضوعات المقترحة" description={`${eligibleAgendaCount ?? agendaCandidates.length} موضوعات وصلت إلى ${selected.unit_name_ar ?? selected.governance_unit_name_ar ?? "هذا المجلس"} وأصبحت مؤهلة للإدراج`} size="lg" scrollContent onClose={()=>setAgendaModal(false)} closeDisabled={agendaLoading} footer={<Button variant="secondary" disabled={agendaLoading} onClick={()=>setAgendaModal(false)}>إغلاق</Button>}>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 rounded-q-card bg-q-surface-2 p-3 sm:flex-row">
+            <label className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-q-control border border-q-border bg-q-surface px-3"><Search className="shrink-0 text-q-text-3" size={19}/><span className="sr-only">البحث في الموضوعات المقترحة</span><input autoFocus value={agendaQuery} onChange={(event)=>setAgendaQuery(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter")void loadAgendaCandidates();}} placeholder="اسم الموضوع أو رقمه" className="min-w-0 flex-1 bg-transparent text-q-ui text-q-text outline-none placeholder:text-q-text-3"/></label>
+            <Button pending={agendaLoading} onClick={()=>void loadAgendaCandidates()}>بحث</Button>
           </div>
+          {agendaSearchNotice&&<InlineMessage tone="error">{agendaSearchNotice}</InlineMessage>}
+          {agendaLoading?<div className="grid min-h-48 place-items-center"><div className="text-center"><LoaderCircle className="mx-auto animate-spin text-q-link" size={28}/><p className="mt-3 text-q-ui font-bold">جاري تحديث المقترحات…</p></div></div>:agendaCandidates.length?<ul className="grid gap-4">{agendaCandidates.map(topic=><li key={topic.id}><AgendaCandidateCard item={topic} busy={detailLoading} onReview={(item)=>{setAgendaModal(false);setCandidateTarget(item);}}/></li>)}</ul>:<div className="rounded-q-card border border-dashed border-q-border p-6 text-center"><Search className="mx-auto text-q-text-3" size={28}/><h3 className="mt-3 text-q-h3 font-bold">لا توجد موضوعات مؤهلة حاليًا</h3><p className="mx-auto mt-2 max-w-lg text-q-ui leading-7 text-q-text-2">يظهر الموضوع عندما تصل مرحلته إلى هذا المجلس، يعتمد محضر المجلس السابق إن وجد، ولا يكون مرتبطًا باجتماع آخر مفتوح.</p><Link href="/admin/topics" className="mt-4 inline-flex min-h-11 items-center rounded-q-control border border-q-primary px-4 text-q-ui font-bold text-q-link">فتح الموضوعات والتحقق من المسار</Link></div>}
         </div>
-      )}
+      </Dialog>}
 
       {/* Create Meeting Modal */}
       {invitationModal && selected && selected.updated_at && <InvitationTimingDialog key={selected.id} meetingId={selected.id} expectedUpdatedAt={selected.updated_at} startTime={selected.start_time} endTime={selected.end_time} onClose={() => setInvitationModal(false)} onSent={() => { void openDetail(selected.id); }} />}
+      {candidateTarget && selected && <AgendaCandidateDetailsDialog candidate={candidateTarget} busy={detailLoading} onClose={()=>setCandidateTarget(null)} actionLabel={selected.capabilities?.can_edit_topic_instructions?"مراجعة التعليمات والإدراج":"إدراج في هذا الاجتماع"} onReview={(item)=>{setCandidateTarget(null);if(selected.capabilities?.can_edit_topic_instructions)setInstructionTarget({topicId:item.id,title:item.title_ar,text:item.discussion_instructions??""});else void addAgendaItem(item.id);}}/>}
       {createModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#081630]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="إنشاء اجتماع جديد">
           <form onSubmit={handleCreate} className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
@@ -769,7 +766,7 @@ export function MeetingsWorkspace() {
       )}
       {instructionTarget&&selected&&<AgendaInstructionsDialog title={instructionTarget.title} initialValue={instructionTarget.text} inserting={!instructionTarget.updatedAt} onClose={()=>setInstructionTarget(null)} onSave={async text=>{
        await rpc("save_agenda_topic_instructions",{p_meeting_id:selected.id,p_topic_id:instructionTarget.topicId,p_instructions:text,p_expected_updated_at:instructionTarget.updatedAt??null});
-       await openDetail(selected.id);setAgendaActionNotice({kind:"success",text:"حُفظت تعليمات هذا الموضوع في الاجتماع دون تغيير التصنيف."});
+       await openDetail(selected.id);setNotice({kind:"success",text:"حُفظت تعليمات هذا الموضوع في الاجتماع دون تغيير التصنيف."});
       }}/>}
     </div>
   );
