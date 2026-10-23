@@ -1,8 +1,10 @@
 "use client";
 
-import { startTransition, useDeferredValue, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
 import { AlertCircle, Archive, Building2, CalendarDays, CheckCircle2, CircleCheckBig, Crown, GitBranch, LoaderCircle, Pencil, Plus, Power, PowerOff, RefreshCw, Search, ShieldCheck, UserPlus, UsersRound, X } from "lucide-react";
 import { PageHeader } from "@/shared/ui/page-header";
+import { Button } from "@/shared/ui/button";
+import { InlineMessage } from "@/shared/ui/inline-message";
 import { councilRpc } from "../api/councils-client";
 import { buildOrganizationalCouncilTree } from "../model/organizational-council-tree";
 import type { CouncilDetail, CouncilFormOptions, CouncilFormValues, CouncilMembership, CouncilMembershipResult, CouncilReadiness, CouncilSearchResult, CouncilSummary, CouncilHierarchyData, RoleOption, UserOption } from "../model/types";
@@ -31,7 +33,9 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
   const [loadingList, setLoadingList] = useState(false);
   const [hierarchyError, setHierarchyError] = useState("");
   const hierarchyRequest = useRef(0);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(true);
+  const [detailError, setDetailError] = useState("");
+  const detailRequest = useRef(0);
   const [notice, setNotice] = useState<Notice>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -42,7 +46,6 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
   const [endingMember, setEndingMember] = useState<CouncilMembership | null>(null);
   const [lifecycle, setLifecycle] = useState<LifecycleDialog>(null);
 
-  function showError(error: unknown, fallback: string) { setNotice({ kind: "error", message: error instanceof Error ? error.message : fallback }); }
   function showSuccess(message: string) { setNotice({ kind: "success", message }); }
 
   const councilOptions: CouncilFormOptions = {
@@ -72,47 +75,48 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
     }
   }
 
-  async function loadSelected(councilId: string) {
+  const loadSelected = useCallback(async (councilId: string) => {
+    const request = ++detailRequest.current;
     setLoadingDetail(true);
+    setDetailError("");
+    setDetail(null); setMembers([]); setReadiness(null);
     try {
       const [nextDetail, memberPage, nextReadiness] = await Promise.all([
-        councilRpc<CouncilDetail>("admin_get_council_detail", { p_council_id: councilId }),
+        councilRpc<CouncilDetail>("admin_get_council_detail_v2", { p_council_id: councilId }),
         councilRpc<CouncilMembershipResult>("admin_list_council_members", { p_council_id: councilId, p_include_ended: true, p_limit: 100, p_offset: 0 }),
         councilRpc<CouncilReadiness>("admin_validate_council_administrative_readiness", { p_council_id: councilId }),
       ]);
-      startTransition(() => { setDetail(nextDetail); setMembers(memberPage.items); setReadiness(nextReadiness); });
+      if (request !== detailRequest.current) return false;
+      setDetail(nextDetail); setMembers(memberPage.items); setReadiness(nextReadiness);
+      return true;
     } catch (error) {
-      showError(error, "تعذر تحميل بيانات المجلس.");
+      if (request === detailRequest.current) setDetailError(error instanceof Error ? error.message : "تعذر تحميل بيانات المجلس.");
+      return false;
     } finally {
-      setLoadingDetail(false);
+      if (request === detailRequest.current) setLoadingDetail(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     if (!selectedId) return;
     let active = true;
-    void Promise.all([
-      councilRpc<CouncilDetail>("admin_get_council_detail", { p_council_id: selectedId }),
-      councilRpc<CouncilMembershipResult>("admin_list_council_members", { p_council_id: selectedId, p_include_ended: true, p_limit: 100, p_offset: 0 }),
-      councilRpc<CouncilReadiness>("admin_validate_council_administrative_readiness", { p_council_id: selectedId }),
-    ]).then(([nextDetail, memberPage, nextReadiness]) => {
-      if (active) startTransition(() => { setDetail(nextDetail); setMembers(memberPage.items); setReadiness(nextReadiness); });
-    }).catch((error) => { if (active) showError(error, "تعذر تحميل بيانات المجلس."); }).finally(() => { if (active) setLoadingDetail(false); });
-    return () => { active = false; };
-  }, [selectedId]);
+    const requests = detailRequest;
+    queueMicrotask(() => { if (active) void loadSelected(selectedId); });
+    return () => { active = false; requests.current++; };
+  }, [selectedId, loadSelected]);
 
   async function refreshCouncil(message: string) {
-    await Promise.all([loadList(), selectedId ? loadSelected(selectedId) : Promise.resolve()]);
-    showSuccess(message);
+    const [, loaded] = await Promise.all([loadList(), selectedId ? loadSelected(selectedId) : Promise.resolve(true)]);
+    showSuccess(loaded ? message : `${message} تعذر تحديث العرض؛ أعد تحميل بيانات المجلس دون إعادة الحفظ.`);
   }
 
   async function createCouncil(values: CouncilFormValues) {
     creationRequest.current ??= crypto.randomUUID();
-    const created = await councilRpc<{ id: string; reference_number: string }>("admin_create_council_v2", {
-      p_name_ar: values.nameAr, p_name_en: values.nameEn || null, p_description: values.description || null,
-      p_unit_type_id: values.unitTypeId, p_scope_unit_id: values.scopeUnitId || null, p_parent_council_id: null, p_governance_class_id: values.governanceClassId || null,
-      p_minimum_active_members: values.minimumActiveMembers, p_allow_dual_leadership: values.allowDualLeadership,
-      p_meeting_plan: values.createMeetingPlan ? { meeting_type_id: values.meetingTypeId, recurrence: values.recurrence, first_meeting_date: values.firstMeetingDate, ends_on: values.planEndsOn || null, missed_after_days: values.missedAfterDays } : null,
+    const created = await councilRpc<{ id: string; reference_number: string }>("admin_create_council_with_plan_v2", {
+      p_values: {name_ar: values.nameAr, name_en: values.nameEn || null, description: values.description || null,
+       unit_type_id: values.unitTypeId, scope_unit_id: values.scopeUnitId || null, parent_council_id: null, governance_class_id: values.governanceClassId || null,
+       minimum_active_members: values.minimumActiveMembers, allow_dual_leadership: values.allowDualLeadership},
+      p_meeting_plan: values.createMeetingPlan ? { meeting_type_id: values.meetingTypeId, recurrence: values.recurrence, monthly_week: values.monthlyWeek || null, first_meeting_date: values.firstMeetingDate, ends_on: values.planEndsOn || null, missed_after_days: values.missedAfterDays } : null,
       p_client_request_id: creationRequest.current,
     });
     if (!created?.id || !created.reference_number) throw new Error("تعذر تأكيد إنشاء المجلس؛ حدّث القائمة للتحقق قبل المحاولة مجددًا.");
@@ -122,12 +126,16 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
 
   async function updateCouncil(values: CouncilFormValues) {
     if (!detail) return;
-    await councilRpc("admin_update_council", {
-      p_council_id: detail.id, p_name_ar: values.nameAr, p_name_en: values.nameEn || null, p_description: values.description || null,
-      p_unit_type_id: values.unitTypeId, p_governance_class_id: values.governanceClassId || null,
-      p_minimum_active_members: values.minimumActiveMembers, p_allow_dual_leadership: values.allowDualLeadership, p_expected_updated_at: detail.updated_at,
+    const saved = await councilRpc<{saved: boolean; id: string}>("admin_update_council_v2", {
+      p_council_id: detail.id, p_expected_updated_at: detail.updated_at,
+      p_values: {name_ar: values.nameAr, name_en: values.nameEn || null, description: values.description || null,
+       unit_type_id: values.unitTypeId, governance_class_id: values.governanceClassId || null,
+       minimum_active_members: values.minimumActiveMembers, allow_dual_leadership: values.allowDualLeadership},
+      p_meeting_plan: values.createMeetingPlan ? {meeting_type_id: values.meetingTypeId, recurrence: values.recurrence, monthly_week: values.monthlyWeek || null,
+       first_meeting_date: values.firstMeetingDate, ends_on: values.planEndsOn || null, missed_after_days: values.missedAfterDays} : null,
     });
-    await refreshCouncil("تم حفظ بيانات المجلس بنجاح.");
+    if (!saved?.saved || saved.id !== detail.id) throw new Error("تعذر تأكيد الحفظ؛ أعد تحميل المجلس للتحقق قبل المحاولة مجددًا.");
+    await refreshCouncil(values.createMeetingPlan ? "تم حفظ المجلس وخطته وإنشاء أول اجتماع كمسودة." : "تم حفظ بيانات المجلس بنجاح.");
   }
 
   async function addMember(value: { userId: string; roleId: string; title: string; start: string; end: string | null }) {
@@ -173,10 +181,10 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
     <section className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[#dce7f1] bg-white p-3 shadow-sm"><label className="relative min-w-[240px] flex-1"><Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#91a0b1]" /><input value={query} onChange={(e) => setQuery(e.target.value)} aria-label="البحث في الهيكل" placeholder="ابحث عن وحدة أو مجلس..." className="h-11 w-full rounded-xl border border-[#e0e8f0] bg-[#f8fafc] pr-10 pl-3 text-xs outline-none focus:border-[#8fc3ee] focus:bg-white" /></label><select value={status} onChange={(e) => setStatus(e.target.value)} className="h-11 min-w-40 rounded-xl border border-[#e0e8f0] bg-white px-3 text-xs font-bold text-[#52647a]"><option value="">كل الحالات</option><option value="active">نشط</option><option value="inactive">غير نشط</option><option value="archived">مؤرشف</option></select><button type="button" onClick={() => void loadList()} className="grid h-11 w-11 place-items-center rounded-xl border border-[#dce7f1] text-[#61758d] hover:bg-[#f2f7fb]" aria-label="تحديث"><RefreshCw size={16} className={loadingList ? "animate-spin" : ""} /></button></section>
     <div className={treeStyles.workspaceGrid}>
       <section className={treeStyles.panel}><div className={treeStyles.panelHeader}><div><div className="flex items-center gap-2"><h2 className="text-sm font-black text-[#172a42]">الهيكل التنظيمي والمجالس</h2><span className="rounded-full bg-[#eaf4ff] px-2 py-0.5 text-[9px] font-black text-[#0872df]">{visibleTree.length}</span></div><p className="mt-1 text-[10px] text-[#8393a6]">التبعية من الوحدات؛ اختر مجلسًا لعرض تفاصيله.</p></div>{loadingList ? <LoaderCircle size={19} className="animate-spin text-[#0872df]" /> : <GitBranch size={19} className="text-[#0872df]" />}</div>{hierarchyError && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">{hierarchyError}<button type="button" disabled={loadingList} onClick={() => void loadList()} className="mt-2 block font-bold underline">إعادة تحميل الهيكل</button></div>}<OrganizationalCouncilTree data={tree} query={deferredQuery} status={status} selectedId={visibleSelectedId} onSelect={(id) => { if (id === selectedId) return; setDetail(null); setMembers([]); setReadiness(null); setLoadingDetail(true); setSelectedId(id); setTab("overview"); }} /></section>
-      <CouncilDetailPanel detail={visibleSelectedId ? detail : null} fallback={visibleSelectedId ? result.items.find((item) => item.id === visibleSelectedId) : undefined} members={visibleSelectedId ? members : []} readiness={visibleSelectedId ? readiness : null} tab={tab} loading={Boolean(visibleSelectedId && loadingDetail)} onTab={setTab} onEdit={() => setEditing(true)} onAddMember={() => setAddingMember(true)} onLeadership={() => setLeadership(true)} onEditMember={setEditingMember} onEndMember={setEndingMember} onLifecycle={setLifecycle} />
+      <CouncilDetailPanel error={detailError} onRetry={() => { if (visibleSelectedId) void loadSelected(visibleSelectedId); }} detail={visibleSelectedId && detail?.id === visibleSelectedId ? detail : null} fallback={visibleSelectedId ? result.items.find((item) => item.id === visibleSelectedId) : undefined} members={visibleSelectedId ? members : []} readiness={visibleSelectedId ? readiness : null} tab={tab} loading={Boolean(visibleSelectedId && loadingDetail)} onTab={setTab} onEdit={() => setEditing(true)} onAddMember={() => setAddingMember(true)} onLeadership={() => setLeadership(true)} onEditMember={setEditingMember} onEndMember={setEndingMember} onLifecycle={setLifecycle} />
     </div>
     {creating && <CouncilFormDialog options={councilOptions} onClose={() => setCreating(false)} onSubmit={createCouncil} />}
-    {editing && detail && <CouncilFormDialog mode="edit" options={councilOptions} initialValues={toFormValues(detail)} onClose={() => setEditing(false)} onSubmit={updateCouncil} />}
+    {editing && detail && <CouncilFormDialog mode="edit" canCreateMeetingPlan={detail.can_create_meeting_plan === true} existingPlan={detail.meeting_plan} options={councilOptions} initialValues={toFormValues(detail)} onClose={() => setEditing(false)} onSubmit={updateCouncil} />}
     {addingMember && <MemberDialog users={users} excludedUserIds={members.filter((membership) => membership.is_effective && !isLeadershipRole(membership.role_code)).map((membership) => membership.user_id)} roles={roles} onClose={() => setAddingMember(false)} onConfirm={addMember} />}
     {leadership && <LeadershipDialog users={users} members={members} onClose={() => setLeadership(false)} onConfirm={assignLeadership} />}
     {editingMember && <EditMembershipDialog membership={editingMember} onClose={() => setEditingMember(null)} onConfirm={(value) => updateMembership(editingMember, value)} />}
@@ -185,15 +193,23 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
   </div>;
 }
 
-function CouncilDetailPanel({ detail, fallback, members, readiness, tab, loading, onTab, onEdit, onAddMember, onLeadership, onEditMember, onEndMember, onLifecycle }: { detail: CouncilDetail | null; fallback?: CouncilSummary; members: CouncilMembership[]; readiness: CouncilReadiness | null; tab: Tab; loading: boolean; onTab: (tab: Tab) => void; onEdit: () => void; onAddMember: () => void; onLeadership: () => void; onEditMember: (membership: CouncilMembership) => void; onEndMember: (membership: CouncilMembership) => void; onLifecycle: (action: Exclude<LifecycleDialog, null>) => void }) {
+function CouncilDetailPanel({ detail, fallback, members, readiness, tab, loading, error, onRetry, onTab, onEdit, onAddMember, onLeadership, onEditMember, onEndMember, onLifecycle }: { detail: CouncilDetail | null; fallback?: CouncilSummary; members: CouncilMembership[]; readiness: CouncilReadiness | null; tab: Tab; loading: boolean; error: string; onRetry: () => void; onTab: (tab: Tab) => void; onEdit: () => void; onAddMember: () => void; onLeadership: () => void; onEditMember: (membership: CouncilMembership) => void; onEndMember: (membership: CouncilMembership) => void; onLifecycle: (action: Exclude<LifecycleDialog, null>) => void }) {
   const council = detail ?? fallback;
+  if (council && (loading || !detail || error)) return <section className="space-y-4 rounded-q-card border border-q-border bg-q-surface p-6" aria-busy={loading}>
+    <h2 className="text-q-h3 font-bold text-q-text">{council.name_ar}</h2>
+    {loading ? <InlineMessage>جارٍ تحميل بيانات المجلس وأعضائه…</InlineMessage> : <>
+      <InlineMessage tone="error">{error || "تعذر تحميل بيانات المجلس وأعضائه؛ لا يعني ذلك خلو المجلس من الأعضاء."}</InlineMessage>
+      <Button variant="secondary" onClick={onRetry}>إعادة تحميل بيانات المجلس</Button>
+    </>}
+  </section>;
   if (!council) return <section className="grid min-h-96 place-items-center rounded-3xl border border-dashed border-[#c9d8e6] bg-white p-10 text-center"><div><Building2 size={36} className="mx-auto text-[#a2b3c5]" /><h2 className="mt-4 text-sm font-black text-[#344861]">اختر مجلساً من الشجرة</h2><p className="mt-2 text-xs text-[#8494a6]">ستظهر بيانات المجلس وعضوياته وجاهزيته هنا.</p></div></section>;
   const archived = council.status === "archived";
   const activePeople = new Set(members.filter((membership) => membership.is_effective).map((membership) => membership.user_id)).size;
   return <section className="relative overflow-hidden rounded-3xl border border-[#dce7f1] bg-white shadow-[0_12px_32px_rgba(15,42,72,.05)]">
     {loading && <div className="absolute inset-x-0 top-0 z-20 h-1 overflow-hidden bg-[#dbeeff]"><div className="h-full w-1/3 animate-pulse bg-[#0872df]" /></div>}
-    <div className="relative overflow-hidden bg-[linear-gradient(125deg,#071b39_0%,#0b4f8d_58%,#0872df_100%)] p-6 text-white"><div className="absolute -left-16 -top-20 h-52 w-52 rounded-full border border-white/15" /><div className="relative flex flex-wrap items-start gap-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/14 ring-1 ring-white/20"><Building2 size={26} /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-black">{council.name_ar}</h2><CouncilStatusBadge value={council.status} /></div><p dir="ltr" className="mt-1 w-fit text-[11px] font-bold text-white/60">{council.code}</p><p className="mt-3 max-w-2xl text-xs leading-6 text-white/75">{council.description || "لم يضف وصف لاختصاص المجلس بعد."}</p></div>{detail && !archived && <div className="flex gap-2"><ActionButton icon={Pencil} label="تعديل" onClick={onEdit} /></div>}</div></div>
+    <div className="relative overflow-hidden bg-[linear-gradient(125deg,#071b39_0%,#0b4f8d_58%,#0872df_100%)] p-6 text-white"><div className="absolute -left-16 -top-20 h-52 w-52 rounded-full border border-white/15" /><div className="relative flex flex-wrap items-start gap-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/14 ring-1 ring-white/20"><Building2 size={26} /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-black">{council.name_ar}</h2><CouncilStatusBadge value={council.status} /></div><p dir="ltr" className="mt-1 w-fit text-[11px] font-bold text-white/60">{council.code}</p><p className="mt-3 max-w-2xl text-xs leading-6 text-white/75">{council.description || "لم يضف وصف لاختصاص المجلس بعد."}</p></div>{detail && !detail.meeting_plan_unavailable && !archived && <div className="flex gap-2"><ActionButton icon={Pencil} label="تعديل" onClick={onEdit} /></div>}</div></div>
     <div className="flex gap-2 overflow-x-auto border-b border-[#e4ecf3] bg-[#fbfdff] px-5 pt-3">{([{ id: "overview", label: "نظرة عامة", icon: Building2 }, { id: "members", label: `الأعضاء (${activePeople})`, icon: UsersRound }, { id: "readiness", label: "الجاهزية والتشغيل", icon: ShieldCheck }] as const).map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => onTab(id)} className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-xs font-black transition ${tab === id ? "border-[#0872df] text-[#0872df]" : "border-transparent text-[#718399] hover:text-[#29445f]"}`}><Icon size={15} />{label}</button>)}</div>
+    {detail?.meeting_plan_unavailable && <div className="p-5"><InlineMessage>تعديل بيانات المجلس وخطة اجتماعاته غير متاح مؤقتاً. بيانات المجلس وأعضاؤه محفوظة، ويمكن إدارة العضويات من تبويب الأعضاء.</InlineMessage></div>}
     {tab === "overview" && <Overview detail={detail} council={council} />}
     {tab === "members" && <MembersPanel members={members} archived={archived} onAdd={onAddMember} onLeadership={onLeadership} onEdit={onEditMember} onEnd={onEndMember} />}
     {tab === "readiness" && <ReadinessPanel council={council} readiness={readiness} onLifecycle={onLifecycle} />}

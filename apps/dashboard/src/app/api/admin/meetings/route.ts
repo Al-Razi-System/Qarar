@@ -5,26 +5,37 @@ import { isJsonObject, readJsonObject } from "@/shared/security/json-body";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
 import { apiError, apiSuccess, requestId } from "@/shared/api/response";
 import { logEvent } from "@/shared/observability/logger";
+import { notifyVotingMutation } from "@/features/meetings/server/voting-events";
 
 const contracts = new Set([
+  "save_meeting_with_quorum_v2",
   "search_meetings", "create_meeting", "create_meeting_series", "create_meeting_series_from_existing", "list_meeting_series", "update_meeting_series_recurrence", "get_meeting_detail", "get_completed_meeting_record", "list_meeting_topic_attachments", "update_meeting",
   "transition_meeting", "get_sprint02_form_options",
   "admin_list_meeting_types", "admin_create_meeting_type", "admin_update_meeting_type",
   "search_eligible_agenda_topics", "add_agenda_item", "remove_agenda_item", "reorder_agenda_items",
-  "open_meeting_session", "get_meeting_session_detail", "lock_attendance_roster",
+  "open_meeting_session", "get_meeting_session_detail", "list_meeting_member_profiles_v2", "lock_attendance_roster",
+  "get_meeting_broadcast_v2", "set_meeting_broadcast_v2", "hand_over_meeting_broadcast_v2",
+  "set_meeting_broadcast_document_v2", "set_agenda_item_downloads_v2",
+  "list_meeting_item_timers_v2", "set_agenda_item_planned_minutes_v2",
+  "list_meeting_referrals_v2", "refer_agenda_item_v2",
+  "list_meeting_assignments_v2", "search_meeting_assignment_options_v2", "propose_meeting_assignment_v2", "confirm_meeting_assignment_v2", "withdraw_meeting_assignment_v2",
   "create_checkin_session", "revoke_checkin_session", "self_check_in",
   "override_attendance", "verify_attendance", "recalculate_meeting_quorum",
   "apply_quorum_failure", "get_attendance_history",
   "open_voting_round", "get_voting_round_detail", "get_my_open_votes",
   "cast_vote", "close_voting_round", "cancel_voting_round",
-  "create_decision_from_voting_round", "list_meeting_decisions", "list_meeting_voting_rounds",
-  "update_agenda_discussion", "complete_meeting_session",
+  "create_decision_from_voting_round", "update_meeting_decision_text", "list_meeting_decisions", "list_meeting_voting_rounds",
+  "update_agenda_discussion", "complete_meeting_session", "save_agenda_topic_instructions",
   "send_meeting_invitations",
   "send_meeting_invitations_v2",
   "get_meeting_readiness",
   "get_meeting_minutes", "save_meeting_minutes_draft", "submit_meeting_minutes",
   "respond_meeting_minutes_approval", "generate_meeting_minutes_draft",
   "sign_meeting_minutes_approval",
+]);
+const cancellableReadContracts = new Set([
+  "search_meetings", "list_meeting_series", "get_meeting_detail", "get_completed_meeting_record",
+  "list_meeting_topic_attachments", "get_sprint02_form_options", "search_eligible_agenda_topics", "get_meeting_readiness",
 ]);
 
 export async function POST(request: Request) {
@@ -43,10 +54,16 @@ export async function POST(request: Request) {
     if (params !== undefined && !isJsonObject(params)) {
       return NextResponse.json({ error: { message: "معاملات العملية غير صالحة." } }, { status: 400 });
     }
-    const data = await (contract.endsWith("_v2") ? qararRpcV2<unknown>(contract, params ?? {}) : qararRpc<unknown>(contract, params ?? {}));
+    const data = await (contract.endsWith("_v2")
+      ? qararRpcV2<unknown>(contract, params ?? {})
+      : qararRpc<unknown>(contract, params ?? {}, cancellableReadContracts.has(contract) ? { signal: request.signal } : {}));
+    notifyVotingMutation(contract, params ?? {}, data);
     return apiSuccess(data, id);
   } catch (error) {
     const safeError = safeAdminError(error, "تعذر تنفيذ العملية.", 500);
+    const message = safeError.code === "QUERY_TIMEOUT" && parsedBody.value.contract === "search_meetings"
+      ? "استغرق تحميل الاجتماعات وقتًا أطول من المتوقع. أعد المحاولة بعد لحظات."
+      : safeError.message;
     logEvent(safeError.status < 500 ? "warn" : "error", "meeting.operation.failed", {
       request_id: id,
       contract: typeof parsedBody.value.contract === "string" ? parsedBody.value.contract : "unknown",
@@ -55,6 +72,6 @@ export async function POST(request: Request) {
       upstreamCode: typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined,
       message: error instanceof Error ? error.message : String(error),
     });
-    return apiError(safeError.message, safeError.status, safeError.code, id);
+    return apiError(message, safeError.status, safeError.code, id);
   }
 }

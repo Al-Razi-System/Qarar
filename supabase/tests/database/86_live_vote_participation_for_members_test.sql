@@ -38,18 +38,16 @@ insert into public.permissions(id,organization_id,code,module,action,context_sco
 ('86000000-0000-0000-0000-000000000050','86000000-0000-0000-0000-000000000001','attendance.verify','attendance','verify','governance_unit','Verify attendance'),
 ('86000000-0000-0000-0000-000000000051','86000000-0000-0000-0000-000000000001','attendance.override','attendance','override','governance_unit','Override attendance'),
 ('86000000-0000-0000-0000-000000000052','86000000-0000-0000-0000-000000000001','attendance.lock','attendance','lock','governance_unit','Lock attendance'),
-('86000000-0000-0000-0000-000000000053','86000000-0000-0000-0000-000000000001','topics.read','topics','read','governance_unit','Read governed topics');
+('86000000-0000-0000-0000-000000000053','86000000-0000-0000-0000-000000000001','topics.read','topics','read','governance_unit','Read governed topics')
+on conflict (organization_id,code) do nothing;
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select '86000000-0000-0000-0000-000000000001','86000000-0000-0000-0000-000000000031',id
 from public.permissions
 where organization_id='86000000-0000-0000-0000-000000000001'
-  and left(id::text,8)='86000000';
+  and code in ('meetings.manage','attendance.read','attendance.manage','quorum.read','quorum.manage','voting.read','voting.manage','voting.cast','attendance.check_in','attendance.verify','attendance.override','attendance.lock','topics.read');
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select '86000000-0000-0000-0000-000000000001','86000000-0000-0000-0000-000000000032',id
-from public.permissions where id in(
- '86000000-0000-0000-0000-000000000042','86000000-0000-0000-0000-000000000044',
- '86000000-0000-0000-0000-000000000046','86000000-0000-0000-0000-000000000048',
- '86000000-0000-0000-0000-000000000049');
+from public.permissions where organization_id='86000000-0000-0000-0000-000000000001' and code in ('attendance.read','quorum.read','voting.read','voting.cast','attendance.check_in');
 insert into public.memberships(id,organization_id,user_id,governance_unit_id,role_id) values
 ('86000000-0000-0000-0000-000000000061','86000000-0000-0000-0000-000000000001','86000000-0000-0000-0000-000000000011','86000000-0000-0000-0000-000000000022','86000000-0000-0000-0000-000000000031'),
 ('86000000-0000-0000-0000-000000000062','86000000-0000-0000-0000-000000000001','86000000-0000-0000-0000-000000000012','86000000-0000-0000-0000-000000000022','86000000-0000-0000-0000-000000000032'),

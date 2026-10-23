@@ -2,12 +2,12 @@
 
 import { useCallback, useDeferredValue, useEffect, useEffectEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AlertCircle, Check, FileCheck2, Forward, Inbox, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { topicsRpc } from "../api/topics-client";
 import type { ReviewAction, Topic, TopicDetail } from "../model/topic-view";
 import { TopicActionDialog } from "./topic-action-dialog";
 import { TopicList } from "./topic-list";
-import { TopicRegulationCreator } from "./topic-regulation-creator";
 import { TopicSummaryPanel } from "./topic-summary-panel";
 
 type Notice = { kind: "success" | "error"; text: string };
@@ -30,7 +30,7 @@ const priorityOptions = [
   ["medium", "متوسطة"], ["low", "منخفضة"],
 ] as const;
 
-export function TopicsWorkspace({ initialQuery = "", initialTab = "mine" }: { initialQuery?: string; initialTab?: "mine" | "review" }) {
+export function TopicsWorkspace({ initialQuery = "", initialTab = "mine", canCreate = false }: { initialQuery?: string; initialTab?: "mine" | "review"; canCreate?: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<"mine" | "review">(initialTab);
   const [query, setQuery] = useState(initialQuery);
@@ -51,7 +51,6 @@ export function TopicsWorkspace({ initialQuery = "", initialTab = "mine" }: { in
   const [referReason, setReferReason] = useState("");
   const [referUnits, setReferUnits] = useState<GovernanceUnit[]>([]);
   const [referUnitsLoading, setReferUnitsLoading] = useState(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const loadTopics = useCallback(async () => {
     setLoading(true);
@@ -202,11 +201,6 @@ export function TopicsWorkspace({ initialQuery = "", initialTab = "mine" }: { in
     }
   }
 
-  function followCreatedTopic(topicId: string) {
-    setCreateDialogOpen(false);
-    router.push(`/admin/topics/${topicId}`);
-  }
-
   const statusOptions = tab === "review" ? reviewStatusOptions : myStatusOptions;
 
   return <div className="space-y-5">
@@ -217,7 +211,7 @@ export function TopicsWorkspace({ initialQuery = "", initialTab = "mine" }: { in
 
     <section className="rounded-3xl border border-[#dce7f1] bg-white p-3 shadow-[0_10px_32px_rgba(13,42,76,.05)]">
       <div className="flex flex-wrap items-center gap-2">
-        <button onClick={() => setCreateDialogOpen(true)} className="flex h-11 items-center gap-2 rounded-xl bg-[#0877df] px-5 text-xs font-black text-white shadow-[0_8px_20px_rgba(8,119,223,.2)] hover:bg-[#0669c7]"><Plus size={16} /> إنشاء موضوع</button>
+        {canCreate && <Link href="/admin/topics/new" className="inline-flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-5 py-3 text-q-ui font-bold text-q-on-primary"><Plus size={16} /> إنشاء موضوع</Link>}
         <button onClick={() => changeTab("mine")} className={`flex h-11 items-center gap-2 rounded-xl px-4 text-xs font-black transition ${tab === "mine" ? "bg-[#0b2f59] text-white" : "text-[#53677d] hover:bg-[#f3f7fb]"}`}><Inbox size={15} /> موضوعاتي</button>
         <button onClick={() => changeTab("review")} className={`flex h-11 items-center gap-2 rounded-xl px-4 text-xs font-black transition ${tab === "review" ? "bg-[#0b2f59] text-white" : "text-[#53677d] hover:bg-[#f3f7fb]"}`}><FileCheck2 size={15} /> قائمة المراجعة</button>
         <div className="mr-auto flex flex-wrap items-center gap-2">
@@ -242,6 +236,5 @@ export function TopicsWorkspace({ initialQuery = "", initialTab = "mine" }: { in
       <footer className="flex justify-end gap-2 border-t border-[#e6edf4] bg-[#fbfcfe] p-4"><button onClick={() => setReferModal(false)} disabled={actionBusy} className="h-10 rounded-xl border border-[#d8e2ec] px-5 text-xs font-bold text-[#53667c]">إلغاء</button><button onClick={() => void referTopic()} disabled={actionBusy || !referUnit || referReason.trim().length < 5} className="h-10 rounded-xl bg-[#0877df] px-5 text-xs font-black text-white disabled:opacity-45">{actionBusy ? "جارٍ الإحالة..." : "تأكيد الإحالة"}</button></footer>
     </section></div>}
 
-    {createDialogOpen && <div className="fixed inset-0 z-50 overflow-y-auto bg-[#061329]/60 p-3 backdrop-blur-sm sm:p-6"><div role="dialog" aria-modal="true" aria-labelledby="create-topic-dialog-title" className="mx-auto w-full max-w-[1120px] overflow-hidden rounded-3xl bg-[#f4f7fb] shadow-2xl"><div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#dce7f1] bg-white/95 px-5 py-4 backdrop-blur sm:px-7"><div><p className="text-[10px] font-black text-[#ff7a00]">إنشاء موضوع</p><h2 id="create-topic-dialog-title" className="mt-1 text-base font-black text-[#0a1330]">بيانات مختصرة، ثم اختيار المسار</h2></div><button onClick={() => setCreateDialogOpen(false)} aria-label="إغلاق معالج إنشاء الموضوع" className="grid h-10 w-10 place-items-center rounded-xl border border-[#dce7f1] text-[#60738a] hover:bg-[#f4f7fb]"><X size={19} /></button></div><div className="p-3 sm:p-5"><TopicRegulationCreator onFollowTopic={followCreatedTopic} /></div></div></div>}
   </div>;
 }

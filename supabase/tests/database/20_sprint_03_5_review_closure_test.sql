@@ -39,7 +39,7 @@ select ok(not exists(
    )
 ), 'legacy automatic regulation facades are removed from api_v1');
 select is((select contract_count from qarar_architecture.api_release_registry where api_version='v1'),
- 222,'api_v1 release count includes activation and governed offboarding contracts');
+ 240,'api_v1 release count includes notification provider operations');
 select is((select count(*)::integer from qarar_architecture.api_contract_registry
   where api_version='v1' and contract_name in(
   'admin_list_governance_unit_classes','admin_create_governance_unit_class',
@@ -88,11 +88,11 @@ select ok(
  has_schema_privilege('qarar_meetings_executor','qarar_governance','USAGE'),
  'meeting execution can use its reviewed governance-step read allowlist');
 select ok(
- position('v_step.step_type<>''voting''' in pg_get_functiondef(
+ position('qarar_governance.meeting_vote_plan(v_step.id)' in pg_get_functiondef(
   'qarar_voting.enforce_governed_voting_round()'::regprocedure))>0
  and position('new.workflow_instance_step_id:=v_step.id' in pg_get_functiondef(
   'qarar_voting.enforce_governed_voting_round()'::regprocedure))>0,
- 'opening a governed vote validates and captures the active voting step');
+ 'opening a governed vote validates and captures the council step the vote decides');
 select ok(
  position('is distinct from new.workflow_instance_step_id' in pg_get_functiondef(
   'qarar_voting.advance_governed_workflow_from_vote()'::regprocedure))>0,
@@ -130,7 +130,9 @@ select function_returns(
  'qarar_voting','cancel_expired_workflow_voting_rounds',array['uuid','timestamp with time zone'],'integer',
  'voting has a dedicated operation to cancel expired workflow rounds');
 select ok(
- position('select s.* into replay' in pg_get_functiondef(
+ position('select prior.* into replay' in pg_get_functiondef(
+  'qarar_governance.act_topic_workflow_step_core(uuid,text,text,uuid,integer)'::regprocedure)) > 0
+ and position('select prior.* into replay' in pg_get_functiondef(
   'qarar_governance.act_topic_workflow_step_core(uuid,text,text,uuid,integer)'::regprocedure))
  < position('from qarar_governance.topic_governance_mappings' in pg_get_functiondef(
   'qarar_governance.act_topic_workflow_step_core(uuid,text,text,uuid,integer)'::regprocedure)),

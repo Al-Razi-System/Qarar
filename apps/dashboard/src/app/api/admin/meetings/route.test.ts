@@ -2,7 +2,15 @@ import { afterEach, expect, it, vi } from "vitest";
 const { rpc, rpcV2 } = vi.hoisted(() => ({ rpc: vi.fn(), rpcV2: vi.fn() }));
 vi.mock("@/shared/api/qarar-server", () => ({ qararRpc: rpc, qararRpcV2: rpcV2 }));
 import { POST } from "./route";
+import { watchVoting } from "@/features/meetings/server/voting-events";
 afterEach(() => vi.resetAllMocks());
+it("saves meeting data and its quorum in one V2 transaction", async () => {
+  rpcV2.mockResolvedValue({ id: "meeting-1", quorum_percentage: 30 });
+  const params = { p_action: "create", p_values: { p_title_ar: "اجتماع تجريبي" }, p_quorum_percentage: 30 };
+  expect((await POST(request("save_meeting_with_quorum_v2", params))).status).toBe(200);
+  expect(rpcV2).toHaveBeenCalledWith("save_meeting_with_quorum_v2", params);
+  expect(rpc).not.toHaveBeenCalled();
+});
 function request(contract: string, params: unknown = {}) {
   return new Request("http://localhost/api/admin/meetings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contract, params }) });
 }
@@ -23,4 +31,32 @@ it("preserves V1 consumers and rejects unsupported calls", async () => {
 it("rejects malformed parameters before invoking the database", async () => {
   expect((await POST(request("send_meeting_invitations_v2", []))).status).toBe(400);
   expect(rpcV2).not.toHaveBeenCalled();
+});
+it("notifies voting readers only after a successful write, never on rejection", async () => {
+  const wake = vi.fn(); const stop = watchVoting(() => ["round:r1"], wake);
+  try {
+    rpc.mockRejectedValueOnce(Object.assign(new Error("لا صلاحية"), { code: "42501", status: 403 }));
+    expect((await POST(request("cast_vote", { p_voting_round_id: "r1" }))).status).toBe(403);
+    expect(wake).not.toHaveBeenCalled();
+    rpc.mockResolvedValueOnce({ accepted: true, voting_round_id: "r1" });
+    expect((await POST(request("cast_vote", { p_voting_round_id: "r1" }))).status).toBe(200);
+    expect(wake).toHaveBeenCalledOnce();
+  } finally { stop(); }
+});
+it("translates a database statement timeout into a safe actionable response", async () => {
+  rpc.mockRejectedValueOnce(Object.assign(new Error("canceling statement due to statement timeout"), {
+    code: "57014",
+    status: 500,
+  }));
+
+  const response = await POST(request("search_meetings"));
+  const payload = await response.json();
+
+  expect(response.status).toBe(503);
+  expect(payload.error).toMatchObject({
+    code: "QUERY_TIMEOUT",
+    message: "استغرق تحميل الاجتماعات وقتًا أطول من المتوقع. أعد المحاولة بعد لحظات.",
+  });
+  expect(payload.error.requestId).toEqual(expect.any(String));
+  expect(JSON.stringify(payload)).not.toContain("statement timeout");
 });

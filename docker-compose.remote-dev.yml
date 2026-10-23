@@ -22,14 +22,40 @@ services:
       QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD: ${QARAR_LOGIN_RATE_LIMIT_REDIS_PASSWORD}
       QARAR_LOGIN_RATE_LIMIT_REDIS_PORT: 6379
       GOVERNANCE_V2_UI_ENABLED: "true"
+      OPENWA_ADMIN_BASE_URL: http://qarar-openwa-test:2785
+      OPENWA_API_KEY_FILE: /run/openwa-data/.api-key
+      OPENWA_SESSION_NAME: qarar-test
       WATCHPACK_POLLING: "true"
     networks:
       - fateen_net
       - qarar_dev
+      - openwa_test
     restart: unless-stopped
     volumes:
       - .:/workspace
       - dashboard-dev-next:/workspace/apps/dashboard/.next
+      - openwa_test_data:/run/openwa-data:ro
+
+  notification-worker-dev:
+    image: node:22-alpine
+    container_name: qarar-notification-worker-dev
+    working_dir: /workspace/services/notification-worker
+    command: npm start
+    environment:
+      QARAR_SUPABASE_URL: http://qarar-dev-supabase-kong:8000
+      QARAR_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      OPENWA_BASE_URL: http://qarar-openwa-test:2785
+      OPENWA_SESSION_ID: qarar-test
+      OPENWA_API_KEY_FILE: /run/openwa-data/.api-key
+      NOTIFICATION_WORKER_INTERVAL_MS: 5000
+      NOTIFICATION_WORKER_BATCH_SIZE: 25
+    networks:
+      - qarar_dev
+      - openwa_test
+    restart: unless-stopped
+    volumes:
+      - .:/workspace:ro
+      - openwa_test_data:/run/openwa-data:ro
 
 networks:
   fateen_net:
@@ -37,7 +63,12 @@ networks:
   qarar_dev:
     external: true
     name: qarar-dev_default
+  openwa_test:
+    external: true
+    name: qarar-openwa-test-network
 
 volumes:
   dashboard-dev-next:
-
+  openwa_test_data:
+    external: true
+    name: qarar-openwa-test-data

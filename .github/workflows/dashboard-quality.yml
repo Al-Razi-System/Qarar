@@ -9,9 +9,13 @@ on:
       - "supabase/functions/**"
       - "supabase/migrations/**"
       - "supabase/tests/**"
+      - "supabase/docker/**"
+      - "scripts/*e2e*"
       - ".github/workflows/dashboard-quality.yml"
   push:
-    branches: [dev]
+    # Dedicated validation branches can exercise the complete gate before a
+    # merge, without API credentials or changing the shared working branch.
+    branches: [dev, "codex/ci-*"]
 
 concurrency:
   group: dashboard-quality-${{ github.workflow }}-${{ github.ref }}
@@ -39,6 +43,9 @@ jobs:
       - name: Verify documentation encoding
         working-directory: ${{ github.workspace }}
         run: npm run test:development-governance
+      - name: Verify E2E isolation safeguards
+        working-directory: ${{ github.workspace }}
+        run: node --test scripts/isolated-e2e-ci.test.mjs scripts/report-e2e-failures.test.mjs
 
   api-contracts:
     runs-on: ubuntu-latest
@@ -55,7 +62,10 @@ jobs:
 
   docker-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    # Run the isolated browser stack on this same runner after removing the
+    # default stack. Reuse its exact pulled images instead of downloading them
+    # again on a second VM and exhausting the public registry data allowance.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -64,7 +74,12 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Fresh Docker configuration
-        run: cp supabase/docker/.env.example supabase/docker/.env
+        # The pgTAP files build their own fixtures. The development seed cannot
+        # run on a fresh volume yet: it executes functions that read
+        # auth.sessions, which GoTrue creates only after the migration runner.
+        run: |
+          cp supabase/docker/.env.example supabase/docker/.env
+          sed -i 's/^QARAR_APPLY_SEED=.*/QARAR_APPLY_SEED=false/' supabase/docker/.env
       - name: Validate and start the stack
         run: |
           npm run docker:config
@@ -73,6 +88,15 @@ jobs:
             -f supabase/docker/docker-compose.yml up -d --wait --pull never
       - name: Run database contract smoke tests
         run: sh supabase/tests/run-completed-db-tests.sh
+      - name: Race a decision edit against minutes submission in two sessions
+        if: ${{ !cancelled() }}
+        run: |
+          PGHOST=127.0.0.1 \
+          PGPORT="$(sed -n 's/^QARAR_DB_DIRECT_PORT=//p' supabase/docker/.env)" \
+          PGUSER=supabase_admin \
+          PGPASSWORD="$(sed -n 's/^POSTGRES_PASSWORD=//p' supabase/docker/.env)" \
+          PGDATABASE=postgres \
+          bash supabase/tests/concurrency/decision_minutes_lock.sh
       - name: Verify generated API contract reference against the running registry
         run: npm run test:api-docs
       - if: always()
@@ -80,34 +104,44 @@ jobs:
       - if: always()
         run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml down -v
 
-  regulations-e2e:
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    needs: [quality, api-contracts, docker-smoke]
-    defaults:
-      run:
-        working-directory: apps/dashboard
-    steps:
-      - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/dashboard/package-lock.json
       - run: npm ci
+        working-directory: apps/dashboard
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+        working-directory: apps/dashboard
       - name: Prepare Supabase configuration
         working-directory: ${{ github.workspace }}
-        run: cp supabase/docker/.env.example supabase/docker/.env
-      - name: Start Supabase
+        run: sh scripts/prepare-e2e-supabase-env.sh
+      - name: Validate isolated Supabase configuration
+        working-directory: ${{ github.workspace }}
+        run: node scripts/e2e-supabase.mjs config
+      - name: Verify previously pulled images without another registry download
+        working-directory: ${{ github.workspace }}
+        run: node scripts/e2e-supabase.mjs images
+      - name: Start isolated Supabase
+        working-directory: ${{ github.workspace }}
+        run: node scripts/e2e-supabase.mjs up
+      - name: Verify JWT database initialization
+        working-directory: ${{ github.workspace }}
+        run: node scripts/test-e2e-jwt-database.mjs
+      - name: Seed isolated Supabase after Auth is ready
         working-directory: ${{ github.workspace }}
         run: |
-          sh scripts/pull-supabase-compose-images.sh
-          docker compose --env-file supabase/docker/.env \
-            -f supabase/docker/docker-compose.yml up -d --wait --pull never
+          # The browser fixture copies the permission catalogue of the seeded
+          # demo organization. Re-run the migration runner with the seed on: it
+          # verifies the applied migrations and records the seed in its ledger.
+          node scripts/e2e-supabase.mjs seed
       - name: Run regulations browser scenarios
         run: npm run test:e2e
+        working-directory: apps/dashboard
+      - name: Report final browser failure causes without retry duplicates
+        if: ${{ failure() && hashFiles('apps/dashboard/test-results/e2e-report.json') != '' }}
+        run: node scripts/report-e2e-failures.mjs
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
@@ -119,10 +153,20 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
       - name: Print service logs on failure
-        if: failure()
+        if: ${{ failure() && env.QARAR_E2E_ENV_FILE != '' }}
         working-directory: ${{ github.workspace }}
-        run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml logs --tail 300
+        run: node scripts/e2e-supabase.mjs logs
       - name: Stop Supabase
-        if: always()
+        if: ${{ always() && env.QARAR_E2E_ENV_FILE != '' }}
         working-directory: ${{ github.workspace }}
-        run: docker compose --env-file supabase/docker/.env -f supabase/docker/docker-compose.yml down -v
+        run: node scripts/e2e-supabase.mjs down
+
+  # Preserve the required check name. The actual complete Playwright suite now
+  # runs in docker-smoke on its image-warmed runner; any browser failure fails
+  # that prerequisite and cannot make this aggregate gate succeed.
+  regulations-e2e:
+    runs-on: ubuntu-latest
+    needs: [quality, api-contracts, docker-smoke]
+    steps:
+      - name: Confirm all database and browser prerequisites succeeded
+        run: echo "The full Playwright suite and database gates completed successfully on the shared CI runner."

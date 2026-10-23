@@ -1,3 +1,4 @@
+import type { MinutesDecision } from "./minutes-decisions";
 export type MeetingCapabilities = {
   can_manage?: boolean;
   can_manage_agenda?: boolean;
@@ -8,14 +9,19 @@ export type MeetingCapabilities = {
   can_cancel?: boolean;
   can_archive?: boolean;
   can_edit?: boolean;
+  can_edit_topic_instructions?: boolean;
 };
 
 export type Meeting = {
+  quorum_percentage?: number;
   id: string;
   meeting_no?: string | null;
   title_ar: string;
   status: string;
   scheduled_date?: string;
+  planned_window_start?: string | null;
+  planned_window_end?: string | null;
+  schedule_date_confirmed?: boolean;
   start_time?: string;
   end_time?: string;
   location_type?: string;
@@ -34,6 +40,8 @@ export type AgendaItem = {
   agenda_order: number;
   agenda_status?: string;
   discussion_notes?: string | null;
+  discussion_instructions?: string | null;
+  updated_at?: string;
   is_exception?: boolean;
   exception_reason?: string | null;
   topic?: {
@@ -54,6 +62,7 @@ export type MeetingDetail = Meeting & {
   capabilities?: MeetingCapabilities;
   agenda_items?: AgendaItem[];
   scheduled_suggestions?: ScheduledAgendaSuggestion[];
+  submitted_suggestions?:{items:AgendaCandidate[];total:number;locked?:boolean}|null;
 };
 
 export type ScheduledAgendaSuggestion = {
@@ -72,10 +81,23 @@ export type MinuteApproval = {
 export type MeetingMinutes = {
   id?: string; content_draft?: string | null; content_final?: string | null; status: string;
   updated_at?: string; approved_at?: string | null; approvals?: MinuteApproval[]; viewer_can_edit?: boolean; final_content_hash?: string | null;
+  /** The current text of each decision of the meeting; the minutes must carry each one to be submitted. */
+  decisions?: MinutesDecision[];
 };
 export type MeetingReadiness = { ready: boolean; checks: Array<{ code: string; label: string; complete: boolean; count?: number }> };
-export type MeetingTopicAttachment = { id: string; topic_id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number; description?: string | null; created_at?: string };
+export type MeetingTopicAttachment = {
+  id: string; topic_id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number; description?: string | null; created_at?: string;
+  /** The agenda item the file is discussed under, in this meeting. */
+  agenda_item_id?: string;
+  /** False when the chair withheld downloads for the item; the file is then shown inside the room only. */
+  download_allowed?: boolean;
+  /** Effective viewer permission; a contextual chair retains access independently of participant policy. */
+  viewer_download_allowed?: boolean;
+  /** The revision of that decision, sent back when the chair changes it. */
+  download_revision?: number;
+};
 export type AgendaCandidate = {
+  discussion_instructions?: string | null;
   id: string;
   title_ar: string;
   topic_no?: string;

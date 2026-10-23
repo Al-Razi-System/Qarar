@@ -1,24 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
-import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import path from "node:path";
+import { readE2EEnvironment } from "./src/lib/e2e-environment";
 
 function localSupabaseEnv() {
-  const dockerDirectory = path.resolve(__dirname, "../../supabase/docker");
-  const candidates = [".env", ".env.example"];
-  const source = candidates.map((name) => path.join(dockerDirectory, name)).find((file) => {
-    try { readFileSync(file); return true; } catch { return false; }
-  });
-  if (!source) throw new Error("لا يوجد إعداد Supabase محلي لتشغيل اختبارات المتصفح.");
-  const values = Object.fromEntries(readFileSync(source, "utf8").split(/\r?\n/).filter((line) => line && !line.startsWith("#") && line.includes("=")).map((line) => {
-    const at = line.indexOf("=");
-    return [line.slice(0, at), line.slice(at + 1).replace(/^"|"$/g, "")];
-  }));
+  const values = readE2EEnvironment();
   const redisHost = execFileSync("docker", [
     "inspect",
     "-f",
     "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
-    "supabase-login-rate-limit-redis-1",
+    "qarar-e2e-redis",
   ], { encoding: "utf8" }).trim();
   return {
     QARAR_SUPABASE_URL: values.SUPABASE_PUBLIC_URL || "http://127.0.0.1:54321",
@@ -51,7 +41,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: process.env.CI
-    ? [["html", { open: "never" }], ["github"], ["junit", { outputFile: "test-results/e2e-junit.xml" }]]
+    ? [["html", { open: "never" }], ["github"], ["junit", { outputFile: "test-results/e2e-junit.xml" }], ["json", { outputFile: "test-results/e2e-report.json" }]]
     : "list",
   globalSetup: process.env.QARAR_ACTIVATION_E2E_ONLY ? undefined : "./e2e/global-setup.ts",
   globalTeardown: process.env.QARAR_ACTIVATION_E2E_ONLY ? undefined : "./e2e/global-teardown.ts",

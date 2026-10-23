@@ -1,5 +1,9 @@
 # JSON Response Contracts
 
+### `save_agenda_topic_instructions`
+
+Returns `{ id: uuid, updated_at: timestamptz }` for the agenda item inserted or updated. Failed validation, missing chair membership, locked preparation and optimistic conflicts are errors, never a success response. `get_meeting_detail.capabilities.can_edit_topic_instructions` is a boolean; agenda items expose the resolved nullable `discussion_instructions`, while proposal items expose inherited instructions.
+
 This catalog fixes the frontend-visible shape of every authenticated `api_v1` function returning
 `jsonb`. It complements the exact argument/result reference in
 [12-contract-reference.md](./12-contract-reference.md). A trailing `?` means nullable. Arrays are
@@ -145,7 +149,12 @@ TopicHistory = {
 | `list_topic_attachments` | `TopicAttachment[]` with `{id,file_name,file_url,mime_type,file_size_bytes,description?,created_at}` |
 | `add_topic_attachment` | The six-argument overload returns `{id}`; the requirement-linked overload returns `{id,requirement_code?}` |
 | `remove_topic_attachment` | `{id,deleted:true}` |
-| `get_topic_meeting_history` | `TopicMeetingHistory[]`, each with agenda state, nested meeting, voting rounds, and decisions |
+| `get_topic_meeting_history` | `TopicMeetingHistory[]`, each with agenda state, nested meeting, nullable approved `minutes`, voting rounds, and decisions |
+| `get_topic_activity_timeline` | `TopicActivity[]` ordered chronologically with `{id,source,action,entity_type,entity_id?,occurred_at,actor_user_id?,actor_name_ar?,from_status?,to_status?,summary?}` |
+| `admin_get_notification_workspace` | `{summary,settings,connection,templates,deliveries}` for the current organization |
+| `admin_save_notification_settings` | `{settings,version}` after an atomic optimistic-concurrency save |
+| `admin_begin_notification_test` | `{delivery_id,completion_token,status}` for the auditable test delivery |
+| `admin_finish_notification_test` | `{delivery_id,status,accepted}` after recording the provider result once |
 
 ## Meetings and Agenda
 
@@ -172,7 +181,7 @@ AgendaItem = {
 |---|---|
 | `get_sprint02_form_options` | `{meeting_types:Option[],meeting_units:UnitOption[],referral_units:UnitOption[],location_types:string[]}` |
 | `search_meetings` | `Page<MeetingSummary>` |
-| `get_meeting_detail` | `Meeting row + {governance_unit:UnitOption,meeting_type:Option,agenda_items:AgendaItem[],status_history:MeetingStatusHistory[]}` |
+| `get_meeting_detail` | `Meeting row + {quorum_percentage:integer,governance_unit:UnitOption,meeting_type:Option,agenda_items:AgendaItem[],status_history:MeetingStatusHistory[]}`; each agenda topic optionally has `context:{description:string|null,route:MeetingTopicStage[],previous_decisions:ClosedMeetingDecision[]}` authorized through this meeting, not a general topic grant. |
 | `get_completed_meeting_record` | `{meeting_id,status,quorum,attendance:{eligible_count,present_count,absent_count,excused_count,records[]},agenda_items:[{topic,discussion_notes,voting_rounds[],decisions[]}],minutes:{approvals[]}?}` |
 | `create_meeting` | `{id,meeting_no,status,idempotent_replay}` |
 | `create_meeting_series` | `{id,occurrences:[{id,meeting_no,status,idempotent_replay,occurrence_number,scheduled_date}]}` |
@@ -196,7 +205,7 @@ AgendaItem = {
 
 | Contract | Response |
 |---|---|
-| `get_meeting_minutes` | Meeting-minutes row plus `approvals[]`; each approval contains identity, status, notes, resolution, and concurrency fields |
+| `get_meeting_minutes` | Meeting-minutes row plus `approvals[]` and `decisions[]`; each approval contains identity, status, notes, resolution, and concurrency fields; each decision is `{id,decision_no,agenda_item_id,decision_text}` |
 | `save_meeting_minutes_draft` | `{id,status,updated_at}` |
 | `submit_meeting_minutes` | `{id,status:"ready_for_approval",approvers}` |
 | `respond_meeting_minutes_approval` | `{approval_id,decision}` |
@@ -261,7 +270,8 @@ VotingRound = {
 | `cancel_voting_round` | `{voting_round_id,status,result}` |
 | `get_voting_round_detail` | `VotingRound + {has_voted,my_vote?,eligible_members:EligibleMember[]?,votes:VoteDetail[]?}` |
 | `create_decision_from_voting_round` | `{id,decision_no,decision_status,already_exists}` |
-| `list_meeting_decisions` | `DecisionSummary[]` with `{id,decision_no,agenda_item_id,decision_text,decision_status,requires_approval}` |
+| `list_meeting_decisions` | `DecisionSummary[]` with `{id,decision_no,agenda_item_id,decision_text,decision_status,requires_approval,updated_at,can_edit_text}` |
+| `update_meeting_decision_text` | `{id,decision_no,decision_status,decision_text,updated_at,changed,meeting_status}` |
 | `list_meeting_voting_rounds` | `VotingRoundSummary[]` with agenda identity, status/result, and vote counts |
 
 `eligible_members` and `votes` are `null` for ordinary members and arrays for callers with

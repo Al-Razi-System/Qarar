@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { safeAdminError } from "./admin-error";
 
 describe("safeAdminError", () => {
+  it("preserves an authored Arabic HTTP conflict without reflecting SQL", () => {
+    expect(safeAdminError(Object.assign(new Error("تغيرت صورتك؛ أعد تحميلها"), { code: "PT409", status: 409 }), "تعذر الحفظ")).toMatchObject({ status: 409, message: "تغيرت صورتك؛ أعد تحميلها" });
+    expect(safeAdminError(Object.assign(new Error("private SQL details"), { code: "PT409", status: 409 }), "تعذر الحفظ")).toMatchObject({ status: 409, message: "تعذر الحفظ" });
+  });
   it("لا يعيد رسالة قاعدة البيانات الخام إلى المتصفح", () => {
     const error = safeAdminError(
       { status: 409, code: "23505", message: "duplicate key value violates unique constraint users_email_key" },
@@ -57,6 +61,17 @@ describe("safeAdminError", () => {
       code: "ADMIN_OPERATION_FAILED",
       message: "تعذر تنفيذ العملية.",
       status: 500,
+    });
+  });
+
+  it("يصنف مهلة قاعدة البيانات برسالة عامة آمنة قابلة للتخصيص عند المسار", () => {
+    expect(safeAdminError(
+      { status: 500, code: "57014", message: "canceling statement due to statement timeout" },
+      "تعذر تنفيذ العملية.",
+    )).toEqual({
+      code: "QUERY_TIMEOUT",
+      message: "استغرق تنفيذ الطلب وقتًا أطول من المتوقع. أعد المحاولة بعد لحظات.",
+      status: 503,
     });
   });
 });

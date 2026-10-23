@@ -1,6 +1,11 @@
 begin;
 create extension if not exists pgtap;
-select plan(24);
+select plan(25);
+
+select is(
+ (select count(*)::integer from qarar_architecture.function_registry r
+  join pg_proc p on p.oid=r.function_oid where p.prokind<>'f'),
+ 0,'the implementation registry contains ordinary functions only');
 
 select is(
  (select count(*)::integer from pg_proc p join pg_namespace n on n.oid=p.pronamespace
@@ -163,6 +168,11 @@ select is(
     source.rolname='qarar_topics_executor'
     and n.nspname='qarar_governance' and c.relname='topic_regulation_references'
    )
+   -- Creating a council writes its periodic governance meeting plan (20261007001000).
+   and not (
+    source.rolname='qarar_core_executor'
+    and n.nspname='qarar_meetings' and c.relname='council_meeting_plans_v2'
+   )
    and not (n.nspname='qarar_audit' and c.relname='audit_logs')),
 0,'module executors have no unregistered cross-module table writes');
 
@@ -245,7 +255,7 @@ with discovered as (
  from qarar_architecture.function_registry r
  join pg_proc p on p.oid=r.function_oid
  cross join lateral regexp_matches(
-  pg_get_functiondef(p.oid),
+  case when p.prokind='f' then pg_get_functiondef(p.oid) else null end,
   '(qarar_[a-z_]+)\.([a-z][a-z0-9_]*)',
   'g'
  ) m
@@ -270,7 +280,7 @@ select is(
   join pg_proc p on p.proname=c.implementation_name
    and pg_get_function_identity_arguments(p.oid)=c.identity_arguments
   join pg_namespace n on n.oid=p.pronamespace and n.nspname=c.implementation_schema
-  where pg_get_functiondef(p.oid) !~
+  where (case when p.prokind='f' then pg_get_functiondef(p.oid) else '' end) !~
    '(current_organization_id|organization_id|assert_permission|has_permission|is_system_admin|auth\.(uid|role)|users where id=p_actor_user_id)'
  ),
  0,'every API contract implementation contains an explicit tenant or actor guard');

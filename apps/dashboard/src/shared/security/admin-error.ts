@@ -10,6 +10,7 @@ const PUBLIC_ERROR_CODES = new Set([
   "42501",
   "23P01",
   "40001",
+  "PT409",
   "P0002",
   "P0003",
 ]);
@@ -43,6 +44,14 @@ export function safeAdminError(
   }
 
   const metadata = isRecord(error) ? error : undefined;
+  const upstreamCode = metadata?.code;
+  if (upstreamCode === "57014") {
+    return {
+      code: "QUERY_TIMEOUT",
+      message: "استغرق تنفيذ الطلب وقتًا أطول من المتوقع. أعد المحاولة بعد لحظات.",
+      status: 503,
+    };
+  }
   const upstreamStatus = metadata?.status;
   const status =
     typeof upstreamStatus === "number" &&
@@ -51,7 +60,6 @@ export function safeAdminError(
     upstreamStatus <= 599
       ? upstreamStatus
       : fallbackStatus;
-  const upstreamCode = metadata?.code;
   const code =
     typeof upstreamCode === "string" && PUBLIC_ERROR_CODES.has(upstreamCode)
       ? upstreamCode
