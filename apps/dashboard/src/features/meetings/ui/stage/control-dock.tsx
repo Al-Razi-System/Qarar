@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
+import { OverflowMenu } from "@/shared/ui/overflow-menu";
 import { cn } from "@/shared/lib/utils";
 import type { ChairAction } from "../../model/agenda-flow";
 import type { AgendaDiscussionItem } from "../../model/live-meeting";
@@ -31,7 +32,6 @@ type Props = {
  */
 export function ControlDock({ item, actions, note, busy, blockers, onAction, onComplete, pinned = false, decisionTools, progress }: Props) {
   const [showBlockers, setShowBlockers] = useState(false);
-  const [showAlternatives, setShowAlternatives] = useState(false);
   const reason = actions.find((action) => action.disabledReason)?.disabledReason ?? null;
   const primary = actions[0];
   const status = busy ? <span role="status" className="font-bold text-q-text-2">جارٍ التنفيذ…</span>
@@ -53,7 +53,15 @@ export function ControlDock({ item, actions, note, busy, blockers, onAction, onC
               {primary.label}
             </Button>
           )}
-          {actions.length > 1 && <Button variant="secondary" disabled={busy} onClick={() => setShowAlternatives(true)}>خيارات أخرى للبند</Button>}
+          {actions.length > 1 && (
+            <OverflowMenu
+              label="خيارات أخرى للبند"
+              disabled={busy}
+              align="start"
+              side="top"
+              items={actions.slice(1).map((action) => ({ key: action.kind, label: action.label, hint: action.disabledReason, disabled: Boolean(action.disabledReason), onSelect: () => onAction(action) }))}
+            />
+          )}
           {decisionTools}
         </div>
         {status && <p className="m-0 text-q-caption">{status}</p>}
@@ -79,12 +87,6 @@ export function ControlDock({ item, actions, note, busy, blockers, onAction, onC
             </>
           )}
       </div>
-      {showAlternatives && <Dialog title="خيارات أخرى للبند" description="بدائل للخطوة الحالية، ولا تغيّر ترتيب بقية البنود." onClose={() => setShowAlternatives(false)}>
-        <div className="flex flex-col items-start gap-3">{actions.slice(1).map(action => <div key={action.kind} className="flex flex-col gap-1">
-          <Button variant="secondary" disabled={busy || Boolean(action.disabledReason)} onClick={() => { setShowAlternatives(false); onAction(action); }}>{action.label}</Button>
-          {action.disabledReason && <p className="m-0 text-q-caption text-q-warning">{action.disabledReason}</p>}
-        </div>)}</div>
-      </Dialog>}
       {showBlockers && (
         <Dialog
           title="قبل إنهاء الجلسة"

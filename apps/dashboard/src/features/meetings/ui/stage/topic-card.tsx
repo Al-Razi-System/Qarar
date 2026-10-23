@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Expand, Info } from "lucide-react";
+import { Expand, Info, Timer } from "lucide-react";
+import { OverflowMenu } from "@/shared/ui/overflow-menu";
+import { PlannedMinutesSelect, type PlannedMinutesControl } from "./item-timer";
 import { InstructionContent } from "@/shared/content/instruction-content";
 import { cn } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
@@ -59,16 +61,19 @@ type Props = {
   timer?: ReactNode;
   /** The decision's assignments, under the decision. */
   assignments?: ReactNode;
+  /** Given to the council's chair: plans the item's duration from the item's menu. */
+  durationPlan?: { minutes: number | null; control: PlannedMinutesControl };
 };
 
 /**
  * Everything the council needs on one agenda item: its guidance, its files and
  * what earlier councils decided, then the vote and the rapporteur's summary.
  */
-export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads, timer, assignments }: Props) {
+export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads, timer, assignments, durationPlan }: Props) {
   const [chosenTab, setChosenTab] = useState<ReferenceTab | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
+  const [durationOpen, setDurationOpen] = useState(false);
   const [localDocument, setLocalDocument] = useState<{ attachmentId: string | null; page: number } | null>(null);
   // Without a broadcast the card keeps its own open file; with one, the broadcast decides.
   const shownDocument = document !== undefined ? document : localDocument;
@@ -113,6 +118,10 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
     {tab === "history" && history && <TopicHistory history={history} />}
   </>;
 
+  const menuItems = [
+    ...(item.topic?.context ? [{ key: "context", label: "تفاصيل الموضوع ومساره", hint: "الوصف ومراحل المسار والقرارات السابقة", icon: <Info size={16} />, onSelect: () => setContextOpen(true) }] : []),
+    ...(durationPlan ? [{ key: "duration", label: "المدة المقررة", hint: durationPlan.minutes ? `${durationPlan.minutes} دقيقة` : "بلا تحديد", icon: <Timer size={16} />, onSelect: () => setDurationOpen(true) }] : []),
+  ];
   const expandLabel = tab === "instructions" ? "تكبير التعليمات" : tab === "attachments" ? "تكبير المرفقات" : "تكبير القرارات السابقة";
 
   return (
@@ -124,11 +133,7 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
             {item.topic?.category_name_ar && <span className="text-q-link">{item.topic.category_name_ar}</span>}
             {item.topic?.topic_no && <span dir="ltr" className="font-normal text-q-text-2">{item.topic.topic_no}</span>}
           </p>
-          {item.topic?.context && (
-            <button type="button" onClick={() => setContextOpen(true)} className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-q-control px-2 font-sans text-q-caption font-bold text-q-link hover:bg-q-surface-2 -mt-2.5 -me-2">
-              <Info size={16} aria-hidden="true" />تفاصيل الموضوع ومساره
-            </button>
-          )}
+          {menuItems.length > 0 && <OverflowMenu label="خيارات البند" items={menuItems} className="-mt-2" />}
         </div>
         <h2 className="m-0 break-words text-q-h3 font-bold leading-snug">{item.topic?.title_ar ?? "بند جدول الأعمال"}</h2>
         {item.topic?.submitted_by_name_ar && <p className="m-0 text-q-caption text-q-text-2">مقدم من {item.topic.submitted_by_name_ar}</p>}
@@ -139,6 +144,11 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
         </div>
         {timer && <div className="border-t border-q-border pt-2">{timer}</div>}
       </header>
+      {durationOpen && durationPlan && (
+        <Dialog title="المدة المقررة للبند" description="يقارن العدّاد مدة المناقشة بها، ويظهر التجاوز لكل الحاضرين." onClose={() => setDurationOpen(false)} footer={<Button variant="secondary" onClick={() => setDurationOpen(false)}>تم</Button>}>
+          <PlannedMinutesSelect plan={durationPlan.control} plannedMinutes={durationPlan.minutes} />
+        </Dialog>
+      )}
       {contextOpen && item.topic?.context && <TopicContextDialog title={item.topic.title_ar} context={item.topic.context} onClose={() => setContextOpen(false)} />}
 
       {ballot}

@@ -144,17 +144,16 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
   } : undefined;
 
   const selectedTimer = timers?.data?.timers.find((entry) => entry.agenda_item_id === selected.id);
-  const timer = timers?.data ? (
-    <ItemTimer
-      timer={selectedTimer}
-      clockOffsetMs={timers.clockOffsetMs}
-      plan={viewerIsChair && plannedMinutes && !presenting ? {
-        pending: plannedMinutes.pendingItemId === selected.id,
-        error: plannedMinutes.errorItemId === selected.id ? plannedMinutes.error : null,
-        onChange: (minutes) => plannedMinutes.onChange(selected.id, minutes, selectedTimer?.revision ?? 0),
-      } : undefined}
-    />
-  ) : null;
+  const timer = timers?.data ? <ItemTimer timer={selectedTimer} clockOffsetMs={timers.clockOffsetMs} /> : null;
+  // The chair plans the duration from the item's menu, not from a field always on screen.
+  const durationPlan = timers?.data && viewerIsChair && plannedMinutes && !presenting ? {
+    minutes: selectedTimer?.planned_minutes ?? null,
+    control: {
+      pending: plannedMinutes.pendingItemId === selected.id,
+      error: plannedMinutes.errorItemId === selected.id ? plannedMinutes.error : null,
+      onChange: (minutes: number | null) => plannedMinutes.onChange(selected.id, minutes, selectedTimer?.revision ?? 0),
+    },
+  } : undefined;
 
   const assignmentList = assignments?.error ? <InlineMessage tone="error">{assignments.error}<Button variant="secondary" onClick={assignments.onRetry}>إعادة تحميل التكليفات</Button></InlineMessage> : assignments?.data ? (
     <ItemAssignments
@@ -202,6 +201,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
       controllerName={controllerName}
       downloads={downloadControl}
       timer={timer}
+      durationPlan={durationPlan}
       assignments={assignmentList}
     />
   );

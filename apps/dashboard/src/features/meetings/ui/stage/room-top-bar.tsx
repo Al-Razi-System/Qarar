@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Maximize2, Minimize2, Moon, Presentation, Sun } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { OverflowMenu } from "@/shared/ui/overflow-menu";
 import type { LiveMeetingSession } from "../../model/live-meeting";
 
 const RING_RADIUS = 15;
@@ -42,7 +43,6 @@ function QuorumRing({ present, eligible, met }: { present: number; eligible: num
 }
 
 const barButton = "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-q-control border border-q-border bg-q-surface px-3 font-sans text-q-caption font-bold text-q-link hover:bg-q-surface-2";
-const iconButton = "grid h-11 w-11 shrink-0 place-items-center rounded-q-control border border-q-border bg-q-surface text-q-text-2 hover:bg-q-surface-2 hover:text-q-text";
 
 type Props = {
   session: LiveMeetingSession;
@@ -94,21 +94,10 @@ export function RoomTopBar({ session, startedAt, dark, onToggleTheme, presentati
             <span className="text-q-caption text-q-text-2">{present} حاضرون من {eligible}{required && <span className="sr-only"> · {required}</span>}</span>
           </div>
         </div>
-        {!presentation?.active && <>
-        <span aria-hidden="true" className="hidden h-8 w-px bg-q-border xl:block" />
-        <div className="hidden flex-col leading-tight xl:flex">
-          <span className="text-q-caption font-bold">{roleLabel}</span>
-          <span className="text-q-caption text-q-text-2">{session.viewer.full_name_ar}</span>
-        </div>
-        {session.viewer.is_roster_member && !checkedIn && (
+        {session.viewer.is_roster_member && !checkedIn && !presentation?.active && (
           <span className="rounded-full bg-q-warning-soft px-3 py-1 text-q-caption font-bold text-q-warning">لم يثبت حضورك بعد</span>
         )}
-        {session.viewer.is_roster_member && checkedIn && <span className="sr-only">حضورك مثبت</span>}
-        </>}
         <div className="flex items-center gap-2">
-          <button type="button" onClick={onToggleTheme} aria-pressed={dark} aria-label={dark ? "الوضع الفاتح" : "الوضع الليلي"} title={dark ? "الوضع الفاتح" : "الوضع الليلي"} className={iconButton}>
-            {dark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
-          </button>
           {fullscreen && (
             <button type="button" onClick={fullscreen.onToggle} aria-pressed={fullscreen.active} className={barButton}>
               {fullscreen.active ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
@@ -121,6 +110,17 @@ export function RoomTopBar({ session, startedAt, dark, onToggleTheme, presentati
               {presentation.active ? "إنهاء العرض" : "وضع العرض"}
             </button>
           )}
+          <OverflowMenu
+            label="إعدادات العرض"
+            header={(
+              <div className="flex flex-col leading-snug">
+                <span className="text-q-caption font-bold">{roleLabel}</span>
+                <span className="text-q-caption text-q-text-2">{session.viewer.full_name_ar}</span>
+                {session.viewer.is_roster_member && checkedIn && <span className="text-q-caption font-bold text-q-success">حضورك مثبت</span>}
+              </div>
+            )}
+            items={[{ key: "theme", label: "الوضع الليلي", icon: dark ? <Sun size={16} /> : <Moon size={16} />, checked: dark, onSelect: onToggleTheme }]}
+          />
         </div>
       </div>
     </header>
