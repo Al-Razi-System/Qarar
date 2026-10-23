@@ -45,7 +45,9 @@ describe("AgendaWorkspace", () => {
   it("lists the agenda in order and lets whoever runs the meeting open another item", async () => {
     setup("chair");
     const items = within(screen.getByRole("navigation", { name: "جدول الأعمال" })).getAllByRole("button");
-    expect(items.map((item) => item.textContent)).toEqual(["1 · خطة البرنامجقيد المناقشة", "2 · تشكيل اللجنةلم يبدأ"]);
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveAccessibleName(/^البند 1:\s*خطة البرنامج\s*قيد المناقشة$/);
+    expect(items[1]).toHaveAccessibleName(/^البند 2:\s*تشكيل اللجنة\s*لم يبدأ$/);
     expect(items[0]).toHaveAttribute("aria-current", "true");
     await userEvent.click(items[1]);
     expect(screen.getByRole("heading", { name: "تشكيل اللجنة" })).toBeInTheDocument();
@@ -55,7 +57,7 @@ describe("AgendaWorkspace", () => {
     setup("member", { ballot: <p>ورقة التصويت</p> });
     const timeline = screen.getByRole("navigation", { name: "جدول الأعمال" });
     expect(within(timeline).queryAllByRole("button")).toHaveLength(0);
-    expect(within(timeline).getByText("1 · خطة البرنامج").closest("[aria-current]")).toHaveAttribute("aria-current", "step");
+    expect(within(timeline).getByText("خطة البرنامج").closest("[aria-current]")).toHaveAttribute("aria-current", "step");
     const topic = screen.getByRole("region", { name: "الموضوع المعروض" });
     expect(within(topic).getByRole("heading", { name: "خطة البرنامج" })).toBeInTheDocument();
     expect(within(topic).getByText("ورقة التصويت")).toBeInTheDocument();

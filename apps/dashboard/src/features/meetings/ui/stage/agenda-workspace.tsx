@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
+import { cn } from "@/shared/lib/utils";
 import { Card } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { InlineMessage } from "@/shared/ui/inline-message";
@@ -160,6 +161,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
       key={`assignments-${selected.id}`}
       editorOpen={assignmentEditorItemId === selected.id}
       onEditorChange={(open) => setAssignmentEditorItemId(open ? selected.id : null)}
+      addFromDock={manager && !presenting}
       assignments={assignments.data.assignments.filter((row) => row.agenda_item_id === selected.id)}
       viewer={assignments.data.viewer}
       options={presenting ? null : assignments.data.options}
@@ -238,18 +240,25 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
     );
   }
 
-  // The broadcast bar heads the agenda column: it governs the navigation listed under it.
+  // The chair's cockpit. Its columns follow the room's own width, not the
+  // window's, so the app's sidebar never squeezes them: the agenda becomes a
+  // rail of numbers when space is short, and the table shrinks to the height
+  // left above the dock instead of sliding under it.
+  const settled = ordered.filter((item) => states[item.id]?.tone === "success" || item.agenda_status === "postponed").length;
   return (
-    <div className={`grid gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:grid-cols-[minmax(11rem,14rem)_minmax(0,1fr)_minmax(20rem,24rem)] ${presenting && manager ? "pb-64 lg:pb-0" : ""}`}>
-      <div className="order-2 flex min-w-0 flex-col gap-3 lg:col-span-2 lg:max-h-36 lg:overflow-y-auto xl:order-none xl:col-span-1 xl:max-h-none xl:min-h-0">
-        {bar}
-        {timeline}
+    <div className="@container/room h-full min-h-0">
+      <div className={cn(
+        "grid gap-4 @3xl/room:h-full @3xl/room:min-h-0 @3xl/room:grid-cols-[4.5rem_minmax(0,1fr)_minmax(19rem,22rem)] @6xl/room:grid-cols-[minmax(12rem,15rem)_minmax(0,1fr)_minmax(20rem,25rem)]",
+        presenting && manager && "pb-64 @3xl/room:pb-0",
+      )}>
+        <div className="order-3 min-w-0 @3xl/room:order-none @3xl/room:min-h-0 @3xl/room:overflow-y-auto">{timeline}</div>
+        <div className="@container order-1 flex min-w-0 flex-col gap-3 @3xl/room:order-none @3xl/room:min-h-0">
+          {bar}
+          {stage && <div className="min-h-0 @3xl/room:flex-1">{stage}</div>}
+          {manager && <ControlDock pinned={presenting} item={selected} actions={actions} note={note} busy={busy} blockers={blockers} onAction={run} onComplete={onComplete} decisionTools={decisionTools} progress={{ done: settled, total: ordered.length }} />}
+        </div>
+        <div className="order-2 min-w-0 @3xl/room:order-none @3xl/room:min-h-0 @3xl/room:overflow-y-auto">{topic}</div>
       </div>
-      <div className="order-1 flex min-w-0 flex-col gap-3 lg:order-none lg:min-h-0">
-        {stage && <div className="min-h-0 lg:flex-1 lg:overflow-y-auto">{stage}</div>}
-        {manager && <ControlDock pinned={presenting} item={selected} actions={actions} note={note} busy={busy} blockers={blockers} onAction={run} onComplete={onComplete} decisionTools={decisionTools} />}
-      </div>
-      <div className="order-3 min-w-0 lg:order-none lg:min-h-0 lg:overflow-y-auto">{topic}</div>
     </div>
   );
 }

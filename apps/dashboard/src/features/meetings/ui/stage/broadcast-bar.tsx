@@ -27,7 +27,7 @@ export function BroadcastBar({ broadcast, pending, error, onHandOver }: Props) {
         ? { label: "إعادة التحكم للرئيس", to: "chair" as const }
         : null;
   return (
-    <section aria-label="بث الجلسة" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-q-card border border-q-border bg-q-surface px-3 py-2 font-sans text-q-text">
+    <section aria-label="بث الجلسة" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-q-control bg-q-surface-2 px-3 py-1.5 font-sans text-q-text">
       <p className="m-0 flex items-start gap-2 text-q-caption font-bold" role="status">
         <span aria-hidden="true" className="q-live-dot mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-q-live" />
         {broadcast.viewer_controls
@@ -39,7 +39,7 @@ export function BroadcastBar({ broadcast, pending, error, onHandOver }: Props) {
           {error && <span role="alert" className="text-q-caption font-bold text-q-danger">{error}</span>}
           {pending && <span role="status" className="text-q-caption font-bold text-q-text-2">جارٍ التسليم…</span>}
           {action && (
-            <Button variant="secondary" disabled={pending} onClick={() => onHandOver(action.to)}>{action.label}</Button>
+            <Button variant="ghost" disabled={pending} onClick={() => onHandOver(action.to)}>{action.label}</Button>
           )}
         </div>
       )}
