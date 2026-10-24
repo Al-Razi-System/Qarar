@@ -29,7 +29,29 @@ where owning_schema = 'api_v1'
 insert into qarar_architecture.module_table_read_allowlist(source_module, target_schema, table_name, rationale) values
   ('governance', 'qarar_meetings', 'meetings', 'WhatsApp dispatch context fills a message with its meeting'),
   ('governance', 'qarar_execution', 'action_items', 'WhatsApp dispatch context fills a message with its task'),
-  ('governance', 'qarar_decisions', 'decisions', 'WhatsApp dispatch context fills a message with its decision')
+  ('governance', 'qarar_decisions', 'decisions', 'WhatsApp dispatch context fills a message with its decision'),
+  -- The topic journey and meeting history read the approved minutes and the
+  -- topic's audit events (20261022010000); topics already holds both reads.
+  ('topics', 'qarar_minutes', 'meeting_minutes', 'Topic journey and meeting history show the approved minutes'),
+  ('topics', 'qarar_audit', 'audit_logs', 'Topic journey lists the topic''s audit events')
 on conflict do nothing;
+
+-- Meeting search is scoped to the councils the viewer may see (20261021005000).
+insert into qarar_architecture.module_function_execute_allowlist(source_module, target_schema, function_name, identity_arguments, rationale) values
+  ('meetings', 'qarar_iam', 'current_meeting_access_units', '', 'Meeting search is scoped to the councils the viewer may see')
+on conflict do nothing;
+
+-- 4. Every API contract implementation states its own guard. The workspace
+--    delegated it to the delivery-reason function (20261021010000); the same
+--    check now also opens the workspace itself.
+do $$
+declare d text;
+begin
+  select pg_get_functiondef('qarar_governance.admin_get_notification_workspace(integer)'::regprocedure) into d;
+  d := replace(d, E'begin\n  base:=qarar_governance.admin_get_notification_workspace_delivery_reason_base(p_limit);',
+    E'begin\n  if not qarar_iam.is_system_admin() then raise exception using errcode=''42501'',message=''هذه الصفحة متاحة لمسؤول النظام فقط'';end if;\n  base:=qarar_governance.admin_get_notification_workspace_delivery_reason_base(p_limit);');
+  if position('is_system_admin' in d) = 0 then raise exception 'notification workspace shape changed'; end if;
+  execute d;
+end $$;
 
 commit;

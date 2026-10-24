@@ -160,8 +160,9 @@ select is(
     source.rolname='qarar_governance_executor'
     and n.nspname='qarar_topics' and c.relname='topics'
    )
+   -- Meetings and tasks enqueue their WhatsApp events in the outbox (20261020020000).
    and not (
-    source.rolname='qarar_meetings_executor'
+    source.rolname in('qarar_meetings_executor','qarar_execution_executor')
     and n.nspname='qarar_governance' and c.relname='notification_outbox'
    )
    and not (
@@ -271,7 +272,10 @@ select is(
    and not exists(
     select 1 from qarar_architecture.module_function_execute_allowlist a
     where a.source_module=d.module_code and a.target_schema=d.target_schema
-     and a.function_name=d.target_name)),
+     and a.function_name=d.target_name)
+   -- The reviewed outbox writes of the table-write check above.
+   and not (d.module_code in('meetings','execution')
+    and d.target_schema='qarar_governance' and d.target_name='notification_outbox')),
  0,'all source-level cross-module dependencies are registered');
 
 select is(
