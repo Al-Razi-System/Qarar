@@ -178,11 +178,17 @@ select ok(
   ),
   'governance executor receives reviewed unit read dependency'
 );
+-- The WhatsApp dispatch context reads meetings since 20261021007000; the read
+-- is allowed only while it is declared in the module read allowlist.
 select ok(
   not has_table_privilege(
     'qarar_governance_executor',
     'qarar_meetings.meetings',
     'select'
+  )
+  or exists (
+    select 1 from qarar_architecture.module_table_read_allowlist
+    where source_module = 'governance' and target_schema = 'qarar_meetings' and table_name = 'meetings'
   ),
   'governance executor has no undeclared meeting dependency'
 );
@@ -190,7 +196,8 @@ select is(
   (select count(*)::integer
    from qarar_architecture.module_table_read_allowlist
    where source_module='governance'),
-  8,
+  -- 8 plus the meetings, tasks and decisions read by the WhatsApp dispatch context (20261024011000).
+  11,
   'governance cross-module reads are explicitly allowlisted'
 );
 set local role qarar_iam_executor;

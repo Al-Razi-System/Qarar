@@ -52,7 +52,8 @@ select is(
   (select count(*)::integer
    from qarar_architecture.api_contract_registry
    where api_version = 'v1'),
- 240,
+ 242,
+  -- 240 plus the WhatsApp outbox claim (20261021009000) and the topic journey (20261022010000).
   'api_v1 contract count is explicit and reviewed');
 
 select is(
