@@ -201,12 +201,12 @@ async function vote(page: Page, followsBroadcast = false) {
   if (followsBroadcast) {
     await expect(page.getByRole("region", { name: "بث الجلسة" })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "أقسام غرفة الاجتماع" })).toHaveCount(0);
-  } else {
-    await openAgenda(page);
   }
-  await expect(page.getByText("تصويت مفتوح لك الآن")).toBeVisible();
-  await page.getByRole("radio", { name: "موافق", exact: true }).click();
-  await page.getByRole("button", { name: "تأكيد التصويت", exact: true }).click();
+  // An open round puts the private ballot in front of every eligible voter.
+  const ballot = page.getByRole("dialog").filter({ hasText: "تصويت مفتوح لك الآن" });
+  await expect(ballot).toBeVisible();
+  await ballot.getByRole("radio", { name: "موافق", exact: true }).click();
+  await ballot.getByRole("button", { name: "تأكيد التصويت", exact: true }).click();
   await expect(page.getByText("تم تسجيل صوتك وملاحظتك بسرية.")).toBeVisible();
 }
 
