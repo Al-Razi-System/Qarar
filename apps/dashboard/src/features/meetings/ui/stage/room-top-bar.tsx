@@ -79,7 +79,7 @@ export function RoomTopBar({ session, startedAt, dark, onToggleTheme, presentati
 
   return (
     <header className="relative z-20 flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 rounded-q-card border border-q-border border-t-4 border-t-q-primary bg-q-surface px-4 py-2.5 font-sans text-q-text sm:px-5">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div className="flex min-w-0 grow basis-56 items-center gap-3">
         <h1 className="m-0 line-clamp-2 min-w-0 text-q-h3 font-bold leading-snug lg:truncate" title={session.meeting.title_ar}>{session.meeting.title_ar}</h1>
         <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-q-live-soft px-3 py-1 text-q-caption font-bold text-q-live" role="status" aria-label={clock ? `جلسة حية منذ ${clock}` : "جلسة حية"}>
           <span aria-hidden="true" className="q-live-dot inline-block h-2 w-2 rounded-full bg-q-live" />
