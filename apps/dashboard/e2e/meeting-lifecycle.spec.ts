@@ -254,9 +254,13 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
       await page.goto(`/admin/meetings/${lifecycle.meetingId}/live`);
       await expect(page.getByRole("heading", { name: "اجتماع Playwright الشامل" })).toBeVisible({ timeout: 30_000 });
     }
-    await expect(chair.page.getByText("لوحة رئيس المجلس")).toBeVisible();
-    await expect(rapporteur.page.getByText("لوحة مقرر المجلس")).toBeVisible();
-    await expect(member.page.getByText("بوابة عضو المجلس")).toBeVisible();
+    // Each account sees its own view; the role label lives in the room's display menu.
+    for (const [page, label] of [[chair.page, "لوحة رئيس المجلس"], [rapporteur.page, "لوحة مقرر المجلس"], [member.page, "بوابة عضو المجلس"]] as const) {
+      await page.getByRole("button", { name: "إعدادات العرض" }).click();
+      await expect(page.getByRole("menu", { name: "إعدادات العرض" }).getByText(label)).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("menu", { name: "إعدادات العرض" })).toBeHidden();
+    }
 
     await openAgenda(chair.page);
     await chair.page.getByRole("button", { name: "بدء المناقشة" }).click();

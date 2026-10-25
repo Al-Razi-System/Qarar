@@ -60,25 +60,30 @@ export function ItemTimer({ timer, clockOffsetMs, plan }: Props) {
       ) : (
         <span className="text-q-text-2">يبدأ العدّاد مع بدء المناقشة.</span>
       )}
-      {plan && (
-        <label className="inline-flex items-center gap-2 font-bold text-q-text-2">
-          المدة المقررة
-          <select
-            value={timer?.planned_minutes ?? ""}
-            disabled={plan.pending}
-            onChange={(event) => plan.onChange(event.target.value ? Number(event.target.value) : null)}
-            className="h-11 rounded-q-control border border-q-border bg-q-surface px-2 text-q-caption text-q-text"
-          >
-            <option value="">بلا تحديد</option>
-            {PLANNED_MINUTES_CHOICES.map((minutes) => <option key={minutes} value={minutes}>{minutes} دقيقة</option>)}
-            {timer?.planned_minutes && !PLANNED_MINUTES_CHOICES.includes(timer.planned_minutes) && (
-              <option value={timer.planned_minutes}>{timer.planned_minutes} دقيقة</option>
-            )}
-          </select>
-        </label>
-      )}
-      {plan?.pending && <span role="status" className="font-bold text-q-text-2">جارٍ حفظ المدة…</span>}
-      {plan?.error && <span role="alert" className="font-bold text-q-danger">{plan.error}</span>}
+      {plan && <PlannedMinutesSelect plan={plan} plannedMinutes={timer?.planned_minutes ?? null} />}
+    </div>
+  );
+}
+
+/** The chair's choice of the item's planned duration, with its saving and failure states. */
+export function PlannedMinutesSelect({ plan, plannedMinutes }: { plan: PlannedMinutesControl; plannedMinutes: number | null }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-q-caption">
+      <label className="inline-flex items-center gap-2 font-bold text-q-text-2">
+        المدة المقررة
+        <select
+          value={plannedMinutes ?? ""}
+          disabled={plan.pending}
+          onChange={(event) => plan.onChange(event.target.value ? Number(event.target.value) : null)}
+          className="h-11 rounded-q-control border border-q-border bg-q-surface px-2 text-q-caption text-q-text"
+        >
+          <option value="">بلا تحديد</option>
+          {PLANNED_MINUTES_CHOICES.map((minutes) => <option key={minutes} value={minutes}>{minutes} دقيقة</option>)}
+          {plannedMinutes && !PLANNED_MINUTES_CHOICES.includes(plannedMinutes) && <option value={plannedMinutes}>{plannedMinutes} دقيقة</option>}
+        </select>
+      </label>
+      {plan.pending && <span role="status" className="font-bold text-q-text-2">جارٍ حفظ المدة…</span>}
+      {plan.error && <span role="alert" className="font-bold text-q-danger">{plan.error}</span>}
     </div>
   );
 }

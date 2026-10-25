@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Maximize2, Minimize2, Moon, Presentation, Sun } from "lucide-react";
+import { cn } from "@/shared/lib/utils";
+import { OverflowMenu } from "@/shared/ui/overflow-menu";
 import type { LiveMeetingSession } from "../../model/live-meeting";
 
 const RING_RADIUS = 15;
@@ -39,7 +42,7 @@ function QuorumRing({ present, eligible, met }: { present: number; eligible: num
   );
 }
 
-const barButton = "min-h-11 shrink-0 rounded-q-control border border-q-border bg-q-surface px-3 font-sans text-q-caption font-bold text-q-link hover:bg-q-surface-2";
+const barButton = "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-q-control border border-q-border bg-q-surface px-3 font-sans text-q-caption font-bold text-q-link hover:bg-q-surface-2";
 
 type Props = {
   session: LiveMeetingSession;
@@ -70,47 +73,54 @@ export function RoomTopBar({ session, startedAt, dark, onToggleTheme, presentati
   const myAttendance = session.my_attendance;
   const checkedIn = myAttendance?.verification_status === "verified" && ["present", "late"].includes(myAttendance.status);
 
+  const required = quorum && quorum.required_percentage !== undefined
+    ? `المطلوب ${Math.ceil(eligible * quorum.required_percentage / 100)} من ${eligible} · النصاب ${quorum.required_percentage}٪`
+    : null;
+
   return (
-    <header className="relative z-20 flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-q-card border border-q-border border-t-4 border-t-q-primary bg-q-surface px-4 py-3 font-sans text-q-text sm:px-6">
-      <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-        <h1 className="m-0 min-w-0 text-q-h3 font-bold">{session.meeting.title_ar}</h1>
-        <span className="inline-flex items-center gap-2 rounded-full bg-q-live-soft px-3 py-1 text-q-caption font-bold text-q-live" role="status" aria-label={clock ? `جلسة حية منذ ${clock}` : "جلسة حية"}>
+    <header className="relative z-20 flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 rounded-q-card border border-q-border border-t-4 border-t-q-primary bg-q-surface px-4 py-2.5 font-sans text-q-text sm:px-5">
+      <div className="flex min-w-0 grow basis-56 items-center gap-3">
+        <h1 className="m-0 line-clamp-2 min-w-0 text-q-h3 font-bold leading-snug lg:truncate" title={session.meeting.title_ar}>{session.meeting.title_ar}</h1>
+        <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-q-live-soft px-3 py-1 text-q-caption font-bold text-q-live" role="status" aria-label={clock ? `جلسة حية منذ ${clock}` : "جلسة حية"}>
           <span aria-hidden="true" className="q-live-dot inline-block h-2 w-2 rounded-full bg-q-live" />
           مباشر{clock && <> · <span dir="ltr">{clock}</span></>}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex items-center gap-2" title={required ?? undefined}>
           <QuorumRing present={present} eligible={eligible} met={met} />
           <div className="flex flex-col leading-tight">
-            <span className="text-q-ui font-bold">{met ? "النصاب مكتمل" : "النصاب غير مكتمل"}</span>
-            <span className="text-q-caption opacity-80">{present} حاضرون من {eligible}</span>
-            {quorum && quorum.required_percentage !== undefined && <span className="text-q-caption opacity-80">المطلوب {Math.ceil(eligible * quorum.required_percentage / 100)} من {eligible} · النصاب {quorum.required_percentage}٪</span>}
+            <span className={cn("text-q-ui font-bold", met ? "text-q-success" : "text-q-warning")}>{met ? "النصاب مكتمل" : "النصاب غير مكتمل"}</span>
+            <span className="text-q-caption text-q-text-2">{present} حاضرون من {eligible}{required && <span className="sr-only"> · {required}</span>}</span>
           </div>
         </div>
-        <div className="flex flex-col leading-tight">
-          <span className="text-q-caption font-bold">{roleLabel}</span>
-          <span className="text-q-caption opacity-80">{session.viewer.full_name_ar}</span>
-        </div>
-        {session.viewer.is_roster_member && (
-          <span className={checkedIn ? "rounded-full bg-q-success-soft px-3 py-1 text-q-caption font-bold text-q-success" : "rounded-full bg-q-warning-soft px-3 py-1 text-q-caption font-bold text-q-warning"}>
-            {checkedIn ? "حضورك مثبت" : "لم يثبت حضورك بعد"}
-          </span>
+        {session.viewer.is_roster_member && !checkedIn && !presentation?.active && (
+          <span className="rounded-full bg-q-warning-soft px-3 py-1 text-q-caption font-bold text-q-warning">لم يثبت حضورك بعد</span>
         )}
         <div className="flex items-center gap-2">
-          <button type="button" onClick={onToggleTheme} aria-pressed={dark} className={barButton}>
-            {dark ? "الوضع الفاتح" : "الوضع الليلي"}
-          </button>
           {fullscreen && (
             <button type="button" onClick={fullscreen.onToggle} aria-pressed={fullscreen.active} className={barButton}>
+              {fullscreen.active ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
               {fullscreen.active ? "الخروج من ملء الشاشة" : "ملء الشاشة"}
             </button>
           )}
           {presentation && (
-            <button type="button" onClick={presentation.onToggle} aria-pressed={presentation.active} className={barButton}>
-              {presentation.active ? "إنهاء وضع العرض" : "وضع العرض على الشاشة"}
+            <button type="button" onClick={presentation.onToggle} aria-pressed={presentation.active} aria-label={presentation.active ? "إنهاء وضع العرض" : "وضع العرض على الشاشة"} className={barButton}>
+              <Presentation size={16} aria-hidden="true" />
+              {presentation.active ? "إنهاء العرض" : "وضع العرض"}
             </button>
           )}
+          <OverflowMenu
+            label="إعدادات العرض"
+            header={(
+              <div className="flex flex-col leading-snug">
+                <span className="text-q-caption font-bold">{roleLabel}</span>
+                <span className="text-q-caption text-q-text-2">{session.viewer.full_name_ar}</span>
+                {session.viewer.is_roster_member && checkedIn && <span className="text-q-caption font-bold text-q-success">حضورك مثبت</span>}
+              </div>
+            )}
+            items={[{ key: "theme", label: "الوضع الليلي", icon: dark ? <Sun size={16} /> : <Moon size={16} />, checked: dark, onSelect: onToggleTheme }]}
+          />
         </div>
       </div>
     </header>
