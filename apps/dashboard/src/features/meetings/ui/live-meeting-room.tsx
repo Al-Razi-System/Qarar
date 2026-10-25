@@ -31,6 +31,9 @@ import { useLiveVoting } from "./use-live-voting";
 type MeetingDetail = { agenda_items?: AgendaDiscussionItem[]; status_history?: Array<{ to_status: string; changed_at: string }> };
 
 /** When the session was opened: the last move of the meeting into "in_progress". */
+/** How often the room is still read while its channel reports every change. */
+const ROOM_FALLBACK_MS = 30_000;
+
 function sessionStartedAt(detail: MeetingDetail) {
   return [...(detail.status_history ?? [])].reverse().find((entry) => entry.to_status === "in_progress")?.changed_at ?? null;
 }
@@ -40,6 +43,10 @@ type RoomTab = "my-attendance" | "attendance" | "agenda";
 type ReasonRequest = { kind: "postpone"; item: AgendaDiscussionItem } | { kind: "manual-attendance"; record: Attendance };
 
 export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId: string; publicCheckInOrigin?: string }) {
+  // Every call names this room, so a successful write tells its other screens at once.
+  function roomRpc<T>(contract: string, params: Record<string, unknown> = {}, options: { signal?: AbortSignal } = {}) {
+    return liveMeetingRpc<T>(contract, params, { ...options, meetingId });
+  }
   const router = useRouter();
   const theme = useRoomTheme();
   const roomRef = useRef<HTMLDivElement>(null);
@@ -91,7 +98,12 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     previousVotingStructure.current = votingStructure;
     if (votingStructure !== null && previous !== null && previous !== votingStructure) void refreshRoom(true);
   }, [votingStructure]);
-  const refreshInterval = checkIn || session?.open_voting_rounds.length ? 3_000 : 10_000;
+  // Another screen changed the room: read it again now, not at the next periodic read.
+  useEffect(() => {
+    if (voting.roomTick > 0) void refreshRoom(true);
+  }, [voting.roomTick]);
+  // While the channel is connected the periodic read is only a safety net.
+  const refreshInterval = voting.connected ? ROOM_FALLBACK_MS : checkIn || session?.open_voting_rounds.length ? 3_000 : 10_000;
 
   useEffect(() => {
     let stopped = false;
@@ -108,7 +120,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   }, [meetingId, refreshInterval]);
 
   // While the session runs, every screen follows the broadcast of whoever controls it.
-  const live = useMeetingBroadcast(meetingId, session?.meeting.status === "in_progress");
+  const live = useMeetingBroadcast(meetingId, session?.meeting.status === "in_progress", { tick: voting.broadcastTick, connected: voting.connected });
 
   // Leaving full screen with the browser's own key also leaves presentation mode.
   useEffect(() => {
@@ -136,12 +148,12 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     try {
       if (!silent) setLoadError(null);
       const [live, detail, votes, meetingDecisions, meetingRounds, attachments] = await Promise.all([
-        liveMeetingRpc<LiveMeetingSession>("get_meeting_session_detail", { p_meeting_id: meetingId }),
-        liveMeetingRpc<MeetingDetail>("get_meeting_detail", { p_meeting_id: meetingId }),
-        liveMeetingRpc<MyVote[]>("get_my_open_votes", { p_meeting_id: meetingId }),
-        liveMeetingRpc<Decision[]>("list_meeting_decisions", { p_meeting_id: meetingId }),
-        liveMeetingRpc<VotingRound[]>("list_meeting_voting_rounds", { p_meeting_id: meetingId }),
-        liveMeetingRpc<MeetingTopicAttachment[]>("list_meeting_topic_attachments", { p_meeting_id: meetingId }),
+        roomRpc<LiveMeetingSession>("get_meeting_session_detail", { p_meeting_id: meetingId }),
+        roomRpc<MeetingDetail>("get_meeting_detail", { p_meeting_id: meetingId }),
+        roomRpc<MyVote[]>("get_my_open_votes", { p_meeting_id: meetingId }),
+        roomRpc<Decision[]>("list_meeting_decisions", { p_meeting_id: meetingId }),
+        roomRpc<VotingRound[]>("list_meeting_voting_rounds", { p_meeting_id: meetingId }),
+        roomRpc<MeetingTopicAttachment[]>("list_meeting_topic_attachments", { p_meeting_id: meetingId }),
       ]);
       if (["waiting_for_minutes", "waiting_for_approval", "closed"].includes(live.meeting.status)) {
         router.replace(`/admin/meetings/${meetingId}/minutes`);
@@ -162,11 +174,11 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       setRounds(meetingRounds ?? []);
       setTopicAttachments(attachments ?? []);
       // The timers are read with every refresh; without them the room works as before.
-      await liveMeetingRpc<MeetingItemTimers>("list_meeting_item_timers_v2", { p_meeting_id: meetingId })
+      await roomRpc<MeetingItemTimers>("list_meeting_item_timers_v2", { p_meeting_id: meetingId })
         .then((data) => setItemTimers({ data, clockOffsetMs: Date.parse(data.server_now) - Date.now() }))
         .catch(() => setItemTimers((current) => current));
       // Referrals too: without them the room shows no referral and offers none.
-      await liveMeetingRpc<MeetingReferrals>("list_meeting_referrals_v2", { p_meeting_id: meetingId })
+      await roomRpc<MeetingReferrals>("list_meeting_referrals_v2", { p_meeting_id: meetingId })
         .then(setReferrals)
         .catch(() => setReferrals((current) => current));
       // And assignments: without them the decision shows no assignment section.
@@ -175,7 +187,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       if (profilesLoadedFor.current !== rosterKey) {
         profilesLoadedFor.current = rosterKey;
         try {
-          setProfiles(await liveMeetingRpc<MemberProfiles>("list_meeting_member_profiles_v2", { p_meeting_id: meetingId }));
+          setProfiles(await roomRpc<MemberProfiles>("list_meeting_member_profiles_v2", { p_meeting_id: meetingId }));
           setProfilesError(null);
         } catch (error) {
           // The table still works without the cards; the failure is shown in the card the viewer opens.
@@ -208,7 +220,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
 
   async function refreshAssignments() {
     try {
-      setAssignments(await liveMeetingRpc<MeetingAssignments>("list_meeting_assignments_v2", { p_meeting_id: meetingId }));
+      setAssignments(await roomRpc<MeetingAssignments>("list_meeting_assignments_v2", { p_meeting_id: meetingId }));
       setAssignmentsError(null);
     } catch (error) {
       setAssignmentsError(messageOf(error, "تعذر تحميل التكليفات. أعد المحاولة لعرضها وإضافتها."));
@@ -218,7 +230,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   async function castVote(roundId: string, value: VoteValue, note: string | null) {
     setNotice(null);
     try {
-      const result = await liveMeetingRpc<{ accepted: boolean }>("cast_vote", { p_voting_round_id: roundId, p_vote_value: value, p_vote_note: note }, { signal: AbortSignal.timeout(20_000) });
+      const result = await roomRpc<{ accepted: boolean }>("cast_vote", { p_voting_round_id: roundId, p_vote_value: value, p_vote_note: note }, { signal: AbortSignal.timeout(20_000) });
       if (result.accepted !== true) throw new Error("Vote acknowledgement missing");
       voting.acknowledge(roundId);
       setMyVotes(current => current.map(vote => vote.voting_round_id === roundId ? { ...vote, has_voted: true } : vote));
@@ -249,7 +261,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     setBusy(true);
     setNotice(null);
     try {
-      const result = await liveMeetingRpc<CheckInToken>("create_checkin_session", { p_meeting_id: meetingId, p_valid_for_minutes: 15 });
+      const result = await roomRpc<CheckInToken>("create_checkin_session", { p_meeting_id: meetingId, p_valid_for_minutes: 15 });
       setCheckIn(result);
       await load(true, true);
     } catch (error) { setNotice({ kind: "error", text: messageOf(error, "تعذر إنشاء رمز الحضور.") }); }
@@ -257,7 +269,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   }
 
   function submitAttendance(record: Attendance, status: "present" | "absent" | "excused", note: string | null) {
-    return perform(() => liveMeetingRpc("verify_attendance", { p_attendance_record_id: record.id, p_status: status, p_note: note, p_expected_updated_at: record.updated_at }), status === "present" ? "تم اعتماد حضور العضو وتحديث النصاب." : status === "excused" ? "تم تسجيل اعتذار العضو." : "تم تسجيل غياب العضو.");
+    return perform(() => roomRpc("verify_attendance", { p_attendance_record_id: record.id, p_status: status, p_note: note, p_expected_updated_at: record.updated_at }), status === "present" ? "تم اعتماد حضور العضو وتحديث النصاب." : status === "excused" ? "تم تسجيل اعتذار العضو." : "تم تسجيل غياب العضو.");
   }
 
   function verifyAttendance(record: Attendance, status: "present" | "absent" | "excused") {
@@ -278,7 +290,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       setBusy(true);
       setNotice(null);
       try {
-        await liveMeetingRpc("update_agenda_discussion", { p_agenda_item_id: item.id, p_status: status, p_discussion_notes: notes, p_expected_updated_at: item.updated_at });
+        await roomRpc("update_agenda_discussion", { p_agenda_item_id: item.id, p_status: status, p_discussion_notes: notes, p_expected_updated_at: item.updated_at });
         await load(true, true);
         return true;
       } catch {
@@ -287,7 +299,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
         setBusy(false);
       }
     }
-    return perform(() => liveMeetingRpc("update_agenda_discussion", { p_agenda_item_id: item.id, p_status: status, p_discussion_notes: notes, p_expected_updated_at: item.updated_at }), status === "under_discussion" ? "بدأت مناقشة البند." : status === "discussed" ? "تم حفظ الملخص النهائي للبند بنجاح." : "أُجل البند مع توثيق السبب.");
+    return perform(() => roomRpc("update_agenda_discussion", { p_agenda_item_id: item.id, p_status: status, p_discussion_notes: notes, p_expected_updated_at: item.updated_at }), status === "under_discussion" ? "بدأت مناقشة البند." : status === "discussed" ? "تم حفظ الملخص النهائي للبند بنجاح." : "أُجل البند مع توثيق السبب.");
   }
 
   function submitReason(reason: string) {
@@ -303,15 +315,15 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     if (decision) {
       // The token of the text the editor started from, not of a newer polled copy:
       // if someone else saved meanwhile, the server refuses instead of overwriting them.
-      return perform(() => liveMeetingRpc("update_meeting_decision_text", { p_decision_id: decision.id, p_decision_text: text, p_expected_updated_at: decision.updated_at }), "تم حفظ التعديل على نص القرار.");
+      return perform(() => roomRpc("update_meeting_decision_text", { p_decision_id: decision.id, p_decision_text: text, p_expected_updated_at: decision.updated_at }), "تم حفظ التعديل على نص القرار.");
     }
     if (!round) return Promise.resolve(false);
-    return perform(() => liveMeetingRpc("create_decision_from_voting_round", { p_voting_round_id: round.id, p_decision_text: text, p_requires_approval: true }), "تم حفظ صياغة القرار وإحالته للاعتماد.");
+    return perform(() => roomRpc("create_decision_from_voting_round", { p_voting_round_id: round.id, p_decision_text: text, p_requires_approval: true }), "تم حفظ صياغة القرار وإحالته للاعتماد.");
   }
 
   async function confirmCompleteSession() {
     if (!session) return;
-    const completed = await perform(() => liveMeetingRpc("complete_meeting_session", { p_meeting_id: meetingId, p_expected_updated_at: session.meeting.updated_at }), "انتهت الجلسة وانتقل الاجتماع إلى إعداد المحضر.");
+    const completed = await perform(() => roomRpc("complete_meeting_session", { p_meeting_id: meetingId, p_expected_updated_at: session.meeting.updated_at }), "انتهت الجلسة وانتقل الاجتماع إلى إعداد المحضر.");
     if (!completed) return;
     setCompleteConfirmation(false);
     router.push(`/admin/meetings/${meetingId}/minutes`);
@@ -341,16 +353,16 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
 
   const assignmentActions = {
     onSearchUsers: async (query: string) => {
-      const result = await liveMeetingRpc<{ users: AssignmentUserOption[] }>("search_meeting_assignment_options_v2", { p_meeting_id: meetingId, p_query: query, p_limit: 20 });
+      const result = await roomRpc<{ users: AssignmentUserOption[] }>("search_meeting_assignment_options_v2", { p_meeting_id: meetingId, p_query: query, p_limit: 20 });
       return result.users;
     },
-    onCreate: (agendaItemId: string, input: NewAssignment) => runAssignment(NEW_ASSIGNMENT_KEY, () => liveMeetingRpc("propose_meeting_assignment_v2", {
+    onCreate: (agendaItemId: string, input: NewAssignment) => runAssignment(NEW_ASSIGNMENT_KEY, () => roomRpc("propose_meeting_assignment_v2", {
       p_agenda_item_id: agendaItemId, p_title: input.title, p_description: null,
       p_assigned_user_id: input.userId, p_assigned_unit_id: input.unitId, p_due_date: input.dueDate,
       p_follow_up_user_id: input.followUpId, p_requires_evidence: input.requiresEvidence,
     }), "تعذر حفظ التكليف."),
-    onConfirm: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => liveMeetingRpc("confirm_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر اعتماد التكليف."),
-    onWithdraw: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => liveMeetingRpc("withdraw_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر سحب التكليف."),
+    onConfirm: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => roomRpc("confirm_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر اعتماد التكليف."),
+    onWithdraw: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => roomRpc("withdraw_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر سحب التكليف."),
   };
 
   function submitReferral(toUnitId: string, reason: string) {
@@ -358,7 +370,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     // The item as the room last read it: a change from another screen is refused, not overwritten.
     const item = agenda.find((row) => row.id === referralItem.id) ?? referralItem;
     return perform(
-      () => liveMeetingRpc("refer_agenda_item_v2", { p_agenda_item_id: item.id, p_to_unit_id: toUnitId, p_reason: reason, p_expected_updated_at: item.updated_at }),
+      () => roomRpc("refer_agenda_item_v2", { p_agenda_item_id: item.id, p_to_unit_id: toUnitId, p_reason: reason, p_expected_updated_at: item.updated_at }),
       "أُحيل البند، وينتظر قبول الجهة المحال إليها.",
     );
   }
@@ -366,7 +378,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   async function setPlannedMinutes(agendaItemId: string, minutes: number | null, revision: number) {
     setPlannedState({ pendingItemId: agendaItemId, errorItemId: null, error: null });
     try {
-      await liveMeetingRpc("set_agenda_item_planned_minutes_v2", { p_agenda_item_id: agendaItemId, p_minutes: minutes, p_expected_revision: revision });
+      await roomRpc("set_agenda_item_planned_minutes_v2", { p_agenda_item_id: agendaItemId, p_minutes: minutes, p_expected_revision: revision });
       await load(true, true);
       setPlannedState({ pendingItemId: null, errorItemId: null, error: null });
     } catch (error) {
@@ -378,7 +390,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   async function setItemDownloads(agendaItemId: string, allowed: boolean, revision: number) {
     setDownloadState({ pendingItemId: agendaItemId, errorItemId: null, error: null });
     try {
-      await liveMeetingRpc("set_agenda_item_downloads_v2", { p_agenda_item_id: agendaItemId, p_allowed: allowed, p_expected_revision: revision });
+      await roomRpc("set_agenda_item_downloads_v2", { p_agenda_item_id: agendaItemId, p_allowed: allowed, p_expected_revision: revision });
       await load(true, true);
       setDownloadState({ pendingItemId: null, errorItemId: null, error: null });
     } catch (error) {
@@ -464,7 +476,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       )}
 
       <QuorumDecisionGate session={session} busy={busy} onChoose={async (action, reason) => {
-        const saved = await perform(() => liveMeetingRpc("apply_quorum_failure", { p_meeting_id: meetingId, p_action: action, p_reason: reason, p_expected_updated_at: session.meeting.updated_at }), action === "postpone" ? "أُجل الاجتماع لعدم اكتمال النصاب." : "سُجل قرار المتابعة بنصاب غير مكتمل وسيظهر في القرارات والمحضر.");
+        const saved = await perform(() => roomRpc("apply_quorum_failure", { p_meeting_id: meetingId, p_action: action, p_reason: reason, p_expected_updated_at: session.meeting.updated_at }), action === "postpone" ? "أُجل الاجتماع لعدم اكتمال النصاب." : "سُجل قرار المتابعة بنصاب غير مكتمل وسيظهر في القرارات والمحضر.");
         if (saved && action === "postpone") router.push("/admin/meetings");
         return saved;
       }} />
@@ -477,9 +489,9 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           busy={busy}
           canLock={session.viewer.can_lock_attendance}
           onOpenQr={() => void createCheckInSession()}
-          onRefreshQuorum={() => void perform(() => liveMeetingRpc("recalculate_meeting_quorum", { p_meeting_id: meetingId, p_record_snapshot: true }), "تم تحديث النصاب.")}
+          onRefreshQuorum={() => void perform(() => roomRpc("recalculate_meeting_quorum", { p_meeting_id: meetingId, p_record_snapshot: true }), "تم تحديث النصاب.")}
           onVerify={verifyAttendance}
-          onLock={() => void perform(() => liveMeetingRpc("lock_attendance_roster", { p_meeting_id: meetingId, p_expected_updated_at: session.meeting.updated_at }), "تم تثبيت سجل الحضور واعتماد النصاب.")}
+          onLock={() => void perform(() => roomRpc("lock_attendance_roster", { p_meeting_id: meetingId, p_expected_updated_at: session.meeting.updated_at }), "تم تثبيت سجل الحضور واعتماد النصاب.")}
         />
       ) : (
         <div className={cn("min-h-0 flex-1", (presenting || fullscreen) && "overflow-y-auto")}><AgendaWorkspace
@@ -508,8 +520,8 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
           referrals={referrals}
           assignments={{ data: assignments, error: assignmentsError, onRetry: () => void refreshAssignments(), activity: assignmentActivity, ...assignmentActions }}
           onRequestReferral={(item) => { setNotice(null); setReferralItem(item); }}
-          onOpenRound={(item) => void perform(() => liveMeetingRpc("open_voting_round", { p_agenda_item_id: item.id, p_expected_meeting_updated_at: session.meeting.updated_at }), "فُتحت جولة التصويت لهذا البند.")}
-          onCloseRound={(round) => void perform(() => liveMeetingRpc("close_voting_round", { p_voting_round_id: round.id, p_reason: "إغلاق الجولة بعد اكتمال التصويت." }), "أُغلقت الجولة وحُسبت النتيجة.")}
+          onOpenRound={(item) => void perform(() => roomRpc("open_voting_round", { p_agenda_item_id: item.id, p_expected_meeting_updated_at: session.meeting.updated_at }), "فُتحت جولة التصويت لهذا البند.")}
+          onCloseRound={(round) => void perform(() => roomRpc("close_voting_round", { p_voting_round_id: round.id, p_reason: "إغلاق الجولة بعد اكتمال التصويت." }), "أُغلقت الجولة وحُسبت النتيجة.")}
           onCreateDecision={(round, item) => { setNotice(null); setDecisionDraft({ round, item }); }}
           onEditDecision={(decision, item, round) => { setNotice(null); setDecisionDraft({ round, item, decision }); }}
           onComplete={() => { setNotice(null); setCompleteConfirmation(true); }}

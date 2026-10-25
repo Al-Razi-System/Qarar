@@ -265,6 +265,8 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     await openAgenda(chair.page);
     await chair.page.getByRole("button", { name: "بدء المناقشة" }).click();
     await expect(chair.page.getByText("بدأت مناقشة البند.")).toBeVisible();
+    // The room tells every screen at once; nobody waits for a periodic read.
+    await expect(member.page.getByText("قيد المناقشة").first()).toBeVisible({ timeout: 3_000 });
     await chair.page.getByRole("button", { name: "وضع العرض على الشاشة" }).click();
     await expect(chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" })).toBeInViewport();
     await chair.page.getByRole("button", { name: "تكبير التعليمات" }).click();
@@ -276,6 +278,7 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     await expect(chair.page.getByText("تم حفظ الملخص النهائي للبند بنجاح.")).toBeVisible();
     await chair.page.getByRole("button", { name: "إنهاء وضع العرض", exact: true }).click();
     await chair.page.getByRole("button", { name: "فتح التصويت للأعضاء" }).click();
+    await expect(member.page.getByRole("dialog").filter({ hasText: "تصويت مفتوح لك الآن" })).toBeVisible({ timeout: 3_000 });
     const closeVote = chair.page.getByRole("button", { name: "إغلاق التصويت واحتساب النتيجة" });
     await expect(closeVote).toBeDisabled();
     await expect(chair.page.getByRole("img", { name: "صوّت 0 من 3", exact: true })).toBeVisible();

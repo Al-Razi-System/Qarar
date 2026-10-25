@@ -5,20 +5,24 @@ import { liveMeetingRpc } from "../../api/live-meeting-client";
 import type { MeetingBroadcast } from "../../model/live-meeting";
 import type { ReferenceTab } from "./topic-card";
 
-/** How often a screen asks for the broadcast while the session runs. */
+/** How often a screen asks for the broadcast when the room's channel is down. */
 export const BROADCAST_REFRESH_MS = 2_000;
+/** How often it still asks while the channel tells it of every change. */
+export const BROADCAST_FALLBACK_MS = 10_000;
 
 function messageOf(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
 /**
- * The broadcast of the council's screens. Every screen reads it every two
- * seconds; the controller's choices are shown at once and sent in order, each
- * against the revision the server last confirmed, so two quick clicks never
- * overwrite each other. A refused change restores the server's state and says why.
+ * The broadcast of the council's screens. A screen reads it again as soon as
+ * the room's channel says it changed (`signal.tick`), and periodically as a
+ * fallback: every two seconds without the channel, every ten with it. The
+ * controller's choices are shown at once and sent in order, each against the
+ * revision the server last confirmed, so two quick clicks never overwrite each
+ * other. A refused change restores the server's state and says why.
  */
-export function useMeetingBroadcast(meetingId: string, enabled: boolean) {
+export function useMeetingBroadcast(meetingId: string, enabled: boolean, signal?: { tick: number; connected: boolean }) {
   const [broadcast, setBroadcast] = useState<MeetingBroadcast | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -33,8 +37,12 @@ export function useMeetingBroadcast(meetingId: string, enabled: boolean) {
     setBroadcast(next);
   }
 
+  const tick = signal?.tick ?? 0;
+  const interval = signal?.connected ? BROADCAST_FALLBACK_MS : BROADCAST_REFRESH_MS;
+  const room = { meetingId };
+
   async function reload() {
-    const fresh = await liveMeetingRpc<MeetingBroadcast>("get_meeting_broadcast_v2", { p_meeting_id: meetingId });
+    const fresh = await liveMeetingRpc<MeetingBroadcast>("get_meeting_broadcast_v2", { p_meeting_id: meetingId }, room);
     if (!writing.current) show(fresh);
     return fresh;
   }
@@ -42,7 +50,7 @@ export function useMeetingBroadcast(meetingId: string, enabled: boolean) {
   const refresh = useEffectEvent(async () => {
     if (writing.current) return;
     try {
-      const fresh = await liveMeetingRpc<MeetingBroadcast>("get_meeting_broadcast_v2", { p_meeting_id: meetingId });
+      const fresh = await liveMeetingRpc<MeetingBroadcast>("get_meeting_broadcast_v2", { p_meeting_id: meetingId }, room);
       if (writing.current) return;
       if (JSON.stringify(fresh) !== JSON.stringify(shown.current)) show(fresh);
       setError((current) => (current === READ_FAILED ? null : current));
@@ -56,16 +64,16 @@ export function useMeetingBroadcast(meetingId: string, enabled: boolean) {
     if (!enabled) return;
     let stopped = false;
     let timer: number | undefined;
-    async function tick() {
+    async function next() {
       await refresh();
-      if (!stopped) timer = window.setTimeout(() => void tick(), BROADCAST_REFRESH_MS);
+      if (!stopped) timer = window.setTimeout(() => void next(), interval);
     }
-    void tick();
+    void next();
     return () => {
       stopped = true;
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [meetingId, enabled]);
+  }, [meetingId, enabled, interval, tick]);
 
   async function flush() {
     writing.current = true;
@@ -80,13 +88,13 @@ export function useMeetingBroadcast(meetingId: string, enabled: boolean) {
               p_agenda_item_id: next.agendaItemId,
               p_panel: next.panel,
               p_expected_revision: confirmedRevision.current,
-            })
+            }, room)
             : await liveMeetingRpc<MeetingBroadcast>("set_meeting_broadcast_document_v2", {
               p_meeting_id: meetingId,
               p_attachment_id: next.attachmentId,
               p_page: next.page,
               p_expected_revision: confirmedRevision.current,
-            });
+            }, room);
           confirmedRevision.current = saved.revision;
           if (!queued.current) show(saved);
           setError(null);
@@ -133,7 +141,7 @@ export function useMeetingBroadcast(meetingId: string, enabled: boolean) {
         p_meeting_id: meetingId,
         p_to_role: toRole,
         p_expected_revision: confirmedRevision.current,
-      });
+      }, room);
       show(saved);
       setError(null);
     } catch (failure) {

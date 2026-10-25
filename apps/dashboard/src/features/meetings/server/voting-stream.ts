@@ -1,4 +1,5 @@
 import type { MyVote, VotingRound } from "../model/live-meeting";
+import type { RoomChange } from "./voting-events";
 export type VotingSnapshot = { rounds: VotingRound[]; votes: MyVote[] };
 
 /** Defence in depth: even a future contract field cannot leak an open ballot. */
@@ -14,10 +15,12 @@ export function votingSnapshot(rounds: VotingRound[], votes: MyVote[]): VotingSn
   };
 }
 
-export function votingStream({ initial, read, subscribe, signal, onError, pollMs = 1000, maxMs = 50_000 }: {
+export function votingStream({ initial, read, subscribe, signal, onError, room, pollMs = 1000, maxMs = 50_000 }: {
   initial: VotingSnapshot; read: (signal: AbortSignal) => Promise<VotingSnapshot>;
   subscribe: (wake: () => void) => () => void; signal: AbortSignal;
   onError: (error: unknown) => { message: string; terminal: boolean };
+  /** The room's change signal: a revision and a scope, never meeting data. */
+  room?: { revision: () => number; watch: (notify: (change: RoomChange) => void) => () => void };
   pollMs?: number; maxMs?: number;
 }) {
   let close = () => {};
@@ -29,11 +32,13 @@ export function votingStream({ initial, read, subscribe, signal, onError, pollMs
       let previous = JSON.stringify(initial);
       const send = (value: string) => { if (!stopped) controller.enqueue(encoder.encode(value)); };
       let unsubscribe = () => {};
+      let unwatchRoom = () => {};
       close = () => {
         if (stopped) return;
         stopped = true; abort.abort(); clearInterval(interval); clearTimeout(deadline);
-        unsubscribe(); signal.removeEventListener("abort", close); if (!cancelled) controller.close();
+        unsubscribe(); unwatchRoom(); signal.removeEventListener("abort", close); if (!cancelled) controller.close();
       };
+      const sendRoom = (change: RoomChange) => send(`event: room\ndata: ${JSON.stringify({ revision: change.revision, scope: change.scope })}\n\n`);
       async function refresh() {
         if (stopped) return;
         if (reading) { queued = true; return; }
@@ -52,8 +57,9 @@ export function votingStream({ initial, read, subscribe, signal, onError, pollMs
       const interval = setInterval(() => { void refresh(); }, pollMs);
       const deadline = setTimeout(close, maxMs);
       send(`retry: 1000\nevent: voting\ndata: ${previous}\n\n`);
+      if (room) { sendRoom({ revision: room.revision(), scope: "sync" }); unwatchRoom = room.watch(sendRoom); }
       unsubscribe = subscribe(() => { void refresh(); });
-      if (stopped) unsubscribe();
+      if (stopped) { unsubscribe(); unwatchRoom(); }
       signal.addEventListener("abort", close, { once: true });
       if (signal.aborted) close();
     },

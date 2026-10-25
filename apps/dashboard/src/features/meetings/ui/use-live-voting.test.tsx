@@ -34,4 +34,24 @@ describe("live voting subscriber", () => {
     expect(result.current.error).toMatch(/صلاحية/);
     expect(Source.instances[1].close).toHaveBeenCalled();
   });
+  it("counts room and broadcast changes, and catches up on a change missed while disconnected", () => {
+    vi.stubGlobal("EventSource", Source);
+    const { result } = renderHook(() => useLiveVoting("m1", true));
+    const source = Source.instances[0];
+    act(() => source.send("room", { revision: 3, scope: "sync" }));
+    expect(result.current.roomTick).toBe(0);
+    expect(result.current.broadcastTick).toBe(0);
+    // Reloading the room also reloads its broadcast; a broadcast change alone leaves the room.
+    act(() => source.send("room", { revision: 4, scope: "room" }));
+    expect(result.current.roomTick).toBe(1);
+    expect(result.current.broadcastTick).toBe(1);
+    act(() => source.send("room", { revision: 5, scope: "broadcast" }));
+    expect(result.current.broadcastTick).toBe(2);
+    expect(result.current.roomTick).toBe(1);
+    act(() => source.send("room", { revision: 5, scope: "sync" }));
+    expect(result.current.roomTick).toBe(1);
+    act(() => source.send("room", { revision: 9, scope: "sync" }));
+    expect(result.current.roomTick).toBe(2);
+    expect(result.current.broadcastTick).toBe(3);
+  });
 });

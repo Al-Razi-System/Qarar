@@ -2,7 +2,7 @@ import { qararRpc } from "@/shared/api/qarar-server";
 import { safeAdminError } from "@/shared/security/admin-error";
 import { apiError, requestId } from "@/shared/api/response";
 import { logEvent } from "@/shared/observability/logger";
-import { watchVoting } from "@/features/meetings/server/voting-events";
+import { roomRevision, watchRoom, watchVoting } from "@/features/meetings/server/voting-events";
 import { votingSnapshot, votingStream } from "@/features/meetings/server/voting-stream";
 import type { MyVote, VotingRound } from "@/features/meetings/model/live-meeting";
 
@@ -30,7 +30,10 @@ export async function GET(request: Request, context: { params: Promise<{ meeting
   }
   try {
     const initial = await read(request.signal);
-    return new Response(votingStream({ initial, read, signal: request.signal, subscribe: wake => watchVoting(() => keys, wake),
+    // Writes through this server wake the stream at once; the slower periodic
+    // read covers writes that reach the database another way.
+    return new Response(votingStream({ initial, read, signal: request.signal, subscribe: wake => watchVoting(() => keys, wake), pollMs: 3000,
+      room: { revision: () => roomRevision(meetingId), watch: notify => watchRoom(meetingId, notify) },
       onError: error => { const { safe, terminal } = failure(error); return { message: safe.message, terminal }; },
     }), { headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "private, no-store, no-transform", "X-Accel-Buffering": "no", "x-request-id": id } });
   } catch (error) {
