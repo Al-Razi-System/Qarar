@@ -15,8 +15,8 @@ select matches((select prosrc from pg_proc where oid='qarar_governance.admin_sav
 select matches((select prosrc from pg_proc where oid='qarar_governance.get_notification_dispatch_context(uuid,uuid)'::regprocedure),'channel_enabled','dispatcher receives channel policy');
 select matches((select prosrc from pg_proc where oid='qarar_governance.get_notification_dispatch_context(uuid,uuid)'::regprocedure),'custom_intro','dispatcher receives safe template customization');
 select ok((select relrowsecurity from pg_class where oid='qarar_governance.notification_settings'::regclass),'settings use RLS');
-select matches((select prosrc from pg_proc where oid='qarar_meetings.generate_meeting_notification_events(date,integer)'::regprocedure),'meeting_reminder_days','meeting scheduler uses organization policy');
-select matches((select prosrc from pg_proc where oid='qarar_execution.generate_action_item_notification_events(date,integer)'::regprocedure),'task_due_soon_days','task scheduler uses organization policy');
+select matches((select prosrc from pg_proc where oid='qarar_meetings.generate_meeting_notification_events(date,integer)'::regprocedure),'organization_reminder_days\(m\.organization_id,''meeting''','meeting scheduler uses organization policy');
+select matches((select prosrc from pg_proc where oid='qarar_execution.generate_action_item_notification_events(date,integer)'::regprocedure),'organization_reminder_days\(t\.organization_id,''task''','task scheduler uses organization policy');
 
 select * from finish();
 rollback;

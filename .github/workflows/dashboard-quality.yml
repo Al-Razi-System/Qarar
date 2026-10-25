@@ -11,6 +11,7 @@ on:
       - "supabase/tests/**"
       - "supabase/docker/**"
       - "scripts/*e2e*"
+      - "scripts/pull-supabase-compose-images*"
       - ".github/workflows/dashboard-quality.yml"
   push:
     # Dedicated validation branches can exercise the complete gate before a
@@ -45,7 +46,7 @@ jobs:
         run: npm run test:development-governance
       - name: Verify E2E isolation safeguards
         working-directory: ${{ github.workspace }}
-        run: node --test scripts/isolated-e2e-ci.test.mjs scripts/report-e2e-failures.test.mjs
+        run: node --test scripts/isolated-e2e-ci.test.mjs scripts/report-e2e-failures.test.mjs scripts/pull-supabase-compose-images.test.mjs
 
   api-contracts:
     runs-on: ubuntu-latest
