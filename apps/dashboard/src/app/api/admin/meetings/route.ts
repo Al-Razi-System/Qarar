@@ -5,7 +5,7 @@ import { isJsonObject, readJsonObject } from "@/shared/security/json-body";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
 import { apiError, apiSuccess, requestId } from "@/shared/api/response";
 import { logEvent } from "@/shared/observability/logger";
-import { notifyVotingMutation } from "@/features/meetings/server/voting-events";
+import { notifyRoomChange, notifyVotingMutation, roomScopeOf } from "@/features/meetings/server/voting-events";
 
 const contracts = new Set([
   "save_meeting_with_quorum_v2",
@@ -38,6 +38,20 @@ const cancellableReadContracts = new Set([
   "list_meeting_topic_attachments", "get_sprint02_form_options", "search_eligible_agenda_topics", "get_meeting_readiness",
 ]);
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The meeting whose screens a successful write should tell. The live room names
+ * itself in a header because many of its writes carry only an item or a round.
+ * The header grants nothing: it only asks that meeting's screens to read again,
+ * each with its own authority.
+ */
+function roomMeetingId(request: Request, params: Record<string, unknown>, result: unknown) {
+  const data = result && typeof result === "object" ? result as Record<string, unknown> : {};
+  const candidate = params.p_meeting_id ?? data.meeting_id ?? request.headers.get("x-qarar-meeting-id");
+  return typeof candidate === "string" && UUID.test(candidate) ? candidate : null;
+}
+
 export async function POST(request: Request) {
   const id = requestId(request);
   const originError = rejectUntrustedMutation(request);
@@ -57,7 +71,10 @@ export async function POST(request: Request) {
     const data = await (contract.endsWith("_v2")
       ? qararRpcV2<unknown>(contract, params ?? {})
       : qararRpc<unknown>(contract, params ?? {}, cancellableReadContracts.has(contract) ? { signal: request.signal } : {}));
-    notifyVotingMutation(contract, params ?? {}, data);
+    const meetingId = roomMeetingId(request, params ?? {}, data);
+    notifyVotingMutation(contract, params ?? {}, data, meetingId);
+    const scope = roomScopeOf(contract);
+    if (scope && meetingId) notifyRoomChange(meetingId, scope);
     return apiSuccess(data, id);
   } catch (error) {
     const safeError = safeAdminError(error, "تعذر تنفيذ العملية.", 500);

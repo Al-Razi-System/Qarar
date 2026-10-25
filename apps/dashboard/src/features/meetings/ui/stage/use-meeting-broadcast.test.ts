@@ -4,7 +4,7 @@ import type { MeetingBroadcast } from "../../model/live-meeting";
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../../api/live-meeting-client", () => ({ liveMeetingRpc: rpc }));
-import { useMeetingBroadcast } from "./use-meeting-broadcast";
+import { BROADCAST_FALLBACK_MS, BROADCAST_REFRESH_MS, useMeetingBroadcast } from "./use-meeting-broadcast";
 
 const server = (overrides: Partial<MeetingBroadcast> = {}): MeetingBroadcast => ({
   meeting_id: "m1", active: true, controller_role: "chair", agenda_item_id: null, panel: "instructions", revision: 0,
@@ -90,7 +90,7 @@ describe("useMeetingBroadcast", () => {
     await act(async () => { handover.resolve(server({ revision: 8, controller_role: "rapporteur", viewer_controls: false, can_hand_over: false, can_take_back: true })); });
     expect(result.current.pending).toBe(false);
     expect(result.current.broadcast).toMatchObject({ controller_role: "rapporteur", can_take_back: true });
-    expect(rpc).toHaveBeenCalledWith("hand_over_meeting_broadcast_v2", { p_meeting_id: "m1", p_to_role: "rapporteur", p_expected_revision: 7 });
+    expect(rpc).toHaveBeenCalledWith("hand_over_meeting_broadcast_v2", { p_meeting_id: "m1", p_to_role: "rapporteur", p_expected_revision: 7 }, { meetingId: "m1" });
   });
 
   it("opens a document for every screen against the confirmed revision", async () => {
@@ -102,6 +102,28 @@ describe("useMeetingBroadcast", () => {
     act(() => result.current.openDocument("f2", 1, "a2"));
     expect(result.current.broadcast).toMatchObject({ attachment_id: "f2", page: 1, panel: "attachments", agenda_item_id: "a2" });
     await waitFor(() => expect(result.current.broadcast?.revision).toBe(3));
-    expect(rpc).toHaveBeenCalledWith("set_meeting_broadcast_document_v2", { p_meeting_id: "m1", p_attachment_id: "f2", p_page: 1, p_expected_revision: 2 });
+    expect(rpc).toHaveBeenCalledWith("set_meeting_broadcast_document_v2", { p_meeting_id: "m1", p_attachment_id: "f2", p_page: 1, p_expected_revision: 2 }, { meetingId: "m1" });
+  });
+});
+
+describe("useMeetingBroadcast with the room's change signal", () => {
+  it("reads at once when the room says the broadcast changed, and only slowly as a fallback while connected", async () => {
+    vi.useFakeTimers();
+    try {
+      rpc.mockResolvedValue(server({ revision: 1 }));
+      const { result, rerender } = renderHook(({ tick }) => useMeetingBroadcast("m1", true, { tick, connected: true }), { initialProps: { tick: 0 } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      expect(result.current.broadcast?.revision).toBe(1);
+      expect(rpc).toHaveBeenCalledTimes(1);
+      await act(async () => { await vi.advanceTimersByTimeAsync(BROADCAST_REFRESH_MS * 2); });
+      expect(rpc).toHaveBeenCalledTimes(1);
+      rpc.mockResolvedValue(server({ revision: 2, agenda_item_id: "a2" }));
+      rerender({ tick: 1 });
+      await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      expect(rpc).toHaveBeenCalledTimes(2);
+      expect(result.current.broadcast?.agenda_item_id).toBe("a2");
+      await act(async () => { await vi.advanceTimersByTimeAsync(BROADCAST_FALLBACK_MS); });
+      expect(rpc).toHaveBeenCalledTimes(3);
+    } finally { vi.useRealTimers(); }
   });
 });

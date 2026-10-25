@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 const { rpc, rpcV2 } = vi.hoisted(() => ({ rpc: vi.fn(), rpcV2: vi.fn() }));
 vi.mock("@/shared/api/qarar-server", () => ({ qararRpc: rpc, qararRpcV2: rpcV2 }));
 import { POST } from "./route";
-import { watchVoting } from "@/features/meetings/server/voting-events";
+import { watchRoom, watchVoting } from "@/features/meetings/server/voting-events";
 afterEach(() => vi.resetAllMocks());
 it("saves meeting data and its quorum in one V2 transaction", async () => {
   rpcV2.mockResolvedValue({ id: "meeting-1", quorum_percentage: 30 });
@@ -11,8 +11,9 @@ it("saves meeting data and its quorum in one V2 transaction", async () => {
   expect(rpcV2).toHaveBeenCalledWith("save_meeting_with_quorum_v2", params);
   expect(rpc).not.toHaveBeenCalled();
 });
-function request(contract: string, params: unknown = {}) {
-  return new Request("http://localhost/api/admin/meetings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contract, params }) });
+function request(contract: string, params: unknown = {}, meetingId?: string) {
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(meetingId ? { "x-qarar-meeting-id": meetingId } : {}) };
+  return new Request("http://localhost/api/admin/meetings", { method: "POST", headers, body: JSON.stringify({ contract, params }) });
 }
 it("dispatches atomic invitation timing to V2, not the legacy facade", async () => {
   rpcV2.mockResolvedValue({ queued: 2 });
@@ -59,4 +60,36 @@ it("translates a database statement timeout into a safe actionable response", as
   });
   expect(payload.error.requestId).toEqual(expect.any(String));
   expect(JSON.stringify(payload)).not.toContain("statement timeout");
+});
+it("tells the room's screens after a successful room change, using the room the request came from", async () => {
+  const meetingId = "6f0c2a8e-3d4b-4c1a-9e2f-5b7d8a9c0e1f";
+  const notify = vi.fn(); const stop = watchRoom(meetingId, notify);
+  try {
+    rpc.mockRejectedValueOnce(Object.assign(new Error("تعارض"), { code: "40001", status: 409 }));
+    await POST(request("update_agenda_discussion", { p_agenda_item_id: "a1" }, meetingId));
+    expect(notify).not.toHaveBeenCalled();
+    rpc.mockResolvedValueOnce({ id: "a1" });
+    expect((await POST(request("update_agenda_discussion", { p_agenda_item_id: "a1" }, meetingId))).status).toBe(200);
+    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ scope: "room" }));
+    rpc.mockResolvedValueOnce({ id: "a1" });
+    await POST(request("get_meeting_session_detail", { p_meeting_id: meetingId }, meetingId));
+    expect(notify).toHaveBeenCalledOnce();
+  } finally { stop(); }
+});
+it("wakes the meeting's voting readers when a round opens, though the call names only the item", async () => {
+  const meetingId = "6f0c2a8e-3d4b-4c1a-9e2f-5b7d8a9c0e1f";
+  const wake = vi.fn(); const stop = watchVoting(() => [`meeting:${meetingId}`], wake);
+  try {
+    rpc.mockResolvedValueOnce({ id: "round-1", status: "open" });
+    await POST(request("open_voting_round", { p_agenda_item_id: "a1" }, meetingId));
+    expect(wake).toHaveBeenCalledOnce();
+  } finally { stop(); }
+});
+it("ignores a room header that is not a meeting identifier", async () => {
+  const notify = vi.fn(); const stop = watchRoom("not-a-uuid", notify);
+  try {
+    rpc.mockResolvedValueOnce({ id: "a1" });
+    await POST(request("update_agenda_discussion", { p_agenda_item_id: "a1" }, "not-a-uuid"));
+    expect(notify).not.toHaveBeenCalled();
+  } finally { stop(); }
 });

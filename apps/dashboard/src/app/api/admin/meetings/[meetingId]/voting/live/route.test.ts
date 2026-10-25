@@ -32,7 +32,9 @@ describe("authenticated contextual voting channel", () => {
     const reader = response.body!.getReader();
     const first = new TextDecoder().decode((await reader.read()).value);
     expect(first).not.toMatch(/chair_vote|reject|approve_count|PRIVATE/);
-    allowed = false; await vi.advanceTimersByTimeAsync(1000);
+    // The room's change signal follows: a revision and a scope, nothing else.
+    expect(new TextDecoder().decode((await reader.read()).value)).toBe('event: room\ndata: {"revision":0,"scope":"sync"}\n\n');
+    allowed = false; await vi.advanceTimersByTimeAsync(3000);
     expect(new TextDecoder().decode((await reader.read()).value)).toContain('"terminal":true');
     expect((await reader.read()).done).toBe(true);
     expect(rpc.mock.calls[3][0]).toBe("get_meeting_session_detail");
