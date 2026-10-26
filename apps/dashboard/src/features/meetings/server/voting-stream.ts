@@ -20,7 +20,7 @@ export function votingStream({ initial, read, subscribe, signal, onError, room, 
   subscribe: (wake: () => void) => () => void; signal: AbortSignal;
   onError: (error: unknown) => { message: string; terminal: boolean };
   /** The room's change signal: a revision and a scope, never meeting data. */
-  room?: { revision: () => number; watch: (notify: (change: RoomChange) => void) => () => void };
+  room?: { initialRevision: number; revision: () => number; watch: (notify: (change: RoomChange) => void) => () => void };
   pollMs?: number; maxMs?: number;
 }) {
   let close = () => {};
@@ -57,7 +57,15 @@ export function votingStream({ initial, read, subscribe, signal, onError, room, 
       const interval = setInterval(() => { void refresh(); }, pollMs);
       const deadline = setTimeout(close, maxMs);
       send(`retry: 1000\nevent: voting\ndata: ${previous}\n\n`);
-      if (room) { sendRoom({ revision: room.revision(), scope: "sync" }); unwatchRoom = room.watch(sendRoom); }
+      if (room) {
+        // Listen before reading the current revision. `initialRevision` was
+        // captured before the initial database snapshot; a difference means a
+        // write overlapped that snapshot and the client must read once more.
+        unwatchRoom = room.watch(sendRoom);
+        const currentRevision = room.revision();
+        sendRoom({ revision: currentRevision, scope: "sync" });
+        if (currentRevision !== room.initialRevision) sendRoom({ revision: currentRevision, scope: "room" });
+      }
       unsubscribe = subscribe(() => { void refresh(); });
       if (stopped) { unsubscribe(); unwatchRoom(); }
       signal.addEventListener("abort", close, { once: true });

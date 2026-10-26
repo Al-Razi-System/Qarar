@@ -76,11 +76,25 @@ describe("room change signals", () => {
     let notify!: (change: { revision: number; scope: "room" | "broadcast" }) => void;
     const abort = new AbortController();
     const reader = votingStream({ initial, read: async () => initial, subscribe: () => () => {}, signal: abort.signal, onError: () => ({ message: "خطأ", terminal: true }),
-      room: { revision: () => 7, watch: fn => { notify = fn; return () => {}; } } }).getReader();
+      room: { initialRevision: 7, revision: () => 7, watch: fn => { notify = fn; return () => {}; } } }).getReader();
     const opening = decode((await reader.read()).value) + decode((await reader.read()).value);
     expect(opening).toContain('event: room\ndata: {"revision":7,"scope":"sync"}');
     notify({ revision: 8, scope: "broadcast" });
     expect(decode((await reader.read()).value)).toBe('event: room\ndata: {"revision":8,"scope":"broadcast"}\n\n');
+    abort.abort(); await reader.cancel();
+  });
+  it("sends a catch-up change when the room changed while the initial snapshot was being read", async () => {
+    const abort = new AbortController();
+    let revision = 4;
+    const reader = votingStream({ initial, read: async () => initial, subscribe: () => () => {}, signal: abort.signal, onError: () => ({ message: "خطأ", terminal: true }),
+      room: {
+        initialRevision: 3,
+        revision: () => revision,
+        watch: () => { revision = 4; return () => {}; },
+      } as never,
+    }).getReader();
+    const opening = decode((await reader.read()).value) + decode((await reader.read()).value) + decode((await reader.read()).value);
+    expect(opening).toContain('event: room\ndata: {"revision":4,"scope":"room"}');
     abort.abort(); await reader.cancel();
   });
 });

@@ -204,13 +204,24 @@ for migration in $(find /migrations -maxdepth 1 -type f -name '*.sql' | sort); d
   echo "Applying migration: $version"
   # Apply the migration and its ledger entry in one transaction. A statement
   # failure or container interruption cannot leave an unrecorded partial schema.
+  # Historical Qarar migrations may already contain one outer BEGIN/COMMIT
+  # pair. Remove only standalone transaction-control lines and let this runner
+  # own the single transaction that also records the checksum. Keeping the
+  # file's COMMIT would end psql's --single-transaction before the ledger write.
   # check_function_bodies=off (as pg_dump and pg_restore set it): GoTrue creates
   # its own auth tables (auth.sessions among them) only after this runner
   # finishes, so a fresh volume must accept SQL function bodies that reference
   # them. Bodies are still validated when the functions run.
-  PGOPTIONS="${PGOPTIONS:-} -c check_function_bodies=off" psql -v ON_ERROR_STOP=1 --single-transaction \
-    -f "$migration" \
-    -c "insert into qarar_internal.applied_migrations(version,checksum_sha256) values ('$version','$checksum')"
+  {
+    awk '
+      tolower($0) ~ /^[[:space:]]*begin[[:space:]]*;[[:space:]]*$/ { next }
+      tolower($0) ~ /^[[:space:]]*commit[[:space:]]*;[[:space:]]*$/ { next }
+      { print }
+    ' "$migration"
+    printf "\ninsert into qarar_internal.applied_migrations(version,checksum_sha256) values ('%s','%s');\n" \
+      "$version" "$checksum"
+  } | PGOPTIONS="${PGOPTIONS:-} -c check_function_bodies=off" \
+    psql -v ON_ERROR_STOP=1 --single-transaction
 done
 
 if [ "$apply_seed" = "true" ]; then

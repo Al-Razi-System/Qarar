@@ -39,7 +39,7 @@ it("notifies voting readers only after a successful write, never on rejection", 
     rpc.mockRejectedValueOnce(Object.assign(new Error("لا صلاحية"), { code: "42501", status: 403 }));
     expect((await POST(request("cast_vote", { p_voting_round_id: "r1" }))).status).toBe(403);
     expect(wake).not.toHaveBeenCalled();
-    rpc.mockResolvedValueOnce({ accepted: true, voting_round_id: "r1" });
+    rpc.mockResolvedValueOnce({ accepted: true, voting_round_id: "r1", meeting_id: "6f0c2a8e-3d4b-4c1a-9e2f-5b7d8a9c0e1f" });
     expect((await POST(request("cast_vote", { p_voting_round_id: "r1" }))).status).toBe(200);
     expect(wake).toHaveBeenCalledOnce();
   } finally { stop(); }
@@ -69,6 +69,7 @@ it("tells the room's screens after a successful room change, using the room the 
     await POST(request("update_agenda_discussion", { p_agenda_item_id: "a1" }, meetingId));
     expect(notify).not.toHaveBeenCalled();
     rpc.mockResolvedValueOnce({ id: "a1" });
+    rpc.mockResolvedValueOnce({ agenda_items: [{ id: "a1" }] });
     expect((await POST(request("update_agenda_discussion", { p_agenda_item_id: "a1" }, meetingId))).status).toBe(200);
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ scope: "room" }));
     rpc.mockResolvedValueOnce({ id: "a1" });
@@ -81,6 +82,7 @@ it("wakes the meeting's voting readers when a round opens, though the call names
   const wake = vi.fn(); const stop = watchVoting(() => [`meeting:${meetingId}`], wake);
   try {
     rpc.mockResolvedValueOnce({ id: "round-1", status: "open" });
+    rpc.mockResolvedValueOnce({ agenda_items: [{ id: "a1" }] });
     await POST(request("open_voting_round", { p_agenda_item_id: "a1" }, meetingId));
     expect(wake).toHaveBeenCalledOnce();
   } finally { stop(); }
@@ -90,6 +92,16 @@ it("ignores a room header that is not a meeting identifier", async () => {
   try {
     rpc.mockResolvedValueOnce({ id: "a1" });
     await POST(request("update_agenda_discussion", { p_agenda_item_id: "a1" }, "not-a-uuid"));
+    expect(notify).not.toHaveBeenCalled();
+  } finally { stop(); }
+});
+it("does not let an item mutation wake a different meeting named only by the client header", async () => {
+  const foreignMeeting = "7f0c2a8e-3d4b-4c1a-9e2f-5b7d8a9c0e2f";
+  const notify = vi.fn(); const stop = watchRoom(foreignMeeting, notify);
+  try {
+    rpc.mockResolvedValueOnce({ id: "agenda-from-another-meeting" });
+    rpc.mockResolvedValueOnce({ agenda_items: [{ id: "agenda-in-foreign-meeting" }] });
+    expect((await POST(request("update_agenda_discussion", { p_agenda_item_id: "agenda-from-another-meeting" }, foreignMeeting))).status).toBe(200);
     expect(notify).not.toHaveBeenCalled();
   } finally { stop(); }
 });

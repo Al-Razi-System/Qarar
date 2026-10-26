@@ -29,6 +29,44 @@ describe("LiveMeetingRoom polling", () => {
     view.unmount();
   });
 
+  it("does not lose a room change that arrives while an older refresh is pending", async () => {
+    vi.useFakeTimers();
+    class Source extends EventTarget {
+      static current: Source;
+      close = vi.fn(); onerror = null;
+      constructor() { super(); Source.current = this; }
+    }
+    vi.stubGlobal("EventSource", Source);
+    let detailReads = 0;
+    let timerReads = 0;
+    let releaseOlderRefresh!: () => void;
+    const session = { viewer: { user_id: "member", full_name_ar: "عضو", mode: "member" }, meeting: { id: "m", title_ar: "اجتماع", status: "in_progress", attendance_locked: true }, attendance: [], my_attendance: null, quorum: { quorum_status: "met" }, open_voting_rounds: [] };
+    liveMeetingRpc.mockImplementation(async (contract: string) => {
+      if (contract === "get_meeting_session_detail") return session;
+      if (contract === "get_meeting_detail") { detailReads++; return { agenda_items: [] }; }
+      if (contract === "list_meeting_item_timers_v2") {
+        if (++timerReads === 2) await new Promise<void>(resolve => { releaseOlderRefresh = resolve; });
+        return { server_now: new Date().toISOString(), timers: [] };
+      }
+      if (contract === "list_meeting_referrals_v2") return { referrals: [], destinations: [] };
+      if (contract === "list_meeting_assignments_v2") return { assignments: [], viewer: {}, options: null };
+      if (contract === "list_meeting_member_profiles_v2") return { members: [], mobile_visible: false };
+      return [];
+    });
+
+    const view = render(<LiveMeetingRoom meetingId="m" />);
+    await act(async () => Promise.resolve());
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+    expect(detailReads).toBe(2);
+    await act(async () => {
+      Source.current.dispatchEvent(new MessageEvent("room", { data: JSON.stringify({ revision: 1, scope: "room" }) }));
+    });
+    expect(detailReads).toBe(2);
+    await act(async () => { releaseOlderRefresh(); await Promise.resolve(); });
+    expect(detailReads).toBe(3);
+    view.unmount();
+  });
+
   it("updates participation even while a full room refresh is blocked", async () => {
     vi.useFakeTimers();
     class Source extends EventTarget {

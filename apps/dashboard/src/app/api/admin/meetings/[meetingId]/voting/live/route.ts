@@ -29,11 +29,12 @@ export async function GET(request: Request, context: { params: Promise<{ meeting
     return { safe, terminal: [401, 403, 404].includes(safe.status) || safe.code === "42501" || safe.code === "P0002" };
   }
   try {
+    const initialRoomRevision = roomRevision(meetingId);
     const initial = await read(request.signal);
     // Writes through this server wake the stream at once; the slower periodic
     // read covers writes that reach the database another way.
     return new Response(votingStream({ initial, read, signal: request.signal, subscribe: wake => watchVoting(() => keys, wake), pollMs: 3000,
-      room: { revision: () => roomRevision(meetingId), watch: notify => watchRoom(meetingId, notify) },
+      room: { initialRevision: initialRoomRevision, revision: () => roomRevision(meetingId), watch: notify => watchRoom(meetingId, notify) },
       onError: error => { const { safe, terminal } = failure(error); return { message: safe.message, terminal }; },
     }), { headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "private, no-store, no-transform", "X-Accel-Buffering": "no", "x-request-id": id } });
   } catch (error) {

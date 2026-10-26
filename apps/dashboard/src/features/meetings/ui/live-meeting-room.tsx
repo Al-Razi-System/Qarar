@@ -80,6 +80,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [profilesError, setProfilesError] = useState<string | null>(null);
   const loadInFlight = useRef(false);
   const loadFinished = useRef<Promise<void> | null>(null);
+  const queuedRoomRefresh = useRef(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [checkIn, setCheckIn] = useState<CheckInToken | null>(null);
   /** The decision dialog: drafting from an approved round, or editing a saved decision's text. */
@@ -91,16 +92,17 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [busy, setBusy] = useState(false);
 
   const refreshRoom = useEffectEvent((silent: boolean) => load(silent));
+  const refreshRoomAfterSignal = useEffectEvent((silent: boolean) => load(silent, false, true));
   const votingStructure = voting.snapshot?.rounds.map(round => `${round.id}:${round.status}`).join("|") ?? null;
   const previousVotingStructure = useRef<string | null>(null);
   useEffect(() => {
     const previous = previousVotingStructure.current;
     previousVotingStructure.current = votingStructure;
-    if (votingStructure !== null && previous !== null && previous !== votingStructure) void refreshRoom(true);
+    if (votingStructure !== null && previous !== null && previous !== votingStructure) void refreshRoomAfterSignal(true);
   }, [votingStructure]);
   // Another screen changed the room: read it again now, not at the next periodic read.
   useEffect(() => {
-    if (voting.roomTick > 0) void refreshRoom(true);
+    if (voting.roomTick > 0) void refreshRoomAfterSignal(true);
   }, [voting.roomTick]);
   // While the channel is connected the periodic read is only a safety net.
   const refreshInterval = voting.connected ? ROOM_FALLBACK_MS : checkIn || session?.open_voting_rounds.length ? 3_000 : 10_000;
@@ -132,13 +134,16 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, []);
 
-  async function load(silent = false, afterMutation = false): Promise<void> {
+  async function load(silent = false, afterMutation = false, queueIfBusy = false): Promise<void> {
     if (loadInFlight.current) {
       // A poll may predate the mutation: never mistake it for its fresh result.
       if (afterMutation) {
         await loadFinished.current;
         return load(silent, true);
       }
+      // A room signal describes a confirmed change. Coalesce signals while an
+      // older read is running, then read once more as soon as it finishes.
+      if (queueIfBusy) queuedRoomRefresh.current = true;
       return;
     }
     loadInFlight.current = true;
@@ -215,6 +220,10 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       loadInFlight.current = false;
       finish();
       if (!silent) setLoading(false);
+      if (queuedRoomRefresh.current) {
+        queuedRoomRefresh.current = false;
+        void load(true);
+      }
     }
   }
 
