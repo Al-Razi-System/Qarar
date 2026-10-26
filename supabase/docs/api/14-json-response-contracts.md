@@ -237,6 +237,7 @@ MeetingSessionDetail = {
 
 | Contract | Response |
 |---|---|
+| `get_meeting_session_start_timing_v2` | `{meeting_id,meeting_no?,title_ar,scheduled_date,start_time?,end_time?,timezone,server_now,scheduled_start_at?,scheduled_end_at?,timing_status,requires_confirmation,difference_minutes,can_confirm_off_schedule}` |
 | `open_meeting_session` | `MeetingSessionDetail` |
 | `get_meeting_session_detail` | `MeetingSessionDetail` |
 | `create_checkin_session` | `{checkin_session_id,meeting_id,token,expires_at}` |

@@ -13,7 +13,7 @@ const contracts = new Set([
   "transition_meeting", "get_sprint02_form_options",
   "admin_list_meeting_types", "admin_create_meeting_type", "admin_update_meeting_type",
   "search_eligible_agenda_topics", "add_agenda_item", "remove_agenda_item", "reorder_agenda_items",
-  "open_meeting_session", "get_meeting_session_detail", "list_meeting_member_profiles_v2", "lock_attendance_roster",
+  "open_meeting_session", "get_meeting_session_start_timing_v2", "get_meeting_session_detail", "list_meeting_member_profiles_v2", "lock_attendance_roster",
   "get_meeting_broadcast_v2", "set_meeting_broadcast_v2", "hand_over_meeting_broadcast_v2",
   "set_meeting_broadcast_document_v2", "set_agenda_item_downloads_v2",
   "list_meeting_item_timers_v2", "set_agenda_item_planned_minutes_v2",
@@ -34,7 +34,7 @@ const contracts = new Set([
   "sign_meeting_minutes_approval",
 ]);
 const cancellableReadContracts = new Set([
-  "search_meetings", "list_meeting_series", "get_meeting_detail", "get_completed_meeting_record",
+  "search_meetings", "list_meeting_series", "get_meeting_detail", "get_completed_meeting_record", "get_meeting_session_start_timing_v2",
   "list_meeting_topic_attachments", "get_sprint02_form_options", "search_eligible_agenda_topics", "get_meeting_readiness",
 ]);
 

@@ -16,8 +16,9 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `create_checkin_session` | `attendance` | `authenticated` | `p_meeting_id uuid, p_valid_for_minutes integer` | `jsonb` |
 | `get_attendance_history` | `attendance` | `authenticated` | `p_attendance_record_id uuid` | `jsonb` |
 | `get_meeting_session_detail` | `attendance` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
+| `get_meeting_session_start_timing_v2` | `attendance` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `lock_attendance_roster` | `attendance` | `authenticated` | `p_meeting_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
-| `open_meeting_session` | `attendance` | `authenticated` | `p_meeting_id uuid, p_expected_updated_at timestamp with time zone` | `jsonb` |
+| `open_meeting_session` | `attendance` | `authenticated` | `p_meeting_id uuid, p_expected_updated_at timestamp with time zone, p_confirmed_off_schedule boolean` | `jsonb` |
 | `override_attendance` | `attendance` | `authenticated` | `p_attendance_record_id uuid, p_status text, p_reason text, p_expected_updated_at timestamp with time zone` | `jsonb` |
 | `recalculate_meeting_quorum` | `attendance` | `authenticated` | `p_meeting_id uuid, p_record_snapshot boolean` | `jsonb` |
 | `revoke_checkin_session` | `attendance` | `authenticated` | `p_checkin_session_id uuid, p_reason text` | `jsonb` |

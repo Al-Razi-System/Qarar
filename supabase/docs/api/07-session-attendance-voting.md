@@ -29,17 +29,28 @@ Use authenticated `POST /rest/v1/rpc/<function>` requests. Clients must not inse
 
 ## Open Meeting Session
 
+Before opening, call `get_meeting_session_start_timing_v2(p_meeting_id)`. It calculates the
+official window from server time and the organization's timezone. A start on the scheduled date
+from two hours before the start through the scheduled end returns `requires_confirmation=false`.
+An earlier or later start returns the scheduled timestamps, the difference in minutes,
+`requires_confirmation=true`, and whether the current actor is the contextual council chair.
+
 `open_meeting_session` requires a `ready_to_start` meeting:
 
 ```json
 {
   "p_meeting_id": "<uuid>",
-  "p_expected_updated_at": "<meeting.updated_at>"
+  "p_expected_updated_at": "<meeting.updated_at>",
+  "p_confirmed_off_schedule": false
 }
 ```
 
 It atomically snapshots all active unit memberships into an unclaimed/pending attendance roster, moves the
 meeting to `in_progress`, creates status/history/audit records, and calculates the initial quorum.
+The command recalculates the official window while holding the meeting lock. An off-schedule start
+requires `p_confirmed_off_schedule=true` from an active chair of that meeting's council; a global
+permission does not substitute for this role. Rejection creates no roster or partial opening event.
+Legacy meetings with missing times remain openable and are recorded as `schedule_unavailable`.
 Do not use `transition_meeting` to start a meeting.
 
 ## Session Detail

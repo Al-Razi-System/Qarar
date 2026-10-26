@@ -10,7 +10,7 @@ import { meetingRpc as rpc } from "../api/meetings-client";
 import {
   isAgendaEditable, meetingStatusLabels as statusLabels, meetingStatusTone as statusTone,
   type AgendaCandidate, type Meeting, type MeetingDetail, type MeetingFormOptions,
-  type MeetingMinutes, type MeetingReadiness, type MeetingTopicAttachment, type MinuteApproval, type SignatureStrokes,
+  type MeetingMinutes, type MeetingReadiness, type MeetingStartTiming, type MeetingTopicAttachment, type MinuteApproval, type SignatureStrokes,
 } from "../model/meeting";
 import { Button } from "@/shared/ui/button";
 import { AdministrativeInput } from "@/shared/ui/administrative-field";
@@ -25,6 +25,7 @@ import {AgendaCandidateDetailsDialog} from "./agenda-candidate-details-dialog";
 import { CompletedMeetingSummary } from "./completed-meeting-summary";
 import { MeetingMinutesWorkspace } from "./meeting-minutes-workspace";
 import { InvitationTimingDialog } from "./invitation-timing-dialog";
+import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { Dialog } from "@/shared/ui/dialog";
 
@@ -98,6 +99,9 @@ export function MeetingsWorkspace() {
   const [createModal, setCreateModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [invitationModal, setInvitationModal] = useState(false);
+  const [startTiming, setStartTiming] = useState<MeetingStartTiming | null>(null);
+  const [startSessionPending, setStartSessionPending] = useState(false);
+  const [startSessionError, setStartSessionError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [recurring, setRecurring] = useState(false);
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<MeetingSeries["frequency"]>("monthly");
@@ -457,15 +461,39 @@ export function MeetingsWorkspace() {
     } finally { setDetailLoading(false); }
   }
 
-  async function openLiveSession() {
+  async function performOpenLiveSession(confirmedOffSchedule: boolean) {
     if (!selected) return;
-    setDetailLoading(true); setNotice(null);
+    setStartSessionPending(true); setStartSessionError(null); setNotice(null);
     try {
-      await rpc("open_meeting_session", { p_meeting_id: selected.id, p_expected_updated_at: selected.updated_at });
+      await rpc("open_meeting_session", {
+        p_meeting_id: selected.id,
+        p_expected_updated_at: selected.updated_at,
+        p_confirmed_off_schedule: confirmedOffSchedule,
+      });
       router.push(`/admin/meetings/${selected.id}/live`);
     } catch (err) {
-      setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر فتح الجلسة." });
-      setDetailLoading(false);
+      const text = err instanceof Error ? err.message : "تعذر فتح الجلسة.";
+      if (confirmedOffSchedule) setStartSessionError(text);
+      else setNotice({ kind: "error", text });
+    } finally {
+      setStartSessionPending(false);
+    }
+  }
+
+  async function openLiveSession() {
+    if (!selected) return;
+    setStartSessionPending(true); setStartSessionError(null); setNotice(null);
+    try {
+      const timing = await rpc<MeetingStartTiming>("get_meeting_session_start_timing_v2", { p_meeting_id: selected.id });
+      if (timing.requires_confirmation) {
+        setStartTiming(timing);
+        return;
+      }
+      await performOpenLiveSession(false);
+    } catch (err) {
+      setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر التحقق من موعد الاجتماع." });
+    } finally {
+      setStartSessionPending(false);
     }
   }
 
@@ -673,7 +701,7 @@ export function MeetingsWorkspace() {
                 {(["waiting_for_minutes", "waiting_for_approval", "closed", "archived"].includes(selected.status)) && <Link href={`/admin/meetings/${selected.id}/minutes`} className="flex items-center gap-1.5 rounded-xl bg-[#0877d6] px-4 py-2.5 text-[11px] font-black text-white shadow-[0_7px_18px_rgba(8,119,214,.2)]"><FileText size={14} />{["closed", "archived"].includes(selected.status) ? "عرض المحضر النهائي والتواقيع" : "فتح مساحة المحضر والمصادقات"}</Link>}
                 {(selected.capabilities?.can_schedule || (selected.status === "draft" && selected.capabilities?.can_manage && selected.schedule_date_confirmed === false)) && <div><Button pending={detailLoading} disabled={selected.schedule_date_confirmed === false} onClick={() => transitionMeeting("scheduled")}><Play size={14}/>جدولة</Button>{selected.schedule_date_confirmed === false && <p className="mt-2 text-q-caption text-q-text-2">حدد يوم الاجتماع ووقتي البداية والنهاية من تعديل الاجتماع أولاً.</p>}</div>}
                 {selected.status === "scheduled" && <>{selected.capabilities?.can_send_invitations && <button onClick={() => setInvitationModal(true)} disabled={detailLoading || !readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "تجهيز دعوات أعضاء المجلس"} className="flex items-center gap-1.5 rounded-xl border border-[#bfd5e8] px-3 py-2 text-[11px] font-bold text-[#0066cc] disabled:opacity-40"><Users size={14} /> تجهيز الدعوات</button>}{selected.capabilities?.can_prepare_session && <button onClick={() => transitionMeeting("ready_to_start")} disabled={!readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "قفل التحضير وتجهيز الجلسة"} className="flex items-center gap-1.5 rounded-xl bg-[#f28c28] px-3 py-2 text-[11px] font-bold text-white disabled:bg-[#a9b6c5]"><Users size={14} /> تجهيز الجلسة</button>}</>}
-                {selected.capabilities?.can_start_session && <button onClick={() => void openLiveSession()} className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white"><Play size={14} /> فتح الجلسة الحية</button>}
+                {selected.capabilities?.can_start_session && <Button variant="success" pending={startSessionPending} pendingLabel="جارٍ التحقق من الموعد…" onClick={() => void openLiveSession()}><Play size={14} /> فتح الجلسة الحية</Button>}
                 {selected.status === "in_progress" && <Link href={`/admin/meetings/${selected.id}/live`} className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white"><Play size={14} /> متابعة الجلسة الحية</Link>}
                 {selected.status === "waiting_for_minutes" && <span className="rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-bold text-amber-800">أكمل المحضر وأرسله للمصادقة من القسم أعلاه.</span>}
                 {selected.capabilities?.can_cancel && <button onClick={() => void transitionMeeting("cancelled")} className="rounded-xl border border-red-200 px-3 py-2 text-[11px] font-bold text-red-600">إلغاء الاجتماع</button>}
@@ -697,6 +725,13 @@ export function MeetingsWorkspace() {
 
       {/* Create Meeting Modal */}
       {invitationModal && selected && selected.updated_at && <InvitationTimingDialog key={selected.id} meetingId={selected.id} expectedUpdatedAt={selected.updated_at} startTime={selected.start_time} endTime={selected.end_time} onClose={() => setInvitationModal(false)} onSent={() => { void openDetail(selected.id); }} />}
+      {startTiming && <MeetingStartConfirmationDialog
+        timing={startTiming}
+        pending={startSessionPending}
+        error={startSessionError}
+        onClose={() => { if (!startSessionPending) { setStartTiming(null); setStartSessionError(null); } }}
+        onConfirm={() => void performOpenLiveSession(true)}
+      />}
       {candidateTarget && selected && <AgendaCandidateDetailsDialog candidate={candidateTarget} busy={detailLoading} onClose={()=>setCandidateTarget(null)} actionLabel={selected.capabilities?.can_edit_topic_instructions?"مراجعة التعليمات والإدراج":"إدراج في هذا الاجتماع"} onReview={(item)=>{setCandidateTarget(null);if(selected.capabilities?.can_edit_topic_instructions)setInstructionTarget({topicId:item.id,title:item.title_ar,text:item.discussion_instructions??""});else void addAgendaItem(item.id);}}/>}
       {createModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#081630]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="إنشاء اجتماع جديد">

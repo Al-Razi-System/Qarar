@@ -85,6 +85,22 @@ export type MeetingMinutes = {
   decisions?: MinutesDecision[];
 };
 export type MeetingReadiness = { ready: boolean; checks: Array<{ code: string; label: string; complete: boolean; count?: number }> };
+export type MeetingStartTiming = {
+  meeting_id: string;
+  meeting_no?: string | null;
+  title_ar: string;
+  scheduled_date: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  timezone: string;
+  server_now: string;
+  scheduled_start_at?: string | null;
+  scheduled_end_at?: string | null;
+  timing_status: "within_window" | "early" | "late" | "schedule_unavailable";
+  requires_confirmation: boolean;
+  difference_minutes: number;
+  can_confirm_off_schedule: boolean;
+};
 export type MeetingTopicAttachment = {
   id: string; topic_id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number; description?: string | null; created_at?: string;
   /** The agenda item the file is discussed under, in this meeting. */
