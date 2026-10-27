@@ -1,8 +1,8 @@
 import { runDeliveryBatch } from "./worker.mjs";
 import { runDispatchBatch } from "./dispatcher.mjs";
 
-export async function runWorkerCycle({client,provider,limit=25}) {
-  const dispatched=await runDispatchBatch({client,limit});
+export async function runWorkerCycle({client,provider,limit=25,appBaseUrl}) {
+  const dispatched=await runDispatchBatch({client,limit,appBaseUrl});
   const delivered=await runDeliveryBatch({client,provider,limit});
   return {dispatched,delivered};
 }

@@ -3,7 +3,7 @@ import { QararClient } from "./qarar-client.mjs";
 import { readFileSync } from "node:fs";
 import { runWorkerCycle, runWorkerLoop } from "./runtime.mjs";
 
-const required = ["QARAR_SUPABASE_URL","QARAR_SERVICE_ROLE_KEY","OPENWA_BASE_URL","OPENWA_SESSION_ID"];
+const required = ["QARAR_SUPABASE_URL","QARAR_SERVICE_ROLE_KEY","QARAR_APP_URL","OPENWA_BASE_URL","OPENWA_SESSION_ID"];
 for (const name of required) if (!process.env[name]) throw new Error(`Missing required environment variable: ${name}`);
 
 const apiKey=process.env.OPENWA_API_KEY??(process.env.OPENWA_API_KEY_FILE?readFileSync(process.env.OPENWA_API_KEY_FILE,"utf8").trim():null);
@@ -17,6 +17,7 @@ if(!Number.isInteger(intervalMs)||intervalMs<1000||intervalMs>300000) throw new 
 const batchSize=Number.parseInt(process.env.NOTIFICATION_WORKER_BATCH_SIZE??"25",10);
 if(!Number.isInteger(batchSize)||batchSize<1||batchSize>100) throw new Error("NOTIFICATION_WORKER_BATCH_SIZE must be between 1 and 100");
 const provider = new OpenWAProvider({ baseUrl: process.env.OPENWA_BASE_URL, sessionId: process.env.OPENWA_SESSION_ID, apiKey, timeoutMs });
+const appBaseUrl = new URL(process.env.QARAR_APP_URL).origin;
 
 const controller=new AbortController();
 process.once("SIGTERM",()=>controller.abort());
@@ -25,7 +26,7 @@ await runWorkerLoop({
   signal:controller.signal,
   intervalMs,
   runOnce:async()=>{
-    const results=await runWorkerCycle({client,provider,limit:batchSize});
+    const results=await runWorkerCycle({client,provider,limit:batchSize,appBaseUrl});
     return {dispatched:results.dispatched.length,delivered:results.delivered.length,results};
   }
 });

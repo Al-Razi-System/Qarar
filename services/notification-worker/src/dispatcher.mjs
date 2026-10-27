@@ -7,6 +7,9 @@ export function templateFor(context) {
     case "meeting.reminder.due": return "meeting_reminder";
     case "meeting.cycle.due_soon": return "meeting_cycle_due_soon";
     case "meeting.cycle.overdue": return "meeting_cycle_overdue";
+    case "meeting.postponed": return "meeting_postponed";
+    case "meeting.cancelled": return "meeting_cancelled";
+    case "meeting.invitation.updated": return "meeting_invitation_updated";
     case "execution.task.created": return role === "follower" ? "task_created_follower" : "task_created_assignee";
     case "execution.task.due_soon": return "task_due_soon";
     case "execution.task.overdue": return "task_overdue";
@@ -34,7 +37,18 @@ export function normalizeE164(value) {
   return /^\+[1-9][0-9]{7,14}$/.test(compact) ? compact : null;
 }
 
-export async function runDispatchBatch({ client, workerId = randomUUID(), limit = 10 }) {
+function applicationVariables(payload, appBaseUrl) {
+  const origin = new URL(appBaseUrl).origin;
+  const meetingId = payload?.meeting_id;
+  const taskId = payload?.action_item_id;
+  return {
+    ...payload,
+    meeting_url: meetingId ? `${origin}/admin/meetings/${encodeURIComponent(meetingId)}` : undefined,
+    task_url: taskId ? `${origin}/admin/tasks?task=${encodeURIComponent(taskId)}` : undefined
+  };
+}
+
+export async function runDispatchBatch({ client, workerId = randomUUID(), limit = 10, appBaseUrl = "http://localhost:3000" }) {
   const lockToken = randomUUID();
   const events = await client.claimEvents(workerId, lockToken, limit);
   const results = [];
@@ -59,7 +73,7 @@ export async function runDispatchBatch({ client, workerId = randomUUID(), limit 
         continue;
       }
       await client.materializeDelivery(event.id, event.lock_token, templateCode, destination, {
-        ...context.payload,
+        ...applicationVariables(context.payload, appBaseUrl),
         recipient_name_ar: context.recipient_name_ar,
         custom_intro: context.custom_intro,
         custom_action: context.custom_action

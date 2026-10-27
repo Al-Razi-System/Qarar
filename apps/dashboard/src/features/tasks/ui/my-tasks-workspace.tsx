@@ -97,7 +97,7 @@ function AttentionStrip({ tasks, active, onPick }: { tasks: MyTasks; active: str
  * Everything a person has to do with assignments: the tasks they execute,
  * the ones awaiting their verification, and the ones they follow.
  */
-export function MyTasksWorkspace() {
+export function MyTasksWorkspace({ initialTaskId = null }: { initialTaskId?: string | null }) {
   const [tasks, setTasks] = useState<MyTasks | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [list, setList] = useState<TaskList>("to_execute");
@@ -138,13 +138,20 @@ export function MyTasksWorkspace() {
       (data) => {
         if (cancelled) return;
         setTasks(data);
-        // Open where the person has work: verification first, then execution.
-        setList(data.to_verify.length ? "to_verify" : data.to_execute.length ? "to_execute" : data.following.length ? "following" : "to_execute");
+        const linkedList = initialTaskId
+          ? TASK_LISTS.find((entry) => data[entry.value].some((task) => task.id === initialTaskId))?.value
+          : undefined;
+        // A notification link opens its addressed task; otherwise open where the person has work.
+        setList(linkedList ?? (data.to_verify.length ? "to_verify" : data.to_execute.length ? "to_execute" : data.following.length ? "following" : "to_execute"));
+        if (initialTaskId) {
+          setSelectedId(initialTaskId);
+          void loadDetail(initialTaskId);
+        }
       },
       (error) => { if (!cancelled) setLoadError(messageOf(error, "تعذر تحميل مهامك.")); },
     );
     return () => { cancelled = true; };
-  }, []);
+  }, [initialTaskId, loadDetail]);
 
   function select(taskId: string) {
     setSelectedId(taskId);

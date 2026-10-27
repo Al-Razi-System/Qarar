@@ -42,6 +42,15 @@ describe("taskStatusLabel", () => {
 describe("MyTasksWorkspace", () => {
   const lists = (patch: Partial<MyTasks> = {}): MyTasks => ({ to_execute: [summary()], to_verify: [], following: [], ...patch });
 
+  it("opens the task addressed by a direct notification link", async () => {
+    rpc.mockImplementation((contract: string) => contract === "list_my_tasks_v2"
+      ? Promise.resolve(lists())
+      : Promise.resolve(detail()));
+    render(<MyTasksWorkspace initialTaskId="t1" />);
+    expect(await screen.findByRole("region", { name: "تفاصيل المهمة" })).toHaveTextContent("تحديث الخطة الدراسية");
+    expect(rpc).toHaveBeenCalledWith("get_task_v2", { p_task_id: "t1" });
+  });
+
   it("opens on the tasks awaiting the viewer's verification, and on a task's details", async () => {
     rpc.mockImplementation((contract: string) => contract === "list_my_tasks_v2"
       ? Promise.resolve(lists({ to_verify: [summary({ id: "t2", title_ar: "إبلاغ الأقسام", status: "submitted" })] }))

@@ -44,6 +44,7 @@ services:
     environment:
       QARAR_SUPABASE_URL: http://qarar-dev-supabase-kong:8000
       QARAR_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      QARAR_APP_URL: https://devqarar.prideidea.com
       OPENWA_BASE_URL: http://qarar-openwa-test:2785
       OPENWA_SESSION_ID: qarar-test
       OPENWA_API_KEY_FILE: /run/openwa-data/.api-key
