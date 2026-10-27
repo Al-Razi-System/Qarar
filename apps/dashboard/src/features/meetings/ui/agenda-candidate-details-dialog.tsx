@@ -13,6 +13,7 @@ import { Card } from "@/shared/ui/card";
 import { Dialog } from "@/shared/ui/dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
+import { TopicPdfDownloadButton } from "@/features/topics/ui/topic-pdf-download-button";
 import type { AgendaCandidate } from "../model/meeting";
 
 type TopicDetail = {
@@ -92,8 +93,9 @@ function EmptySection({ icon: Icon, title, description }: { icon: typeof Papercl
   </div>;
 }
 
-export function AgendaCandidateDetailsDialog({ candidate, busy, onClose, onReview, actionLabel = "مراجعة التعليمات والإدراج" }: {
+export function AgendaCandidateDetailsDialog({ candidate, meetingId, busy, onClose, onReview, actionLabel = "مراجعة التعليمات والإدراج" }: {
   candidate: AgendaCandidate;
+  meetingId?: string;
   busy: boolean;
   onClose: () => void;
   onReview: (candidate: AgendaCandidate) => void;
@@ -159,7 +161,7 @@ export function AgendaCandidateDetailsDialog({ candidate, busy, onClose, onRevie
     closeDisabled={busy}
     footer={<div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-q-caption text-q-text-2">الإدراج يضيف الموضوع إلى هذا الاجتماع ولا يعني اعتماده.</p>
-      <div className="flex flex-wrap gap-3"><Button variant="secondary" disabled={busy} onClick={onClose}>إغلاق</Button><Button pending={busy} disabled={loading || Boolean(fatalError)} onClick={() => onReview(candidate)}>{actionLabel}<ArrowLeft size={18} /></Button></div>
+      <div className="flex flex-wrap items-start gap-3"><TopicPdfDownloadButton topicId={candidate.id} meetingId={meetingId} /><Button variant="secondary" disabled={busy} onClick={onClose}>إغلاق</Button><Button pending={busy} disabled={loading || Boolean(fatalError)} onClick={() => onReview(candidate)}>{actionLabel}<ArrowLeft size={18} /></Button></div>
     </div>}
   >
     <div className="flex w-full flex-col gap-5">

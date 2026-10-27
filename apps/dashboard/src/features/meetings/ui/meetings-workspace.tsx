@@ -732,7 +732,7 @@ export function MeetingsWorkspace() {
         onClose={() => { if (!startSessionPending) { setStartTiming(null); setStartSessionError(null); } }}
         onConfirm={() => void performOpenLiveSession(true)}
       />}
-      {candidateTarget && selected && <AgendaCandidateDetailsDialog candidate={candidateTarget} busy={detailLoading} onClose={()=>setCandidateTarget(null)} actionLabel={selected.capabilities?.can_edit_topic_instructions?"مراجعة التعليمات والإدراج":"إدراج في هذا الاجتماع"} onReview={(item)=>{setCandidateTarget(null);if(selected.capabilities?.can_edit_topic_instructions)setInstructionTarget({topicId:item.id,title:item.title_ar,text:item.discussion_instructions??""});else void addAgendaItem(item.id);}}/>}
+      {candidateTarget && selected && <AgendaCandidateDetailsDialog candidate={candidateTarget} meetingId={selected.id} busy={detailLoading} onClose={()=>setCandidateTarget(null)} actionLabel={selected.capabilities?.can_edit_topic_instructions?"مراجعة التعليمات والإدراج":"إدراج في هذا الاجتماع"} onReview={(item)=>{setCandidateTarget(null);if(selected.capabilities?.can_edit_topic_instructions)setInstructionTarget({topicId:item.id,title:item.title_ar,text:item.discussion_instructions??""});else void addAgendaItem(item.id);}}/>}
       {createModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#081630]/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="إنشاء اجتماع جديد">
           <form onSubmit={handleCreate} className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">

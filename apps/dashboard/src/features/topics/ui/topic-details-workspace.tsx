@@ -11,6 +11,7 @@ import { readUploadResponse } from "@/shared/api/upload-response";
 import {TypedTopicAuthorities,type TypedTopicSnapshot} from "./typed-topic-details";
 import {Button} from "@/shared/ui/button";
 import {InlineMessage} from "@/shared/ui/inline-message";
+import {TopicPdfDownloadButton} from "./topic-pdf-download-button";
 
 type TopicDetail = {
   id: string;
@@ -137,6 +138,7 @@ const activityActionLabels: Record<string, string> = {
   "governance.topic.current_unit.repaired": "مواءمة المجلس الحالي مع مرحلة المسار",
   "meetings.agenda.downloads": "تحديث صلاحية تنزيل مرفقات البند",
   "meetings.agenda.planned_minutes": "تحديد المدة المقررة للبند",
+  "topics.pdf.export": "تنزيل ملف الموضوع الرسمي",
 };
 
 function topicDisplayStatus(topicStatus: string, priorRouteRequest: PriorRouteRequest | null, typedReady = false) {
@@ -368,6 +370,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
       </div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-5 py-4 text-[11px] font-bold text-[#526f8c] sm:px-7" aria-label="سلسلة حوكمة الموضوع">
         {headerPath.map((item, index) => <span key={`${item}-${index}`} className="flex items-center gap-2"><span className={index === 0 ? "text-[#0a1330]" : ""}>{item}</span>{index < headerPath.length - 1 && <span className="text-[#9aabc0]">←</span>}</span>)}
+        <div className="ms-auto"><TopicPdfDownloadButton topicId={topicId} /></div>
       </div>
     </header>
 
