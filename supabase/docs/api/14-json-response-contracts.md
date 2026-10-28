@@ -155,6 +155,7 @@ TopicHistory = {
 | `get_topic_meeting_history` | `TopicMeetingHistory[]`, each with agenda state, nested meeting, nullable approved `minutes`, voting rounds, and decisions |
 | `get_topic_activity_timeline` | `TopicActivity[]` ordered chronologically with `{id,source,action,entity_type,entity_id?,occurred_at,actor_user_id?,actor_name_ar?,from_status?,to_status?,summary?}` |
 | `record_topic_pdf_export` | `{recorded:true,topic_id,meeting_id?,actor_user_id,recorded_at}` after contextual authorization and appending the audit event |
+| `get_topic_pdf_bundle` | `{topic,workflow,attachments,requirements,references,referrals,meetings,activity,printed_by}` after topic-read and optional meeting-context authorization |
 | `admin_get_notification_workspace` | `{summary,settings,connection,templates,deliveries}` for the current organization |
 | `admin_save_notification_settings` | `{settings,version}` after an atomic optimistic-concurrency save |
 | `admin_begin_notification_test` | `{delivery_id,completion_token,status}` for the auditable test delivery |

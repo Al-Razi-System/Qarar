@@ -242,6 +242,7 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `get_topic_detail` | `topics` | `authenticated` | `p_topic_id uuid` | `jsonb` |
 | `get_topic_form_options` | `topics` | `authenticated` | `-` | `jsonb` |
 | `get_topic_meeting_history` | `topics` | `authenticated` | `p_topic_id uuid` | `jsonb` |
+| `get_topic_pdf_bundle` | `topics` | `authenticated` | `p_topic_id uuid, p_meeting_id uuid` | `jsonb` |
 | `get_topic_requirements_status` | `topics` | `authenticated` | `p_topic_id uuid` | `jsonb` |
 | `get_topic_route_history` | `topics` | `authenticated` | `p_topic_id uuid` | `jsonb` |
 | `list_topic_attachments` | `topics` | `authenticated` | `p_topic_id uuid` | `jsonb` |

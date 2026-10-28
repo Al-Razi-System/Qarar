@@ -18,7 +18,10 @@ export function TopicPdfDownloadButton({ topicId, meetingId }: { topicId: string
       const response = await fetch(`/api/admin/topics/${encodeURIComponent(topicId)}/pdf${query}`, { cache: "no-store" });
       if (!response.ok) {
         const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
-        throw new Error(payload?.error?.message ?? "تعذر إعداد ملف الموضوع. أعد المحاولة.");
+        const gatewayTimeout = [502, 503, 504, 524].includes(response.status);
+        throw new Error(payload?.error?.message ?? (gatewayTimeout
+          ? "استغرق إعداد الملف وقتًا أطول من مهلة الاتصال. أعد المحاولة الآن."
+          : "تعذر إعداد ملف الموضوع. أعد المحاولة."));
       }
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);

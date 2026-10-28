@@ -29,3 +29,13 @@ it("keeps the screen usable and explains a server failure beside the action", as
   expect(await screen.findByRole("alert")).toHaveTextContent("لا تملك صلاحية تنزيل هذا الملف.");
   expect(screen.getByRole("button", { name: "طباعة / تنزيل PDF" })).toBeEnabled();
 });
+
+it("explains a gateway timeout instead of showing a generic operation failure", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("upstream timeout", { status: 524 })));
+  render(<TopicPdfDownloadButton topicId="topic-1" />);
+
+  fireEvent.click(screen.getByRole("button", { name: "طباعة / تنزيل PDF" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("استغرق إعداد الملف وقتًا أطول من مهلة الاتصال. أعد المحاولة الآن.");
+  expect(screen.getByRole("button", { name: "طباعة / تنزيل PDF" })).toBeEnabled();
+});

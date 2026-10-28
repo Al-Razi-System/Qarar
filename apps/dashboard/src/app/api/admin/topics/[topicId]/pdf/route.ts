@@ -18,22 +18,14 @@ export async function GET(request: Request, context: { params: Promise<{ topicId
       return Response.json({ error: { code: "INVALID_IDENTIFIER", message: "معرّف الموضوع أو الاجتماع غير صالح." } }, { status: 400 });
     }
 
-    const meetingAuthorization = meetingId
-      ? qararRpc("get_meeting_detail", { p_meeting_id: meetingId })
-      : Promise.resolve(null);
-    const [topic, workflow, attachments, requirements, references, referrals, meetings, activity, account, logoBuffer] = await Promise.all([
-      qararRpc<TopicPdfData["topic"]>("get_topic_detail", { p_topic_id: topicId }),
-      qararRpc<TopicPdfData["workflow"]>("get_topic_workflow", { p_topic_id: topicId }),
-      qararRpc<TopicPdfData["attachments"]>("list_topic_attachments", { p_topic_id: topicId }),
-      qararRpc<TopicPdfData["requirements"]>("get_topic_requirements_status", { p_topic_id: topicId }),
-      qararRpc<TopicPdfData["references"]>("list_topic_regulation_references", { p_topic_id: topicId }),
-      qararRpc<TopicPdfData["referrals"]>("get_topic_route_history", { p_topic_id: topicId }),
-      qararRpc<TopicPdfData["meetings"]>("get_topic_meeting_history", { p_topic_id: topicId }),
-      qararRpc<TopicPdfData["activity"]>("get_topic_activity_timeline", { p_topic_id: topicId }),
-      qararRpc<{ full_name_ar?: string; profile?: { full_name_ar?: string } }>("get_my_account", {}),
+    const [bundle, logoBuffer] = await Promise.all([
+      qararRpc<Omit<TopicPdfData, "printedBy" | "printedAt" | "logo"> & { printed_by?: string }>("get_topic_pdf_bundle", {
+        p_topic_id: topicId,
+        p_meeting_id: meetingId,
+      }),
       readFile(path.join(process.cwd(), "public/brand/razi-university.jpg")),
-      meetingAuthorization,
     ]);
+    const { topic, workflow, attachments, requirements, references, referrals, meetings, activity } = bundle;
 
     const document = TopicDocument({
       topic,
@@ -44,7 +36,7 @@ export async function GET(request: Request, context: { params: Promise<{ topicId
       referrals: referrals ?? [],
       meetings: meetings ?? [],
       activity: activity ?? [],
-      printedBy: account.profile?.full_name_ar ?? account.full_name_ar ?? "مستخدم نظام قرار",
+      printedBy: bundle.printed_by ?? "مستخدم نظام قرار",
       printedAt: new Date().toISOString(),
       logo: `data:image/jpeg;base64,${logoBuffer.toString("base64")}`,
     });

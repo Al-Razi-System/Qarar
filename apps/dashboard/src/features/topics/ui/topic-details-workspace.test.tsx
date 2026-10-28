@@ -53,6 +53,7 @@ it("shows the approved prior council minute and persisted cross-module audit tim
  expect(screen.getByText("محضر المجلس السابق")).toBeInTheDocument();
  expect(screen.getByText("النص الرسمي لمحضر مجلس القسم")).toBeInTheDocument();
  expect(screen.getByText("محضر معتمد")).toBeInTheDocument();
+ expect(screen.getByRole("button",{name:"تنزيل محضر اجتماع الميزانية"})).toBeEnabled();
  fireEvent.click(screen.getByRole("button",{name:"سجل النشاط والتدقيق"}));
  expect(screen.getByText("اكتمال مناقشة البند")).toBeInTheDocument();
  expect(screen.getByText(/رئيس المجلس/)).toBeInTheDocument();

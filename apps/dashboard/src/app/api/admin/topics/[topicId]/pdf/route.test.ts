@@ -35,16 +35,12 @@ function coreTopic() {
 
 it("builds the official topic PDF from authorized contracts and records the successful export", async () => {
   rpc.mockImplementation(async (contract: string) => {
-    if (contract === "get_topic_detail") return coreTopic();
-    if (contract === "get_meeting_detail") return { id: meetingId, meeting_no: "MTG-2026-000010" };
-    if (contract === "get_topic_workflow") return { status: "active", steps: [] };
-    if (contract === "list_topic_attachments") return [{ id: "file-1", file_name: "الخطة.pdf" }];
-    if (contract === "get_topic_requirements_status") return { items: [], missing_mandatory: 0, ready_for_review: true };
-    if (contract === "list_topic_regulation_references") return [];
-    if (contract === "get_topic_route_history") return [];
-    if (contract === "get_topic_meeting_history") return [];
-    if (contract === "get_topic_activity_timeline") return [];
-    if (contract === "get_my_account") return { profile: { full_name_ar: "مدير النظام" } };
+    if (contract === "get_topic_pdf_bundle") return {
+      topic: coreTopic(), workflow: { status: "active", steps: [] },
+      attachments: [{ id: "file-1", file_name: "الخطة.pdf" }],
+      requirements: { items: [], missing_mandatory: 0, ready_for_review: true },
+      references: [], referrals: [], meetings: [], activity: [], printed_by: "مدير النظام",
+    };
     if (contract === "record_topic_pdf_export") return { recorded: true };
     throw new Error(`unexpected contract ${contract}`);
   });
@@ -60,7 +56,8 @@ it("builds the official topic PDF from authorized contracts and records the succ
   expect(response.headers.get("Content-Type")).toBe("application/pdf");
   expect(response.headers.get("Content-Disposition")).toContain("TOP-2026-000123-topic.pdf");
   expect(Buffer.from(await response.arrayBuffer()).toString()).toBe("official-pdf");
-  expect(rpc).toHaveBeenCalledWith("get_meeting_detail", { p_meeting_id: meetingId });
+  expect(rpc).toHaveBeenCalledWith("get_topic_pdf_bundle", { p_topic_id: topicId, p_meeting_id: meetingId });
+  expect(rpc).not.toHaveBeenCalledWith("get_meeting_detail", expect.anything());
   expect(rpc).toHaveBeenCalledWith("record_topic_pdf_export", { p_topic_id: topicId, p_meeting_id: meetingId });
   expect(rpc.mock.calls.at(-1)?.[0]).toBe("record_topic_pdf_export");
 });
@@ -78,7 +75,7 @@ it("does not record an export when authorization or document creation fails", as
   expect(rpc).not.toHaveBeenCalledWith("record_topic_pdf_export", expect.anything());
 
   rpc.mockReset();
-  rpc.mockImplementation(async (contract: string) => contract === "get_topic_detail" ? coreTopic() : contract === "get_my_account" ? { full_name_ar: "مدير النظام" } : []);
+  rpc.mockImplementation(async (contract: string) => contract === "get_topic_pdf_bundle" ? { topic: coreTopic(), workflow: null, attachments: [], requirements: null, references: [], referrals: [], meetings: [], activity: [], printed_by: "مدير النظام" } : []);
   readFile.mockResolvedValue(Buffer.from("logo"));
   render.mockRejectedValue(new Error("renderer exploded"));
   const broken = await GET(

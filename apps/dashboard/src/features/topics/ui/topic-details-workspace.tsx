@@ -12,6 +12,7 @@ import {TypedTopicAuthorities,type TypedTopicSnapshot} from "./typed-topic-detai
 import {Button} from "@/shared/ui/button";
 import {InlineMessage} from "@/shared/ui/inline-message";
 import {TopicPdfDownloadButton} from "./topic-pdf-download-button";
+import {MeetingMinutesDownloadButton} from "@/features/meetings/ui/meeting-minutes-download-button";
 
 type TopicDetail = {
   id: string;
@@ -553,7 +554,7 @@ function Decisions({ preview, meetings, priorRouteRequest }: { preview: Regulati
       {entry.minutes && <section className="border-t border-q-border bg-q-surface-2 p-4" aria-label={`محضر ${entry.meeting.title}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div><h4 className="text-q-ui font-black text-q-text">محضر المجلس السابق</h4><p className="mt-1 text-q-caption text-q-text-3">{entry.meeting.unit_name || "المجلس المختص"} · {entry.meeting.meeting_no || "اجتماع موثق"}</p></div>
-          <span className={`rounded-q-pill px-3 py-1 text-q-caption font-black ${entry.minutes.status === "approved" ? "bg-q-success-soft text-q-success" : "bg-q-warning-soft text-q-warning"}`}>{entry.minutes.status === "approved" ? "محضر معتمد" : "المحضر قيد الاعتماد"}</span>
+          <div className="flex flex-wrap items-center gap-2"><span className={`rounded-q-pill px-3 py-1 text-q-caption font-black ${entry.minutes.status === "approved" ? "bg-q-success-soft text-q-success" : "bg-q-warning-soft text-q-warning"}`}>{entry.minutes.status === "approved" ? "محضر معتمد" : "المحضر قيد الاعتماد"}</span>{entry.minutes.status === "approved" && <MeetingMinutesDownloadButton meetingId={entry.meeting.id} meetingTitle={entry.meeting.title} />}</div>
         </div>
         {entry.minutes.content ? <div className="mt-3 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-q-control border border-q-border bg-q-surface p-4 text-q-ui leading-7 text-q-text-2">{entry.minutes.content}</div> : <InlineMessage className="mt-3" tone="warning">يظهر النص الرسمي للمحضر بعد اكتمال المصادقة واعتماده.</InlineMessage>}
         <p className="mt-2 text-q-caption text-q-text-3">{entry.minutes.approved_at ? `اعتمد في ${dateLabel(entry.minutes.approved_at)}` : `آخر تحديث ${dateLabel(entry.minutes.updated_at)}`}</p>

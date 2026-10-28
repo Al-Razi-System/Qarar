@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(10);
+select plan(19);
 
 insert into public.organizations(id,code,name_ar) values
 ('d3000000-0000-0000-0000-000000000001','s130','مؤسسة اختبار تصدير الموضوع'),
@@ -30,9 +30,16 @@ select has_function('api_v1','record_topic_pdf_export',array['uuid','uuid'],'top
 select function_returns('api_v1','record_topic_pdf_export',array['uuid','uuid'],'jsonb','contract returns the print receipt');
 select ok(has_function_privilege('authenticated','api_v1.record_topic_pdf_export(uuid,uuid)','execute'),'authenticated callers reach the contextual guard');
 select ok(not has_function_privilege('anon','api_v1.record_topic_pdf_export(uuid,uuid)','execute'),'anonymous callers cannot record exports');
+select has_function('api_v1','get_topic_pdf_bundle',array['uuid','uuid'],'topic PDF aggregate read contract exists');
+select function_returns('api_v1','get_topic_pdf_bundle',array['uuid','uuid'],'jsonb','aggregate contract returns one document bundle');
+select ok(has_function_privilege('authenticated','api_v1.get_topic_pdf_bundle(uuid,uuid)','execute'),'authenticated callers reach the aggregate contextual guard');
+select ok(not has_function_privilege('anon','api_v1.get_topic_pdf_bundle(uuid,uuid)','execute'),'anonymous callers cannot read the document bundle');
 
 select set_config('request.jwt.claims','{"sub":"d3000000-0000-0000-0000-000000000011","role":"authenticated"}',true);
 set local role authenticated;
+select is(api_v1.get_topic_pdf_bundle('d3000000-0000-0000-0000-000000000041',null)->'topic'->>'topic_no','TOP-2026-130001','authorized topic reader receives the complete document bundle');
+select is(api_v1.get_topic_pdf_bundle('d3000000-0000-0000-0000-000000000041','d3000000-0000-0000-0000-000000000051')->'topic'->>'topic_no','TOP-2026-130001','eligible meeting context can read the document bundle');
+select throws_ok($$select api_v1.get_topic_pdf_bundle('d3000000-0000-0000-0000-000000000041','d3000000-0000-0000-0000-000000000052')$$,'42501',null,'aggregate read rejects an unrelated meeting context');
 select is(api_v1.record_topic_pdf_export('d3000000-0000-0000-0000-000000000041','d3000000-0000-0000-0000-000000000051')->>'recorded','true','authorized export is recorded');
 select throws_ok($$select api_v1.record_topic_pdf_export('d3000000-0000-0000-0000-000000000041','d3000000-0000-0000-0000-000000000052')$$,'42501',null,'meeting context must contain an eligible agenda proposal');
 reset role;
@@ -41,11 +48,13 @@ select is((select metadata->>'meeting_id' from qarar_audit.audit_logs where acti
 
 select set_config('request.jwt.claims','{"sub":"d3000000-0000-0000-0000-000000000012","role":"authenticated"}',true);
 set local role authenticated;
+select throws_ok($$select api_v1.get_topic_pdf_bundle('d3000000-0000-0000-0000-000000000041',null)$$,'42501',null,'same-tenant user without topic access cannot read the document bundle');
 select throws_ok($$select api_v1.record_topic_pdf_export('d3000000-0000-0000-0000-000000000041',null)$$,'42501',null,'same-tenant user without topic access is denied');
 reset role;
 
 select set_config('request.jwt.claims','{"sub":"d3000000-0000-0000-0000-000000000013","role":"authenticated"}',true);
 set local role authenticated;
+select throws_ok($$select api_v1.get_topic_pdf_bundle('d3000000-0000-0000-0000-000000000041',null)$$,'P0002',null,'foreign tenant cannot read the document bundle');
 select throws_ok($$select api_v1.record_topic_pdf_export('d3000000-0000-0000-0000-000000000041',null)$$,'P0002',null,'foreign tenant cannot record the export');
 reset role;
 

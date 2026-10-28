@@ -32,7 +32,7 @@ beforeEach(() => {
     if (contract === "get_topic_workflow") return { status: "active", steps: [{ id: "s1", sequence_no: 1, status: "completed", outcome_code: "approved", snapshot: { name_ar: "مجلس القسم" } }, { id: "s2", sequence_no: 2, status: "active", snapshot: { name_ar: "مجلس الكلية" } }] };
     if (contract === "list_topic_attachments") return [{ id: "a1", file_name: "خطة الرسالة.pdf", file_url: "/file.pdf", mime_type: "application/pdf", file_size_bytes: 2048 }];
     if (contract === "get_topic_route_history") return [];
-    if (contract === "get_topic_meeting_history") return [{ agenda_item_id: "ai1", agenda_status: "discussed", meeting: { id: "m1", meeting_no: "MTG-2026-000001", title: "اجتماع مجلس القسم", status: "closed", unit_name: "مجلس قسم إدارة الأعمال" }, voting_rounds: [{ id: "v1", round_number: 1, status: "closed", result: "approved", approve_count: 8, reject_count: 0, abstain_count: 1 }], decisions: [{ id: "d1", decision_no: "DEC-2026-000002", decision_text: "الموافقة ورفع الموضوع.", decision_status: "approved", requires_approval: false }] }];
+    if (contract === "get_topic_meeting_history") return [{ agenda_item_id: "ai1", agenda_status: "discussed", meeting: { id: "m1", meeting_no: "MTG-2026-000001", title: "اجتماع مجلس القسم", status: "closed", unit_name: "مجلس قسم إدارة الأعمال" }, minutes: { id: "minute-1", status: "approved", content: "النص الرسمي لمحضر المجلس السابق", approved_at: "2026-10-21T12:00:00Z" }, voting_rounds: [{ id: "v1", round_number: 1, status: "closed", result: "approved", approve_count: 8, reject_count: 0, abstain_count: 1 }], decisions: [{ id: "d1", decision_no: "DEC-2026-000002", decision_text: "الموافقة ورفع الموضوع.", decision_status: "approved", requires_approval: false }] }];
     return null;
   });
 });
@@ -74,6 +74,8 @@ it("shows the complete decision context before offering insertion", async () => 
   fireEvent.click(screen.getByRole("radio", { name: "السجل السابق" }));
   expect(screen.getAllByText("DEC-2026-000002").length).toBeGreaterThan(0);
   expect(screen.getByText("8 موافق")).toBeInTheDocument();
+  expect(screen.getByText("النص الرسمي لمحضر المجلس السابق")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "تنزيل محضر اجتماع مجلس القسم" })).toBeEnabled();
   expect(rpc.mock.calls.map((call) => call[0])).toEqual(expect.arrayContaining(["get_topic_detail", "get_topic_workflow", "list_topic_attachments", "get_topic_route_history", "get_topic_meeting_history"]));
   fireEvent.click(screen.getByRole("button", { name: "مراجعة التعليمات والإدراج" }));
   expect(review).toHaveBeenCalledWith(candidate);
