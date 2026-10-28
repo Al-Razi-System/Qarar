@@ -13,6 +13,7 @@ const contracts = new Set([
   "transition_meeting", "get_sprint02_form_options",
   "admin_list_meeting_types", "admin_create_meeting_type", "admin_update_meeting_type",
   "search_eligible_agenda_topics", "add_agenda_item", "remove_agenda_item", "reorder_agenda_items",
+  "create_direct_agenda_topic_v2",
   "get_topic_return_option", "return_topic_to_previous_council",
   "open_meeting_session", "get_meeting_session_start_timing_v2", "get_meeting_session_detail", "list_meeting_member_profiles_v2", "lock_attendance_roster",
   "get_meeting_broadcast_v2", "set_meeting_broadcast_v2", "hand_over_meeting_broadcast_v2",

@@ -12,7 +12,7 @@ select is(
 
 select is(
   (select count(*)::integer from qarar_architecture.entity_registry),
-  120, -- plus tenant notification policy and template settings
+  123, -- current reviewed module entity registry
   'all application entities are registered');
 
 select is(
@@ -21,7 +21,7 @@ select is(
    join qarar_architecture.module_registry m using (module_code)
    join pg_class c on c.relname = e.entity_name and c.relkind in ('r', 'p')
    join pg_namespace n on n.oid = c.relnamespace and n.nspname = m.schema_name),
-  120,
+  123,
   'all registered entities are physically owned by their module');
 
 select is(
@@ -52,8 +52,8 @@ select is(
   (select count(*)::integer
    from qarar_architecture.api_contract_registry
    where api_version = 'v1'),
- 242,
-  -- 240 plus the WhatsApp outbox claim (20261021009000) and the topic journey (20261022010000).
+ 251,
+  -- Current frozen v1 surface after the October meeting and topic journey additions.
   'api_v1 contract count is explicit and reviewed');
 
 select is(

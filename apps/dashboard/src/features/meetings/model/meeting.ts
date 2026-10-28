@@ -10,10 +10,12 @@ export type MeetingCapabilities = {
   can_archive?: boolean;
   can_edit?: boolean;
   can_edit_topic_instructions?: boolean;
+  can_add_direct_topic?: boolean;
 };
 
 export type Meeting = {
   quorum_percentage?: number;
+  governance_mode?: "governed" | "custom";
   id: string;
   meeting_no?: string | null;
   title_ar: string;
@@ -44,6 +46,7 @@ export type AgendaItem = {
   updated_at?: string;
   is_exception?: boolean;
   exception_reason?: string | null;
+  requires_voting?: boolean;
   topic?: {
     id: string;
     title_ar: string;
@@ -52,6 +55,7 @@ export type AgendaItem = {
     priority?: string;
     category_name_ar?: string;
     submitted_by_name_ar?: string;
+    is_direct?: boolean;
   };
 };
 

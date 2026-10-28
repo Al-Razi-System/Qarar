@@ -26,6 +26,7 @@ import { CompletedMeetingSummary } from "./completed-meeting-summary";
 import { MeetingMinutesWorkspace } from "./meeting-minutes-workspace";
 import { InvitationTimingDialog } from "./invitation-timing-dialog";
 import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dialog";
+import { DirectAgendaTopicDialog } from "./direct-agenda-topic-dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { Dialog } from "@/shared/ui/dialog";
 
@@ -115,6 +116,9 @@ export function MeetingsWorkspace() {
   const [eligibleAgendaCount, setEligibleAgendaCount] = useState<number | null>(null);
   const [agendaLoading, setAgendaLoading] = useState(false);
   const [agendaModal, setAgendaModal] = useState(false);
+  const [directTopicModal, setDirectTopicModal] = useState(false);
+  const [directTopicPending, setDirectTopicPending] = useState(false);
+  const [directTopicError, setDirectTopicError] = useState<string | null>(null);
   const [agendaQuery, setAgendaQuery] = useState("");
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -461,6 +465,27 @@ export function MeetingsWorkspace() {
     } finally { setDetailLoading(false); }
   }
 
+  async function addDirectAgendaTopic(input: { requestId: string; title: string; description: string; priority: "low" | "medium" | "high" | "urgent"; requiresVoting: boolean }) {
+    if (!selected) return;
+    setDirectTopicPending(true); setDirectTopicError(null);
+    try {
+      await rpc("create_direct_agenda_topic_v2", {
+        p_meeting_id: selected.id,
+        p_title_ar: input.title,
+        p_description: input.description || null,
+        p_priority: input.priority,
+        p_requires_voting: input.requiresVoting,
+        p_client_request_id: input.requestId,
+      });
+      setDirectTopicModal(false);
+      await openDetail(selected.id);
+      await loadMeetings({ background: true });
+      setNotice({ kind: "success", text: input.requiresVoting ? "أُضيف الموضوع المباشر مع التصويت إلى جدول الأعمال." : "أُضيف موضوع المناقشة المباشر إلى جدول الأعمال." });
+    } catch (err) {
+      setDirectTopicError(meetingErrorMessage(err, "تعذر إضافة الموضوع المباشر."));
+    } finally { setDirectTopicPending(false); }
+  }
+
   async function performOpenLiveSession(confirmedOffSchedule: boolean) {
     if (!selected) return;
     setStartSessionPending(true); setStartSessionError(null); setNotice(null);
@@ -510,6 +535,7 @@ export function MeetingsWorkspace() {
         p_end_time: null,
         p_location_type: fd.get("location_type") || "onsite",
         p_location_details: fd.get("location_details") || null,
+        p_governance_mode: fd.get("governance_mode") || "governed",
       };
       const values = recurring ? {
         ...common,
@@ -683,7 +709,9 @@ export function MeetingsWorkspace() {
                 editable={Boolean(selected.capabilities?.can_manage_agenda && isAgendaEditable(selected.status))}
                 busy={detailLoading}
                 eligibleCount={eligibleAgendaCount ?? selected.submitted_suggestions?.total ?? 0}
-                onAdd={() => void openAgendaModal()}
+                canAddDirect={selected.capabilities?.can_add_direct_topic}
+                onAddProposals={() => void openAgendaModal()}
+                onAddDirect={() => { setDirectTopicError(null); setDirectTopicModal(true); }}
                 onMove={(index, direction) => void moveAgendaItem(index, direction)}
                 onRemove={(id) => void removeAgendaItem(id)}
                 onEditInstructions={selected.capabilities?.can_edit_topic_instructions?item=>{if(item.topic)setInstructionTarget({topicId:item.topic.id,title:item.topic.title_ar,text:item.discussion_instructions??"",updatedAt:item.updated_at});}:undefined}
@@ -722,6 +750,12 @@ export function MeetingsWorkspace() {
           {agendaLoading?<div className="grid min-h-48 place-items-center"><div className="text-center"><LoaderCircle className="mx-auto animate-spin text-q-link" size={28}/><p className="mt-3 text-q-ui font-bold">جاري تحديث المقترحات…</p></div></div>:agendaCandidates.length?<ul className="grid gap-4">{agendaCandidates.map(topic=><li key={topic.id}><AgendaCandidateCard item={topic} busy={detailLoading} onReview={(item)=>{setAgendaModal(false);setCandidateTarget(item);}}/></li>)}</ul>:<div className="rounded-q-card border border-dashed border-q-border p-6 text-center"><Search className="mx-auto text-q-text-3" size={28}/><h3 className="mt-3 text-q-h3 font-bold">لا توجد موضوعات مؤهلة حاليًا</h3><p className="mx-auto mt-2 max-w-lg text-q-ui leading-7 text-q-text-2">يظهر الموضوع عندما تصل مرحلته إلى هذا المجلس، يعتمد محضر المجلس السابق إن وجد، ولا يكون مرتبطًا باجتماع آخر مفتوح.</p><Link href="/admin/topics" className="mt-4 inline-flex min-h-11 items-center rounded-q-control border border-q-primary px-4 text-q-ui font-bold text-q-link">فتح الموضوعات والتحقق من المسار</Link></div>}
         </div>
       </Dialog>}
+      {directTopicModal && selected && <DirectAgendaTopicDialog
+        pending={directTopicPending}
+        error={directTopicError}
+        onClose={() => { if (!directTopicPending) { setDirectTopicModal(false); setDirectTopicError(null); } }}
+        onSubmit={addDirectAgendaTopic}
+      />}
 
       {/* Create Meeting Modal */}
       {invitationModal && selected && selected.updated_at && <InvitationTimingDialog key={selected.id} meetingId={selected.id} expectedUpdatedAt={selected.updated_at} startTime={selected.start_time} endTime={selected.end_time} onClose={() => setInvitationModal(false)} onSent={() => { void openDetail(selected.id); }} />}
@@ -769,6 +803,17 @@ export function MeetingsWorkspace() {
               {notice?.kind === "error" && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{notice.text}</p>}
               <p className="text-xs leading-6 text-slate-500">يُحدد وقت البداية والنهاية عند تجهيز الدعوات، وليس عند إنشاء الاجتماع.</p>
               <MeetingQuorumField disabled={creating}/>
+              <fieldset className="grid gap-3 rounded-q-card border border-q-border p-4">
+                <legend className="px-2 text-q-ui font-bold text-q-text">حوكمة جدول الأعمال</legend>
+                <label className="flex cursor-pointer items-start gap-3 rounded-q-control border border-q-border bg-q-surface p-3 has-[:checked]:border-q-primary has-[:checked]:bg-q-primary-soft">
+                  <input type="radio" name="governance_mode" value="governed" defaultChecked className="mt-1 h-5 w-5 accent-q-primary"/>
+                  <span><strong className="block text-q-ui text-q-text">اجتماع محكوم</strong><span className="mt-1 block text-q-caption leading-6 text-q-text-2">يعرض الموضوعات الواردة عبر مسارات المجالس، ويمكن للرئيس أيضاً إضافة موضوع مباشر خاص بالاجتماع.</span></span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3 rounded-q-control border border-q-border bg-q-surface p-3 has-[:checked]:border-q-primary has-[:checked]:bg-q-primary-soft">
+                  <input type="radio" name="governance_mode" value="custom" className="mt-1 h-5 w-5 accent-q-primary"/>
+                  <span><strong className="block text-q-ui text-q-text">اجتماع غير محكوم</strong><span className="mt-1 block text-q-caption leading-6 text-q-text-2">جدول أعمال مستقل يبنيه الرئيس من موضوعات مباشرة، من دون لائحة أو تصنيف أو مسار اعتماد.</span></span>
+                </label>
+              </fieldset>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">المجلس أو الجهة *</span><select required name="governance_unit_id" disabled={meetingOptionsLoading || !(meetingOptions?.meeting_units?.length)} className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs outline-none focus:border-[#0066cc] disabled:cursor-not-allowed disabled:bg-[#f4f7fa]"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الجهات…" : meetingOptions?.meeting_units?.length ? "اختر المجلس أو الجهة" : "لا توجد جهة متاحة ضمن صلاحياتك"}</option>{meetingOptions?.meeting_units?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name_ar}</option>)}</select><small className="mt-1 block text-[10px] text-[#718196]">تظهر الجهات التي تملك صلاحية إنشاء اجتماع فيها فقط.</small></label>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">نوع الاجتماع *</span><select required name="meeting_type_id" value={selectedMeetingTypeId} onChange={(event) => { const meetingTypeId = event.target.value; setSelectedMeetingTypeId(meetingTypeId); const meetingType = meetingOptions?.meeting_types?.find((type) => type.id === meetingTypeId); if (meetingType?.name_ar.includes("دوري")) setRecurring(true); }} disabled={meetingOptionsLoading || !(meetingOptions?.meeting_types?.length)} className="h-11 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-xs outline-none focus:border-[#0066cc] disabled:cursor-not-allowed disabled:bg-[#f4f7fa]"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الأنواع…" : meetingOptions?.meeting_types?.length ? "اختر نوع الاجتماع" : "لا توجد أنواع اجتماعات نشطة"}</option>{meetingOptions?.meeting_types?.map((type) => <option key={type.id} value={type.id}>{type.name_ar}</option>)}</select><small className="mt-1 block text-[10px] text-[#718196]">عند اختيار «اجتماع دوري» ستظهر إعدادات دورة الانعقاد تلقائياً.</small></label>
               <label><span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">عنوان الاجتماع *</span><input required name="title_ar" placeholder="مثال: الاجتماع الثالث لمجلس القسم" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs outline-none focus:border-[#0066cc]" /></label>

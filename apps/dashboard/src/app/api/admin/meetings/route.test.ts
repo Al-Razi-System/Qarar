@@ -23,6 +23,13 @@ it("dispatches atomic invitation timing to V2, not the legacy facade", async () 
   expect(rpcV2).toHaveBeenCalledWith("send_meeting_invitations_v2", params);
   expect(rpc).not.toHaveBeenCalled();
 });
+it("dispatches a direct agenda topic and its optional voting policy through V2", async () => {
+  rpcV2.mockResolvedValue({ agenda_item_id: "agenda-1", requires_voting: false });
+  const params = { p_meeting_id: "meeting-1", p_title_ar: "إحاطة مباشرة", p_requires_voting: false, p_client_request_id: "request-1" };
+  expect((await POST(request("create_direct_agenda_topic_v2", params))).status).toBe(200);
+  expect(rpcV2).toHaveBeenCalledWith("create_direct_agenda_topic_v2", params);
+  expect(rpc).not.toHaveBeenCalled();
+});
 it("preserves V1 consumers and rejects unsupported calls", async () => {
   rpc.mockResolvedValue({ id: "meeting-1" });
   expect((await POST(request("create_meeting"))).status).toBe(200);
