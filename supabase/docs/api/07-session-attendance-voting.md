@@ -440,6 +440,14 @@ a corrected round can be opened. A meeting cannot move to minutes while any roun
 A meeting also cannot move to minutes while an agenda item that was not postponed has no closed
 round (`23514`, naming the item).
 
+When a governed stage uses the `chair_decides` rejection policy, closing a rejected round does not
+silently terminate or move the workflow. `list_pending_rejected_vote_resolutions` returns the
+pending choice only to the contextual chair; other viewers receive an empty list. The chair calls
+`resolve_rejected_vote` to either finalize rejection or return the topic to the previous council.
+Returning requires a reason of at least ten characters. Both choices create the formal decision,
+append audit evidence, update the workflow atomically, and unblock session completion. Until then,
+the meeting cannot move to minutes.
+
 ## Decisions
 
 `create_decision_from_voting_round` drafts the decision of an approved, closed round. The council

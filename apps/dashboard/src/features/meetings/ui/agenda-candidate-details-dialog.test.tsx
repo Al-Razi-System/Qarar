@@ -3,7 +3,9 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { AgendaCandidateDetailsDialog } from "./agenda-candidate-details-dialog";
 
 const rpc = vi.fn();
+const meetingRpc = vi.fn();
 vi.mock("@/features/topics/api/topics-client", () => ({ topicsRpc: (...args: unknown[]) => rpc(...args) }));
+vi.mock("../api/meetings-client", () => ({ meetingRpc: (...args: unknown[]) => meetingRpc(...args) }));
 
 const candidate = {
   id: "topic-1",
@@ -19,6 +21,12 @@ const candidate = {
 
 beforeEach(() => {
   rpc.mockReset();
+  meetingRpc.mockReset();
+  meetingRpc.mockImplementation(async (contract: string) => contract === "get_topic_return_option" ? {
+    available: true,
+    expected_version: 0,
+    previous_unit_name_ar: "مجلس قسم إدارة الأعمال",
+  } : null);
   rpc.mockImplementation(async (contract: string) => {
     if (contract === "get_topic_detail") return { ...candidate, description: "طلب اعتماد عنوان الرسالة والمشرف العلمي.", priority: "medium", status: "new", category: { name_ar: "اعتماد عنوان ومشرف للرسالة" }, governance_unit: { name_ar: "مجلس كلية العلوم الإدارية والإنسانية" }, submitted_by: { full_name_ar: "حسن قاسم علي سلوم" }, created_at: "2026-10-20T09:00:00Z", typed_creation_request: { snapshot: { topic_type_name_ar: "اعتماد عنوان ومشرف للرسالة", classification_name_ar: "أكاديمي", authoring: { discussion_instructions: "### محاور القرار\n\n- تحقق من استيفاء الخطة." } } } };
     if (contract === "get_topic_workflow") return { status: "active", steps: [{ id: "s1", sequence_no: 1, status: "completed", outcome_code: "approved", snapshot: { name_ar: "مجلس القسم" } }, { id: "s2", sequence_no: 2, status: "active", snapshot: { name_ar: "مجلس الكلية" } }] };
@@ -27,6 +35,26 @@ beforeEach(() => {
     if (contract === "get_topic_meeting_history") return [{ agenda_item_id: "ai1", agenda_status: "discussed", meeting: { id: "m1", meeting_no: "MTG-2026-000001", title: "اجتماع مجلس القسم", status: "closed", unit_name: "مجلس قسم إدارة الأعمال" }, voting_rounds: [{ id: "v1", round_number: 1, status: "closed", result: "approved", approve_count: 8, reject_count: 0, abstain_count: 1 }], decisions: [{ id: "d1", decision_no: "DEC-2026-000002", decision_text: "الموافقة ورفع الموضوع.", decision_status: "approved", requires_approval: false }] }];
     return null;
   });
+});
+
+it("lets the contextual chair return a proposal with an explicit written reason", async () => {
+  const returned = vi.fn();
+  meetingRpc.mockImplementation(async (contract: string) => {
+    if (contract === "get_topic_return_option") return { available: true, expected_version: 3, previous_unit_name_ar: "مجلس قسم إدارة الأعمال" };
+    if (contract === "return_topic_to_previous_council") return { returned_to_unit_id: "unit-1" };
+    return null;
+  });
+  render(<AgendaCandidateDetailsDialog candidate={candidate} meetingId="meeting-2" busy={false} onClose={() => {}} onReview={() => {}} onReturned={returned} />);
+  expect(await screen.findByRole("button", { name: "إرجاع إلى مجلس قسم إدارة الأعمال" })).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "إرجاع إلى مجلس قسم إدارة الأعمال" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "سبب الإرجاع" }), { target: { value: "استكمال المستندات النظامية المطلوبة" } });
+  fireEvent.click(screen.getByRole("button", { name: "تأكيد الإرجاع" }));
+  await waitFor(() => expect(meetingRpc).toHaveBeenCalledWith("return_topic_to_previous_council", expect.objectContaining({
+    p_topic_id: candidate.id,
+    p_reason: "استكمال المستندات النظامية المطلوبة",
+    p_expected_version: 3,
+  })));
+  expect(returned).toHaveBeenCalled();
 });
 
 it("shows the complete decision context before offering insertion", async () => {

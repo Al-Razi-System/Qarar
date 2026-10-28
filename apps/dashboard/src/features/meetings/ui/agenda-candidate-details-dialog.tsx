@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft, CheckCircle2, Clock3, FileCheck2, FileText, GitBranch,
-  Landmark, LoaderCircle, Paperclip, Route, UserRound, Vote,
+  Landmark, LoaderCircle, Paperclip, RotateCcw, Route, UserRound, Vote,
 } from "lucide-react";
 import { topicsRpc } from "@/features/topics/api/topics-client";
+import { meetingRpc } from "../api/meetings-client";
 import { InstructionContent } from "@/shared/content/instruction-content";
+import { AdministrativeTextArea } from "@/shared/ui/administrative-field";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
@@ -54,6 +56,7 @@ type MeetingHistory = {
   voting_rounds: Array<{ id: string; round_number: number; status: string; result?: string | null; approve_count?: number; reject_count?: number; abstain_count?: number }>;
   decisions: Array<{ id: string; decision_no: string; decision_text: string; decision_status: string; issued_at?: string | null }>;
 };
+type ReturnOption = { available: boolean; reason_unavailable?: string | null; expected_version?: number; previous_unit_name_ar?: string | null };
 
 type Tab = "summary" | "attachments" | "route" | "history";
 
@@ -93,12 +96,13 @@ function EmptySection({ icon: Icon, title, description }: { icon: typeof Papercl
   </div>;
 }
 
-export function AgendaCandidateDetailsDialog({ candidate, meetingId, busy, onClose, onReview, actionLabel = "مراجعة التعليمات والإدراج" }: {
+export function AgendaCandidateDetailsDialog({ candidate, meetingId, busy, onClose, onReview, onReturned, actionLabel = "مراجعة التعليمات والإدراج" }: {
   candidate: AgendaCandidate;
   meetingId?: string;
   busy: boolean;
   onClose: () => void;
   onReview: (candidate: AgendaCandidate) => void;
+  onReturned?: () => void;
   actionLabel?: string;
 }) {
   const [topic, setTopic] = useState<TopicDetail | null>(null);
@@ -111,11 +115,16 @@ export function AgendaCandidateDetailsDialog({ candidate, meetingId, busy, onClo
   const [sectionErrors, setSectionErrors] = useState<string[]>([]);
   const [attempt, setAttempt] = useState(0);
   const [tab, setTab] = useState<Tab>("summary");
+  const [returnOption, setReturnOption] = useState<ReturnOption | null>(null);
+  const [returnMode, setReturnMode] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
+  const [returnPending, setReturnPending] = useState(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
     async function load() {
-      setLoading(true); setFatalError(null); setSectionErrors([]); setTopic(null); setWorkflow(null); setAttachments([]); setReferrals([]); setHistory([]);
+      setLoading(true); setFatalError(null); setSectionErrors([]); setTopic(null); setWorkflow(null); setAttachments([]); setReferrals([]); setHistory([]); setReturnOption(null);
       try {
         const detail = await topicsRpc<TopicDetail>("get_topic_detail", { p_topic_id: candidate.id });
         if (!alive) return;
@@ -125,16 +134,18 @@ export function AgendaCandidateDetailsDialog({ candidate, meetingId, busy, onClo
           topicsRpc<TopicAttachment[]>("list_topic_attachments", { p_topic_id: candidate.id }),
           topicsRpc<Referral[]>("get_topic_route_history", { p_topic_id: candidate.id }),
           topicsRpc<MeetingHistory[]>("get_topic_meeting_history", { p_topic_id: candidate.id }),
+          meetingId ? meetingRpc<ReturnOption>("get_topic_return_option", { p_topic_id: candidate.id, p_meeting_id: meetingId }) : Promise.resolve(null),
         ]);
         if (!alive) return;
         const labels = ["المسار", "المرفقات", "الإحالات", "الاجتماعات والقرارات السابقة"];
         sections.forEach((result, index) => {
-          if (result.status === "rejected") setSectionErrors((current) => [...current, `تعذر تحميل قسم ${labels[index]}. يمكنك إعادة المحاولة دون فقد بقية التفاصيل.`]);
+          if (result.status === "rejected" && labels[index]) setSectionErrors((current) => [...current, `تعذر تحميل قسم ${labels[index]}. يمكنك إعادة المحاولة دون فقد بقية التفاصيل.`]);
         });
         if (sections[0].status === "fulfilled") setWorkflow(sections[0].value as Workflow);
         if (sections[1].status === "fulfilled") setAttachments((sections[1].value as TopicAttachment[]) ?? []);
         if (sections[2].status === "fulfilled") setReferrals((sections[2].value as Referral[]) ?? []);
         if (sections[3].status === "fulfilled") setHistory((sections[3].value as MeetingHistory[]) ?? []);
+        if (sections[4].status === "fulfilled") setReturnOption(sections[4].value as ReturnOption | null);
       } catch (error) {
         if (alive) setFatalError(error instanceof Error ? error.message : "تعذر تحميل ملف الموضوع.");
       } finally {
@@ -143,7 +154,23 @@ export function AgendaCandidateDetailsDialog({ candidate, meetingId, busy, onClo
     }
     void load();
     return () => { alive = false; };
-  }, [candidate.id, attempt]);
+  }, [candidate.id, meetingId, attempt]);
+
+  async function submitReturn() {
+    if (!returnOption?.available || returnOption.expected_version === undefined || returnReason.trim().length < 10) return;
+    setReturnPending(true); setReturnError(null);
+    try {
+      await meetingRpc("return_topic_to_previous_council", {
+        p_topic_id: candidate.id,
+        p_reason: returnReason.trim(),
+        p_idempotency_key: crypto.randomUUID(),
+        p_expected_version: returnOption.expected_version,
+      });
+      onReturned?.();
+    } catch (error) {
+      setReturnError(error instanceof Error ? error.message : "تعذر إرجاع الموضوع. حدّث البيانات ثم أعد المحاولة.");
+    } finally { setReturnPending(false); }
+  }
 
   const sourceDecision = useMemo(() => history.flatMap((item) => item.decisions).at(0), [history]);
   const sourceMeeting = history.at(0)?.meeting;
@@ -161,10 +188,68 @@ export function AgendaCandidateDetailsDialog({ candidate, meetingId, busy, onClo
     closeDisabled={busy}
     footer={<div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-q-caption text-q-text-2">الإدراج يضيف الموضوع إلى هذا الاجتماع ولا يعني اعتماده.</p>
-      <div className="flex flex-wrap items-start gap-3"><TopicPdfDownloadButton topicId={candidate.id} meetingId={meetingId} /><Button variant="secondary" disabled={busy} onClick={onClose}>إغلاق</Button><Button pending={busy} disabled={loading || Boolean(fatalError)} onClick={() => onReview(candidate)}>{actionLabel}<ArrowLeft size={18} /></Button></div>
+      <div className="flex flex-wrap items-start gap-3">
+        <TopicPdfDownloadButton topicId={candidate.id} meetingId={meetingId} />
+        {returnOption?.available && (
+          <Button
+            variant="danger"
+            disabled={busy || loading}
+            aria-label={`إرجاع إلى ${returnOption.previous_unit_name_ar ?? "المجلس السابق"}`}
+            onClick={() => { setReturnMode(true); setReturnError(null); }}
+          >
+            إرجاع للمجلس السابق
+            <RotateCcw size={18} />
+          </Button>
+        )}
+        <Button variant="secondary" disabled={busy || returnPending} onClick={onClose}>إغلاق</Button>
+        <Button pending={busy} disabled={loading || Boolean(fatalError) || returnPending} onClick={() => onReview(candidate)}>
+          {actionLabel}
+          <ArrowLeft size={18} />
+        </Button>
+      </div>
     </div>}
   >
     <div className="flex w-full flex-col gap-5">
+      {returnMode && returnOption?.available && (
+        <Card className="space-y-4 border-q-danger bg-q-danger-soft">
+          <div>
+            <h3 className="text-q-h3 font-bold text-q-danger">
+              إرجاع الموضوع إلى {returnOption.previous_unit_name_ar ?? "المجلس السابق"}
+            </h3>
+            <p className="mt-2 text-q-ui text-q-text-2">
+              سيخرج الموضوع من مقترحات هذا المجلس وتبدأ دورة مراجعة جديدة لدى المجلس السابق، مع بقاء قرارات الدورات السابقة محفوظة.
+            </p>
+          </div>
+          <AdministrativeTextArea
+            label="سبب الإرجاع"
+            hint="سيظهر السبب في مسار الموضوع وسجل التدقيق. اكتب عشرة أحرف على الأقل."
+            minLength={10}
+            required
+            value={returnReason}
+            onChange={(event) => setReturnReason(event.target.value)}
+            disabled={returnPending}
+          />
+          {returnError && <InlineMessage tone="error">{returnError}</InlineMessage>}
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="danger"
+              pending={returnPending}
+              pendingLabel="جارٍ إرجاع الموضوع…"
+              disabled={returnReason.trim().length < 10}
+              onClick={() => void submitReturn()}
+            >
+              تأكيد الإرجاع
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={returnPending}
+              onClick={() => { setReturnMode(false); setReturnReason(""); setReturnError(null); }}
+            >
+              إلغاء
+            </Button>
+          </div>
+        </Card>
+      )}
       <Card className="overflow-hidden p-0">
         <div className="border-t-4 border-q-primary p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">

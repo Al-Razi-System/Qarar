@@ -141,6 +141,9 @@ TopicHistory = {
 | `refer_topic` | `{referral_id,topic_id,status,from_unit_id,to_unit_id}` |
 | `respond_topic_referral` | `{referral_id,topic_id,status,current_unit_id}` |
 | `get_topic_route_history` | `TopicRouteEntry[]`, ordered chronologically as defined in [06-topic-referrals.md](./06-topic-referrals.md) |
+| `get_topic_resubmission_option` | `{available,reason_unavailable?,expected_version?,destination_step_id?,destination_unit_id?,destination_unit_name_ar?}` |
+| `resubmit_returned_topic` | `{topic_id,step_id?,unit_id?,cycle_no?,idempotent_replay}` |
+| `return_topic_to_previous_council` | `{topic_id,returned_from_step_id?,returned_to_step_id?,returned_to_unit_id?,returned_to_submitter,cycle_no?,idempotent_replay}` |
 | `create_topic_with_regulation_bundle` | The selected-regulation topic result plus `topic_id` and the persisted `regulation_references` array |
 | `get_topic_regulation_tree` | `{items:RegulationTree[],total}`; every item has `policy`, `version`, and ordered selectable `nodes` |
 | `list_topic_regulation_references` | `RegulationReference[]` with policy/version/item identity, type, primary flag, and display labels |
@@ -201,6 +204,7 @@ AgendaItem = {
 | `complete_meeting_session` | `{id,status:"waiting_for_minutes"}` |
 | `send_meeting_invitations` | `{meeting_id,queued,status:"queued"}` |
 | `get_meeting_readiness` | `{ready,checks}`; checks have `code`, `label`, `complete`, and optional `count` |
+| `get_topic_return_option` | `{available,reason_unavailable?,expected_version?,current_step_id?,current_unit_name_ar?,previous_step_id?,previous_unit_id?,previous_unit_name_ar}` |
 
 ## Meeting Minutes
 
@@ -275,6 +279,8 @@ VotingRound = {
 | `list_meeting_decisions` | `DecisionSummary[]` with `{id,decision_no,agenda_item_id,decision_text,decision_status,requires_approval,updated_at,can_edit_text}` |
 | `update_meeting_decision_text` | `{id,decision_no,decision_status,decision_text,updated_at,changed,meeting_status}` |
 | `list_meeting_voting_rounds` | `VotingRoundSummary[]` with agenda identity, status/result, and vote counts |
+| `list_pending_rejected_vote_resolutions` | `{can_resolve,items:{id,voting_round_id,agenda_item_id,topic_id,topic_title,expected_version,step_expected_version,destination_unit_name_ar}[]}` |
+| `resolve_rejected_vote` | `{resolution_id,decision_id?,resolution?,idempotent_replay}` |
 
 `eligible_members` and `votes` are `null` for ordinary members and arrays for callers with
 `voting.manage`, as described in [07-session-attendance-voting.md](./07-session-attendance-voting.md).

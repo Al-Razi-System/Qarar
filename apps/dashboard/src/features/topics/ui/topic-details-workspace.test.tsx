@@ -1,5 +1,5 @@
 import {afterEach,expect,it,vi} from "vitest";
-import {fireEvent,render,screen} from "@testing-library/react";
+import {fireEvent,render,screen,waitFor} from "@testing-library/react";
 import {TopicDetailsWorkspace} from "./topic-details-workspace";
 afterEach(()=>vi.unstubAllGlobals());
 function mockTopic(failWorkflow=false, deniedContract=""){
@@ -57,4 +57,22 @@ it("shows the approved prior council minute and persisted cross-module audit tim
  expect(screen.getByText("اكتمال مناقشة البند")).toBeInTheDocument();
  expect(screen.getByText(/رئيس المجلس/)).toBeInTheDocument();
  expect(screen.getAllByText("تم تقديم الموضوع")).toHaveLength(1);
+});
+it("lets only the returned topic submitter resubmit from the action location",async()=>{
+ let resubmitted=false;
+ vi.stubGlobal("fetch",vi.fn(async(_url,options)=>{
+  const {contract}=JSON.parse(options.body);
+  if(contract==="resubmit_returned_topic"){resubmitted=true;return new Response(JSON.stringify({data:{topic_id:"topic"}}));}
+  const data=contract==="get_topic_detail"?{id:"topic",title_ar:"موضوع معاد للاستكمال",status:resubmitted?"approved":"returned",priority:"medium",routing_status:resubmitted?"routing_ready":"routing_blocked",history:[{id:"return",to_status:"returned",change_reason:"استكمال المرفقات النظامية"}]}:
+   contract==="get_topic_resubmission_option"?{available:!resubmitted,expected_version:3,destination_unit_name_ar:"مجلس القسم"}:
+   contract==="get_topic_workflow"?{status:resubmitted?"active":"blocked",steps:[]}:
+   contract==="get_topic_requirements_status"?{items:[],missing_mandatory:0,ready_for_review:true}:[];
+  return new Response(JSON.stringify({data}));
+ }));
+ render(<TopicDetailsWorkspace topicId="topic"/>);
+ const action=await screen.findByRole("button",{name:"إعادة إرسال الموضوع"});
+ fireEvent.click(action);
+ await waitFor(()=>expect(vi.mocked(fetch).mock.calls.some(([,options])=>JSON.parse(options?.body as string).contract==="resubmit_returned_topic")).toBe(true));
+ expect(await screen.findByText("أُعيد إرسال الموضوع إلى مجلس القسم بنجاح.")).toBeInTheDocument();
+ expect(screen.queryByRole("button",{name:"إعادة إرسال الموضوع"})).not.toBeInTheDocument();
 });

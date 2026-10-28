@@ -120,10 +120,13 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `get_topic_regulation_preview` | `governance` | `authenticated` | `p_governance_unit_id uuid, p_topic_category_id uuid, p_priority text, p_source_type text, p_effective_on date, p_policy_id uuid, p_policy_version_id uuid, p_policy_item_id uuid, p_scope_assignment_id uuid` | `jsonb` |
 | `get_topic_regulation_route_preview` | `governance` | `authenticated` | `p_governance_unit_id uuid, p_topic_category_id uuid, p_priority text, p_source_type text, p_effective_on date, p_policy_id uuid, p_policy_version_id uuid, p_policy_item_id uuid, p_scope_assignment_id uuid` | `jsonb` |
 | `get_topic_regulation_tree` | `governance` | `authenticated` | `p_governance_unit_id uuid, p_topic_category_id uuid, p_priority text, p_source_type text, p_effective_on date` | `jsonb` |
+| `get_topic_resubmission_option` | `governance` | `authenticated` | `p_topic_id uuid` | `jsonb` |
 | `get_topic_workflow` | `governance` | `authenticated` | `p_topic_id uuid` | `jsonb` |
 | `preview_policy_conditions` | `governance` | `authenticated` | `p_conditions jsonb, p_context jsonb` | `jsonb` |
 | `request_custom_workflow` | `governance` | `authenticated` | `p_topic_id uuid, p_workflow_template_version_id uuid, p_reason text, p_valid_until timestamp with time zone` | `jsonb` |
 | `request_workflow_exception` | `governance` | `authenticated` | `p_topic_id uuid, p_workflow_template_version_id uuid, p_reason text, p_valid_until timestamp with time zone` | `jsonb` |
+| `resubmit_returned_topic` | `governance` | `authenticated` | `p_topic_id uuid, p_idempotency_key uuid, p_expected_version integer` | `jsonb` |
+| `return_topic_to_previous_council` | `governance` | `authenticated` | `p_topic_id uuid, p_reason text, p_idempotency_key uuid, p_expected_version integer` | `jsonb` |
 | `review_topic_prior_route_request` | `governance` | `authenticated` | `p_request_id uuid, p_action text, p_comment text` | `jsonb` |
 | `service_acknowledge_notification_outbox` | `governance` | `service_role` | `p_event_id uuid, p_lock_token uuid` | `jsonb` |
 | `service_claim_notification_deliveries` | `governance` | `service_role` | `p_worker_id uuid, p_lock_token uuid, p_channel text, p_limit integer, p_lease_seconds integer` | `TABLE(id uuid, organization_id uuid, outbox_event_id uuid, recipient_user_id uuid, channel text, template_code text, template_version text, destination text, variables jsonb, status text, attempts integer, lock_token uuid, lease_expires_at timestamp with time zone)` |
@@ -206,6 +209,7 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `get_meeting_detail` | `meetings` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `get_meeting_readiness` | `meetings` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `get_sprint02_form_options` | `meetings` | `authenticated` | `-` | `jsonb` |
+| `get_topic_return_option` | `meetings` | `authenticated` | `p_topic_id uuid, p_meeting_id uuid` | `jsonb` |
 | `list_meeting_series` | `meetings` | `authenticated` | `-` | `jsonb` |
 | `list_meeting_topic_attachments` | `meetings` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `remove_agenda_item` | `meetings` | `authenticated` | `p_agenda_item_id uuid, p_reason text` | `jsonb` |
@@ -255,4 +259,6 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `get_my_open_votes` | `voting` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `get_voting_round_detail` | `voting` | `authenticated` | `p_voting_round_id uuid` | `jsonb` |
 | `list_meeting_voting_rounds` | `voting` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
+| `list_pending_rejected_vote_resolutions` | `voting` | `authenticated` | `p_meeting_id uuid` | `jsonb` |
 | `open_voting_round` | `voting` | `authenticated` | `p_agenda_item_id uuid, p_expected_meeting_updated_at timestamp with time zone` | `jsonb` |
+| `resolve_rejected_vote` | `voting` | `authenticated` | `p_voting_round_id uuid, p_resolution text, p_reason text, p_idempotency_key uuid, p_expected_version integer` | `jsonb` |

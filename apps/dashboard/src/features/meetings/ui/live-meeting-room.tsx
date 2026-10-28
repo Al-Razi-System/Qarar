@@ -22,6 +22,7 @@ import { MemberVoteCard, type VoteValue } from "./stage/member-vote-card";
 import { ReasonDialog } from "./stage/reason-dialog";
 import { NEW_ASSIGNMENT_KEY, type AssignmentActivity } from "./stage/item-assignments";
 import { ReferralDialog } from "./stage/referral-dialog";
+import { RejectedVoteResolutionDialog, type PendingRejectedVoteResolution } from "./rejected-vote-resolution-dialog";
 import { RoomStage } from "./stage/room-stage";
 import { RoomTopBar } from "./stage/room-top-bar";
 import { useMeetingBroadcast } from "./stage/use-meeting-broadcast";
@@ -41,6 +42,7 @@ type CheckInToken = { token: string; expires_at: string };
 type RoomTab = "my-attendance" | "attendance" | "agenda";
 /** An action that the minutes must explain, waiting for its reason. */
 type ReasonRequest = { kind: "postpone"; item: AgendaDiscussionItem } | { kind: "manual-attendance"; record: Attendance };
+type PendingRejectedVoteResolutions = { items: PendingRejectedVoteResolution[]; can_resolve: boolean };
 
 export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId: string; publicCheckInOrigin?: string }) {
   // Every call names this room, so a successful write tells its other screens at once.
@@ -67,6 +69,8 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   const [roomVotes, setMyVotes] = useState<MyVote[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [roomRounds, setRounds] = useState<VotingRound[]>([]);
+  const [rejectedVoteResolutions, setRejectedVoteResolutions] = useState<PendingRejectedVoteResolution[]>([]);
+  const [resolutionError, setResolutionError] = useState<string | null>(null);
   const voting = useLiveVoting(meetingId, sessionRecord?.meeting.status === "in_progress");
   const rounds = voting.snapshot?.rounds ?? roomRounds;
   const myVotes = voting.snapshot?.votes ?? roomVotes;
@@ -152,13 +156,14 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     if (!silent) setLoading(true);
     try {
       if (!silent) setLoadError(null);
-      const [live, detail, votes, meetingDecisions, meetingRounds, attachments] = await Promise.all([
+      const [live, detail, votes, meetingDecisions, meetingRounds, attachments, pendingRejections] = await Promise.all([
         roomRpc<LiveMeetingSession>("get_meeting_session_detail", { p_meeting_id: meetingId }),
         roomRpc<MeetingDetail>("get_meeting_detail", { p_meeting_id: meetingId }),
         roomRpc<MyVote[]>("get_my_open_votes", { p_meeting_id: meetingId }),
         roomRpc<Decision[]>("list_meeting_decisions", { p_meeting_id: meetingId }),
         roomRpc<VotingRound[]>("list_meeting_voting_rounds", { p_meeting_id: meetingId }),
         roomRpc<MeetingTopicAttachment[]>("list_meeting_topic_attachments", { p_meeting_id: meetingId }),
+        roomRpc<PendingRejectedVoteResolutions>("list_pending_rejected_vote_resolutions", { p_meeting_id: meetingId }),
       ]);
       if (["waiting_for_minutes", "waiting_for_approval", "closed"].includes(live.meeting.status)) {
         router.replace(`/admin/meetings/${meetingId}/minutes`);
@@ -178,6 +183,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       setDecisions(meetingDecisions ?? []);
       setRounds(meetingRounds ?? []);
       setTopicAttachments(attachments ?? []);
+      setRejectedVoteResolutions(Array.isArray(pendingRejections?.items) ? pendingRejections.items : []);
       // The timers are read with every refresh; without them the room works as before.
       await roomRpc<MeetingItemTimers>("list_meeting_item_timers_v2", { p_meeting_id: meetingId })
         .then((data) => setItemTimers({ data, clockOffsetMs: Date.parse(data.server_now) - Date.now() }))
@@ -328,6 +334,34 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     }
     if (!round) return Promise.resolve(false);
     return perform(() => roomRpc("create_decision_from_voting_round", { p_voting_round_id: round.id, p_decision_text: text, p_requires_approval: true }), "تم حفظ صياغة القرار وإحالته للاعتماد.");
+  }
+
+  async function resolveRejectedVote(resolution: "final_reject" | "return_previous", reason: string) {
+    const item = rejectedVoteResolutions[0];
+    if (!item) return;
+    setBusy(true);
+    setResolutionError(null);
+    setNotice(null);
+    try {
+      await roomRpc("resolve_rejected_vote", {
+        p_voting_round_id: item.voting_round_id,
+        p_resolution: resolution,
+        p_reason: reason || null,
+        p_idempotency_key: crypto.randomUUID(),
+        p_expected_version: item.expected_version,
+      });
+      setNotice({
+        kind: "success",
+        text: resolution === "return_previous"
+          ? `تم توثيق قرار إعادة الموضوع إلى ${item.destination_unit_name_ar}.`
+          : "تم توثيق الرفض النهائي وإغلاق مسار الموضوع.",
+      });
+      await load(true, true);
+    } catch (error) {
+      setResolutionError(messageOf(error, "تعذر توثيق قرار الرئيس. تحقّق من حالة التصويت ثم أعد المحاولة."));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function confirmCompleteSession() {
@@ -540,6 +574,15 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       {checkIn && <AttendanceQrDialog meetingId={meetingId} token={checkIn.token} expiresAt={checkIn.expires_at} publicOrigin={publicCheckInOrigin} attendance={session.attendance} viewerUserId={session.viewer.user_id} busy={busy} onVerify={verifyAttendance} onClose={() => setCheckIn(null)} onRenew={() => void createCheckInSession()} />}
 
       {decisionDraft && <DecisionComposerDialog key={decisionDraft.decision?.id ?? decisionDraft.item.id} item={decisionDraft.item} round={decisionDraft.round} decision={decisionDraft.decision} busy={busy} error={dialogError} isRapporteur={rapporteur} onClose={() => setDecisionDraft(null)} onSubmit={submitDecision} />}
+
+      {rejectedVoteResolutions[0] && (
+        <RejectedVoteResolutionDialog
+          item={rejectedVoteResolutions[0]}
+          pending={busy}
+          error={resolutionError}
+          onSubmit={(resolution, reason) => void resolveRejectedVote(resolution, reason)}
+        />
+      )}
 
       {referralItem && (
         <ReferralDialog

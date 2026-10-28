@@ -93,9 +93,10 @@ type PriorRouteAttachment = { id: string; file_name: string; file_url: string; m
 type PriorRouteStep = { id: string; sequence_no: number; step_title: string; responsible_unit_name_ar?: string | null; meeting_date: string; meeting_reference?: string | null; decision_type: string; decision_text: string; bypass_reason: string; attachments: PriorRouteAttachment[] };
 type PriorRouteRequest = { id: string; topic_id: string; status: string; is_requester: boolean; submitted_at?: string | null; reviewed_at?: string | null; review_comment?: string | null; steps: PriorRouteStep[] };
 type PriorRouteCouncil = PriorRouteStep & { evidence_ids: string[]; covered_step_titles: string[]; all_steps_have_evidence: boolean };
+type ResubmissionOption = { available: boolean; reason_unavailable?: string | null; expected_version?: number | null; destination_unit_name_ar?: string | null };
 
 type TabId = "summary" | "regulation" | "requirements" | "workflow" | "referrals" | "decisions" | "activity";
-type Notice = { kind: "error"; text: string } | null;
+type Notice = { kind: "error" | "success"; text: string } | null;
 
 const tabs: Array<{ id: TabId; label: string; icon: typeof FileText }> = [
   { id: "summary", label: "الملخص", icon: FileText },
@@ -218,6 +219,8 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
   const [meetingHistory, setMeetingHistory] = useState<TopicMeetingHistory[]>([]);
   const [activityTimeline, setActivityTimeline] = useState<TopicActivity[]>([]);
   const [priorRouteRequest, setPriorRouteRequest] = useState<PriorRouteRequest | null>(null);
+  const [resubmissionOption, setResubmissionOption] = useState<ResubmissionOption | null>(null);
+  const [resubmitting, setResubmitting] = useState(false);
   const [attachmentBusy, setAttachmentBusy] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("summary");
   const [loading, setLoading] = useState(true);
@@ -228,7 +231,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
   useEffect(() => {
     let alive = true;
     async function load() {
-      setLoading(true); setNotice(null);setReadErrors([]);setPreview(null);setWorkflow(null);setReferrals([]);setAttachments([]);setRegulationReferences([]);setMeetingHistory([]);setActivityTimeline([]);setPriorRouteRequest(null);
+      setLoading(true); setNotice(null);setReadErrors([]);setPreview(null);setWorkflow(null);setReferrals([]);setAttachments([]);setRegulationReferences([]);setMeetingHistory([]);setActivityTimeline([]);setPriorRouteRequest(null);setResubmissionOption(null);
       try {
         const detail = await rpc<TopicDetail>("get_topic_detail", { p_topic_id: topicId });
         if (!alive) return;
@@ -244,6 +247,13 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
           rpc<TopicActivity[]>("get_topic_activity_timeline", { p_topic_id: topicId }).then((data) => { if (alive) setActivityTimeline(data ?? []); }).catch(failed("سجل النشاط والتدقيق")),
           rpc<PriorRouteRequest | null>("get_topic_prior_route_request", { p_topic_id: topicId }).then((data) => { if (alive) setPriorRouteRequest(data); }).catch(failed("أدلة المسار السابق")),
         ];
+        if (detail.status === "returned") {
+          background.push(
+            rpc<ResubmissionOption>("get_topic_resubmission_option", { p_topic_id: topicId })
+              .then((data) => { if (alive) setResubmissionOption(data); })
+              .catch(failed("صلاحية إعادة إرسال الموضوع")),
+          );
+        }
         if (detail.policy_id && detail.policy_version_id && detail.policy_item_id && detail.policy_scope_assignment_id && detail.current_unit_id && detail.category_id) {
           background.push(rpc<RegulationPreview>("get_topic_regulation_preview", {
             p_governance_unit_id: detail.current_unit_id,
@@ -343,6 +353,27 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
       setNotice({ kind: "error", text: error instanceof Error ? error.message : "تعذر تأكيد استيفاء المتطلب." });
     } finally { setAttachmentBusy(false); }
   }
+  async function resubmitTopic() {
+    if (!resubmissionOption?.available || resubmissionOption.expected_version == null) return;
+    setResubmitting(true);
+    setNotice(null);
+    try {
+      await rpc("resubmit_returned_topic", {
+        p_topic_id: topicId,
+        p_idempotency_key: crypto.randomUUID(),
+        p_expected_version: resubmissionOption.expected_version,
+      });
+      const destination = resubmissionOption.destination_unit_name_ar || "المجلس المختص";
+      setTopic((current) => current ? { ...current, status: "approved", routing_status: "routing_ready" } : current);
+      setWorkflow((current) => current ? { ...current, status: "active" } : current);
+      setResubmissionOption(null);
+      setNotice({ kind: "success", text: `أُعيد إرسال الموضوع إلى ${destination} بنجاح.` });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "تعذر إعادة إرسال الموضوع." });
+    } finally {
+      setResubmitting(false);
+    }
+  }
   const headerPath = [
     topic?.title_ar || "الموضوع",
     topic?.topic_type_version_id ? topic.typed_creation_request?.snapshot?.topic_type_name_ar : topic?.policy_id ? "اللائحة الحاكمة" : "بانتظار تحديد اللائحة",
@@ -356,7 +387,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
 
   return <div className="space-y-5">
     <Link href="/admin/topics" className="inline-flex items-center gap-2 text-xs font-bold text-[#0066cc] transition hover:text-[#004f9f]"><ArrowRight size={15} /> العودة إلى الموضوعات</Link>
-    {notice && <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-800"><CircleAlert size={16} />{notice.text}</div>}
+    {notice && <InlineMessage tone={notice.kind}>{notice.text}</InlineMessage>}
     {readErrors.length > 0 && <div className="space-y-3">
       {readErrors.map(error => <InlineMessage key={error} tone="error">{error}</InlineMessage>)}
       <Button variant="secondary" onClick={() => setReadAttempt(value => value + 1)}>إعادة تحميل التفاصيل</Button>
@@ -379,7 +410,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
     </div>
 
     <section className="rounded-3xl border border-[#dce7f1] bg-white p-5 shadow-[0_10px_28px_rgba(24,48,80,.045)] sm:p-7">
-      {activeTab === "summary" && <Summary topic={topic} workflow={workflow} preview={preview} priorRouteRequest={priorRouteRequest} />}
+      {activeTab === "summary" && <Summary topic={topic} workflow={workflow} preview={preview} priorRouteRequest={priorRouteRequest} resubmissionOption={resubmissionOption} resubmitting={resubmitting} onResubmit={resubmitTopic} />}
       {activeTab === "regulation" && (topic.topic_type_version_id ? <TypedTopicAuthorities snapshot={topic.typed_creation_request?.snapshot} /> : <Regulation topic={topic} preview={preview} references={regulationReferences} />)}
       {activeTab === "requirements" && <Requirements preview={preview} requirementsStatus={requirementsStatus} attachments={attachments} priorRouteRequest={priorRouteRequest} busy={attachmentBusy} onUpload={uploadAttachment} onUploadPriorEvidence={uploadPriorRouteEvidence} onSubmitPriorRoute={submitPriorRouteRequest} onRemove={removeAttachment} onFulfill={fulfillRequirement} />}
       {activeTab === "workflow" && <Workflow workflow={workflow} priorRouteRequest={priorRouteRequest} />}
@@ -390,7 +421,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
   </div>;
 }
 
-function Summary({ topic, workflow, preview, priorRouteRequest }: { topic: TopicDetail; workflow: Workflow | null; preview: RegulationPreview | null; priorRouteRequest: PriorRouteRequest | null }) {
+function Summary({ topic, workflow, preview, priorRouteRequest, resubmissionOption, resubmitting, onResubmit }: { topic: TopicDetail; workflow: Workflow | null; preview: RegulationPreview | null; priorRouteRequest: PriorRouteRequest | null; resubmissionOption: ResubmissionOption | null; resubmitting: boolean; onResubmit: () => void }) {
   const latestReturn = [...(topic.history ?? [])].reverse().find((item) => item.to_status === "returned");
   return <div className="space-y-6">
     <SectionTitle icon={ClipboardCheck} title="ملخص الموضوع" description="نظرة سريعة على بيانات الموضوع وحالته الحاكمة الحالية." />
@@ -399,6 +430,10 @@ function Summary({ topic, workflow, preview, priorRouteRequest }: { topic: Topic
       <h3 className="mt-1 text-sm font-black">استكمال البيانات وإعادة الإرسال</h3>
       <p className="mt-2 text-xs leading-7">{latestReturn?.change_reason || "أُعيد الموضوع لاستكمال بيانات أو مرفقات ناقصة. راجع الجهة المراجعة قبل إعادة الإرسال."}</p>
       {latestReturn?.changed_by_name_ar && <p className="mt-2 text-[10px] text-amber-800">طلب الاستكمال: {latestReturn.changed_by_name_ar} · {dateLabel(latestReturn.changed_at)}</p>}
+      {resubmissionOption?.available ? <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Button variant="primary" pending={resubmitting} pendingLabel="جارٍ إعادة الإرسال…" onClick={onResubmit}>إعادة إرسال الموضوع</Button>
+        <p className="text-q-caption font-bold text-q-text-2">سيعود إلى {resubmissionOption.destination_unit_name_ar || "المجلس المختص"} بدورة مراجعة جديدة، مع حفظ السجل السابق.</p>
+      </div> : resubmissionOption?.reason_unavailable ? <InlineMessage className="mt-4" tone="warning">{resubmissionOption.reason_unavailable}</InlineMessage> : null}
     </div>}
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"><Info label="الجهة" value={topic.governance_unit?.name_ar ?? "غير محددة"} /><Info label="الفئة" value={topic.typed_creation_request?.snapshot?.classification_name_ar ?? topic.category?.name_ar ?? "غير محددة"} /><Info label="الأولوية" value={priorityLabels[topic.priority] ?? "غير محددة"} /><Info label="حالة المسار" value={workflowDisplayStatus(workflow?.status ?? topic.routing_status ?? undefined, priorRouteRequest)} /></div>
     <div className="rounded-2xl border border-[#e4edf5] bg-[#fbfdff] p-4"><h3 className="text-xs font-black text-[#0a1330]">الوصف</h3><p className="mt-2 whitespace-pre-wrap text-xs leading-7 text-[#52647a]">{topic.description || "لم يُسجل وصف للموضوع."}</p></div>

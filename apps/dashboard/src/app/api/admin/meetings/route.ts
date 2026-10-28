@@ -13,6 +13,7 @@ const contracts = new Set([
   "transition_meeting", "get_sprint02_form_options",
   "admin_list_meeting_types", "admin_create_meeting_type", "admin_update_meeting_type",
   "search_eligible_agenda_topics", "add_agenda_item", "remove_agenda_item", "reorder_agenda_items",
+  "get_topic_return_option", "return_topic_to_previous_council",
   "open_meeting_session", "get_meeting_session_start_timing_v2", "get_meeting_session_detail", "list_meeting_member_profiles_v2", "lock_attendance_roster",
   "get_meeting_broadcast_v2", "set_meeting_broadcast_v2", "hand_over_meeting_broadcast_v2",
   "set_meeting_broadcast_document_v2", "set_agenda_item_downloads_v2",
@@ -25,6 +26,7 @@ const contracts = new Set([
   "open_voting_round", "get_voting_round_detail", "get_my_open_votes",
   "cast_vote", "close_voting_round", "cancel_voting_round",
   "create_decision_from_voting_round", "update_meeting_decision_text", "list_meeting_decisions", "list_meeting_voting_rounds",
+  "list_pending_rejected_vote_resolutions", "resolve_rejected_vote",
   "update_agenda_discussion", "complete_meeting_session", "save_agenda_topic_instructions",
   "send_meeting_invitations",
   "send_meeting_invitations_v2",
@@ -36,6 +38,7 @@ const contracts = new Set([
 const cancellableReadContracts = new Set([
   "search_meetings", "list_meeting_series", "get_meeting_detail", "get_completed_meeting_record", "get_meeting_session_start_timing_v2",
   "list_meeting_topic_attachments", "get_sprint02_form_options", "search_eligible_agenda_topics", "get_meeting_readiness",
+  "get_topic_return_option", "list_pending_rejected_vote_resolutions",
 ]);
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -43,7 +46,7 @@ const AGENDA_CONTEXT_CONTRACTS = new Set([
   "update_agenda_discussion", "set_agenda_item_downloads_v2", "set_agenda_item_planned_minutes_v2",
   "refer_agenda_item_v2", "propose_meeting_assignment_v2", "open_voting_round",
 ]);
-const ROUND_CONTEXT_CONTRACTS = new Set(["cast_vote", "close_voting_round", "cancel_voting_round", "create_decision_from_voting_round"]);
+const ROUND_CONTEXT_CONTRACTS = new Set(["cast_vote", "close_voting_round", "cancel_voting_round", "create_decision_from_voting_round", "resolve_rejected_vote"]);
 
 function objectOf(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;

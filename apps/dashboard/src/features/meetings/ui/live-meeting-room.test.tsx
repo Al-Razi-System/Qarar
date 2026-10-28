@@ -21,10 +21,10 @@ describe("LiveMeetingRoom polling", () => {
 
     const view = render(<LiveMeetingRoom meetingId="00000000-0000-0000-0000-000000000001" />);
     await act(async () => Promise.resolve());
-    expect(liveMeetingRpc).toHaveBeenCalledTimes(6);
+    expect(liveMeetingRpc).toHaveBeenCalledTimes(7);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
-    expect(liveMeetingRpc).toHaveBeenCalledTimes(6);
+    expect(liveMeetingRpc).toHaveBeenCalledTimes(7);
 
     view.unmount();
   });
