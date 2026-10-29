@@ -11,6 +11,12 @@ it("saves meeting data and its quorum in one V2 transaction", async () => {
   expect(rpcV2).toHaveBeenCalledWith("save_meeting_with_quorum_v2", params);
   expect(rpc).not.toHaveBeenCalled();
 });
+it("routes the authorized calendar read through V2", async () => {
+  const params = { p_from_date: "2026-10-01", p_to_date: "2026-10-31", p_unit_ids: null };
+  rpcV2.mockResolvedValue([]);
+  expect((await POST(request("list_meetings_calendar_v2", params))).status).toBe(200);
+  expect(rpcV2).toHaveBeenCalledWith("list_meetings_calendar_v2", params);
+});
 function request(contract: string, params: unknown = {}, meetingId?: string) {
   const headers: Record<string, string> = { "Content-Type": "application/json", ...(meetingId ? { "x-qarar-meeting-id": meetingId } : {}) };
   return new Request("http://localhost/api/admin/meetings", { method: "POST", headers, body: JSON.stringify({ contract, params }) });

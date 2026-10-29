@@ -4,7 +4,7 @@ import { useDeferredValue, useEffect, useEffectEvent, useRef, useState } from "r
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  AlertCircle, Calendar, CalendarDays, Check, CheckCircle2, ChevronLeft, CircleDot, Clock, FileText, Layers3, LoaderCircle, MapPin, Pencil, Play, Plus, Search, Users, X,
+  AlertCircle, Calendar, CalendarDays, Check, CheckCircle2, ChevronLeft, CircleDot, Clock, FileText, Layers3, List, LoaderCircle, MapPin, Pencil, Play, Plus, Search, Users, X,
 } from "lucide-react";
 import { meetingRpc as rpc } from "../api/meetings-client";
 import {
@@ -29,6 +29,7 @@ import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dia
 import { DirectAgendaTopicDialog } from "./direct-agenda-topic-dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { Dialog } from "@/shared/ui/dialog";
+import { calendarRange, MeetingsCalendar, type CalendarMode } from "./meetings-calendar";
 
 type Notice = { kind: "success" | "error"; text: string };
 type MeetingSeries = {
@@ -125,6 +126,11 @@ export function MeetingsWorkspace() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [activeGroup, setActiveGroup] = useState("all");
+  const [viewMode, setViewMode] = useState<"list" | CalendarMode>("list");
+  const [calendarCursor, setCalendarCursor] = useState(() => new Date());
+  const [calendarItems, setCalendarItems] = useState<Meeting[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [unitFilter, setUnitFilter] = useState("");
   const [minutes, setMinutes] = useState<MeetingMinutes | null>(null);
   const [minutesLoading, setMinutesLoading] = useState(false);
   const [minutesText, setMinutesText] = useState("");
@@ -133,6 +139,17 @@ export function MeetingsWorkspace() {
   const listRequestRef = useRef<AbortController | null>(null);
   const lastListSuccessAtRef = useRef(0);
   const today = localDateKey();
+
+  const loadCalendar = useEffectEvent(async () => {
+    if (viewMode === "list") return;
+    const range = calendarRange(calendarCursor, viewMode);
+    setCalendarLoading(true); setLoadError(null);
+    try {
+      const result = await rpc<Meeting[]>("list_meetings_calendar_v2", { p_from_date: range.from, p_to_date: range.to, p_unit_ids: unitFilter ? [unitFilter] : null }, { timeoutMs: 12_000 });
+      setCalendarItems(result ?? []);
+    } catch (error) { setLoadError(error instanceof Error ? error.message : "تعذر تحميل تقويم الاجتماعات."); }
+    finally { setCalendarLoading(false); }
+  });
 
   async function loadMeetings(options: { background?: boolean } = {}) {
     listRequestRef.current?.abort();
@@ -578,6 +595,9 @@ export function MeetingsWorkspace() {
     };
   }, [deferredQuery, fromDate, toDate]);
 
+  useEffect(() => { const timer = window.setTimeout(() => { if (typeof window.matchMedia === "function" && window.matchMedia("(min-width: 768px)").matches) setViewMode("month"); }, 0); return () => window.clearTimeout(timer); }, []);
+  useEffect(() => { const timer = window.setTimeout(() => void loadCalendar(), 0); return () => window.clearTimeout(timer); }, [viewMode, calendarCursor, unitFilter]);
+
   const refreshWorkspaceOnReturn = useEffectEvent(() => {
     if (listRequestRef.current || Date.now() - lastListSuccessAtRef.current < 30_000) return;
     void loadMeetings({ background: true });
@@ -626,6 +646,16 @@ export function MeetingsWorkspace() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-q-card border border-q-border bg-q-surface p-3">
+        <div className="flex items-center gap-1 rounded-q-control bg-q-surface-2 p-1" aria-label="طريقة عرض الاجتماعات">
+          <Button variant={viewMode === "month" ? "primary" : "ghost"} aria-pressed={viewMode === "month"} onClick={() => setViewMode("month")}><CalendarDays size={17}/>شهري</Button>
+          <Button variant={viewMode === "week" ? "primary" : "ghost"} aria-pressed={viewMode === "week"} onClick={() => setViewMode("week")}><Calendar size={17}/>أسبوعي</Button>
+          <Button variant={viewMode === "list" ? "primary" : "ghost"} aria-pressed={viewMode === "list"} onClick={() => setViewMode("list")}><List size={17}/>القائمة</Button>
+        </div>
+        {viewMode !== "list" && <label className="flex min-h-11 items-center gap-2 text-q-caption font-bold text-q-text-2">المجلس<select value={unitFilter} onChange={(event) => setUnitFilter(event.target.value)} className="h-11 min-w-56 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui text-q-text"><option value="">كل المجالس المتاحة</option>{Array.from(new Map([...meetings, ...calendarItems].filter((item) => item.governance_unit_id).map((item) => [item.governance_unit_id!, item.unit_name_ar ?? item.governance_unit_name_ar ?? "مجلس"]))).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>}
+      </div>
+
+      {viewMode === "list" ? <>
       <nav className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8" aria-label="تصنيف الاجتماعات">
         {[{ key: "all", label: "كل الاجتماعات", description: "جميع الحالات", statuses: [] as readonly string[] }, ...meetingGroups].map((group) => {
           const count = group.key === "all" ? meetings.length : meetings.filter((meeting) => meetingOperationalGroup(meeting, today) === group.key).length;
@@ -739,6 +769,7 @@ export function MeetingsWorkspace() {
           )}
         </div> : <div className="hidden min-h-[360px] place-items-center rounded-2xl border border-dashed border-[#cdddea] bg-gradient-to-b from-white to-[#f7fbff] p-8 text-center xl:grid xl:sticky xl:top-4"><div><span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#eaf4ff] text-[#0877d6]"><CalendarDays size={28}/></span><h2 className="mt-4 text-sm font-black text-[#173652]">اختر اجتماعاً لعرض تفاصيله</h2><p className="mx-auto mt-2 max-w-xs text-[10px] leading-6 text-[#718399]">اضغط على أي بطاقة من القائمة، وستظهر هنا بيانات الموعد وجدول الأعمال والجاهزية والإجراءات المتاحة دون الانتقال إلى أسفل الصفحة.</p></div></div>}
       </div>
+      </> : <MeetingsCalendar items={calendarItems} cursor={calendarCursor} mode={viewMode} loading={calendarLoading} onCursorChange={setCalendarCursor} onOpen={(meetingId) => { setViewMode("list"); void openDetail(meetingId); }} />}
 
       {agendaModal && selected && <Dialog title="الموضوعات المقترحة" description={`${eligibleAgendaCount ?? agendaCandidates.length} موضوعات وصلت إلى ${selected.unit_name_ar ?? selected.governance_unit_name_ar ?? "هذا المجلس"} وأصبحت مؤهلة للإدراج`} size="lg" scrollContent onClose={()=>setAgendaModal(false)} closeDisabled={agendaLoading} footer={<Button variant="secondary" disabled={agendaLoading} onClick={()=>setAgendaModal(false)}>إغلاق</Button>}>
         <div className="flex flex-col gap-4">

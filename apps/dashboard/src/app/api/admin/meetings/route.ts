@@ -9,6 +9,7 @@ import { notifyRoomChange, notifyVotingMutation, roomScopeOf } from "@/features/
 
 const contracts = new Set([
   "save_meeting_with_quorum_v2",
+  "list_meetings_calendar_v2", "save_council_meeting_plan_v2",
   "search_meetings", "create_meeting", "create_meeting_series", "create_meeting_series_from_existing", "list_meeting_series", "update_meeting_series_recurrence", "get_meeting_detail", "get_completed_meeting_record", "list_meeting_topic_attachments", "update_meeting",
   "transition_meeting", "get_sprint02_form_options",
   "admin_list_meeting_types", "admin_create_meeting_type", "admin_update_meeting_type",

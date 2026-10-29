@@ -18,6 +18,7 @@ export type Meeting = {
   governance_mode?: "governed" | "custom";
   id: string;
   meeting_no?: string | null;
+  governance_unit_id?: string;
   title_ar: string;
   status: string;
   scheduled_date?: string;
