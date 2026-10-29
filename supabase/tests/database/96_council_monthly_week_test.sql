@@ -40,21 +40,23 @@ insert into qarar_meetings.meeting_types(id,organization_id,code,name_ar) values
 insert into qarar_meetings.council_meeting_plans_v2(id,organization_id,governance_unit_id,meeting_type_id,recurrence,monthly_week,first_meeting_date,status,created_by_user_id)
 values('93000000-0000-0000-0000-000000000081','93000000-0000-0000-0000-000000000001',
 '93000000-0000-0000-0000-000000000021','93000000-0000-0000-0000-000000000080','monthly',2,'2026-10-08','active','93000000-0000-0000-0000-000000000010');
-select is((select count(*)::integer from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081'),1,'first weekly window produces one draft');
-select is((select planned_window_end from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081'),'2026-10-14'::date,'draft has the full window');
-select ok((select not schedule_date_confirmed from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081'),'anchor is not an actual confirmed date');
-select ok(not (api_v1.get_meeting_detail((select id from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081'))#>>'{capabilities,can_schedule}')::boolean,'backend capability does not offer predictable rejection');
-select throws_ok($q$update qarar_meetings.meetings set status='scheduled' where source_plan_id='93000000-0000-0000-0000-000000000081'$q$,'55000','حدد يوم الاجتماع ووقت انعقاده داخل الأسبوع قبل الجدولة','cannot schedule unconfirmed anchor');
-select throws_ok($q$update qarar_meetings.meetings set scheduled_date='2026-10-22',start_time='09:00',end_time='10:00' where source_plan_id='93000000-0000-0000-0000-000000000081'$q$,'22023','حدد يوماً داخل أسبوع الاجتماع ووقتي بداية ونهاية صحيحين','confirmation must be inside window');
-select lives_ok($q$update qarar_meetings.meetings set scheduled_date='2026-10-12',start_time='09:00',end_time='10:00' where source_plan_id='93000000-0000-0000-0000-000000000081'$q$,'explicit date and times confirm meeting');
-select ok((select schedule_date_confirmed from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081'),'stored confirmation is true');
-select ok((api_v1.get_meeting_detail((select id from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081'))#>>'{capabilities,can_schedule}')::boolean,'confirmed draft enables permitted scheduling');
-select lives_ok($q$update qarar_meetings.meetings set start_time=null,end_time=null where source_plan_id='93000000-0000-0000-0000-000000000081'$q$,'draft may clear its time');
-select ok((select not schedule_date_confirmed from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081'),'clearing time removes confirmation');
-select throws_ok($q$update qarar_meetings.meetings set status='scheduled' where source_plan_id='93000000-0000-0000-0000-000000000081'$q$,'55000','حدد يوم الاجتماع ووقت انعقاده داخل الأسبوع قبل الجدولة','cleared times cannot be scheduled');
-select lives_ok($q$update qarar_meetings.meetings set start_time='09:00',end_time='10:00' where source_plan_id='93000000-0000-0000-0000-000000000081'$q$,'valid times restore confirmation');
+select cmp_ok((select count(*)::integer from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081'),'>=',12,'the complete rolling cycle is materialized');
+create temp table pg_temp.initial_plan_meetings as
+select id,planned_window_start,planned_window_end from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081';
+select is((select planned_window_end from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'),'2026-10-14'::date,'draft has the full window');
+select ok((select not schedule_date_confirmed from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'),'anchor is not an actual confirmed date');
+select ok(not (api_v1.get_meeting_detail((select id from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'))#>>'{capabilities,can_schedule}')::boolean,'backend capability does not offer predictable rejection');
+select throws_ok($q$update qarar_meetings.meetings set status='scheduled' where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'$q$,'55000','حدد يوم الاجتماع ووقت انعقاده داخل الأسبوع قبل الجدولة','cannot schedule unconfirmed anchor');
+select throws_ok($q$update qarar_meetings.meetings set scheduled_date='2026-10-22',start_time='09:00',end_time='10:00' where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'$q$,'22023','حدد يوماً داخل أسبوع الاجتماع ووقتي بداية ونهاية صحيحين','confirmation must be inside window');
+select lives_ok($q$update qarar_meetings.meetings set scheduled_date='2026-10-12',start_time='09:00',end_time='10:00' where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'$q$,'explicit date and times confirm meeting');
+select ok((select schedule_date_confirmed from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'),'stored confirmation is true');
+select ok((api_v1.get_meeting_detail((select id from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'))#>>'{capabilities,can_schedule}')::boolean,'confirmed draft enables permitted scheduling');
+select lives_ok($q$update qarar_meetings.meetings set start_time=null,end_time=null where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'$q$,'draft may clear its time');
+select ok((select not schedule_date_confirmed from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'),'clearing time removes confirmation');
+select throws_ok($q$update qarar_meetings.meetings set status='scheduled' where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'$q$,'55000','حدد يوم الاجتماع ووقت انعقاده داخل الأسبوع قبل الجدولة','cleared times cannot be scheduled');
+select lives_ok($q$update qarar_meetings.meetings set start_time='09:00',end_time='10:00' where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2026-10-08'$q$,'valid times restore confirmation');
 select lives_ok($q$select qarar_meetings.create_council_plan_occurrence_v2('93000000-0000-0000-0000-000000000081','2026-10-01')$q$,'retry after changing actual date returns same window');
-select is((select count(*)::integer from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081'),1,'retry cannot duplicate after confirmation');
+select is((select count(*)::integer from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081'),(select count(*)::integer from pg_temp.initial_plan_meetings),'retry cannot duplicate after confirmation');
 select lives_ok($q$select qarar_meetings.create_council_plan_occurrence_v2('93000000-0000-0000-0000-000000000081','2027-01-01')$q$,'next year draft uses same plan');
 select is((select status from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2027-01-08'),'draft','next occurrence never opens session');
 select ok(not has_function_privilege('authenticated','qarar_meetings.generate_council_monthly_drafts_v2()','execute'),'ordinary client cannot invoke the cross-tenant scheduler');
@@ -72,7 +74,7 @@ select api_v2.admin_create_council_with_plan_v2(
 $$;
 select lives_ok($q$select pg_temp.create_weekly_council()$q$,'create journey supports monthly week atomically');
 select ok((pg_temp.create_weekly_council()->>'idempotent_replay')::boolean,'create retry is idempotent');
-select is((select count(*)::integer from qarar_meetings.meetings where governance_unit_id=(pg_temp.create_weekly_council()->>'id')::uuid),1,'create retry has one draft');
+select cmp_ok((select count(*)::integer from qarar_meetings.meetings where governance_unit_id=(pg_temp.create_weekly_council()->>'id')::uuid),'>=',12,'create retry preserves the materialized cycle');
 select is(api_v1.get_meeting_detail((select id from qarar_meetings.meetings where source_plan_id='93000000-0000-0000-0000-000000000081' and planned_window_start='2027-01-08'))->>'planned_window_end','2027-01-14','meeting detail exposes window for date confirmation');
 select is((api_v1.search_meetings(null,null,null,'2027-01-10','2027-01-10',100,0)->>'total')::integer,1,'date search includes overlap with proposed week');
 select set_config('request.jwt.claims','{}',true);

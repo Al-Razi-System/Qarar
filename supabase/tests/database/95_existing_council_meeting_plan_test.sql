@@ -36,9 +36,11 @@ create function pg_temp.save_plan(first_day text, expected timestamptz) returns 
  '{"name_ar":"المجلس المعدّل","unit_type_id":"93000000-0000-0000-0000-000000000020","minimum_active_members":3,"allow_dual_leadership":false}'::jsonb,expected,
  jsonb_build_object('meeting_type_id','93000000-0000-0000-0000-000000000080','recurrence','monthly','first_meeting_date',first_day));
 $$;
-select lives_ok($call$select pg_temp.save_plan('2026-11-01',(select updated_at from qarar_core.governance_units where id='93000000-0000-0000-0000-000000000021'))$call$,'existing council gets plan and first draft atomically');
-select is((select count(*)::integer from qarar_meetings.meetings where governance_unit_id='93000000-0000-0000-0000-000000000021'),1,'one draft only');
-select is((select status from qarar_meetings.meetings where governance_unit_id='93000000-0000-0000-0000-000000000021'),'draft','meeting does not convene automatically');
+select lives_ok($call$select pg_temp.save_plan('2026-11-01',(select updated_at from qarar_core.governance_units where id='93000000-0000-0000-0000-000000000021'))$call$,'existing council gets plan and its rolling cycle atomically');
+select cmp_ok((select count(*)::integer from qarar_meetings.meetings where governance_unit_id='93000000-0000-0000-0000-000000000021'),'>=',12,'at least one year of monthly drafts is materialized');
+select ok((select bool_and(status='draft') from qarar_meetings.meetings where governance_unit_id='93000000-0000-0000-0000-000000000021'),'meetings do not convene automatically');
+create temp table pg_temp.initial_plan_meeting_count as
+select count(*)::integer value from qarar_meetings.meetings where governance_unit_id='93000000-0000-0000-0000-000000000021';
 select is(api_v2.admin_get_council_detail_v2('93000000-0000-0000-0000-000000000021')->'meeting_plan'->>'recurrence','monthly','detail returns saved plan');
 select throws_ok($call$select pg_temp.save_plan('2026-11-01',(select updated_at from qarar_core.governance_units where id='93000000-0000-0000-0000-000000000021'))$call$,'40001','للمجلس خطة اجتماعات محفوظة؛ حدّث بياناته قبل الحفظ','repeat cannot create another draft');
 select throws_ok($call$select api_v2.admin_update_council_v2('93000000-0000-0000-0000-000000000022',
@@ -54,7 +56,7 @@ select throws_ok($call$select api_v2.admin_update_council_v2('93000000-0000-0000
 select lives_ok($call$select api_v2.admin_update_council_v2('93000000-0000-0000-0000-000000000021',
  '{"name_ar":"المجلس بعد التعديل","unit_type_id":"93000000-0000-0000-0000-000000000020","minimum_active_members":3,"allow_dual_leadership":false}',
  (select updated_at from qarar_core.governance_units where id='93000000-0000-0000-0000-000000000021'),null)$call$,'metadata edit preserves existing plan');
-select is((select count(*)::integer from qarar_meetings.meetings where governance_unit_id='93000000-0000-0000-0000-000000000021'),1,'metadata edit does not regenerate draft');
+select is((select count(*)::integer from qarar_meetings.meetings where governance_unit_id='93000000-0000-0000-0000-000000000021'),(select value from pg_temp.initial_plan_meeting_count),'metadata edit does not regenerate drafts');
 select set_config('request.jwt.claims','{"sub":"93000000-0000-0000-0000-000000000013","role":"authenticated","aal":"aal2"}',true);
 select throws_ok($call$select pg_temp.save_plan('2026-11-01',now())$call$,'42501',null,'unassigned actor cannot save');
 select throws_ok($call$select api_v2.admin_get_council_detail_v2('93000000-0000-0000-0000-000000000021')$call$,'42501',null,'unassigned actor cannot read plan');
