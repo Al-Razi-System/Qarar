@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DecisionTasks, FollowedDecision } from "../model/follow-up";
-import { decisionStatusLabel } from "../model/follow-up";
+import { decisionStatusLabel, groupDecisionTasks } from "../model/follow-up";
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../api/tasks-client", () => ({ tasksRpc: rpc }));
@@ -34,6 +34,19 @@ describe("decisionStatusLabel", () => {
   });
 });
 
+describe("groupDecisionTasks", () => {
+  it("keeps one logical assignment row with independently tracked target tasks", () => {
+    const first = tasks().tasks[0];
+    const groups = groupDecisionTasks([
+      { ...first, id: "t1", status: "completed", progress_percent: 100, assignment_batch_id: "batch-1", assignment_batch_target_count: 2, assignment_batch_title_ar: "إبلاغ الأقسام" },
+      { ...first, id: "t2", action_no: "TSK-2026-000032", assigned_user_name_ar: "د. ريم", assignment_batch_id: "batch-1", assignment_batch_target_count: 2, assignment_batch_title_ar: "إبلاغ الأقسام" },
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({ id: "batch-1", title_ar: "إبلاغ الأقسام", target_count: 2, completed_count: 1 });
+    expect(groups[0].tasks).toHaveLength(2);
+  });
+});
+
 describe("DecisionFollowUpWorkspace", () => {
   it("lists the followed decisions and explains why one cannot close yet", async () => {
     rpc.mockResolvedValue([decision()]);
@@ -43,6 +56,22 @@ describe("DecisionFollowUpWorkspace", () => {
     expect(within(card).getByText("لم تُنجز 1 من مهام القرار أو تُلغَ بعد.")).toBeInTheDocument();
     expect(within(card).getByText("متأخرة: 1")).toBeInTheDocument();
     expect(rpc).toHaveBeenCalledWith("list_decision_follow_up_v2", { p_status: "open" });
+  });
+
+  it("shows one progress row for a multi-target assignment and keeps both target tasks", async () => {
+    const first = tasks().tasks[0];
+    rpc.mockImplementation((contract: string) => contract === "list_decision_follow_up_v2" ? Promise.resolve([decision()]) : Promise.resolve(tasks({
+      tasks: [
+        { ...first, id: "t1", status: "completed", progress_percent: 100, assignment_batch_id: "batch-1", assignment_batch_target_count: 2, assignment_batch_title_ar: "إبلاغ جميع الأقسام" },
+        { ...first, id: "t2", action_no: "TSK-2026-000032", assigned_user_name_ar: "د. ريم", assignment_batch_id: "batch-1", assignment_batch_target_count: 2, assignment_batch_title_ar: "إبلاغ جميع الأقسام" },
+      ],
+    })));
+    render(<DecisionFollowUpWorkspace />);
+    await userEvent.click(await screen.findByRole("button", { name: "عرض المهام" }));
+    expect(await screen.findByText("إبلاغ جميع الأقسام")).toBeVisible();
+    expect(screen.getByText(/أُنجز 1 من 2/)).toBeVisible();
+    expect(screen.getByText("TSK-2026-000031")).toBeInTheDocument();
+    expect(screen.getByText("TSK-2026-000032")).toBeInTheDocument();
   });
 
   it("cancels a task only with a reason, keeps the dialog on failure, and reloads", async () => {
@@ -105,7 +134,7 @@ describe("DecisionFollowUpWorkspace", () => {
       : Promise.resolve(tasks({ tasks: tasks().tasks.map((task) => ({ ...task, can_manage: false })), units: null })));
     render(<DecisionFollowUpWorkspace />);
     await userEvent.click(await screen.findByRole("button", { name: "عرض المهام" }));
-    await screen.findByText("إبلاغ الأقسام");
+    expect((await screen.findAllByText("إبلاغ الأقسام")).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "إغلاق القرار" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "إلغاء المهمة" })).not.toBeInTheDocument();
   });

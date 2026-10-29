@@ -4,7 +4,7 @@
 -- Impact map: docs/engineering/impact/MEETING_ASSIGNMENT_AR.md
 begin;
 create extension if not exists pgtap;
-select plan(47);
+select plan(50);
 
 insert into public.organizations(id,code,name_ar) values
 ('a5000000-0000-0000-0000-000000000001','s104','Assignment'),
@@ -110,6 +110,15 @@ create function pg_temp.s104_batch_task_count(p_batch uuid) returns bigint langu
 $$ select count(*) from qarar_execution.action_items a join qarar_meetings.meeting_assignments ma on ma.id=a.meeting_assignment_id where ma.assignment_batch_id=p_batch $$;
 create function pg_temp.s104_batch_field(p_batch uuid,p_field text) returns text language sql security definer as
 $$ select case p_field when 'target_count' then target_count::text when 'status' then status end from qarar_meetings.meeting_assignment_batches where id=p_batch $$;
+create function pg_temp.s104_batch_minutes_lines(p_batch uuid) returns jsonb language sql security definer as
+$$ select coalesce(jsonb_agg(line),'[]'::jsonb)
+   from jsonb_array_elements(qarar_meetings.minutes_assignment_lines(
+     'a5000000-0000-0000-0000-000000000081','a5000000-0000-0000-0000-000000000001'
+   )) line where line->>'assignment_batch_id'=p_batch::text $$;
+create function pg_temp.s104_batch_follow_up_tasks(p_batch uuid) returns jsonb language sql security definer as
+$$ select coalesce(jsonb_agg(task),'[]'::jsonb)
+   from jsonb_array_elements(api_v2.list_decision_tasks_v2('a5000000-0000-0000-0000-0000000000a1')->'tasks') task
+   where task->>'assignment_batch_id'=p_batch::text $$;
 
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000011');
 select pg_temp.s104_seat_roster();
@@ -207,6 +216,9 @@ select is(pg_temp.s104_batch_field((select id from s104_ids where name='batch'),
 select is(pg_temp.s104_batch_field((select id from s104_ids where name='batch'),'status'),'active','the chair issues the whole batch immediately');
 select is(pg_temp.s104_batch_assignment_count((select id from s104_ids where name='batch')),2::bigint,'each target receives one compatible meeting assignment');
 select is(pg_temp.s104_batch_task_count((select id from s104_ids where name='batch')),2::bigint,'each target receives one independent execution task');
+select is(jsonb_array_length(pg_temp.s104_batch_minutes_lines((select id from s104_ids where name='batch'))),1,'the minutes show one line for a logical assignment batch');
+select is(pg_temp.s104_batch_minutes_lines((select id from s104_ids where name='batch'))->0->>'target_count','2','the minutes state the logical batch target count');
+select is(jsonb_array_length(pg_temp.s104_batch_follow_up_tasks((select id from s104_ids where name='batch'))),2,'follow-up keeps both tasks linked to their logical assignment batch');
 select is((api_v2.propose_meeting_assignment_batch_v2(
   'a5000000-0000-0000-0000-000000000091','Prepare two reports',null,
   '[{"kind":"user","id":"a5000000-0000-0000-0000-000000000013"},{"kind":"unit","id":"a5000000-0000-0000-0000-000000000023"}]'::jsonb,

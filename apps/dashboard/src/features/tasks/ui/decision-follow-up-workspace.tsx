@@ -9,7 +9,7 @@ import { InlineMessage } from "@/shared/ui/inline-message";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
 import { TextArea } from "@/shared/ui/text-area";
 import { tasksRpc } from "../api/tasks-client";
-import { decisionStatusLabel, FOLLOW_UP_FILTERS, OUTCOME_KIND_LABEL, type DecisionTasks, type FollowedDecision, type FollowUpFilter } from "../model/follow-up";
+import { decisionStatusLabel, FOLLOW_UP_FILTERS, groupDecisionTasks, OUTCOME_KIND_LABEL, type DecisionTasks, type FollowedDecision, type FollowUpFilter } from "../model/follow-up";
 import { cn } from "@/shared/lib/utils";
 import { JourneyRail } from "@/shared/ui/journey-rail";
 import { dueText, taskJourney } from "../model/journey";
@@ -130,6 +130,37 @@ function TaskMix({ decision }: { decision: FollowedDecision }) {
   );
 }
 
+function TaskRow({ task, onManage }: {
+  task: DecisionTasks["tasks"][number];
+  onManage: (manage: Manage) => void;
+}) {
+  const taskState = taskStatusLabel(task);
+  const due = dueText(task);
+  return (
+    <li className="flex flex-col gap-2 rounded-q-control border border-q-border bg-q-surface p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-q-ui font-bold">{task.title_ar}</span>
+        <Badge tone={taskState.tone}>{taskState.label}</Badge>
+      </div>
+      <JourneyRail compact label={`مسار المهمة: ${taskState.label}`} steps={taskJourney(task)} />
+      <p className="m-0 flex flex-wrap gap-x-3 gap-y-1 text-q-caption text-q-text-2">
+        <span dir="ltr">{task.action_no}</span>
+        <span>المكلَّف: {assigneeName(task)}</span>
+        <span>المتابع: {task.follow_up_user_name_ar ?? "غير محدد"}</span>
+        <span className={due.tone === "danger" ? "font-bold text-q-danger" : undefined}>{due.text}{task.due_date && ` (${formatDate(task.due_date)})`}</span>
+        <span dir="ltr" className="font-bold text-q-text">{task.progress_percent}%</span>
+      </p>
+      {task.can_manage && (
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => onManage({ kind: "extend", task })}>تمديد الموعد</Button>
+          {task.status !== "submitted" && <Button variant="secondary" onClick={() => onManage({ kind: "reassign", task })}>إعادة إسناد</Button>}
+          <Button variant="ghost" onClick={() => onManage({ kind: "cancel", task })}>إلغاء المهمة</Button>
+        </div>
+      )}
+    </li>
+  );
+}
+
 export function DecisionCard({ decision, open, onToggle, detail, detailError, onManage }: {
   decision: FollowedDecision;
   open: boolean;
@@ -173,33 +204,31 @@ export function DecisionCard({ decision, open, onToggle, detail, detailError, on
             {detail && detail.tasks.length === 0 && <p className="m-0 text-q-ui text-q-text-2">لا تكليفات على هذا القرار.</p>}
             {detail && detail.tasks.length > 0 && (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                {detail.tasks.map((task) => {
-                  const taskState = taskStatusLabel(task);
-                  const due = dueText(task);
-                  return (
-                    <li key={task.id} className="flex flex-col gap-2 rounded-q-control border border-q-border p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-q-ui font-bold">{task.title_ar}</span>
-                        <Badge tone={taskState.tone}>{taskState.label}</Badge>
-                      </div>
-                      <JourneyRail compact label={`مسار المهمة: ${taskState.label}`} steps={taskJourney(task)} />
-                      <p className="m-0 flex flex-wrap gap-x-3 gap-y-1 text-q-caption text-q-text-2">
-                        <span dir="ltr">{task.action_no}</span>
-                        <span>المكلَّف: {assigneeName(task)}</span>
-                        <span>المتابع: {task.follow_up_user_name_ar ?? "غير محدد"}</span>
-                        <span className={due.tone === "danger" ? "font-bold text-q-danger" : undefined}>{due.text}{task.due_date && ` (${formatDate(task.due_date)})`}</span>
-                        <span dir="ltr" className="font-bold text-q-text">{task.progress_percent}%</span>
-                      </p>
-                      {task.can_manage && (
-                        <div className="flex flex-wrap gap-2">
-                          <Button variant="secondary" onClick={() => onManage({ kind: "extend", task })}>تمديد الموعد</Button>
-                          {task.status !== "submitted" && <Button variant="secondary" onClick={() => onManage({ kind: "reassign", task })}>إعادة إسناد</Button>}
-                          <Button variant="ghost" onClick={() => onManage({ kind: "cancel", task })}>إلغاء المهمة</Button>
+                {groupDecisionTasks(detail.tasks).map((group) => (
+                  <li key={group.id}>
+                    <details className="group rounded-q-control border border-q-border bg-q-surface-2 p-3">
+                      <summary className="cursor-pointer list-none">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="m-0 text-q-ui font-bold text-q-text">{group.title_ar}</p>
+                            <p className="m-0 mt-1 text-q-caption text-q-text-2">أُنجز {group.completed_count} من {group.target_count} · {group.tasks.length === 1 ? "مكلّف واحد" : `${group.tasks.length} مكلّفين`}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span dir="ltr" className="text-q-h3 font-bold text-q-text">{group.progress_percent}%</span>
+                            <span className="text-q-caption font-bold text-q-link group-open:hidden">عرض مهام المكلّفين</span>
+                            <span className="hidden text-q-caption font-bold text-q-link group-open:inline">إخفاء المهام</span>
+                          </div>
                         </div>
-                      )}
-                    </li>
-                  );
-                })}
+                        <div aria-hidden="true" className="mt-3 h-2 overflow-hidden rounded-full bg-q-neutral-soft">
+                          <span className="block h-full rounded-full bg-q-primary" style={{ width: `${group.progress_percent}%` }}/>
+                        </div>
+                      </summary>
+                      <ul className="m-0 mt-3 flex list-none flex-col gap-2 border-t border-q-border pt-3 p-0">
+                        {group.tasks.map((task) => <TaskRow key={task.id} task={task} onManage={onManage}/>) }
+                      </ul>
+                    </details>
+                  </li>
+                ))}
               </ul>
             )}
           </section>

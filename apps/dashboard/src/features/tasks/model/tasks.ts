@@ -18,6 +18,9 @@ export type TaskSummary = {
   decision_no: string | null;
   meeting_title_ar: string | null;
   updated_at: string;
+  assignment_batch_id?: string | null;
+  assignment_batch_title_ar?: string | null;
+  assignment_batch_target_count?: number | null;
 };
 
 export type MyTasks = { to_execute: TaskSummary[]; to_verify: TaskSummary[]; following: TaskSummary[] };
