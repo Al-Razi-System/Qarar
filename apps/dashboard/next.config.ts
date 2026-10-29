@@ -18,6 +18,10 @@ const allowedDevOrigins = (process.env.QARAR_ALLOWED_DEV_ORIGINS ?? "")
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Native rasterizers must stay outside the Turbopack graph. Bundling them makes
+  // the first invitation preview compile extremely slowly and can select a WASM
+  // fallback instead of the platform binary.
+  serverExternalPackages: ["@resvg/resvg-js", "@zxing/library"],
   allowedDevOrigins,
   experimental: {
     workerThreads: true,

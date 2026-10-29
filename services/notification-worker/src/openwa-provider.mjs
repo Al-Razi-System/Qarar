@@ -22,22 +22,26 @@ export class OpenWAProvider {
     assertProviderRequest(request);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
-    let response;
     try {
       const resolvedSessionId = await this.resolveSessionId(controller.signal);
-      response = await this.fetchImpl(
-        `${this.baseUrl}/api/sessions/${encodeURIComponent(resolvedSessionId)}/messages/send-text`,
-        {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "x-api-key": this.apiKey,
-            "x-qarar-delivery-id": request.deliveryId
-          },
-          body: JSON.stringify({ chatId: `${request.destinationDigits}@c.us`, text: request.text }),
-          signal: controller.signal
-        }
-      );
+      const chatId = `${request.destinationDigits}@c.us`;
+      if (request.media) {
+        const mediaResponse = await this.postMessage(resolvedSessionId, "send-image", {
+          chatId,
+          base64: request.media.base64,
+          mimetype: request.media.mimetype,
+          filename: request.media.filename,
+          caption: request.text.slice(0, 1024)
+        }, request.deliveryId, controller.signal);
+        if (mediaResponse.ok) return await this.acceptedResult(mediaResponse, this.code);
+        if (![400, 404, 409, 413, 415, 422].includes(mediaResponse.status)) this.throwHttpError(mediaResponse.status);
+        const textResponse = await this.postMessage(resolvedSessionId, "send-text", { chatId, text: request.text }, request.deliveryId, controller.signal);
+        if (!textResponse.ok) this.throwHttpError(textResponse.status);
+        return await this.acceptedResult(textResponse, `openwa-text-fallback-${mediaResponse.status}`);
+      }
+      const response = await this.postMessage(resolvedSessionId, "send-text", { chatId, text: request.text }, request.deliveryId, controller.signal);
+      if (!response.ok) this.throwHttpError(response.status);
+      return await this.acceptedResult(response, request.mediaFallbackReason ? `openwa-text-fallback-${request.mediaFallbackReason}` : this.code);
     } catch (error) {
       if (error instanceof ProviderError) throw error;
       if (error?.name === "AbortError") {
@@ -47,14 +51,26 @@ export class OpenWAProvider {
     } finally {
       clearTimeout(timeout);
     }
+  }
 
-    if (!response.ok) {
+  async postMessage(sessionId, operation, body, deliveryId, signal) {
+    return this.fetchImpl(`${this.baseUrl}/api/sessions/${encodeURIComponent(sessionId)}/messages/${operation}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": this.apiKey, "x-qarar-delivery-id": deliveryId },
+      body: JSON.stringify(body),
+      signal
+    });
+  }
+
+  throwHttpError(status) {
       throw new ProviderError(
-        `OPENWA_HTTP_${response.status}`,
-        response.status === 401 || response.status === 403 ? "رفض مزود واتساب بيانات الاعتماد." : "رفض مزود واتساب طلب الإرسال.",
-        { retryable: RETRYABLE_STATUS.has(response.status), httpStatus: response.status }
+        `OPENWA_HTTP_${status}`,
+        status === 401 || status === 403 ? "رفض مزود واتساب بيانات الاعتماد." : "رفض مزود واتساب طلب الإرسال.",
+        { retryable: RETRYABLE_STATUS.has(status), httpStatus: status }
       );
-    }
+  }
+
+  async acceptedResult(response, providerCode) {
     let body;
     try { body = await response.json(); } catch {
       throw new ProviderError("OPENWA_INVALID_RESPONSE", "أعاد مزود واتساب استجابة غير صالحة.", { retryable: true, httpStatus: response.status, ambiguous: true });
@@ -62,7 +78,7 @@ export class OpenWAProvider {
     if (typeof body.messageId !== "string" || body.messageId.length === 0) {
       throw new ProviderError("OPENWA_MISSING_MESSAGE_ID", "لم يعد مزود واتساب معرف الرسالة.", { retryable: true, httpStatus: response.status, ambiguous: true });
     }
-    return { providerCode: this.code, providerMessageId: body.messageId, acceptedAt: new Date() };
+    return { providerCode, providerMessageId: body.messageId, acceptedAt: new Date() };
   }
 
   async resolveSessionId(signal) {

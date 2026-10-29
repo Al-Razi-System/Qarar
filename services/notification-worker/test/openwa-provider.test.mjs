@@ -16,7 +16,7 @@ before(async () => {
       return;
     }
     if(mode==="slow") return;
-    const status=mode==="unauthorized"?401:mode==="rate"?429:mode==="server"?503:201;
+    const status=mode==="unauthorized"?401:mode==="rate"?429:mode==="server"?503:(mode==="media-rejected"&&request.url?.endsWith("/send-image"))?415:201;
     response.writeHead(status,{"content-type":"application/json"});
     response.end(status===201?JSON.stringify({messageId:"wa-message-1",timestamp:1}):JSON.stringify({message:"failed"}));
   });
@@ -37,6 +37,24 @@ test("sends the exact OpenWA contract without leaking configuration into the bod
   assert.equal(captured.headers["x-api-key"],"secret");
   assert.equal(captured.headers["x-qarar-delivery-id"],request.deliveryId);
   assert.deepEqual(captured.body,{chatId:"967771234567@c.us",text:"رسالة اختبار"});
+});
+test("sends an invitation image as base64 and falls back to the full text when media is rejected",async()=>{
+  requests=[];
+  const provider=new OpenWAProvider({baseUrl,sessionId:"qarar-test",apiKey:"secret"});
+  const mediaRequest={...request,media:{base64:"iVBORw0KGgo=",mimetype:"image/png",filename:"meeting-invitation.png"}};
+  mode="ok";
+  const imageResult=await provider.send(mediaRequest);
+  assert.equal(imageResult.providerCode,"openwa");
+  assert.equal(requests[1].url,"/api/sessions/78086dde-0d9f-4feb-9296-7325c78cc2c0/messages/send-image");
+  assert.deepEqual(requests[1].body,{chatId:"967771234567@c.us",base64:"iVBORw0KGgo=",mimetype:"image/png",filename:"meeting-invitation.png",caption:"رسالة اختبار"});
+
+  requests=[]; mode="media-rejected";
+  const fallback=await provider.send(mediaRequest);
+  assert.match(fallback.providerCode,/^openwa-text-fallback-/);
+  assert.deepEqual(requests.map(item=>item.url),[
+    "/api/sessions/78086dde-0d9f-4feb-9296-7325c78cc2c0/messages/send-image",
+    "/api/sessions/78086dde-0d9f-4feb-9296-7325c78cc2c0/messages/send-text"
+  ]);
 });
 test("fails safely when the configured session name does not exist",async()=>{
   requests=[];

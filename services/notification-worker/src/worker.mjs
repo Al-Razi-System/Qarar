@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { ProviderError } from "./provider.mjs";
 import { renderTemplate } from "./templates.mjs";
 
-export async function runDeliveryBatch({ client, provider, workerId = randomUUID(), limit = 10 }) {
+export async function runDeliveryBatch({ client, provider, mediaRenderer, workerId = randomUUID(), limit = 10 }) {
   const results = [];
   for (let index = 0; index < limit; index += 1) {
     // Claim only the message being sent. A batch-wide lease can expire for the
@@ -12,10 +12,18 @@ export async function runDeliveryBatch({ client, provider, workerId = randomUUID
     const delivery = deliveries[0];
     try {
       const text = renderTemplate(delivery.template_code, delivery.variables);
+      let media;
+      let mediaFallbackReason;
+      if (delivery.template_code === "meeting_invitation" && mediaRenderer) {
+        try { media = await mediaRenderer(delivery.variables); }
+        catch { mediaFallbackReason = "render"; }
+      }
       const accepted = await provider.send({
         deliveryId: delivery.id,
         destinationDigits: delivery.destination.replace(/^\+/, ""),
-        text
+        text,
+        ...(media ? { media } : {}),
+        ...(mediaFallbackReason ? { mediaFallbackReason } : {})
       });
       const completion = await client.completeDelivery(delivery.id, delivery.lock_token, accepted.providerCode, accepted.providerMessageId);
       if (completion?.accepted !== true) throw new ProviderError("DELIVERY_RECEIPT_CONFLICT", "تعذر تثبيت قبول الرسالة.", { retryable: false, ambiguous: true });
