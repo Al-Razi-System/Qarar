@@ -13,6 +13,7 @@ import {Button} from "@/shared/ui/button";
 import {InlineMessage} from "@/shared/ui/inline-message";
 import {TopicPdfDownloadButton} from "./topic-pdf-download-button";
 import {MeetingMinutesDownloadButton} from "@/features/meetings/ui/meeting-minutes-download-button";
+import { TopicCorrectionsPanel } from "./topic-corrections-panel";
 
 type TopicDetail = {
   id: string;
@@ -36,6 +37,12 @@ type TopicDetail = {
   category?: { name_ar?: string };
   governance_unit?: { name_ar?: string };
   history?: ActivityItem[];
+  is_corrected?: boolean;
+  correction_no?: string | null;
+  original_content?: { title_ar?: string | null; title_en?: string | null; description?: string | null } | null;
+  active_correction_id?: string | null;
+  active_correction_no?: string | null;
+  correction_status?: "traversing" | "returned_to_opener" | null;
 };
 
 type ActivityItem = {
@@ -87,8 +94,9 @@ type TopicAttachment = { id: string; file_name: string; file_url: string; descri
 type RequirementStatus = { code: string; name: string; type: string; mandatory: boolean; timing: string; status: "pending" | "fulfilled" | "waived"; note?: string | null; attachment_id?: string | null };
 type RequirementsStatus = { items: RequirementStatus[]; missing_mandatory: number; ready_for_review: boolean };
 type RegulationReference = { id: string; label: string; reference_type: string; is_primary: boolean; policy_name?: string; version_no?: number; item_code?: string | null; item_title?: string | null };
-type TopicMinute = { id: string; status: string; content?: string | null; submitted_at?: string | null; approved_at?: string | null; updated_at?: string | null };
-type TopicMeetingHistory = { agenda_item_id: string; agenda_status: string; discussion_notes?: string | null; meeting: { id: string; meeting_no?: string; title: string; status: string; scheduled_date?: string; unit_name?: string }; minutes?: TopicMinute | null; voting_rounds: Array<{ id: string; round_number: number; status: string; result?: string | null; eligible_voter_count?: number; approve_count?: number; reject_count?: number; abstain_count?: number; opened_at?: string; closed_at?: string | null }>; decisions: Array<{ id: string; decision_no: string; decision_text: string; decision_status: string; requires_approval: boolean; issued_at?: string | null }> };
+type TopicMinute = { id: string; status: string; content?: string | null; submitted_at?: string | null; approved_at?: string | null; updated_at?: string | null; is_corrected?: boolean; correction_no?: string; corrected_version_id?: string; original_content?: string | null; signature_count?: number };
+type TopicDecision = { id: string; decision_no: string; decision_text: string; decision_status: string; requires_approval: boolean; issued_at?: string | null; is_corrected?: boolean; correction_no?: string; corrected_version_id?: string; original_decision_text?: string | null };
+type TopicMeetingHistory = { agenda_item_id: string; agenda_status: string; discussion_notes?: string | null; meeting: { id: string; meeting_no?: string; title: string; status: string; scheduled_date?: string; unit_name?: string }; minutes?: TopicMinute | null; voting_rounds: Array<{ id: string; round_number: number; status: string; result?: string | null; eligible_voter_count?: number; approve_count?: number; reject_count?: number; abstain_count?: number; opened_at?: string; closed_at?: string | null }>; decisions: TopicDecision[] };
 type TopicActivity = { id: string; source: "status_history" | "audit"; action: string; entity_type: string; entity_id?: string | null; occurred_at?: string; actor_name_ar?: string | null; from_status?: string | null; to_status?: string | null; summary?: string | null };
 type PriorRouteAttachment = { id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number };
 type PriorRouteStep = { id: string; sequence_no: number; step_title: string; responsible_unit_name_ar?: string | null; meeting_date: string; meeting_reference?: string | null; decision_type: string; decision_text: string; bypass_reason: string; attachments: PriorRouteAttachment[] };
@@ -96,7 +104,7 @@ type PriorRouteRequest = { id: string; topic_id: string; status: string; is_requ
 type PriorRouteCouncil = PriorRouteStep & { evidence_ids: string[]; covered_step_titles: string[]; all_steps_have_evidence: boolean };
 type ResubmissionOption = { available: boolean; reason_unavailable?: string | null; expected_version?: number | null; destination_unit_name_ar?: string | null };
 
-type TabId = "summary" | "regulation" | "requirements" | "workflow" | "referrals" | "decisions" | "activity";
+type TabId = "summary" | "regulation" | "requirements" | "workflow" | "referrals" | "decisions" | "corrections" | "activity";
 type Notice = { kind: "error" | "success"; text: string } | null;
 
 const tabs: Array<{ id: TabId; label: string; icon: typeof FileText }> = [
@@ -106,6 +114,7 @@ const tabs: Array<{ id: TabId; label: string; icon: typeof FileText }> = [
   { id: "workflow", label: "مسار الاعتماد", icon: Route },
   { id: "referrals", label: "الإحالات", icon: GitPullRequestArrow },
   { id: "decisions", label: "القرارات والتصويت", icon: Vote },
+  { id: "corrections", label: "التصحيحات", icon: ClipboardCheck },
   { id: "activity", label: "سجل النشاط والتدقيق", icon: Activity },
 ];
 
@@ -141,6 +150,10 @@ const activityActionLabels: Record<string, string> = {
   "meetings.agenda.downloads": "تحديث صلاحية تنزيل مرفقات البند",
   "meetings.agenda.planned_minutes": "تحديد المدة المقررة للبند",
   "topics.pdf.export": "تنزيل ملف الموضوع الرسمي",
+  "topic.correction.open": "فتح طلب تصحيح رسمي",
+  "topic.correction.station_decide": "قرار محطة التصحيح",
+  "topic.correction.withdraw": "سحب طلب التصحيح",
+  "topic.correction.minutes_sign": "توقيع المحضر المصحح",
 };
 
 function topicDisplayStatus(topicStatus: string, priorRouteRequest: PriorRouteRequest | null, typedReady = false) {
@@ -394,11 +407,12 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
       <Button variant="secondary" onClick={() => setReadAttempt(value => value + 1)}>إعادة تحميل التفاصيل</Button>
     </div>}
     {topic.topic_type_version_id && topic.routing_status === "routing_ready" && ["new", "under_review"].includes(topic.status) && <InlineMessage tone="info">الموضوع المكتمل متاح مباشرة في مقترحات مجلسه الحالي حسب المسار. المتابعة والسجلات معروضة هنا؛ تُتخذ القرارات والإحالة داخل الاجتماع بعد المناقشة.</InlineMessage>}
+    {topic.active_correction_id && <InlineMessage tone={topic.correction_status === "returned_to_opener" ? "warning" : "info"}>الموضوع قيد التصحيح الرسمي ({topic.active_correction_no}). أوقفت إجراءات المسار والإدراج والتصويت مؤقتاً حتى يكتمل الطلب أو يُسحب.</InlineMessage>}
 
     <header className="overflow-hidden rounded-3xl border border-[#dce7f1] bg-white shadow-[0_10px_28px_rgba(24,48,80,.06)]">
       <div className="border-b border-[#e8eef5] bg-[linear-gradient(120deg,#0a1330_0%,#0066cc_68%,#1e88e5_100%)] px-5 py-5 text-white sm:px-7">
         <p className="text-[10px] font-black text-[#ffbb78]">تفاصيل الموضوع</p>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-xl font-black sm:text-2xl">{topic.title_ar}</h1><p className="mt-1 text-[11px] text-white/75">{topic.topic_no ?? "موضوع مسجل"} · أنشئ في {dateLabel(topic.created_at)}</p></div><span className="rounded-full bg-white/15 px-3 py-1.5 text-[10px] font-black text-white">{topicDisplayStatus(topic.status, priorRouteRequest, Boolean(topic.topic_type_version_id && topic.routing_status === "routing_ready" && ["new", "under_review"].includes(topic.status)))}</span></div>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-xl font-black sm:text-2xl">{topic.title_ar}</h1>{topic.is_corrected && <span className="rounded-q-pill bg-white px-2.5 py-1 text-q-caption font-black text-q-primary">مصحح · {topic.correction_no}</span>}</div><p className="mt-1 text-[11px] text-white/75">{topic.topic_no ?? "موضوع مسجل"} · أنشئ في {dateLabel(topic.created_at)}</p></div><span className="rounded-full bg-white/15 px-3 py-1.5 text-[10px] font-black text-white">{topicDisplayStatus(topic.status, priorRouteRequest, Boolean(topic.topic_type_version_id && topic.routing_status === "routing_ready" && ["new", "under_review"].includes(topic.status)))}</span></div>
       </div>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-5 py-4 text-[11px] font-bold text-[#526f8c] sm:px-7" aria-label="سلسلة حوكمة الموضوع">
         {headerPath.map((item, index) => <span key={`${item}-${index}`} className="flex items-center gap-2"><span className={index === 0 ? "text-[#0a1330]" : ""}>{item}</span>{index < headerPath.length - 1 && <span className="text-[#9aabc0]">←</span>}</span>)}
@@ -417,6 +431,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
       {activeTab === "workflow" && <Workflow workflow={workflow} priorRouteRequest={priorRouteRequest} />}
       {activeTab === "referrals" && <Referrals referrals={referrals} />}
       {activeTab === "decisions" && <Decisions preview={preview} meetings={meetingHistory} priorRouteRequest={priorRouteRequest} />}
+      {activeTab === "corrections" && <TopicCorrectionsPanel topicId={topic.id} title={topic.title_ar} description={topic.description} meetings={meetingHistory} />}
       {activeTab === "activity" && <ActivityLog items={activityTimeline} priorRouteRequest={priorRouteRequest} topicCreatedAt={topic.created_at} typedTopic={Boolean(topic.topic_type_version_id)} />}
     </section>
   </div>;
@@ -549,14 +564,15 @@ function Decisions({ preview, meetings, priorRouteRequest }: { preview: Regulati
       <header className="flex flex-wrap items-center justify-between gap-3 bg-[#f8fbfe] px-4 py-3"><div><h3 className="text-xs font-black text-[#18324e]">{entry.meeting.title}</h3><p className="mt-1 text-[10px] text-[#74869b]">{entry.meeting.meeting_no || "اجتماع"} · {dateLabel(entry.meeting.scheduled_date)} · {entry.meeting.unit_name || "الجهة المختصة"}</p></div><span className="rounded-full bg-[#edf4fa] px-2 py-1 text-[10px] font-black text-[#506980]">{statusLabels[entry.meeting.status] ?? "حالة الاجتماع غير معرّفة"}</span></header>
       <div className="grid gap-3 p-4 lg:grid-cols-2">
         <div><p className="text-[10px] font-black text-[#61758c]">جولات التصويت</p>{entry.voting_rounds.length ? <div className="mt-2 space-y-2">{entry.voting_rounds.map((round) => <div key={round.id} className="rounded-xl border border-[#e5edf4] p-3 text-[10px] text-[#536980]"><div className="flex justify-between gap-2"><strong>الجولة {round.round_number}</strong><span>{round.result ? decisionTypeLabels[round.result] ?? "نتيجة مسجلة" : statusLabels[round.status] ?? "حالة التصويت غير معرّفة"}</span></div>{round.status === "closed" ? <p className="mt-2">موافق: {round.approve_count ?? 0} · رافض: {round.reject_count ?? 0} · ممتنع: {round.abstain_count ?? 0} · المؤهلون: {round.eligible_voter_count ?? 0}</p> : <p className="mt-2">تظهر نتيجة الجولة وأعداد الأصوات بعد إغلاق التصويت.</p>}</div>)}</div> : <p className="mt-2 rounded-xl bg-[#fafcfe] p-3 text-[10px] text-[#7a8b9e]">لم تُفتح جولة تصويت بعد.</p>}</div>
-        <div><p className="text-[10px] font-black text-[#61758c]">القرارات الصادرة</p>{entry.decisions.length ? <div className="mt-2 space-y-2">{entry.decisions.map((decision) => <div key={decision.id} className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3"><div className="flex justify-between gap-2 text-[10px] font-black text-emerald-800"><span>{decision.decision_no}</span><span>{statusLabels[decision.decision_status] ?? "حالة القرار غير معرّفة"}</span></div><p className="mt-2 text-[11px] leading-6 text-[#35546a]">{decision.decision_text}</p></div>)}</div> : <p className="mt-2 rounded-xl bg-[#fafcfe] p-3 text-[10px] text-[#7a8b9e]">لم يصدر قرار بعد.</p>}</div>
+        <div><p className="text-q-caption font-black text-q-text-2">القرارات الصادرة</p>{entry.decisions.length ? <div className="mt-2 space-y-2">{entry.decisions.map((decision) => <div key={decision.id} className="rounded-q-control border border-q-success-soft bg-q-success-soft p-3"><div className="flex flex-wrap justify-between gap-2 text-q-caption font-black text-q-success"><span>{decision.decision_no}</span><span className="flex items-center gap-2">{decision.is_corrected && <span className="rounded-q-pill bg-q-surface px-2 py-1">مصحح · {decision.correction_no}</span>}{statusLabels[decision.decision_status] ?? "حالة القرار غير معرّفة"}</span></div><p className="mt-2 whitespace-pre-wrap text-q-ui leading-6 text-q-text-2">{decision.decision_text}</p>{decision.is_corrected && <details className="mt-2 rounded-q-control border border-q-border bg-q-surface p-2 text-q-caption text-q-text-2"><summary className="cursor-pointer font-bold text-q-link">عرض النص الأصلي</summary><p className="mb-0 whitespace-pre-wrap leading-6">{decision.original_decision_text || "لا يتوفر نص أصلي للعرض."}</p></details>}</div>)}</div> : <p className="mt-2 rounded-q-control bg-q-surface-2 p-3 text-q-caption text-q-text-3">لم يصدر قرار بعد.</p>}</div>
       </div>
       {entry.minutes && <section className="border-t border-q-border bg-q-surface-2 p-4" aria-label={`محضر ${entry.meeting.title}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div><h4 className="text-q-ui font-black text-q-text">محضر المجلس السابق</h4><p className="mt-1 text-q-caption text-q-text-3">{entry.meeting.unit_name || "المجلس المختص"} · {entry.meeting.meeting_no || "اجتماع موثق"}</p></div>
+          <div><div className="flex flex-wrap items-center gap-2"><h4 className="text-q-ui font-black text-q-text">محضر المجلس السابق</h4>{entry.minutes.is_corrected && <span className="rounded-q-pill bg-q-info-soft px-2 py-1 text-q-caption font-bold text-q-link">مصحح · {entry.minutes.correction_no}</span>}</div><p className="mt-1 text-q-caption text-q-text-3">{entry.meeting.unit_name || "المجلس المختص"} · {entry.meeting.meeting_no || "اجتماع موثق"}</p></div>
           <div className="flex flex-wrap items-center gap-2"><span className={`rounded-q-pill px-3 py-1 text-q-caption font-black ${entry.minutes.status === "approved" ? "bg-q-success-soft text-q-success" : "bg-q-warning-soft text-q-warning"}`}>{entry.minutes.status === "approved" ? "محضر معتمد" : "المحضر قيد الاعتماد"}</span>{entry.minutes.status === "approved" && <MeetingMinutesDownloadButton meetingId={entry.meeting.id} meetingTitle={entry.meeting.title} />}</div>
         </div>
         {entry.minutes.content ? <div className="mt-3 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-q-control border border-q-border bg-q-surface p-4 text-q-ui leading-7 text-q-text-2">{entry.minutes.content}</div> : <InlineMessage className="mt-3" tone="warning">يظهر النص الرسمي للمحضر بعد اكتمال المصادقة واعتماده.</InlineMessage>}
+        {entry.minutes.is_corrected && <div className="mt-2"><p className="m-0 text-q-caption text-q-text-2">توقيعات النسخة المصححة: {entry.minutes.signature_count ?? 0} من 2. تواقيع الحاضرين محفوظة على المحضر الأصلي.</p><details className="mt-2 rounded-q-control border border-q-border bg-q-surface p-3 text-q-caption text-q-text-2"><summary className="cursor-pointer font-bold text-q-link">عرض المحضر الأصلي</summary><p className="mb-0 whitespace-pre-wrap leading-7">{entry.minutes.original_content || "لا يتوفر نص أصلي للعرض."}</p></details></div>}
         <p className="mt-2 text-q-caption text-q-text-3">{entry.minutes.approved_at ? `اعتمد في ${dateLabel(entry.minutes.approved_at)}` : `آخر تحديث ${dateLabel(entry.minutes.updated_at)}`}</p>
       </section>}
     </article>)}</div> : priorCouncils.length === 0 ? <EmptyState icon={hasResults ? Vote : Gavel} title="لم يُدرج الموضوع في اجتماع بعد" description="بعد إدراج الموضوع في اجتماع ومناقشته، ستظهر هنا الجلسة وجولات التصويت والقرارات الناتجة." /> : null}
