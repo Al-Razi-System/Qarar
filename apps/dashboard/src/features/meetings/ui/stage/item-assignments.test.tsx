@@ -4,7 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import type { MeetingAssignment, MeetingAssignments } from "../../model/live-meeting";
 import { ItemAssignments, NEW_ASSIGNMENT_KEY, type AssignmentActivity } from "./item-assignments";
 
-const options: MeetingAssignments["options"] = { users: [{ id: "u3", name_ar: "د. خالد" }, { id: "u2", name_ar: "د. هدى" }], units: [{ id: "g1", name_ar: "عمادة القبول" }] };
+const options: MeetingAssignments["options"] = {
+  users: [{ id: "u3", name_ar: "د. خالد" }, { id: "u2", name_ar: "د. هدى" }],
+  units: [{ id: "g1", name_ar: "عمادة القبول" }],
+  unit_types: [{ id: "ut1", name_ar: "الكليات" }],
+};
 const idle: AssignmentActivity = { key: null, errorKey: null, error: null };
 const row = (patch: Partial<MeetingAssignment> = {}): MeetingAssignment => ({
   id: "s1", agenda_item_id: "a1", decision_id: "d1", title_ar: "تحديث الخطة الدراسية", description: null,
@@ -34,9 +38,9 @@ describe("ItemAssignments", () => {
     expect(issue).toBeDisabled();
     expect(screen.getByText("اكتب عنوان التكليف بخمسة أحرف على الأقل.")).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("عنوان التكليف"), "تحديث الخطة الدراسية");
-    expect(screen.getByText("اختر المكلَّف.")).toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText("البحث عن المكلَّف"), "عمادة");
-    await userEvent.click(screen.getByRole("option", { name: "عمادة القبول" }));
+    expect(screen.getByText("اختر مكلَّفاً واحداً على الأقل.")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("البحث عن إضافة شخص أو جهة"), "عمادة");
+    await userEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: "عمادة القبول" }));
     expect(screen.getByText("اختر متابع التكليف؛ هو من يتحقق من إنجازه.")).toBeInTheDocument();
     expect(issue).toBeDisabled();
     await userEvent.type(screen.getByLabelText("البحث عن المتابع"), "هدى");
@@ -44,14 +48,14 @@ describe("ItemAssignments", () => {
     await userEvent.click(screen.getByLabelText("يتطلب أدلة إنجاز"));
     expect(screen.getByText("يصبح التكليف مهمة تنفيذ فور إصداره، قبل اعتماد القرار.")).toBeInTheDocument();
     await userEvent.click(issue);
-    expect(handlers.onCreate).toHaveBeenCalledWith({ title: "تحديث الخطة الدراسية", userId: null, unitId: "g1", dueDate: null, followUpId: "u2", requiresEvidence: true });
+    expect(handlers.onCreate).toHaveBeenCalledWith(expect.objectContaining({ title: "تحديث الخطة الدراسية", targets: [{ kind: "unit", id: "g1", label: "عمادة القبول" }], dueDate: null, followUpId: "u2", requiresEvidence: true, clientRequestId: expect.any(String) }));
     expect(screen.getByLabelText("يتطلب أدلة إنجاز")).not.toBeChecked();
     expect(screen.getByLabelText("عنوان التكليف")).toHaveValue("");
   });
 
   it("searches the whole university while typing and selects a non-member", async () => {
     const { handlers } = setup({ can_issue: true, can_propose: false });
-    await userEvent.type(screen.getByLabelText("البحث عن المكلَّف"), "منى");
+    await userEvent.type(screen.getByLabelText("البحث عن إضافة شخص أو جهة"), "منى");
     await waitFor(() => expect(handlers.onSearchUsers).toHaveBeenCalledWith("منى"));
     await userEvent.click(await screen.findByRole("option", { name: /منى عبدالله.*مديرة التخطيط/ }));
     await userEvent.type(screen.getByLabelText("البحث عن المتابع"), "منى");
@@ -59,14 +63,14 @@ describe("ItemAssignments", () => {
     await userEvent.click((await screen.findAllByRole("option", { name: /منى عبدالله/ }))[0]);
     await userEvent.type(screen.getByLabelText("عنوان التكليف"), "إعداد التقرير التنفيذي");
     await userEvent.click(screen.getByRole("button", { name: "إصدار التكليف" }));
-    expect(handlers.onCreate).toHaveBeenCalledWith(expect.objectContaining({ userId: "outside", followUpId: "outside" }));
+    expect(handlers.onCreate).toHaveBeenCalledWith(expect.objectContaining({ targets: [expect.objectContaining({ kind: "user", id: "outside" })], followUpId: "outside" }));
   });
 
   it("keeps the form on failure and shows why, and shows pending while saving", async () => {
     const onCreate = vi.fn(async () => false);
     const { props, view } = setup({ can_issue: false, can_propose: true }, [], { onCreate });
     await userEvent.type(screen.getByLabelText("عنوان التكليف"), "إبلاغ الأقسام");
-    await userEvent.type(screen.getByLabelText("البحث عن المكلَّف"), "خالد");
+    await userEvent.type(screen.getByLabelText("البحث عن إضافة شخص أو جهة"), "خالد");
     await userEvent.click(screen.getByRole("option", { name: "د. خالد" }));
     await userEvent.type(screen.getByLabelText("البحث عن المتابع"), "هدى");
     await userEvent.click(screen.getByRole("option", { name: "د. هدى" }));

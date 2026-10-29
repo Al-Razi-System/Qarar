@@ -20,7 +20,9 @@ const contracts = new Set([
   "set_meeting_broadcast_document_v2", "set_agenda_item_downloads_v2",
   "list_meeting_item_timers_v2", "set_agenda_item_planned_minutes_v2",
   "list_meeting_referrals_v2", "refer_agenda_item_v2",
-  "list_meeting_assignments_v2", "search_meeting_assignment_options_v2", "propose_meeting_assignment_v2", "confirm_meeting_assignment_v2", "withdraw_meeting_assignment_v2",
+  "list_meeting_assignments_v2", "search_meeting_assignment_options_v2", "preview_meeting_assignment_targets_v2",
+  "propose_meeting_assignment_v2", "confirm_meeting_assignment_v2", "withdraw_meeting_assignment_v2",
+  "propose_meeting_assignment_batch_v2", "confirm_meeting_assignment_batch_v2", "withdraw_meeting_assignment_batch_v2",
   "create_checkin_session", "revoke_checkin_session", "self_check_in",
   "override_attendance", "verify_attendance", "recalculate_meeting_quorum",
   "apply_quorum_failure", "get_attendance_history",
@@ -45,7 +47,7 @@ const cancellableReadContracts = new Set([
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const AGENDA_CONTEXT_CONTRACTS = new Set([
   "update_agenda_discussion", "set_agenda_item_downloads_v2", "set_agenda_item_planned_minutes_v2",
-  "refer_agenda_item_v2", "propose_meeting_assignment_v2", "open_voting_round",
+  "refer_agenda_item_v2", "propose_meeting_assignment_v2", "propose_meeting_assignment_batch_v2", "preview_meeting_assignment_targets_v2", "open_voting_round",
 ]);
 const ROUND_CONTEXT_CONTRACTS = new Set(["cast_vote", "close_voting_round", "cancel_voting_round", "create_decision_from_voting_round", "resolve_rejected_vote"]);
 
@@ -86,6 +88,11 @@ async function headerMatchesMutation(contract: string, meetingId: string, params
       const assignmentId = params.p_assignment_id ?? objectOf(result)?.id;
       const assignments = await qararRpcV2<unknown>("list_meeting_assignments_v2", { p_meeting_id: meetingId });
       return typeof assignmentId === "string" && rowsOf(assignments, "assignments").some(row => row.id === assignmentId);
+    }
+    if (contract === "confirm_meeting_assignment_batch_v2" || contract === "withdraw_meeting_assignment_batch_v2") {
+      const batchId = params.p_batch_id ?? objectOf(result)?.id;
+      const assignments = await qararRpcV2<unknown>("list_meeting_assignments_v2", { p_meeting_id: meetingId });
+      return typeof batchId === "string" && rowsOf(assignments, "assignments").some(row => row.assignment_batch_id === batchId);
     }
     if (contract === "verify_attendance" || contract === "override_attendance") {
       const attendanceId = params.p_attendance_record_id ?? objectOf(result)?.id;

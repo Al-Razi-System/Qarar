@@ -4,7 +4,7 @@
 -- Impact map: docs/engineering/impact/MEETING_ASSIGNMENT_AR.md
 begin;
 create extension if not exists pgtap;
-select plan(38);
+select plan(47);
 
 insert into public.organizations(id,code,name_ar) values
 ('a5000000-0000-0000-0000-000000000001','s104','Assignment'),
@@ -96,6 +96,20 @@ create function pg_temp.s104_close_meeting() returns void language sql security 
 $$ set local session_replication_role=replica;
    update qarar_meetings.meetings set status='closed' where id='a5000000-0000-0000-0000-000000000081';
    set local session_replication_role=origin $$;
+create function pg_temp.s104_add_responsible() returns void language sql security definer as
+$$ insert into qarar_core.organizational_unit_responsibles(
+     organization_id,governance_unit_id,user_id,reason,created_by_user_id
+   ) values(
+     'a5000000-0000-0000-0000-000000000001','a5000000-0000-0000-0000-000000000023',
+     'a5000000-0000-0000-0000-000000000014','Explicit test responsibility',
+     'a5000000-0000-0000-0000-000000000011'
+   ) $$;
+create function pg_temp.s104_batch_assignment_count(p_batch uuid) returns bigint language sql security definer as
+$$ select count(*) from qarar_meetings.meeting_assignments where assignment_batch_id=p_batch $$;
+create function pg_temp.s104_batch_task_count(p_batch uuid) returns bigint language sql security definer as
+$$ select count(*) from qarar_execution.action_items a join qarar_meetings.meeting_assignments ma on ma.id=a.meeting_assignment_id where ma.assignment_batch_id=p_batch $$;
+create function pg_temp.s104_batch_field(p_batch uuid,p_field text) returns text language sql security definer as
+$$ select case p_field when 'target_count' then target_count::text when 'status' then status end from qarar_meetings.meeting_assignment_batches where id=p_batch $$;
 
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000011');
 select pg_temp.s104_seat_roster();
@@ -166,6 +180,46 @@ select is(api_v2.list_meeting_assignments_v2('a5000000-0000-0000-0000-0000000000
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000016');
 select throws_ok($$ select api_v2.search_meeting_assignment_options_v2('a5000000-0000-0000-0000-000000000081','Planner',20) $$,'P0002',null,'another tenant cannot search this meeting assignment directory');
 select throws_ok($$ select api_v2.list_meeting_assignments_v2('a5000000-0000-0000-0000-000000000081') $$,'P0002',null,'another tenant cannot read the assignments');
+
+-- One logical assignment may target several people or units atomically.
+select pg_temp.s104_as('a5000000-0000-0000-0000-000000000011');
+select pg_temp.s104_add_responsible();
+select is(
+  api_v2.preview_meeting_assignment_targets_v2(
+    'a5000000-0000-0000-0000-000000000091',
+    '[{"kind":"unit","id":"a5000000-0000-0000-0000-000000000023"}]'::jsonb
+  )->'targets'->0->>'resolved_user_id',
+  'a5000000-0000-0000-0000-000000000014','an explicit unit responsible is resolved before issue'
+);
+select pg_temp.s104_as('a5000000-0000-0000-0000-000000000013');
+select throws_ok($$ select api_v2.preview_meeting_assignment_targets_v2(
+  'a5000000-0000-0000-0000-000000000091','[{"kind":"user","id":"a5000000-0000-0000-0000-000000000013"}]'::jsonb
+) $$,'42501',null,'a member cannot preview assignment targets');
+select pg_temp.s104_as('a5000000-0000-0000-0000-000000000011');
+insert into s104_ids select 'batch',(
+  api_v2.propose_meeting_assignment_batch_v2(
+    'a5000000-0000-0000-0000-000000000091','Prepare two reports',null,
+    '[{"kind":"user","id":"a5000000-0000-0000-0000-000000000013"},{"kind":"unit","id":"a5000000-0000-0000-0000-000000000023"}]'::jsonb,
+    current_date+20,'a5000000-0000-0000-0000-000000000012',true,
+    'a5000000-0000-0000-0000-0000000000f1'
+  )->>'id')::uuid;
+select is(pg_temp.s104_batch_field((select id from s104_ids where name='batch'),'target_count'),'2','a batch records both resolved targets');
+select is(pg_temp.s104_batch_field((select id from s104_ids where name='batch'),'status'),'active','the chair issues the whole batch immediately');
+select is(pg_temp.s104_batch_assignment_count((select id from s104_ids where name='batch')),2::bigint,'each target receives one compatible meeting assignment');
+select is(pg_temp.s104_batch_task_count((select id from s104_ids where name='batch')),2::bigint,'each target receives one independent execution task');
+select is((api_v2.propose_meeting_assignment_batch_v2(
+  'a5000000-0000-0000-0000-000000000091','Prepare two reports',null,
+  '[{"kind":"user","id":"a5000000-0000-0000-0000-000000000013"},{"kind":"unit","id":"a5000000-0000-0000-0000-000000000023"}]'::jsonb,
+  current_date+20,'a5000000-0000-0000-0000-000000000012',true,
+  'a5000000-0000-0000-0000-0000000000f1'
+)->>'id')::uuid,(select id from s104_ids where name='batch'),'retrying the same client request does not duplicate the batch');
+select is(pg_temp.s104_batch_task_count((select id from s104_ids where name='batch')),2::bigint,'an idempotent retry does not duplicate tasks');
+select throws_ok($$ select api_v2.propose_meeting_assignment_batch_v2(
+  'a5000000-0000-0000-0000-000000000091','Blocked atomic batch',null,
+  '[{"kind":"user","id":"a5000000-0000-0000-0000-000000000013"},{"kind":"unit","id":"a5000000-0000-0000-0000-000000000022"}]'::jsonb,
+  current_date+20,'a5000000-0000-0000-0000-000000000012',false,
+  'a5000000-0000-0000-0000-0000000000f2'
+) $$,'23514',null,'one unresolved unit blocks the whole batch before any task is issued');
 
 -- Rejecting the decision later cancels the tasks the session issued.
 select pg_temp.s104_as('a5000000-0000-0000-0000-000000000011');

@@ -399,13 +399,24 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       const result = await roomRpc<{ users: AssignmentUserOption[] }>("search_meeting_assignment_options_v2", { p_meeting_id: meetingId, p_query: query, p_limit: 20 });
       return result.users;
     },
-    onCreate: (agendaItemId: string, input: NewAssignment) => runAssignment(NEW_ASSIGNMENT_KEY, () => roomRpc("propose_meeting_assignment_v2", {
-      p_agenda_item_id: agendaItemId, p_title: input.title, p_description: null,
-      p_assigned_user_id: input.userId, p_assigned_unit_id: input.unitId, p_due_date: input.dueDate,
-      p_follow_up_user_id: input.followUpId, p_requires_evidence: input.requiresEvidence,
-    }), "تعذر حفظ التكليف."),
-    onConfirm: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => roomRpc("confirm_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر اعتماد التكليف."),
-    onWithdraw: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => roomRpc("withdraw_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر سحب التكليف."),
+    onCreate: (agendaItemId: string, input: NewAssignment) => runAssignment(NEW_ASSIGNMENT_KEY, async () => {
+      const selections = input.targets.map((target) => ({ kind: target.kind, id: target.id, scope_unit_id: target.scopeUnitId ?? null }));
+      const preview = await roomRpc<{ blockers: Array<{ unit_name_ar?: string | null; reason: string }> }>("preview_meeting_assignment_targets_v2", { p_agenda_item_id: agendaItemId, p_selections: selections });
+      if (preview.blockers.length > 0) {
+        throw new Error(preview.blockers.map((blocker) => `${blocker.unit_name_ar ?? "جهة مختارة"}: ${blocker.reason}`).join(" · "));
+      }
+      await roomRpc("propose_meeting_assignment_batch_v2", {
+        p_agenda_item_id: agendaItemId, p_title: input.title, p_description: null,
+        p_selections: selections, p_due_date: input.dueDate, p_follow_up_user_id: input.followUpId,
+        p_requires_evidence: input.requiresEvidence, p_client_request_id: input.clientRequestId,
+      });
+    }, "تعذر حفظ التكليف."),
+    onConfirm: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => assignment.assignment_batch_id
+      ? roomRpc("confirm_meeting_assignment_batch_v2", { p_batch_id: assignment.assignment_batch_id, p_expected_revision: assignment.revision })
+      : roomRpc("confirm_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر اعتماد التكليف."),
+    onWithdraw: (assignment: MeetingAssignment) => void runAssignment(assignment.id, () => assignment.assignment_batch_id
+      ? roomRpc("withdraw_meeting_assignment_batch_v2", { p_batch_id: assignment.assignment_batch_id, p_expected_revision: assignment.revision })
+      : roomRpc("withdraw_meeting_assignment_v2", { p_assignment_id: assignment.id, p_expected_revision: assignment.revision }), "تعذر سحب التكليف."),
   };
 
   function submitReferral(toUnitId: string, reason: string) {

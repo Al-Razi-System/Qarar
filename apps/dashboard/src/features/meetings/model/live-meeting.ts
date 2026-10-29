@@ -80,6 +80,7 @@ export type ItemReferral = {
 /** An execution task the chair issued in the session, or the rapporteur proposed. */
 export type MeetingAssignment = {
   id: string;
+  assignment_batch_id?: string | null;
   agenda_item_id: string;
   decision_id: string;
   title_ar: string;
@@ -105,12 +106,30 @@ export type MeetingAssignments = {
   viewer: { can_issue: boolean; can_propose: boolean };
   assignments: MeetingAssignment[];
   /** For the chair and the rapporteur only: initial suggestions and active units. */
-  options: { users: AssignmentUserOption[]; units: Array<{ id: string; name_ar: string }> } | null;
+  options: {
+    users: AssignmentUserOption[];
+    units: Array<{ id: string; name_ar: string }>;
+    unit_types?: Array<{ id: string; name_ar: string }>;
+  } | null;
 };
 
 export type AssignmentUserOption = { id: string; name_ar: string; email?: string | null; job_title?: string | null };
 
-export type NewAssignment = { title: string; userId: string | null; unitId: string | null; dueDate: string | null; followUpId: string; requiresEvidence: boolean };
+export type AssignmentTargetSelection = {
+  kind: "user" | "unit" | "unit_type";
+  id: string;
+  scopeUnitId?: string | null;
+  label: string;
+};
+
+export type NewAssignment = {
+  title: string;
+  targets: AssignmentTargetSelection[];
+  dueDate: string | null;
+  followUpId: string;
+  requiresEvidence: boolean;
+  clientRequestId: string;
+};
 
 /** The meeting's referrals, and for the chair alone the units an item may go to. */
 export type MeetingReferrals = { referrals: ItemReferral[]; destinations: Array<{ id: string; name_ar: string }> };

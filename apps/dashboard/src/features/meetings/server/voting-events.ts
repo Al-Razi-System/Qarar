@@ -52,6 +52,7 @@ const ROOM_CONTRACTS = new Set([
   "set_agenda_item_downloads_v2", "set_agenda_item_planned_minutes_v2", "refer_agenda_item_v2",
   "create_decision_from_voting_round", "update_meeting_decision_text",
   "propose_meeting_assignment_v2", "confirm_meeting_assignment_v2", "withdraw_meeting_assignment_v2",
+  "propose_meeting_assignment_batch_v2", "confirm_meeting_assignment_batch_v2", "withdraw_meeting_assignment_batch_v2",
 ]);
 
 export function roomScopeOf(contract: string): RoomScope | null {

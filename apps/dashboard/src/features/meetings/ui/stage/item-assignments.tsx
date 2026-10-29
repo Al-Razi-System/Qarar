@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
-import type { AssignmentUserOption, MeetingAssignment, MeetingAssignments, NewAssignment } from "../../model/live-meeting";
+import type { AssignmentTargetSelection, AssignmentUserOption, MeetingAssignment, MeetingAssignments, NewAssignment } from "../../model/live-meeting";
 
 /** What is running now, so its button shows pending and the others wait. */
 export type AssignmentActivity = { key: string | null; errorKey: string | null; error: string | null };
@@ -31,7 +31,7 @@ type PersonPickerProps = {
   value: string;
   initial: AssignmentUserOption[];
   disabled: boolean;
-  onChange: (value: string) => void;
+  onChange: (value: string, option?: AssignmentUserOption) => void;
   onSearch: (query: string) => Promise<AssignmentUserOption[]>;
   units?: Array<{ id: string; name_ar: string }>;
   onUnitChange?: (value: string) => void;
@@ -108,7 +108,7 @@ function AssignmentPersonPicker({ label, value, initial, disabled, onChange, onS
               aria-selected={value === user.id}
               key={user.id}
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => { onChange(user.id); setQuery(user.name_ar); setOpen(false); }}
+              onClick={() => { onChange(user.id, user); setQuery(user.name_ar); setOpen(false); }}
               className="flex w-full flex-col items-start rounded-q-control px-3 py-2 text-start text-q-ui font-bold text-q-text hover:bg-q-surface-2"
             >
               <span>{user.name_ar}</span>
@@ -149,18 +149,24 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
   const open = editorOpen ?? localOpen;
   function changeOpen(next: boolean) { if (onEditorChange) onEditorChange(next); else setLocalOpen(next); }
   const [title, setTitle] = useState("");
-  const [assigneeUser, setAssigneeUser] = useState("");
-  const [assigneeUnit, setAssigneeUnit] = useState("");
+  const [targets, setTargets] = useState<AssignmentTargetSelection[]>([]);
+  const [targetType, setTargetType] = useState("");
+  const [targetScope, setTargetScope] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [followUp, setFollowUp] = useState("");
   const [requiresEvidence, setRequiresEvidence] = useState(false);
+  const [clientRequestId, setClientRequestId] = useState(() => crypto.randomUUID());
   // Withdrawing cancels a task, so it asks once more beside the button.
   const [confirmingWithdraw, setConfirmingWithdraw] = useState<string | null>(null);
   const busy = activity.key !== null;
   const canWrite = (viewer.can_issue || viewer.can_propose) && options !== null;
   const searchUsers = onSearchUsers ?? (async () => options?.users ?? []);
+  function addTarget(target: AssignmentTargetSelection) {
+    const key = `${target.kind}:${target.id}:${target.scopeUnitId ?? ""}`;
+    setTargets((current) => current.some((item) => `${item.kind}:${item.id}:${item.scopeUnitId ?? ""}` === key) ? current : [...current, target]);
+  }
   const missing = title.trim().length < 5 ? "اكتب عنوان التكليف بخمسة أحرف على الأقل."
-    : !assigneeUser && !assigneeUnit ? "اختر المكلَّف."
+    : targets.length === 0 ? "اختر مكلَّفاً واحداً على الأقل."
     : !followUp ? "اختر متابع التكليف؛ هو من يتحقق من إنجازه."
     : null;
 
@@ -168,10 +174,10 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
     event.preventDefault();
     if (missing || busy) return;
     const saved = await onCreate({
-      title: title.trim(), userId: assigneeUser || null, unitId: assigneeUnit || null,
-      dueDate: dueDate || null, followUpId: followUp, requiresEvidence,
+      title: title.trim(), targets,
+      dueDate: dueDate || null, followUpId: followUp, requiresEvidence, clientRequestId,
     });
-    if (saved) { setTitle(""); setAssigneeUser(""); setAssigneeUnit(""); setDueDate(""); setFollowUp(""); setRequiresEvidence(false); }
+    if (saved) { setTitle(""); setTargets([]); setTargetType(""); setTargetScope(""); setDueDate(""); setFollowUp(""); setRequiresEvidence(false); setClientRequestId(crypto.randomUUID()); }
   }
 
   if (assignments.length === 0 && !canWrite) return null;
@@ -181,7 +187,7 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
         <h3 className="m-0 text-q-ui font-bold">التكليفات والمهام</h3>
         {canWrite && !addFromDock && <Button variant="secondary" disabled={busy} onClick={() => changeOpen(true)}>{viewer.can_issue ? "إضافة تكليف" : "اقتراح تكليف"}</Button>}
       </div>
-      {canWrite && <p className="m-0 text-q-caption text-q-text-2">اختياري بعد القرار وقبل إنهاء الجلسة. يظهر التكليف في «مهامي» فور إصداره من الرئيس أو اعتماده لمقترح المقرر.</p>}
+      {canWrite && <p className="m-0 text-q-caption text-q-text-2">يمكن إصدار المطلوب نفسه لعدة أشخاص أو جهات دفعة واحدة. تنشأ لكل مستهدف مهمة مستقلة، ولا يصدر أي جزء إذا تعذر تحديد مسؤول إحدى الجهات.</p>}
       {assignments.length === 0 ? (
         <p className="m-0 text-q-ui text-q-text-2">لا تكليفات على هذا القرار بعد.</p>
       ) : (
@@ -241,7 +247,26 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
             />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
-            <AssignmentPersonPicker label="المكلَّف" value={assigneeUser} initial={options.users} disabled={busy} units={options.units} onUnitChange={setAssigneeUnit} onChange={(id) => { setAssigneeUser(id); if (id) setAssigneeUnit(""); }} onSearch={searchUsers} />
+            <AssignmentPersonPicker
+              key={`target-${targets.length}`}
+              label="إضافة شخص أو جهة"
+              value=""
+              initial={options.users}
+              disabled={busy}
+              units={options.units}
+              onUnitChange={(id) => {
+                const unit = options.units.find((item) => item.id === id);
+                if (unit) addTarget({ kind: "unit", id, label: unit.name_ar });
+              }}
+              onChange={(id, selectedUser) => {
+                const user = selectedUser ?? options.users.find((item) => item.id === id);
+                if (user) addTarget({ kind: "user", id, label: user.name_ar });
+              }}
+              onSearch={async (query) => {
+                const users = await searchUsers(query);
+                return users.map((user) => user);
+              }}
+            />
             <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
               موعد الإنجاز (اختياري)
               <input
@@ -259,6 +284,33 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
               يتطلب أدلة إنجاز
             </label>
           </div>
+          <div className="grid gap-3 rounded-q-control border border-q-border bg-q-surface p-3 sm:grid-cols-3">
+            <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
+              أو استهدف نوع جهة بالكامل
+              <select value={targetType} disabled={busy} onChange={(event) => setTargetType(event.target.value)} className="h-11 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-normal text-q-text">
+                <option value="">اختر نوع الجهة</option>
+                {(options.unit_types ?? []).map((type) => <option key={type.id} value={type.id}>{type.name_ar}</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
+              ضمن جهة رئيسية (اختياري)
+              <select value={targetScope} disabled={busy || !targetType} onChange={(event) => setTargetScope(event.target.value)} className="h-11 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-normal text-q-text">
+                <option value="">كل الجامعة</option>
+                {options.units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name_ar}</option>)}
+              </select>
+            </label>
+            <Button type="button" variant="secondary" disabled={busy || !targetType} onClick={() => {
+              const type = (options.unit_types ?? []).find((item) => item.id === targetType);
+              const scope = options.units.find((item) => item.id === targetScope);
+              if (type) addTarget({ kind: "unit_type", id: type.id, scopeUnitId: targetScope || null, label: scope ? `${type.name_ar} ضمن ${scope.name_ar}` : `كل ${type.name_ar}` });
+            }}>إضافة النوع</Button>
+          </div>
+          {targets.length > 0 && <div aria-label="المستهدفون المختارون" className="flex flex-wrap gap-2">
+            {targets.map((target) => {
+              const key = `${target.kind}:${target.id}:${target.scopeUnitId ?? ""}`;
+              return <button key={key} type="button" disabled={busy} onClick={() => setTargets((current) => current.filter((item) => `${item.kind}:${item.id}:${item.scopeUnitId ?? ""}` !== key))} className="rounded-q-pill border border-q-primary bg-q-primary-soft px-3 py-2 text-q-caption font-bold text-q-primary">{target.label} ×</button>;
+            })}
+          </div>}
           <div className="flex flex-wrap items-center gap-2">
             <Button type="submit" disabled={Boolean(missing)} pending={activity.key === NEW_ASSIGNMENT_KEY} pendingLabel="جارٍ الحفظ…">
               {viewer.can_issue ? "إصدار التكليف" : "اقتراح التكليف"}
