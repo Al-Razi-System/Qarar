@@ -16,6 +16,9 @@ type Props = {
   /** A single thin line for lists; the full rail names every station. */
   compact?: boolean;
   className?: string;
+  /** Makes reached stations selectable without changing their workflow state. */
+  selectedIndex?: number;
+  onSelect?: (index: number) => void;
 };
 
 const stateWords: Record<JourneyStepState, string> = {
@@ -37,7 +40,7 @@ const dotClass: Record<JourneyStepState, string> = {
  * carries the live colour; the ones behind it are filled, the ones ahead are
  * outlined. Every state is also written, so colour is never the only signal.
  */
-export function JourneyRail({ steps, label, compact = false, className }: Props) {
+export function JourneyRail({ steps, label, compact = false, className, selectedIndex, onSelect }: Props) {
   if (compact) {
     return (
       <ol aria-label={label} className={cn("m-0 flex list-none items-center gap-1 p-0", className)}>
@@ -64,6 +67,21 @@ export function JourneyRail({ steps, label, compact = false, className }: Props)
     <ol aria-label={label} className={cn("m-0 grid list-none gap-0 p-0", className)} style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
       {steps.map((step, index) => {
         const reached = step.state === "done";
+        const interactive = Boolean(onSelect);
+        const disabled = step.state === "upcoming";
+        const content = <>
+          <span
+            aria-hidden="true"
+            className={cn("relative z-10 grid h-8 w-8 place-items-center rounded-full border-2 text-q-caption font-bold", dotClass[step.state])}
+          >
+            {reached ? "✓" : index + 1}
+          </span>
+          <span className={cn("max-w-full px-1 text-q-caption", step.state === "upcoming" ? "text-q-text-3" : "font-bold text-q-text")}>
+            {step.label}
+            <span className="sr-only">{`: ${stateWords[step.state]}`}</span>
+          </span>
+          {step.detail && <span className="max-w-full truncate px-1 text-q-caption text-q-text-2">{step.detail}</span>}
+        </>;
         return (
           <li key={step.label} aria-current={step.state === "current" || step.state === "blocked" ? "step" : undefined} className="relative flex min-w-0 flex-col items-center gap-2 text-center">
             {index > 0 && (
@@ -76,17 +94,18 @@ export function JourneyRail({ steps, label, compact = false, className }: Props)
                 )}
               />
             )}
-            <span
-              aria-hidden="true"
-              className={cn("relative z-10 grid h-8 w-8 place-items-center rounded-full border-2 text-q-caption font-bold", dotClass[step.state])}
-            >
-              {reached ? "✓" : index + 1}
-            </span>
-            <span className={cn("max-w-full px-1 text-q-caption", step.state === "upcoming" ? "text-q-text-3" : "font-bold text-q-text")}>
-              {step.label}
-              <span className="sr-only">{`: ${stateWords[step.state]}`}</span>
-            </span>
-            {step.detail && <span className="max-w-full truncate px-1 text-q-caption text-q-text-2">{step.detail}</span>}
+            {interactive ? <button
+              type="button"
+              disabled={disabled}
+              aria-pressed={selectedIndex === index}
+              onClick={() => onSelect?.(index)}
+              className={cn(
+                "relative z-10 flex min-h-20 w-full min-w-0 flex-col items-center gap-2 rounded-q-control p-2",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-q-focus",
+                selectedIndex === index && "bg-q-surface-2 ring-1 ring-q-border-strong",
+                disabled ? "cursor-not-allowed opacity-65" : "cursor-pointer hover:bg-q-surface-2",
+              )}
+            >{content}</button> : content}
           </li>
         );
       })}

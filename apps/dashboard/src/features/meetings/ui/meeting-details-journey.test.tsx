@@ -24,6 +24,23 @@ it("shows one primary action for the current stage and keeps later stages locked
   expect(screen.queryByRole("link", { name: "فتح المحضر والمصادقات" })).not.toBeInTheDocument();
 });
 
+it("opens completed stages for reading while keeping future stages locked", async () => {
+  const minutesMeeting = { ...meeting, status: "waiting_for_minutes", capabilities: {} };
+  mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail" ? Promise.resolve(minutesMeeting) : Promise.resolve({ ready: true, checks: [] }));
+  render(<MeetingDetailsJourney meetingId="meeting-1"/>);
+
+  expect(await screen.findByRole("link", { name: "فتح المحضر والمصادقات" })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: /الإعداد.*تمت/ }));
+  expect(screen.getByText("مرحلة مكتملة للقراءة")).toBeVisible();
+  expect(screen.queryByRole("link", { name: "فتح المحضر والمصادقات" })).not.toBeInTheDocument();
+
+  expect(screen.getByRole("button", { name: /المتابعة.*لم تبدأ/ })).toBeDisabled();
+  expect(screen.getByText(/تُفتح المراحل اللاحقة بعد إكمال المحضر/)).toBeVisible();
+
+  fireEvent.click(screen.getByRole("button", { name: /المحضر.*الآن/ }));
+  expect(screen.getByRole("link", { name: "فتح المحضر والمصادقات" })).toBeVisible();
+});
+
 it("explains unmet readiness beside the disabled action", async () => {
   mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail" ? Promise.resolve(meeting) : Promise.resolve({ ready: false, checks: [{ code: "agenda", label: "إضافة بند واحد على الأقل", complete: false }] }));
   render(<MeetingDetailsJourney meetingId="meeting-1"/>);
