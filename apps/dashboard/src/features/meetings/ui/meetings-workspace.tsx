@@ -138,6 +138,7 @@ export function MeetingsWorkspace() {
   const [topicAttachments, setTopicAttachments] = useState<MeetingTopicAttachment[]>([]);
   const listRequestRef = useRef<AbortController | null>(null);
   const lastListSuccessAtRef = useRef(0);
+  const initialManagedMeetingRef = useRef(false);
   const today = localDateKey();
 
   const loadCalendar = useEffectEvent(async () => {
@@ -597,6 +598,18 @@ export function MeetingsWorkspace() {
 
   useEffect(() => { const timer = window.setTimeout(() => { if (typeof window.matchMedia === "function" && window.matchMedia("(min-width: 768px)").matches) setViewMode("month"); }, 0); return () => window.clearTimeout(timer); }, []);
   useEffect(() => { const timer = window.setTimeout(() => void loadCalendar(), 0); return () => window.clearTimeout(timer); }, [viewMode, calendarCursor, unitFilter]);
+  const openInitialMeeting = useEffectEvent(openDetail);
+  useEffect(() => {
+    if (initialManagedMeetingRef.current) return;
+    const meetingId = new URLSearchParams(window.location.search).get("manage");
+    if (!meetingId) return;
+    initialManagedMeetingRef.current = true;
+    const timer = window.setTimeout(() => {
+      setViewMode("list");
+      void openInitialMeeting(meetingId);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const refreshWorkspaceOnReturn = useEffectEvent(() => {
     if (listRequestRef.current || Date.now() - lastListSuccessAtRef.current < 30_000) return;
@@ -666,7 +679,7 @@ export function MeetingsWorkspace() {
 
       {series.length > 0 && (activeGroup === "all" || activeGroup === "upcoming") && <section className="rounded-2xl border border-[#cfe1f1] bg-gradient-to-l from-[#f3f9ff] to-white p-4">
         <div className="mb-3 flex items-center justify-between"><div><p className="text-[9px] font-black text-[#f17822]">الاجتماعات الدورية</p><h2 className="mt-1 text-sm font-black text-[#173652]">السلاسل ومواعيد الانعقاد</h2></div><span className="rounded-full bg-white px-3 py-1 text-[9px] font-black text-[#0877d6]">{series.length} سلسلة</span></div>
-        <div className="grid gap-3 lg:grid-cols-2">{series.map((item) => <details key={item.id} className="group rounded-2xl border border-[#dbe8f3] bg-white p-4"><summary className="cursor-pointer list-none"><div className="flex items-start justify-between gap-3"><div><h3 className="text-xs font-black text-[#173652]">{item.title_ar}</h3><p className="mt-1 text-[9px] text-[#718399]">{frequencyLabels[item.frequency] ?? item.frequency}{item.frequency === "custom" ? ` · كل ${item.interval_count} يوم` : ""} · {item.occurrence_count} اجتماعات</p></div><span className="rounded-full bg-[#edf6ff] px-2 py-1 text-[9px] font-black text-[#0877d6]">عرض المواعيد</span></div></summary><div className="mt-3 space-y-2 border-t border-[#edf2f6] pt-3">{item.occurrences.map((occurrence) => <button key={occurrence.meeting_id} type="button" onClick={() => void openDetail(occurrence.meeting_id)} className="flex w-full items-center justify-between rounded-xl bg-[#f8fbfe] px-3 py-2 text-right hover:bg-[#edf6ff]"><span className="text-[10px] font-bold text-[#29455f]">الاجتماع {occurrence.occurrence_number} · {occurrence.scheduled_date}</span><span className={`rounded-full px-2 py-0.5 text-[8px] font-black ${statusTone[occurrence.status] ?? "bg-slate-100"}`}>{statusLabels[occurrence.status] ?? occurrence.status}</span></button>)}</div></details>)}</div>
+        <div className="grid gap-3 lg:grid-cols-2">{series.map((item) => <details key={item.id} className="group rounded-2xl border border-[#dbe8f3] bg-white p-4"><summary className="cursor-pointer list-none"><div className="flex items-start justify-between gap-3"><div><h3 className="text-xs font-black text-[#173652]">{item.title_ar}</h3><p className="mt-1 text-[9px] text-[#718399]">{frequencyLabels[item.frequency] ?? item.frequency}{item.frequency === "custom" ? ` · كل ${item.interval_count} يوم` : ""} · {item.occurrence_count} اجتماعات</p></div><span className="rounded-full bg-[#edf6ff] px-2 py-1 text-[9px] font-black text-[#0877d6]">عرض المواعيد</span></div></summary><div className="mt-3 space-y-2 border-t border-[#edf2f6] pt-3">{item.occurrences.map((occurrence) => <button key={occurrence.meeting_id} type="button" onClick={() => router.push(`/admin/meetings/${occurrence.meeting_id}`)} className="flex w-full items-center justify-between rounded-xl bg-[#f8fbfe] px-3 py-2 text-right hover:bg-[#edf6ff]"><span className="text-[10px] font-bold text-[#29455f]">الاجتماع {occurrence.occurrence_number} · {occurrence.scheduled_date}</span><span className={`rounded-full px-2 py-0.5 text-[8px] font-black ${statusTone[occurrence.status] ?? "bg-slate-100"}`}>{statusLabels[occurrence.status] ?? occurrence.status}</span></button>)}</div></details>)}</div>
       </section>}
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(420px,.78fr)_minmax(0,1.22fr)]">
@@ -690,7 +703,7 @@ export function MeetingsWorkspace() {
                   <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black text-[#6f8297] ring-1 ring-[#dfe8f0]">{group.meetings.length}</span>
                 </header>
                 <div className="grid gap-3 p-3">{group.meetings.map((m) => (
-                <button key={m.id} onClick={() => void openDetail(m.id)} aria-expanded={selected?.id === m.id} className={`group flex min-h-32 w-full items-start gap-4 rounded-2xl border px-5 py-4 text-right transition focus:outline-none focus:ring-4 focus:ring-blue-100 ${selected?.id === m.id ? "border-[#0877d6] bg-gradient-to-l from-[#e9f5ff] to-white shadow-[0_10px_28px_rgba(8,119,214,.13)]" : "border-[#e6edf3] bg-white hover:-translate-y-0.5 hover:border-[#9bc9f2] hover:shadow-md"}`}>
+                <button key={m.id} onClick={() => router.push(`/admin/meetings/${m.id}`)} className="group flex min-h-32 w-full items-start gap-4 rounded-2xl border border-[#e6edf3] bg-white px-5 py-4 text-right transition hover:-translate-y-0.5 hover:border-[#9bc9f2] hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-100">
                   <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e7f2ff] text-[#0066cc]">
                     <Calendar size={18} />
                   </span>
@@ -703,7 +716,7 @@ export function MeetingsWorkspace() {
                     <p className="mt-1 text-[10px] text-[#7b8ba0]">
                       {meetingScheduleLabel(m)} · {m.start_time ?? ""}-{m.end_time ?? ""} · {m.unit_name_ar ?? "—"}
                     </p>
-                    <span className={`mt-3 inline-flex items-center gap-1 text-[9px] font-black ${selected?.id === m.id ? "text-[#0877d6]" : "text-[#718399] group-hover:text-[#0877d6]"}`}>{selected?.id === m.id ? "التفاصيل معروضة" : "عرض تفاصيل الاجتماع"}<ChevronLeft size={12}/></span>
+                    <span className="mt-3 inline-flex items-center gap-1 text-[9px] font-black text-[#718399] group-hover:text-[#0877d6]">فتح رحلة الاجتماع<ChevronLeft size={12}/></span>
                   </div>
                 </button>
                 ))}</div>
@@ -769,7 +782,7 @@ export function MeetingsWorkspace() {
           )}
         </div> : <div className="hidden min-h-[360px] place-items-center rounded-2xl border border-dashed border-[#cdddea] bg-gradient-to-b from-white to-[#f7fbff] p-8 text-center xl:grid xl:sticky xl:top-4"><div><span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#eaf4ff] text-[#0877d6]"><CalendarDays size={28}/></span><h2 className="mt-4 text-sm font-black text-[#173652]">اختر اجتماعاً لعرض تفاصيله</h2><p className="mx-auto mt-2 max-w-xs text-[10px] leading-6 text-[#718399]">اضغط على أي بطاقة من القائمة، وستظهر هنا بيانات الموعد وجدول الأعمال والجاهزية والإجراءات المتاحة دون الانتقال إلى أسفل الصفحة.</p></div></div>}
       </div>
-      </> : <MeetingsCalendar items={calendarItems} cursor={calendarCursor} mode={viewMode} loading={calendarLoading} onCursorChange={setCalendarCursor} onOpen={(meetingId) => { setViewMode("list"); void openDetail(meetingId); }} />}
+      </> : <MeetingsCalendar items={calendarItems} cursor={calendarCursor} mode={viewMode} loading={calendarLoading} onCursorChange={setCalendarCursor} onOpen={(meetingId) => router.push(`/admin/meetings/${meetingId}`)} />}
 
       {agendaModal && selected && <Dialog title="الموضوعات المقترحة" description={`${eligibleAgendaCount ?? agendaCandidates.length} موضوعات وصلت إلى ${selected.unit_name_ar ?? selected.governance_unit_name_ar ?? "هذا المجلس"} وأصبحت مؤهلة للإدراج`} size="lg" scrollContent onClose={()=>setAgendaModal(false)} closeDisabled={agendaLoading} footer={<Button variant="secondary" disabled={agendaLoading} onClick={()=>setAgendaModal(false)}>إغلاق</Button>}>
         <div className="flex flex-col gap-4">
