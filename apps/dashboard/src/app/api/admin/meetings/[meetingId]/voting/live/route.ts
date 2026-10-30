@@ -1,8 +1,9 @@
+import { createHash } from "node:crypto";
 import { qararRpc } from "@/shared/api/qarar-server";
 import { safeAdminError } from "@/shared/security/admin-error";
 import { apiError, requestId } from "@/shared/api/response";
 import { logEvent } from "@/shared/observability/logger";
-import { roomRevision, watchRoom, watchVoting } from "@/features/meetings/server/voting-events";
+import { roomRevision, watchRemoteMeetingEvents, watchRoom, watchVoting } from "@/features/meetings/server/voting-events";
 import { votingSnapshot, votingStream } from "@/features/meetings/server/voting-stream";
 import type { MyVote, VotingRound } from "@/features/meetings/model/live-meeting";
 
@@ -15,13 +16,17 @@ export async function GET(request: Request, context: { params: Promise<{ meeting
   async function read(signal: AbortSignal) {
     const options = { signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]) };
     // Recheck resource authority on EVERY snapshot, including an idle stream.
-    await qararRpc("get_meeting_session_detail", { p_meeting_id: meetingId }, options);
+    const room = await qararRpc<{ updated_at?: string; agenda_items?: Array<{ id?: string; updated_at?: string; agenda_status?: string }> }>("get_meeting_detail", { p_meeting_id: meetingId }, options);
+    const roomRevision = createHash("sha256").update(JSON.stringify({
+      meeting: room.updated_at ?? null,
+      agenda: (room.agenda_items ?? []).map(item => [item.id, item.updated_at, item.agenda_status]),
+    })).digest("base64url");
     const [rounds, votes] = await Promise.all([
       qararRpc<VotingRound[]>("list_meeting_voting_rounds", { p_meeting_id: meetingId }, options),
       qararRpc<MyVote[]>("get_my_open_votes", { p_meeting_id: meetingId }, options),
     ]);
     keys = [`meeting:${meetingId}`, ...rounds.filter(round => round.status === "open").map(round => `round:${round.id}`)];
-    return votingSnapshot(rounds, votes);
+    return votingSnapshot(rounds, votes, roomRevision);
   }
   function failure(error: unknown) {
     const safe = safeAdminError(error, "تعذر تحديث التصويت. جارٍ محاولة إعادة الاتصال.", 503);
@@ -33,7 +38,14 @@ export async function GET(request: Request, context: { params: Promise<{ meeting
     const initial = await read(request.signal);
     // Writes through this server wake the stream at once; the slower periodic
     // read covers writes that reach the database another way.
-    return new Response(votingStream({ initial, read, signal: request.signal, subscribe: wake => watchVoting(() => keys, wake), pollMs: 3000,
+    return new Response(votingStream({ initial, read, signal: request.signal, subscribe: wake => {
+      const stopVoting = watchVoting(() => keys, wake);
+      const stopRemote = watchRemoteMeetingEvents(meetingId);
+      return () => { stopVoting(); stopRemote(); };
+    // Redis invalidation provides the immediate path. The database poll is a
+    // recovery net only; running three authorised RPCs every second for every
+    // open screen exhausted the local PostgREST pool and made room loads stall.
+    }, pollMs: 10_000, maxMs: 5 * 60_000,
       room: { initialRevision: initialRoomRevision, revision: () => roomRevision(meetingId), watch: notify => watchRoom(meetingId, notify) },
       onError: error => { const { safe, terminal } = failure(error); return { message: safe.message, terminal }; },
     }), { headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "private, no-store, no-transform", "X-Accel-Buffering": "no", "x-request-id": id } });

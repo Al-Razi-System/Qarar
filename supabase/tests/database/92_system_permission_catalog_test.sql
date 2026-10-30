@@ -4,10 +4,10 @@ select plan(16);
 insert into qarar_core.organizations(id,code,name_ar) values
 ('92000000-0000-0000-0000-000000000001','permission-catalog-test','اختبار دليل الصلاحيات'),
 ('92000000-0000-0000-0000-000000000002','permission-catalog-other','مؤسسة اختبار أخرى');
-select is((select count(*)::integer from qarar_iam.permissions where organization_id='92000000-0000-0000-0000-000000000001'),65,'new organization receives complete catalog');
+select is((select count(*)::integer from qarar_iam.permissions where organization_id='92000000-0000-0000-0000-000000000001'),66,'new organization receives complete catalog');
 select is((select count(*)::integer from qarar_iam.role_permissions where organization_id='92000000-0000-0000-0000-000000000001'),0,'catalog does not grant roles');
-select is((select count(*)::integer from qarar_iam.system_permission_catalog()),65,'catalog has unique reviewed definitions');
-select is((select count(distinct code)::integer from qarar_iam.system_permission_catalog()),65,'catalog codes unique');
+select is((select count(*)::integer from qarar_iam.system_permission_catalog()),66,'catalog has unique reviewed definitions');
+select is((select count(distinct code)::integer from qarar_iam.system_permission_catalog()),66,'catalog codes unique');
 select ok(not exists(
   select 1 from pg_proc p cross join lateral regexp_matches(p.prosrc,
     $pattern$(?:assert_permission|has_permission|actor_has_permission)[(][^;]*?'([a-z][a-z0-9_]+[.][a-z0-9_.]+)'$pattern$,'g') matched

@@ -54,4 +54,21 @@ describe("live voting subscriber", () => {
     expect(result.current.roomTick).toBe(2);
     expect(result.current.broadcastTick).toBe(3);
   });
+  it("refreshes the room when the authorised fallback snapshot fingerprint changes", () => {
+    vi.stubGlobal("EventSource", Source);
+    const { result } = renderHook(() => useLiveVoting("m1", true));
+    const source = Source.instances[0];
+    act(() => source.send("voting", { rounds: [], votes: [], room_revision: "first" }));
+    expect(result.current.roomTick).toBe(1);
+    act(() => source.send("voting", { rounds: [], votes: [], room_revision: "second" }));
+    expect(result.current.roomTick).toBe(2);
+    expect(result.current.broadcastTick).toBe(2);
+  });
+  it("requests one catch-up read whenever the browser reconnects the channel", () => {
+    vi.stubGlobal("EventSource", Source);
+    const { result } = renderHook(() => useLiveVoting("m1", true));
+    act(() => Source.instances[0].dispatchEvent(new Event("open")));
+    expect(result.current.roomTick).toBe(1);
+    expect(result.current.broadcastTick).toBe(1);
+  });
 });

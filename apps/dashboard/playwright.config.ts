@@ -11,6 +11,9 @@ function localSupabaseEnv() {
     "qarar-e2e-redis",
   ], { encoding: "utf8" }).trim();
   return {
+    // The browser suite runs a production build so cookie-authenticated
+    // mutations must receive the exact local origin enforced by the guards.
+    APP_ORIGIN: "https://127.0.0.1:3100",
     QARAR_SUPABASE_URL: values.SUPABASE_PUBLIC_URL || "http://127.0.0.1:54321",
     QARAR_SUPABASE_ANON_KEY: values.ANON_KEY || "",
     QARAR_SUPABASE_SERVICE_ROLE_KEY: values.SERVICE_ROLE_KEY || "",
@@ -22,7 +25,7 @@ function localSupabaseEnv() {
     // Browser suites intentionally create several fresh sessions for the same
     // isolated fixture. Keep throttling enabled, but size its test-only budget
     // above the number of serial desktop and mobile journeys.
-    QARAR_LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS: "100",
+    QARAR_LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS: "20",
     QARAR_LOGIN_RATE_LIMIT_CLIENT_MAX_ATTEMPTS: "100",
     QARAR_LOGIN_RATE_LIMIT_GLOBAL_MAX_ATTEMPTS: values.QARAR_LOGIN_RATE_LIMIT_GLOBAL_MAX_ATTEMPTS || "300",
     QARAR_LOGIN_RATE_LIMIT_WINDOW_SECONDS: values.QARAR_LOGIN_RATE_LIMIT_WINDOW_SECONDS || "900",
@@ -46,7 +49,9 @@ export default defineConfig({
   globalSetup: process.env.QARAR_ACTIVATION_E2E_ONLY ? undefined : "./e2e/global-setup.ts",
   globalTeardown: process.env.QARAR_ACTIVATION_E2E_ONLY ? undefined : "./e2e/global-teardown.ts",
   use: {
-    baseURL: "http://127.0.0.1:3100",
+    baseURL: "https://127.0.0.1:3100",
+    extraHTTPHeaders: { Origin: "https://127.0.0.1:3100" },
+    ignoreHTTPSErrors: true,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -66,10 +71,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1 --port 3100",
-    env: { ...process.env, ...localSupabaseEnv() },
-    url: "http://127.0.0.1:3100/login",
+    command: process.env.QARAR_E2E_SKIP_BUILD
+      ? "node e2e/serve-production-https.mjs"
+      : "npm run build && node e2e/serve-production-https.mjs",
+    env: { ...process.env, ...localSupabaseEnv(), QARAR_NEXT_DIST_DIR: ".next-e2e" },
+    url: "https://127.0.0.1:3100/login",
+    ignoreHTTPSErrors: true,
     reuseExistingServer: false,
-    timeout: 120_000,
+    timeout: 600_000,
   },
 });

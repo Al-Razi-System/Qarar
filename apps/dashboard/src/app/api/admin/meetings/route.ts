@@ -6,6 +6,7 @@ import { rejectUntrustedMutation } from "@/shared/security/request-guards";
 import { apiError, apiSuccess, requestId } from "@/shared/api/response";
 import { logEvent } from "@/shared/observability/logger";
 import { notifyRoomChange, notifyVotingMutation, roomScopeOf } from "@/features/meetings/server/voting-events";
+import { publishMeetingEvent } from "@/features/meetings/server/meeting-event-bus";
 
 const contracts = new Set([
   "save_meeting_with_quorum_v2",
@@ -155,9 +156,23 @@ export async function POST(request: Request) {
       : null;
     const data = await call;
     const meetingId = await roomMeetingId(request, params ?? {}, data, hintedContext);
-    notifyVotingMutation(contract, params ?? {}, data, meetingId);
+    const votingChanged = notifyVotingMutation(contract, params ?? {}, data, meetingId);
     const scope = roomScopeOf(contract);
     if (scope && meetingId) notifyRoomChange(meetingId, scope);
+    if (meetingId && (scope || votingChanged)) {
+      try {
+        await Promise.race([
+          publishMeetingEvent(meetingId, scope ? { kind: "room", scope } : { kind: "voting" }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("meeting event publish timeout")), 500)),
+        ]);
+      } catch (eventError) {
+        logEvent("warn", "meeting.event.publish.failed", {
+          request_id: id,
+          meeting_id: meetingId,
+          cause: eventError instanceof Error ? eventError.message : String(eventError),
+        });
+      }
+    }
     return apiSuccess(data, id);
   } catch (error) {
     const safeError = safeAdminError(error, "تعذر تنفيذ العملية.", 500);

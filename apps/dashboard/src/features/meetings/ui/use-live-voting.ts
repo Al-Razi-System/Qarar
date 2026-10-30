@@ -12,12 +12,16 @@ export function useLiveVoting(meetingId: string, active: boolean) {
   const [state, setState] = useState<{ meetingId: string; snapshot: VotingSnapshot | null; error: string | null; connected: boolean }>({ meetingId, snapshot: null, error: null, connected: false });
   const [ticks, setTicks] = useState({ room: 0, broadcast: 0 });
   const seen = useRef<{ meetingId: string; revision: number } | null>(null);
+  const roomRevision = useRef<{ meetingId: string; value: string } | null>(null);
   const accepted = useRef(new Set<string>());
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!active || typeof EventSource === "undefined") return;
     let stopped = false;
     const source = new EventSource(`/api/admin/meetings/${encodeURIComponent(meetingId)}/voting/live`);
+    source.addEventListener("open", () => {
+      if (!stopped) setTicks(current => ({ room: current.room + 1, broadcast: current.broadcast + 1 }));
+    });
     source.addEventListener("room", event => {
       if (stopped) return;
       let change: { revision?: unknown; scope?: unknown };
@@ -36,6 +40,16 @@ export function useLiveVoting(meetingId: string, active: boolean) {
       try {
         const snapshot = JSON.parse((event as MessageEvent).data) as VotingSnapshot;
         if (!Array.isArray(snapshot.rounds) || !Array.isArray(snapshot.votes)) throw new Error("invalid snapshot");
+        if (typeof snapshot.room_revision === "string") {
+          const previous = roomRevision.current?.meetingId === meetingId ? roomRevision.current.value : null;
+          roomRevision.current = { meetingId, value: snapshot.room_revision };
+          // The room may have changed after its page read but before this SSE
+          // connection completed. The first authorised fingerprint therefore
+          // requests one catch-up read; later reads only act on a difference.
+          if (previous === null || previous !== snapshot.room_revision) {
+            setTicks(current => ({ room: current.room + 1, broadcast: current.broadcast + 1 }));
+          }
+        }
         snapshot.votes = snapshot.votes.map(vote => accepted.current.has(`${meetingId}:${vote.voting_round_id}`) ? { ...vote, has_voted: true } : vote);
         setState({ meetingId, snapshot, error: null, connected: true });
       } catch {

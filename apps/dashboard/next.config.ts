@@ -16,7 +16,17 @@ const allowedDevOrigins = (process.env.QARAR_ALLOWED_DEV_ORIGINS ?? "")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+export function resolveNextDistDir(env: Record<string, string | undefined> = process.env) {
+  const configured = env.QARAR_NEXT_DIST_DIR?.trim();
+  if (!configured) return ".next";
+  if (!/^\.[a-z0-9-]+$/i.test(configured) || configured.includes("..")) {
+    throw new Error("QARAR_NEXT_DIST_DIR must be a project-local hidden directory name.");
+  }
+  return configured;
+}
+
 const nextConfig: NextConfig = {
+  distDir: resolveNextDistDir(),
   output: "standalone",
   // Native rasterizers must stay outside the Turbopack graph. Bundling them makes
   // the first invitation preview compile extremely slowly and can select a WASM

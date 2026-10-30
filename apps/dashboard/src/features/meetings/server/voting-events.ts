@@ -1,3 +1,5 @@
+import { watchMeetingEvents } from "./meeting-event-bus";
+
 // Invalidation only; never put a vote value, note, JWT or user record in this hub.
 type Listener = { keys: Set<string>; wake: () => void };
 type RoomListener = { meetingId: string; notify: (change: RoomChange) => void };
@@ -12,6 +14,7 @@ const listeners = runtime.qararVotingListeners ??= new Set();
 const roomListeners = runtime.qararRoomListeners ??= new Set();
 const roomRevisions = runtime.qararRoomRevisions ??= new Map();
 const roomWindows = runtime.qararRoomWindows ??= new Map();
+const remoteMeetingWatches = new Map<string, { count: number; stop: () => void }>();
 
 export function watchVoting(keys: () => string[], wake: () => void) {
   const listener = { get keys() { return new Set(keys()); }, wake };
@@ -19,12 +22,13 @@ export function watchVoting(keys: () => string[], wake: () => void) {
   return () => { listeners.delete(listener); };
 }
 export function notifyVotingMutation(contract: string, params: Record<string, unknown>, result: unknown, roomMeetingId?: string | null) {
-  if (!["cast_vote", "open_voting_round", "close_voting_round", "cancel_voting_round"].includes(contract)) return;
+  if (!["cast_vote", "open_voting_round", "close_voting_round", "cancel_voting_round"].includes(contract)) return false;
   const data = result && typeof result === "object" ? result as Record<string, unknown> : {};
   const meeting = data.meeting_id ?? params.p_meeting_id ?? roomMeetingId;
   const round = data.voting_round_id ?? params.p_voting_round_id;
   const keys = [typeof meeting === "string" ? `meeting:${meeting}` : "", typeof round === "string" ? `round:${round}` : ""];
   for (const listener of listeners) if (keys.some(key => listener.keys.has(key))) listener.wake();
+  return true;
 }
 
 /**
@@ -68,6 +72,35 @@ export function watchRoom(meetingId: string, notify: (change: RoomChange) => voi
   const listener = { meetingId, notify };
   roomListeners.add(listener);
   return () => { roomListeners.delete(listener); };
+}
+
+/** One Redis subscription per meeting/process, shared by all SSE readers. */
+export function watchRemoteMeetingEvents(meetingId: string) {
+  const existing = remoteMeetingWatches.get(meetingId);
+  if (existing) {
+    existing.count += 1;
+  } else {
+    const stop = watchMeetingEvents(meetingId, event => {
+      if (event.kind === "voting") {
+        for (const listener of listeners) if (listener.keys.has(`meeting:${meetingId}`)) listener.wake();
+        return;
+      }
+      const revision = Math.max(roomRevision(meetingId) + 1, event.revision);
+      roomRevisions.set(meetingId, revision);
+      for (const listener of roomListeners) {
+        if (listener.meetingId === meetingId) listener.notify({ revision, scope: event.scope! });
+      }
+    });
+    remoteMeetingWatches.set(meetingId, { count: 1, stop });
+  }
+  return () => {
+    const current = remoteMeetingWatches.get(meetingId);
+    if (!current) return;
+    current.count -= 1;
+    if (current.count > 0) return;
+    current.stop();
+    remoteMeetingWatches.delete(meetingId);
+  };
 }
 
 function emit(meetingId: string, scope: RoomScope) {

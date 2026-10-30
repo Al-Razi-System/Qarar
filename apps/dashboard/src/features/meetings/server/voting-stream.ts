@@ -1,9 +1,9 @@
 import type { MyVote, VotingRound } from "../model/live-meeting";
 import type { RoomChange } from "./voting-events";
-export type VotingSnapshot = { rounds: VotingRound[]; votes: MyVote[] };
+export type VotingSnapshot = { rounds: VotingRound[]; votes: MyVote[]; room_revision?: string };
 
 /** Defence in depth: even a future contract field cannot leak an open ballot. */
-export function votingSnapshot(rounds: VotingRound[], votes: MyVote[]): VotingSnapshot {
+export function votingSnapshot(rounds: VotingRound[], votes: MyVote[], roomRevision?: string): VotingSnapshot {
   return {
     rounds: rounds.map(round => ({ id: round.id, agenda_item_id: round.agenda_item_id, status: round.status,
       result: round.status === "closed" ? round.result : undefined, eligible_voter_count: round.eligible_voter_count,
@@ -12,6 +12,7 @@ export function votingSnapshot(rounds: VotingRound[], votes: MyVote[]): VotingSn
       ...(round.status === "closed" ? { approve_count: round.approve_count, reject_count: round.reject_count, abstain_count: round.abstain_count, tie_break_applied: round.tie_break_applied } : {}),
     })),
     votes: votes.map(vote => ({ voting_round_id: vote.voting_round_id, title_ar: vote.title_ar, has_voted: vote.has_voted })),
+    ...(roomRevision ? { room_revision: roomRevision } : {}),
   };
 }
 

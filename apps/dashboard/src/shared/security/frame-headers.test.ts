@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import nextConfig, { FRAMEABLE_FILE_ROUTES } from "../../../next.config";
+import nextConfig, { FRAMEABLE_FILE_ROUTES, resolveNextDistDir } from "../../../next.config";
 
 type Rule = { source: string; headers: Array<{ key: string; value: string }> };
 
@@ -11,6 +11,12 @@ function headerFor(rules: Rule[], path: string, key: string) {
 }
 
 describe("frame headers", () => {
+  it("isolates an explicitly configured local Next output directory", () => {
+    expect(resolveNextDistDir({})).toBe(".next");
+    expect(resolveNextDistDir({ QARAR_NEXT_DIST_DIR: ".next-e2e" })).toBe(".next-e2e");
+    expect(() => resolveNextDistDir({ QARAR_NEXT_DIST_DIR: "../shared" })).toThrow();
+  });
+
   it("lets only the agenda file routes be framed, and only by this site", async () => {
     const rules = (await nextConfig.headers!()) as Rule[];
     expect(FRAMEABLE_FILE_ROUTES).toEqual(["/api/admin/topics/upload", "/api/admin/typed-topics/files"]);

@@ -1,9 +1,10 @@
 import { afterEach, expect, it, vi } from "vitest";
-const { rpc, rpcV2 } = vi.hoisted(() => ({ rpc: vi.fn(), rpcV2: vi.fn() }));
+const { rpc, rpcV2, publishMeetingEvent } = vi.hoisted(() => ({ rpc: vi.fn(), rpcV2: vi.fn(), publishMeetingEvent: vi.fn() }));
 vi.mock("@/shared/api/qarar-server", () => ({ qararRpc: rpc, qararRpcV2: rpcV2 }));
+vi.mock("@/features/meetings/server/meeting-event-bus", () => ({ publishMeetingEvent }));
 import { POST } from "./route";
 import { watchRoom, watchVoting } from "@/features/meetings/server/voting-events";
-afterEach(() => vi.resetAllMocks());
+afterEach(() => { vi.resetAllMocks(); publishMeetingEvent.mockResolvedValue(undefined); });
 it("saves meeting data and its quorum in one V2 transaction", async () => {
   rpcV2.mockResolvedValue({ id: "meeting-1", quorum_percentage: 30 });
   const params = { p_action: "create", p_values: { p_title_ar: "اجتماع تجريبي" }, p_quorum_percentage: 30 };
@@ -85,6 +86,7 @@ it("tells the room's screens after a successful room change, using the room the 
     rpc.mockResolvedValueOnce({ agenda_items: [{ id: "a1" }] });
     expect((await POST(request("update_agenda_discussion", { p_agenda_item_id: "a1" }, meetingId))).status).toBe(200);
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ scope: "room" }));
+    expect(publishMeetingEvent).toHaveBeenCalledWith(meetingId, { kind: "room", scope: "room" });
     rpc.mockResolvedValueOnce({ id: "a1" });
     await POST(request("get_meeting_session_detail", { p_meeting_id: meetingId }, meetingId));
     expect(notify).toHaveBeenCalledOnce();

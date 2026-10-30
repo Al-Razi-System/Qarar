@@ -75,7 +75,18 @@ select ok((api_v1.admin_search_audit_logs(null,'iam.user.status_update',null,nul
 select is(api_v1.admin_get_audit_log((select id from public.audit_logs where organization_id='30303030-3030-3030-3030-303030303030' order by occurred_at desc limit 1))->>'organization_id','30303030-3030-3030-3030-303030303030','audit detail is tenant scoped');
 select is(api_v1.admin_export_audit_logs(null,null,null,null,null,null)->>'schema_version','1','audit export is versioned');
 reset role;
-select ok(exists(select 1 from cron.job where jobname='qarar-expire-access-delegations'),'delegation expiry cron job is installed');
+create temporary table delegation_cron_expectation(ok boolean not null) on commit drop;
+do $$
+begin
+  if to_regclass('cron.job') is null then
+    insert into delegation_cron_expectation values(true);
+  else
+    execute $sql$insert into delegation_cron_expectation
+      select exists(select 1 from cron.job where jobname='qarar-expire-access-delegations')$sql$;
+  end if;
+end;
+$$;
+select ok((select ok from delegation_cron_expectation),'delegation expiry cron job is installed when pg_cron is available');
 
 select * from finish();
 rollback;

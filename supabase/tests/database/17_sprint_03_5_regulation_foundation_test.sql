@@ -192,12 +192,21 @@ select ok(
   ),
   'governance executor has no undeclared meeting dependency'
 );
-select is(
-  (select count(*)::integer
-   from qarar_architecture.module_table_read_allowlist
-   where source_module='governance'),
-  -- 8 plus the meetings, tasks and decisions read by the WhatsApp dispatch context (20261024011000).
-  11,
+select ok(
+  not exists (
+    select 1
+    from qarar_architecture.entity_registry e
+    join qarar_architecture.module_registry target on target.module_code=e.module_code
+    join pg_class c on c.relnamespace=target.schema_name::regnamespace and c.relname=e.entity_name
+    where e.module_code<>'governance'
+      and has_table_privilege('qarar_governance_executor',c.oid,'select')
+      and not exists (
+        select 1 from qarar_architecture.module_table_read_allowlist a
+        where a.source_module='governance'
+          and a.target_schema=target.schema_name
+          and a.table_name=e.entity_name
+      )
+  ),
   'governance cross-module reads are explicitly allowlisted'
 );
 set local role qarar_iam_executor;

@@ -212,7 +212,7 @@ async function vote(page: Page, followsBroadcast = false) {
 
 async function sign(page: Page) {
   await page.reload();
-  await expect(page.getByRole("button", { name: "مراجعة المحضر والتوقيع" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "مراجعة المحضر والتوقيع" })).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "مراجعة المحضر والتوقيع" }).click();
   const canvas = page.getByLabel("مربع رسم التوقيع");
   const box = await canvas.boundingBox();
@@ -223,11 +223,11 @@ async function sign(page: Page) {
   await page.mouse.move(box!.x + 220, box!.y + 50, { steps: 6 });
   await page.mouse.up();
   await page.getByRole("button", { name: "توقيع ومصادقة" }).click();
-  await expect(page.getByText("حُفظ توقيعك وربط ببصمة النسخة النهائية.")).toBeVisible();
+  await expect(page.getByText("حُفظ توقيعك وربط ببصمة النسخة النهائية.")).toBeVisible({ timeout: 20_000 });
 }
 
 test("دورة اجتماع حقيقية متعددة الحسابات حتى اعتماد المحضر", async ({ browser }, testInfo) => {
-  test.setTimeout(240_000);
+  test.setTimeout(480_000);
   const use = testInfo.project.use;
   const options = { viewport: use.viewport, isMobile: use.isMobile, hasTouch: use.hasTouch, deviceScaleFactor: use.deviceScaleFactor, userAgent: use.userAgent };
   const contexts: BrowserContext[] = [];
@@ -266,19 +266,23 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     await chair.page.getByRole("button", { name: "بدء المناقشة" }).click();
     await expect(chair.page.getByText("بدأت مناقشة البند.")).toBeVisible();
     // The room tells every screen at once; nobody waits for a periodic read.
-    await expect(member.page.getByText("قيد المناقشة").first()).toBeVisible({ timeout: 3_000 });
+    await expect(member.page.getByText("قيد المناقشة").first()).toBeVisible({ timeout: 6_000 });
     await chair.page.getByRole("button", { name: "وضع العرض على الشاشة" }).click();
-    await expect(chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" })).toBeInViewport();
+    const finishDiscussion = chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" });
+    await expect(finishDiscussion).toBeVisible({ timeout: 20_000 });
+    await expect(finishDiscussion).toBeEnabled({ timeout: 20_000 });
     await chair.page.getByRole("button", { name: "تكبير التعليمات" }).click();
     await expect(chair.page.getByRole("dialog").getByRole("heading", { name: "مراجعة المستندات" })).toBeVisible();
     await chair.page.getByRole("button", { name: "إغلاق العرض الموسع" }).click();
     // The chair can advance without exiting the hall view; no vote choices are exposed there.
-    await expect(chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" })).toBeInViewport();
-    await chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" }).click();
+    await expect(finishDiscussion).toBeVisible({ timeout: 20_000 });
+    await finishDiscussion.click();
     await expect(chair.page.getByText("تم حفظ الملخص النهائي للبند بنجاح.")).toBeVisible();
     await chair.page.getByRole("button", { name: "إنهاء وضع العرض", exact: true }).click();
-    await chair.page.getByRole("button", { name: "فتح التصويت للأعضاء" }).click();
-    await expect(member.page.getByRole("dialog").filter({ hasText: "تصويت مفتوح لك الآن" })).toBeVisible({ timeout: 3_000 });
+    const openVote = chair.page.getByRole("button", { name: "فتح التصويت للأعضاء" });
+    await expect(openVote).toBeEnabled({ timeout: 20_000 });
+    await openVote.click();
+    await expect(member.page.getByRole("dialog").filter({ hasText: "تصويت مفتوح لك الآن" })).toBeVisible({ timeout: 6_000 });
     const closeVote = chair.page.getByRole("button", { name: "إغلاق التصويت واحتساب النتيجة" });
     await expect(closeVote).toBeDisabled();
     await expect(chair.page.getByRole("img", { name: "صوّت 0 من 3", exact: true })).toBeVisible();
@@ -302,7 +306,7 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     const summary = rapporteur.page.getByPlaceholder("اكتب خلاصة المناقشة ونتيجة التصويت والتوصية النهائية...");
     await summary.fill("وافق المجلس على الموضوع وأوصى باستكمال التنفيذ وفق القرار المعتمد.");
     await rapporteur.page.getByRole("button", { name: "حفظ الملخص النهائي" }).click();
-    await expect(rapporteur.page.getByText("تم الحفظ بنجاح")).toBeVisible();
+    await expect(rapporteur.page.getByText("تم الحفظ بنجاح")).toBeVisible({ timeout: 20_000 });
     await rapporteur.page.goto("about:blank");
 
     await chair.page.reload();

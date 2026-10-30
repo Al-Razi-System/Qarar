@@ -519,12 +519,19 @@ describe("AgendaWorkspace assignments", () => {
     const section = screen.getByRole("region", { name: "التكليفات" });
     await userEvent.click(within(screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" })).getByRole("button", { name: "إضافة تكليف" }));
     await userEvent.type(within(section).getByLabelText("عنوان التكليف"), "إبلاغ عمادة القبول");
-    await userEvent.type(within(section).getByLabelText("البحث عن المكلَّف"), "عمادة");
-    await userEvent.click(screen.getByRole("option", { name: "عمادة القبول" }));
+    await userEvent.type(within(section).getByLabelText("البحث عن إضافة شخص أو جهة"), "عمادة");
+    await userEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: "عمادة القبول" }));
     await userEvent.type(within(section).getByLabelText("البحث عن المتابع"), "هدى");
     await userEvent.click(screen.getByRole("option", { name: "د. هدى" }));
     await userEvent.click(within(section).getByRole("button", { name: "إصدار التكليف" }));
-    expect(onCreate).toHaveBeenCalledWith("a1", { title: "إبلاغ عمادة القبول", userId: null, unitId: "g1", dueDate: null, followUpId: "u2", requiresEvidence: false });
+    expect(onCreate).toHaveBeenCalledWith("a1", {
+      title: "إبلاغ عمادة القبول",
+      targets: [{ kind: "unit", id: "g1", label: "عمادة القبول" }],
+      dueDate: null,
+      followUpId: "u2",
+      requiresEvidence: false,
+      clientRequestId: expect.any(String),
+    });
   });
 
   it("offers no assignment before the decision is drafted, nor a form on the presentation screen", () => {
