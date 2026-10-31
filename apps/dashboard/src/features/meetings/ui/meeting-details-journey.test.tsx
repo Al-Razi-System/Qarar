@@ -49,6 +49,33 @@ it("explains unmet readiness beside the disabled action", async () => {
   expect(screen.getByText(/قبل المتابعة: إضافة بند واحد على الأقل/)).toBeVisible();
 });
 
+it("explains that approving the agenda does not start the session before moving to ready to start", async () => {
+  mocks.rpc.mockImplementation((contract: string) => {
+    if (contract === "get_meeting_detail") return Promise.resolve(meeting);
+    if (contract === "get_meeting_readiness") return Promise.resolve({ ready: true, checks: [] });
+    if (contract === "transition_meeting") return Promise.resolve({});
+    return Promise.reject(new Error(`unexpected contract: ${contract}`));
+  });
+
+  render(<MeetingDetailsJourney meetingId="meeting-1"/>);
+  await screen.findByRole("heading", { name: "اجتماع مجلس الجامعة" });
+  fireEvent.click(screen.getByText("إجراءات أخرى"));
+  fireEvent.click(screen.getByRole("button", { name: "اعتماد جدول الأعمال وتجهيز الاجتماع للبدء" }));
+
+  expect(await screen.findByRole("dialog", { name: "اعتماد جدول الأعمال" })).toBeVisible();
+  expect(screen.getByText(/لن تبدأ الجلسة الآن/)).toBeVisible();
+  expect(mocks.rpc.mock.calls.filter(([name]) => name === "transition_meeting")).toHaveLength(0);
+
+  fireEvent.click(screen.getByRole("button", { name: "تأكيد اعتماد جدول الأعمال" }));
+
+  await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("transition_meeting", {
+    p_meeting_id: meeting.id,
+    p_to_status: "ready_to_start",
+    p_reason: null,
+    p_expected_updated_at: meeting.updated_at,
+  }));
+});
+
 it("shows a local retry when the meeting cannot be read", async () => {
   mocks.rpc.mockRejectedValue(new Error("تعذر الاتصال بالخادم"));
   render(<MeetingDetailsJourney meetingId="meeting-1"/>);

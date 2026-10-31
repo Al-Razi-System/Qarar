@@ -79,6 +79,46 @@ it("opens the dedicated meeting journey without loading the legacy detail panel"
   expect(rpc).not.toHaveBeenCalledWith("get_meeting_detail", expect.anything(), expect.anything());
 });
 
+it("opens agenda continuation as a focused workspace for the requested meeting", async () => {
+  const meeting = {
+    id: "meeting-draft",
+    meeting_no: "MTG-2026-000007",
+    title_ar: "اجتماع مجلس الكلية",
+    status: "draft",
+    scheduled_date: "2026-10-08",
+    updated_at: "2026-10-31T18:00:00Z",
+    unit_name_ar: "مجلس كلية العلوم الإدارية والإنسانية",
+    agenda_items: [],
+    capabilities: { can_manage: true, can_manage_agenda: true, can_add_direct_topic: true },
+    submitted_suggestions: { items: [], total: 1 },
+  };
+  rpc.mockImplementation((contract: string) => {
+    if (contract === "get_meeting_detail") return Promise.resolve(meeting);
+    if (contract === "get_meeting_readiness") return Promise.resolve({ ready: false, checks: [] });
+    if (contract === "search_eligible_agenda_topics") return Promise.resolve({ items: [], total: 1 });
+    if (contract === "list_meeting_topic_attachments" || contract === "list_meeting_series") return Promise.resolve([]);
+    if (contract === "search_meetings") return Promise.resolve({ items: [], total: 0 });
+    return Promise.reject(new Error(`unexpected contract: ${contract}`));
+  });
+
+  render(<MeetingsWorkspace initialMeetingId={meeting.id}/>);
+
+  expect(await screen.findByRole("heading", { name: meeting.title_ar })).toBeVisible();
+  expect(screen.getByRole("button", { name: "عرض 1 موضوعات مقترحة" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "موضوع مباشر" })).toBeVisible();
+  expect(screen.queryByRole("table", { name: "أيام الفترة" })).not.toBeInTheDocument();
+  expect(rpc).toHaveBeenCalledWith("get_meeting_detail", { p_meeting_id: meeting.id });
+  expect(rpc).not.toHaveBeenCalledWith("search_meetings", expect.anything(), expect.anything());
+  expect(rpc).not.toHaveBeenCalledWith("list_meetings_calendar_v2", expect.anything(), expect.anything());
+
+  fireEvent.click(screen.getByRole("button", { name: "عرض 1 موضوعات مقترحة" }));
+  const proposals = await screen.findByRole("dialog", { name: "الموضوعات المقترحة" });
+  expect(proposals).toBeVisible();
+  fireEvent.click(within(proposals).getAllByRole("button", { name: "إغلاق" }).at(-1)!);
+  fireEvent.click(screen.getByRole("button", { name: "موضوع مباشر" }));
+  expect(await screen.findByRole("dialog", { name: "إضافة موضوع مباشر" })).toBeVisible();
+});
+
 it("keeps the same search, council and status filters in the calendar", async () => {
   const today = new Date(); const key = (day: number) => `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   const calendar = [

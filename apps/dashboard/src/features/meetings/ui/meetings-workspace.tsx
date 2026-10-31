@@ -26,6 +26,7 @@ import { CompletedMeetingSummary } from "./completed-meeting-summary";
 import { MeetingMinutesWorkspace } from "./meeting-minutes-workspace";
 import { InvitationTimingDialog } from "./invitation-timing-dialog";
 import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dialog";
+import { MeetingPreparationConfirmationDialog } from "./meeting-preparation-confirmation-dialog";
 import { DirectAgendaTopicDialog } from "./direct-agenda-topic-dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { Dialog } from "@/shared/ui/dialog";
@@ -88,12 +89,13 @@ function agendaLockMessage(status: string) {
   return "بدأ الاجتماع، لذلك أصبح جدول الأعمال مقفلًا ولا يمكن إضافة أو إزالة موضوعات.";
 }
 
-export function MeetingsWorkspace() {
+export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: string }) {
   const router = useRouter();
+  const focused = Boolean(initialMeetingId);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [series, setSeries] = useState<MeetingSeries[]>([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialMeetingId);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -105,6 +107,7 @@ export function MeetingsWorkspace() {
   const [editModal, setEditModal] = useState(false);
   const [invitationModal, setInvitationModal] = useState(false);
   const [startTiming, setStartTiming] = useState<MeetingStartTiming | null>(null);
+  const [preparationConfirmationOpen, setPreparationConfirmationOpen] = useState(false);
   const [startSessionPending, setStartSessionPending] = useState(false);
   const [startSessionError, setStartSessionError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -142,7 +145,7 @@ export function MeetingsWorkspace() {
   const [topicAttachments, setTopicAttachments] = useState<MeetingTopicAttachment[]>([]);
   const listRequestRef = useRef<AbortController | null>(null);
   const lastListSuccessAtRef = useRef(0);
-  const initialManagedMeetingRef = useRef(false);
+  const initialManagedMeetingRef = useRef<string | null>(null);
   const today = localDateKey();
   const councilOptions = Array.from(new Map([...meetings, ...calendarItems].filter((item) => item.governance_unit_id).map((item) => [item.governance_unit_id!, item.unit_name_ar ?? item.governance_unit_name_ar ?? "مجلس"])));
   const search = query.trim();
@@ -185,7 +188,7 @@ export function MeetingsWorkspace() {
       lastListSuccessAtRef.current = Date.now();
       setLoading(false);
       const nextMeetings = result.items ?? [];
-      if (!nextMeetings.length || (selected && !nextMeetings.some((meeting) => meeting.id === selected.id))) {
+      if (!focused && (!nextMeetings.length || (selected && !nextMeetings.some((meeting) => meeting.id === selected.id)))) {
         setSelected(null);
       }
       const nextSeries = await seriesRequest;
@@ -398,12 +401,12 @@ export function MeetingsWorkspace() {
   }
 
   async function transitionMeeting(toStatus: string) {
-    if (!selected) return;
+    if (!selected) return false;
     setDetailLoading(true); setNotice(null);
     try {
       const needsReason = toStatus === "cancelled";
       const reason = needsReason ? window.prompt("أدخل سبب الإلغاء (5 أحرف على الأقل):") : null;
-      if (needsReason && (!reason || reason.trim().length < 5)) { setDetailLoading(false); return; }
+      if (needsReason && (!reason || reason.trim().length < 5)) { setDetailLoading(false); return false; }
       await rpc("transition_meeting", {
         p_meeting_id: selected.id,
         p_to_status: toStatus,
@@ -412,9 +415,11 @@ export function MeetingsWorkspace() {
       });
       setNotice({ kind: "success", text: `تم تحويل الاجتماع إلى "${statusLabels[toStatus] ?? toStatus}" بنجاح.` });
       await openDetail(selected.id);
-      await loadMeetings();
+      if (!focused) await loadMeetings();
+      return true;
     } catch (err) {
       setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر التنفيذ." });
+      return false;
     } finally {
       setDetailLoading(false);
     }
@@ -602,29 +607,36 @@ export function MeetingsWorkspace() {
 
   const loadMeetingsOnFilterChange = useEffectEvent(loadMeetings);
   useEffect(() => {
+    if (focused) return;
     const timer = window.setTimeout(() => void loadMeetingsOnFilterChange(), 250);
     return () => {
       window.clearTimeout(timer);
       listRequestRef.current?.abort();
     };
-  }, [deferredQuery, fromDate, toDate]);
+  }, [deferredQuery, fromDate, toDate, focused]);
 
-  useEffect(() => { const timer = window.setTimeout(() => { if (typeof window.matchMedia === "function" && window.matchMedia("(min-width: 768px)").matches) setViewMode("month"); }, 0); return () => window.clearTimeout(timer); }, []);
-  useEffect(() => { const timer = window.setTimeout(() => void loadCalendar(), 0); return () => window.clearTimeout(timer); }, [viewMode, calendarCursor, unitFilter]);
+  useEffect(() => { const timer = window.setTimeout(() => { if (!focused && typeof window.matchMedia === "function" && window.matchMedia("(min-width: 768px)").matches) setViewMode("month"); }, 0); return () => window.clearTimeout(timer); }, [focused]);
+  useEffect(() => {
+    if (focused) return;
+    const timer = window.setTimeout(() => void loadCalendar(), 0);
+    return () => window.clearTimeout(timer);
+  }, [viewMode, calendarCursor, unitFilter, focused]);
   const openInitialMeeting = useEffectEvent(openDetail);
   useEffect(() => {
-    if (initialManagedMeetingRef.current) return;
-    const meetingId = new URLSearchParams(window.location.search).get("manage");
-    if (!meetingId) return;
-    initialManagedMeetingRef.current = true;
+    if (!initialMeetingId || initialManagedMeetingRef.current === initialMeetingId) return;
     const timer = window.setTimeout(() => {
+      initialManagedMeetingRef.current = initialMeetingId;
       setViewMode("list");
-      void openInitialMeeting(meetingId);
+      void openInitialMeeting(initialMeetingId);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [initialMeetingId]);
 
   const refreshWorkspaceOnReturn = useEffectEvent(() => {
+    if (focused) {
+      if (selected?.id) void openDetail(selected.id);
+      return;
+    }
     if (listRequestRef.current || Date.now() - lastListSuccessAtRef.current < 30_000) return;
     void loadMeetings({ background: true });
     if (selected?.id) void openDetail(selected.id);
@@ -642,6 +654,7 @@ export function MeetingsWorkspace() {
 
   return (
     <div className="space-y-5">
+      {focused && <div className="flex flex-wrap items-center justify-between gap-3 rounded-q-card border border-q-border bg-q-surface p-4"><div><p className="text-q-caption font-bold text-q-live">إعداد الاجتماع</p><h2 className="mt-1 text-q-h2 font-bold text-q-text">إدارة جدول الأعمال</h2><p className="mt-1 text-q-ui text-q-text-2">أضف الموضوعات المقترحة أو أنشئ موضوعاً مباشراً لهذا الاجتماع.</p></div><Link href="/admin/meetings" className="inline-flex min-h-11 items-center rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link"><ChevronLeft size={18}/>كل الاجتماعات</Link></div>}
       {loadError && (
         <div className="space-y-2">
           <InlineMessage tone="error">{loadError}</InlineMessage>
@@ -656,7 +669,7 @@ export function MeetingsWorkspace() {
         </div>
       )}
 
-      <section aria-label="عرض الاجتماعات وتصفيتها" className="space-y-4 rounded-q-card border border-q-border bg-q-surface p-4">
+      {!focused && <section aria-label="عرض الاجتماعات وتصفيتها" className="space-y-4 rounded-q-card border border-q-border bg-q-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SegmentedControl label="طريقة عرض الاجتماعات" className="w-full sm:w-auto" value={viewMode} onChange={setViewMode} options={[{ value: "list", label: "القائمة" }, { value: "week", label: "أسبوع" }, { value: "month", label: "شهر" }]}/>
           <div className="flex items-center gap-3">
@@ -694,25 +707,25 @@ export function MeetingsWorkspace() {
           </div>
           {filtersActive && <Button variant="ghost" onClick={() => { setQuery(""); setFromDate(""); setToDate(""); setUnitFilter(""); setActiveGroup("all"); }}>مسح الفلاتر</Button>}
         </div>
-      </section>
+      </section>}
 
       {viewMode === "list" ? <>
-      <nav className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8" aria-label="تصنيف الاجتماعات">
+      {!focused && <nav className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8" aria-label="تصنيف الاجتماعات">
         {[{ key: "all", label: "كل الاجتماعات", description: "جميع الحالات", statuses: [] as readonly string[] }, ...meetingGroups].map((group) => {
           const count = group.key === "all" ? visibleMeetings.length : visibleMeetings.filter((meeting) => meetingOperationalGroup(meeting, today) === group.key).length;
           const presentation = groupPresentation[group.key as keyof typeof groupPresentation]; const Icon = presentation.icon;
           return <button key={group.key} type="button" onClick={() => { setActiveGroup(group.key); setSelected(null); }} className={`min-h-24 rounded-2xl border p-3 text-right transition hover:-translate-y-0.5 hover:shadow-md ${activeGroup === group.key ? presentation.active : presentation.tone}`}><div className="flex items-start justify-between"><span className={`grid h-9 w-9 place-items-center rounded-xl ${activeGroup === group.key ? "bg-white/15" : "bg-white/80"}`}><Icon size={17} /></span><strong className="text-xl font-black">{count}</strong></div><h3 className="mt-2 text-[11px] font-black">{group.label}</h3><p className={`mt-0.5 text-[8px] ${activeGroup === group.key ? "text-white/75" : "opacity-70"}`}>{group.description}</p></button>;
         })}
-      </nav>
+      </nav>}
 
-      {series.length > 0 && (activeGroup === "all" || activeGroup === "upcoming") && <section className="rounded-2xl border border-[#cfe1f1] bg-gradient-to-l from-[#f3f9ff] to-white p-4">
+      {!focused && series.length > 0 && (activeGroup === "all" || activeGroup === "upcoming") && <section className="rounded-2xl border border-[#cfe1f1] bg-gradient-to-l from-[#f3f9ff] to-white p-4">
         <div className="mb-3 flex items-center justify-between"><div><p className="text-[9px] font-black text-[#f17822]">الاجتماعات الدورية</p><h2 className="mt-1 text-sm font-black text-[#173652]">السلاسل ومواعيد الانعقاد</h2></div><span className="rounded-full bg-white px-3 py-1 text-[9px] font-black text-[#0877d6]">{series.length} سلسلة</span></div>
         <div className="grid gap-3 lg:grid-cols-2">{series.map((item) => <details key={item.id} className="group rounded-2xl border border-[#dbe8f3] bg-white p-4"><summary className="cursor-pointer list-none"><div className="flex items-start justify-between gap-3"><div><h3 className="text-xs font-black text-[#173652]">{item.title_ar}</h3><p className="mt-1 text-[9px] text-[#718399]">{frequencyLabels[item.frequency] ?? item.frequency}{item.frequency === "custom" ? ` · كل ${item.interval_count} يوم` : ""} · {item.occurrence_count} اجتماعات</p></div><span className="rounded-full bg-[#edf6ff] px-2 py-1 text-[9px] font-black text-[#0877d6]">عرض المواعيد</span></div></summary><div className="mt-3 space-y-2 border-t border-[#edf2f6] pt-3">{item.occurrences.map((occurrence) => <button key={occurrence.meeting_id} type="button" onClick={() => router.push(`/admin/meetings/${occurrence.meeting_id}`)} className="flex w-full items-center justify-between rounded-xl bg-[#f8fbfe] px-3 py-2 text-right hover:bg-[#edf6ff]"><span className="text-[10px] font-bold text-[#29455f]">الاجتماع {occurrence.occurrence_number} · {occurrence.scheduled_date}</span><span className={`rounded-full px-2 py-0.5 text-[8px] font-black ${statusTone[occurrence.status] ?? "bg-slate-100"}`}>{statusLabels[occurrence.status] ?? occurrence.status}</span></button>)}</div></details>)}</div>
       </section>}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(420px,.78fr)_minmax(0,1.22fr)]">
+      <div className={`grid items-start gap-5 ${focused ? "grid-cols-1" : "xl:grid-cols-[minmax(420px,.78fr)_minmax(0,1.22fr)]"}`}>
         {/* Meetings List */}
-        <div className="rounded-2xl border border-[#e2e9f1] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
+        {!focused && <div className="rounded-2xl border border-[#e2e9f1] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
           {refreshing && !loading && <p role="status" className="m-3 rounded-q-control bg-q-surface-2 px-3 py-2 text-q-caption text-q-text-2">جارٍ تحديث الاجتماعات في الخلفية…</p>}
           {loading ? (
             <div className="grid min-h-[350px] place-items-center"><LoaderCircle className="animate-spin text-[#0066cc]" size={28} /></div>
@@ -751,10 +764,10 @@ export function MeetingsWorkspace() {
               </section>)}
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Detail Panel */}
-        {selected ? <div className="scroll-mt-5 overflow-hidden rounded-2xl border border-[#cfe0ef] bg-white shadow-[0_14px_40px_rgba(24,48,80,.09)] xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+        {selected ? <div className={`scroll-mt-5 overflow-hidden rounded-2xl border border-[#cfe0ef] bg-white shadow-[0_14px_40px_rgba(24,48,80,.09)] ${focused ? "" : "xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto"}`}>
           {detailLoading ? (
             <div className="grid min-h-[400px] place-items-center"><LoaderCircle className="animate-spin text-[#0066cc]" size={28} /></div>
           ) : (
@@ -799,7 +812,7 @@ export function MeetingsWorkspace() {
                 {["draft", "scheduled"].includes(selected.status) && selected.capabilities?.can_manage && <Button variant="secondary" onClick={() => void openEditModal()}><Clock size={18} /> تحديد وقت الاجتماع</Button>}
                 {(["waiting_for_minutes", "waiting_for_approval", "closed", "archived"].includes(selected.status)) && <Link href={`/admin/meetings/${selected.id}/minutes`} className="flex items-center gap-1.5 rounded-xl bg-[#0877d6] px-4 py-2.5 text-[11px] font-black text-white shadow-[0_7px_18px_rgba(8,119,214,.2)]"><FileText size={14} />{["closed", "archived"].includes(selected.status) ? "عرض المحضر النهائي والتواقيع" : "فتح مساحة المحضر والمصادقات"}</Link>}
                 {(selected.capabilities?.can_schedule || (selected.status === "draft" && selected.capabilities?.can_manage && selected.schedule_date_confirmed === false)) && <div><Button pending={detailLoading} disabled={selected.schedule_date_confirmed === false} onClick={() => transitionMeeting("scheduled")}><Play size={14}/>جدولة</Button>{selected.schedule_date_confirmed === false && <p className="mt-2 text-q-caption text-q-text-2">حدد يوم الاجتماع ووقتي البداية والنهاية من تعديل الاجتماع أولاً.</p>}</div>}
-                {selected.status === "scheduled" && <>{selected.capabilities?.can_send_invitations && <button onClick={() => setInvitationModal(true)} disabled={detailLoading || !readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : selected.invitation_summary?.prepared ? "عرض الدعوة المجهزة" : "تجهيز دعوات أعضاء المجلس"} className="flex items-center gap-1.5 rounded-xl border border-[#bfd5e8] px-3 py-2 text-[11px] font-bold text-[#0066cc] disabled:opacity-40"><Users size={14} /> {selected.invitation_summary?.prepared ? "عرض الدعوة" : "تجهيز الدعوات"}</button>}{selected.capabilities?.can_prepare_session && <button onClick={() => transitionMeeting("ready_to_start")} disabled={!readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : "قفل التحضير وتجهيز الجلسة"} className="flex items-center gap-1.5 rounded-xl bg-[#f28c28] px-3 py-2 text-[11px] font-bold text-white disabled:bg-[#a9b6c5]"><Users size={14} /> تجهيز الجلسة</button>}</>}
+                {selected.status === "scheduled" && <>{selected.capabilities?.can_send_invitations && <button onClick={() => setInvitationModal(true)} disabled={detailLoading || !readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : selected.invitation_summary?.prepared ? "عرض الدعوة المجهزة" : "تجهيز دعوات أعضاء المجلس"} className="flex items-center gap-1.5 rounded-xl border border-[#bfd5e8] px-3 py-2 text-[11px] font-bold text-[#0066cc] disabled:opacity-40"><Users size={14} /> {selected.invitation_summary?.prepared ? "عرض الدعوة" : "تجهيز الدعوات"}</button>}{selected.capabilities?.can_prepare_session && <Button variant="secondary" disabled={detailLoading || !readiness?.ready} onClick={() => setPreparationConfirmationOpen(true)}>اعتماد جدول الأعمال وتجهيز الاجتماع للبدء</Button>}</>}
                 {selected.capabilities?.can_start_session && <Button variant="success" pending={startSessionPending} pendingLabel="جارٍ التحقق من الموعد…" onClick={() => void openLiveSession()}><Play size={14} /> فتح الجلسة الحية</Button>}
                 {selected.status === "in_progress" && <Link href={`/admin/meetings/${selected.id}/live`} className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white"><Play size={14} /> متابعة الجلسة الحية</Link>}
                 {selected.status === "waiting_for_minutes" && <span className="rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-bold text-amber-800">أكمل المحضر وأرسله للمصادقة من القسم أعلاه.</span>}
@@ -808,7 +821,7 @@ export function MeetingsWorkspace() {
               </div>
             </div>
           )}
-        </div> : <div className="hidden min-h-[360px] place-items-center rounded-2xl border border-dashed border-[#cdddea] bg-gradient-to-b from-white to-[#f7fbff] p-8 text-center xl:grid xl:sticky xl:top-4"><div><span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#eaf4ff] text-[#0877d6]"><CalendarDays size={28}/></span><h2 className="mt-4 text-sm font-black text-[#173652]">اختر اجتماعاً لعرض تفاصيله</h2><p className="mx-auto mt-2 max-w-xs text-[10px] leading-6 text-[#718399]">اضغط على أي بطاقة من القائمة، وستظهر هنا بيانات الموعد وجدول الأعمال والجاهزية والإجراءات المتاحة دون الانتقال إلى أسفل الصفحة.</p></div></div>}
+        </div> : <div className={`${focused ? "grid" : "hidden xl:grid xl:sticky xl:top-4"} min-h-[360px] place-items-center rounded-2xl border border-dashed border-q-border bg-q-surface p-8 text-center`}><div>{focused && detailLoading ? <LoaderCircle className="mx-auto animate-spin text-q-link" size={28}/> : <CalendarDays className="mx-auto text-q-text-3" size={28}/>}<h2 className="mt-4 text-q-h3 font-bold text-q-text">{focused ? "جارٍ فتح جدول أعمال الاجتماع…" : "اختر اجتماعاً لعرض تفاصيله"}</h2><p className="mx-auto mt-2 max-w-xs text-q-caption leading-6 text-q-text-2">{focused ? "تُحمّل صلاحيات الاجتماع وموضوعاته المقترحة الآن." : "اضغط على أي بطاقة من القائمة، وستظهر هنا بيانات الموعد وجدول الأعمال والجاهزية والإجراءات المتاحة دون الانتقال إلى أسفل الصفحة."}</p></div></div>}
       </div>
       </> : <MeetingsCalendar items={visibleCalendarItems} cursor={calendarCursor} mode={viewMode} loading={calendarLoading} onCursorChange={setCalendarCursor} onOpen={(meetingId) => router.push(`/admin/meetings/${meetingId}`)} onShowDay={(day) => { setCalendarCursor(day); setViewMode("week"); }} />}
 
@@ -837,6 +850,12 @@ export function MeetingsWorkspace() {
         error={startSessionError}
         onClose={() => { if (!startSessionPending) { setStartTiming(null); setStartSessionError(null); } }}
         onConfirm={() => void performOpenLiveSession(true)}
+      />}
+      {preparationConfirmationOpen && <MeetingPreparationConfirmationDialog
+        pending={detailLoading}
+        error={notice?.kind === "error" ? notice.text : null}
+        onClose={() => { if (!detailLoading) { setPreparationConfirmationOpen(false); setNotice(null); } }}
+        onConfirm={() => void (async () => { if (await transitionMeeting("ready_to_start")) setPreparationConfirmationOpen(false); })()}
       />}
       {candidateTarget && selected && (
         <AgendaCandidateDetailsDialog
