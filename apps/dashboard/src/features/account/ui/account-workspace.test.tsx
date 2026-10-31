@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { AccountWorkspace } from "./account-workspace";
+vi.mock("@/shared/ui/self-avatar", () => ({ SelfAvatar: () => <span>الصورة</span> }));
 const fetchMock = vi.fn();
 const account = { id: "self", email: "self@example.test", full_name_ar: "المستخدم", mobile: "", job_title: "" };
 beforeEach(() => { fetchMock.mockReset(); vi.stubGlobal("fetch", fetchMock); });

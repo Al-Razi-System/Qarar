@@ -94,3 +94,17 @@ An assigned approver calls `sign_meeting_minutes_approval` with the approval id,
 and the approval row's expected update timestamp. The response reports the approval decision,
 remaining approvals, whether the meeting closed, and the topic-release result. Signature data is
 validated and bound to the final-content hash inside PostgreSQL.
+
+## Decisions in the minutes
+
+`get_meeting_minutes` returns `decisions[]` (`{id, decision_no, agenda_item_id, decision_text}`):
+the current text of every decision of the meeting.
+
+`submit_meeting_minutes` rejects the final content with `23514` unless it contains the current text
+of every decision exactly; the message names the decisions whose text is missing. A decision edited
+after the draft was generated (`update_meeting_decision_text`) therefore requires regenerating or
+correcting the draft before submission. Clients compare `decisions[]` with the text being edited and
+keep submission disabled, with the reason beside it, until every decision text is present.
+
+Submitting the minutes and editing a decision take the same per-meeting transaction lock, so a
+decision text cannot change between this check and the minutes leaving for approval.

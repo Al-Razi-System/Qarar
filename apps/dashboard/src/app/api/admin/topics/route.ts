@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { qararRpc, requireQararSession } from "@/shared/api/qarar-server";
+import { qararRpc, qararRpcV2, requireQararSession } from "@/shared/api/qarar-server";
 import { safeAdminError } from "@/shared/security/admin-error";
 import { isJsonObject, readJsonObject } from "@/shared/security/json-body";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
@@ -16,8 +16,12 @@ const contracts = new Set([
   "create_topic_custom_route_draft", "create_topic_governance_exception_request",
   "get_topic_prior_route_candidate_steps", "get_topic_prior_route_request", "get_topic_prior_route_summaries", "create_topic_prior_route_request",
   "add_prior_route_evidence_attachment", "submit_topic_prior_route_request",
+  "get_topic_resubmission_option", "resubmit_returned_topic",
+  "list_topic_corrections_v2", "get_topic_correction_v2", "open_topic_correction_v2",
+  "decide_topic_correction_station_v2", "withdraw_topic_correction_v2", "sign_corrected_minutes_v2",
+  "revise_topic_correction_v2",
   "list_topic_attachments", "add_topic_attachment", "remove_topic_attachment",
-  "get_topic_requirements_status", "fulfill_topic_requirement", "get_topic_meeting_history",
+  "get_topic_requirements_status", "fulfill_topic_requirement", "get_topic_meeting_history", "get_topic_activity_timeline",
 ]);
 
 export async function POST(request: Request) {
@@ -36,7 +40,9 @@ export async function POST(request: Request) {
     if (params !== undefined && !isJsonObject(params)) {
       return NextResponse.json({ error: { message: "معاملات العملية غير صالحة." } }, { status: 400 });
     }
-    const data = await qararRpc<unknown>(contract, params ?? {});
+    const data = contract.endsWith("_v2")
+      ? await qararRpcV2<unknown>(contract, params ?? {})
+      : await qararRpc<unknown>(contract, params ?? {});
     return NextResponse.json({ data });
   } catch (error) {
     const safeError = safeAdminError(error, "تعذر تنفيذ العملية.", 500);

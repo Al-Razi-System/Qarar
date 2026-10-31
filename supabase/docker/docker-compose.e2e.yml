@@ -1,0 +1,70 @@
+# Used only with the generated .env.e2e and scripts/e2e-supabase.mjs.
+# Never layer this file onto DEV or production.
+name: qarar-e2e
+services:
+  analytics:
+    container_name: qarar-e2e-analytics
+  auth:
+    container_name: qarar-e2e-auth
+  db:
+    container_name: qarar-e2e-db
+    ports: !override
+      - 127.0.0.1:64327:5432
+    volumes:
+      - ./volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:ro
+      - ./volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:ro
+      - ./volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
+      - ./volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:ro
+      - ./volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:ro
+      - ./volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:ro
+      - ./volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:ro
+  db-migrate:
+    container_name: qarar-e2e-migrations
+  functions:
+    container_name: qarar-e2e-functions
+  imgproxy:
+    container_name: qarar-e2e-imgproxy
+  kong:
+    container_name: qarar-e2e-kong
+    ports: !override
+      - 127.0.0.1:64321:8000
+      - 127.0.0.1:64326:8443
+  login-rate-limit-redis:
+    container_name: qarar-e2e-redis
+  mail:
+    container_name: qarar-e2e-mail
+    ports: !override
+      - 127.0.0.1:64025:8025
+      - 127.0.0.1:64026:1025
+  meta:
+    container_name: qarar-e2e-meta
+  realtime:
+    container_name: qarar-e2e-realtime
+  rest:
+    container_name: qarar-e2e-rest
+  storage:
+    container_name: qarar-e2e-storage
+  studio:
+    container_name: qarar-e2e-studio
+    ports: !override
+      - 127.0.0.1:64323:3000
+    volumes:
+      - type: volume
+        source: e2e-snippets
+        target: /app/snippets
+  supavisor:
+    container_name: qarar-e2e-pooler
+    ports: !override
+      - 127.0.0.1:64322:5432
+      - 127.0.0.1:64329:6543
+  vector:
+    container_name: qarar-e2e-vector
+    # Browser tests do not need host-wide log collection or its Docker socket.
+    profiles: [e2e-observability-disabled]
+    volumes: !override []
+volumes:
+  qarar-db-data:
+    name: qarar-e2e-db-data
+  qarar-storage-data:
+    name: qarar-e2e-storage-data
+  e2e-snippets: {}

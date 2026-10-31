@@ -21,7 +21,7 @@ select ok(
  not has_function_privilege('authenticated','qarar_voting.cast_vote(uuid,text,text)','EXECUTE'),
  'authenticated clients cannot bypass api_v1 to cast votes');
 select ok(
- not has_function_privilege('anon','api_v1.open_meeting_session(uuid,timestamptz)','EXECUTE'),
+ not has_function_privilege('anon','api_v1.open_meeting_session(uuid,timestamptz,boolean)','EXECUTE'),
  'anonymous clients cannot open meeting sessions');
 select ok(
  not has_function_privilege('anon','api_v1.cast_vote(uuid,text,text)','EXECUTE'),

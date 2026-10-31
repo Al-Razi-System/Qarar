@@ -1,0 +1,43 @@
+# Use with the base compose and --profile postgres; no public reverse proxy.
+# Requires a private Docker network already shared with the invitation worker.
+services:
+  openwa-api:
+    image: openwa-api:whatsapp-20261013
+    ports: !reset []
+    environment:
+      NODE_ENV: production
+      DATABASE_TYPE: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: '5432'
+      DATABASE_NAME: openwa
+      DATABASE_SYNCHRONIZE: 'false'
+      API_MASTER_KEY: '${API_MASTER_KEY:?API_MASTER_KEY is required}'
+      DASHBOARD_ENABLED: 'false'
+      ENABLE_SWAGGER: 'false'
+      CORS_ORIGINS: 'https://dawaa.prideidea.com'
+      QUEUE_ENABLED: 'false'
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    shm_size: '256mb'
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1536M
+    networks:
+      - default
+      - invitations-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: true
+  postgres:
+    environment:
+      POSTGRES_DB: openwa
+      POSTGRES_PASSWORD: '${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}'
+networks:
+  invitations-backend:
+    external: true
+    name: '${OPENWA_BACKEND_NETWORK:?OPENWA_BACKEND_NETWORK is required}'

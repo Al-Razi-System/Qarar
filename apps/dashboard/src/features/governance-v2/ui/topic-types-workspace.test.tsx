@@ -74,7 +74,7 @@ describe("TopicTypesWorkspace", () => {
     expect(await screen.findByText(/حُفظت المسودة كاملة بنجاح/)).toBeInTheDocument();
     const body = JSON.parse(mock.mock.calls.find(call => call[1]?.method === "POST")![1].body);
     expect(body.bundle.topic_type).toEqual({ name_ar: "اعتماد برنامج أكاديمي" });
-    expect(body.bundle.workflow).toMatchObject({ workflow_template_version_id: "layout-1", stage_policies: [{ step_key: "s1", kind: "approval", approved: "complete", rejected: "complete" }, { step_key: "s2", approved: "complete" }] });
+    expect(body.bundle.workflow).toMatchObject({ workflow_template_version_id: "layout-1", stage_policies: [{ step_key: "s1", kind: "approval", approved: "complete", rejected: "chair_decides" }, { step_key: "s2", approved: "complete" }] });
     expect(screen.getByRole("status")).toHaveTextContent("TYP-2026-000001");
     expect(screen.getByRole("button", { name: "تم الحفظ" })).toBeDisabled();
   });
