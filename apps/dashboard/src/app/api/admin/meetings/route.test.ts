@@ -18,6 +18,13 @@ it("routes the authorized calendar read through V2", async () => {
   expect((await POST(request("list_meetings_calendar_v2", params))).status).toBe(200);
   expect(rpcV2).toHaveBeenCalledWith("list_meetings_calendar_v2", params);
 });
+it("routes the meeting start timing contract through its published V1 facade", async () => {
+  const params = { p_meeting_id: "meeting-1" };
+  rpc.mockResolvedValue({ timing_status: "early", requires_confirmation: true });
+  expect((await POST(request("get_meeting_session_start_timing_v2", params))).status).toBe(200);
+  expect(rpc).toHaveBeenCalledWith("get_meeting_session_start_timing_v2", params, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+  expect(rpcV2).not.toHaveBeenCalled();
+});
 function request(contract: string, params: unknown = {}, meetingId?: string) {
   const headers: Record<string, string> = { "Content-Type": "application/json", ...(meetingId ? { "x-qarar-meeting-id": meetingId } : {}) };
   return new Request("http://localhost/api/admin/meetings", { method: "POST", headers, body: JSON.stringify({ contract, params }) });

@@ -45,6 +45,10 @@ const cancellableReadContracts = new Set([
   "list_meeting_topic_attachments", "get_sprint02_form_options", "search_eligible_agenda_topics", "get_meeting_readiness",
   "get_topic_return_option", "list_pending_rejected_vote_resolutions",
 ]);
+// A version suffix belongs to the contract name, not necessarily its PostgREST
+// schema. This timing contract was deliberately published in the stable V1
+// facade; keep schema routing explicit instead of inferring it from `_v2`.
+const versionedContractsInV1 = new Set(["get_meeting_session_start_timing_v2"]);
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const AGENDA_CONTEXT_CONTRACTS = new Set([
@@ -144,7 +148,7 @@ export async function POST(request: Request) {
     if (params !== undefined && !isJsonObject(params)) {
       return NextResponse.json({ error: { message: "معاملات العملية غير صالحة." } }, { status: 400 });
     }
-    const call = contract.endsWith("_v2")
+    const call = contract.endsWith("_v2") && !versionedContractsInV1.has(contract)
       ? qararRpcV2<unknown>(contract, params ?? {})
       : qararRpc<unknown>(contract, params ?? {}, cancellableReadContracts.has(contract) ? { signal: request.signal } : {});
     // Validate an untrusted room hint alongside the mutation, not after it, so
