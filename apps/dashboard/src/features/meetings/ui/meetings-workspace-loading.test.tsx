@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 const rpc = vi.hoisted(() => vi.fn());
@@ -77,4 +77,33 @@ it("opens the dedicated meeting journey without loading the legacy detail panel"
   fireEvent.click(await screen.findByRole("button", { name: /اجتماع مبكر/ }));
   expect(push).toHaveBeenCalledWith(`/admin/meetings/${meeting.id}`);
   expect(rpc).not.toHaveBeenCalledWith("get_meeting_detail", expect.anything(), expect.anything());
+});
+
+it("keeps the same search, council and status filters in the calendar", async () => {
+  const today = new Date(); const key = (day: number) => `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const calendar = [
+    { id: "c1", title_ar: "اجتماع مجلس الجامعة", status: "draft", scheduled_date: key(10), governance_unit_id: "u1", unit_name_ar: "مجلس الجامعة" },
+    { id: "c2", title_ar: "اجتماع مجلس الكلية", status: "closed", scheduled_date: key(12), governance_unit_id: "u2", unit_name_ar: "مجلس الكلية" },
+  ];
+  rpc.mockImplementation((contract: string) => {
+    if (contract === "list_meeting_series") return Promise.resolve([]);
+    if (contract === "list_meetings_calendar_v2") return Promise.resolve(calendar);
+    return Promise.resolve({ items: [], total: 0 });
+  });
+  render(<MeetingsWorkspace />);
+  fireEvent.click(await screen.findByRole("radio", { name: "شهر" }));
+  const table = await screen.findByRole("table", { name: "أيام الفترة" });
+  expect(await within(table).findByRole("button", { name: /اجتماع مجلس الجامعة/ })).toBeVisible();
+
+  fireEvent.change(screen.getByLabelText("الحالة"), { target: { value: "completed" } });
+  expect(within(table).queryByRole("button", { name: /اجتماع مجلس الجامعة/ })).not.toBeInTheDocument();
+  expect(within(table).getByRole("button", { name: /اجتماع مجلس الكلية/ })).toBeVisible();
+
+  fireEvent.change(screen.getByLabelText("الحالة"), { target: { value: "all" } });
+  fireEvent.change(screen.getByLabelText("البحث"), { target: { value: "الجامعة" } });
+  expect(within(table).getByRole("button", { name: /اجتماع مجلس الجامعة/ })).toBeVisible();
+  expect(within(table).queryByRole("button", { name: /اجتماع مجلس الكلية/ })).not.toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("المجلس"), { target: { value: "u2" } });
+  await waitFor(() => expect(rpc).toHaveBeenCalledWith("list_meetings_calendar_v2", expect.objectContaining({ p_unit_ids: ["u2"] }), expect.anything()));
 });

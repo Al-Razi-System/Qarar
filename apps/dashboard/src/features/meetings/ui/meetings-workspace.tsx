@@ -4,7 +4,7 @@ import { useDeferredValue, useEffect, useEffectEvent, useRef, useState } from "r
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  AlertCircle, Calendar, CalendarDays, Check, CheckCircle2, ChevronLeft, CircleDot, Clock, FileText, Layers3, List, LoaderCircle, MapPin, Pencil, Play, Plus, Search, Users, X,
+  AlertCircle, Calendar, CalendarDays, Check, CheckCircle2, ChevronLeft, CircleDot, Clock, FileText, Layers3, LoaderCircle, MapPin, Pencil, Play, Plus, Search, Users, X, SlidersHorizontal,
 } from "lucide-react";
 import { meetingRpc as rpc } from "../api/meetings-client";
 import {
@@ -15,7 +15,7 @@ import {
 import { Button } from "@/shared/ui/button";
 import { AdministrativeInput } from "@/shared/ui/administrative-field";
 import { MeetingQuorumField } from "./meeting-quorum-field";
-import { meetingScheduleLabel } from "../model/meeting-schedule";
+import { meetingLocationLabel, meetingScheduleLabel } from "../model/meeting-schedule";
 import { localDateKey, meetingOperationalGroup } from "../model/meeting-operational-state";
 import { MeetingAgendaPanel } from "./meeting-agenda-panel";
 import { ScheduledAgendaSuggestions } from "./scheduled-agenda-suggestions";
@@ -29,6 +29,7 @@ import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dia
 import { DirectAgendaTopicDialog } from "./direct-agenda-topic-dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { Dialog } from "@/shared/ui/dialog";
+import { SegmentedControl } from "@/shared/ui/segmented-control";
 import { calendarRange, MeetingsCalendar, type CalendarMode } from "./meetings-calendar";
 
 type Notice = { kind: "success" | "error"; text: string };
@@ -69,6 +70,8 @@ const groupPresentation = {
   drafts: { icon: FileText, tone: "border-slate-200 bg-slate-50 text-slate-700", active: "border-slate-700 bg-slate-700 text-white" },
   cancelled: { icon: X, tone: "border-red-100 bg-red-50/70 text-red-800", active: "border-red-600 bg-red-600 text-white" },
 } as const;
+
+const filterField = "h-11 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-normal text-q-text outline-none focus:border-q-primary focus:ring-2 focus:ring-q-primary/20";
 
 function groupedMeetings(meetings: Meeting[], today: string) {
   return meetingGroups.map((group) => ({
@@ -131,6 +134,7 @@ export function MeetingsWorkspace() {
   const [calendarItems, setCalendarItems] = useState<Meeting[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [unitFilter, setUnitFilter] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [minutes, setMinutes] = useState<MeetingMinutes | null>(null);
   const [minutesLoading, setMinutesLoading] = useState(false);
   const [minutesText, setMinutesText] = useState("");
@@ -140,6 +144,15 @@ export function MeetingsWorkspace() {
   const lastListSuccessAtRef = useRef(0);
   const initialManagedMeetingRef = useRef(false);
   const today = localDateKey();
+  const councilOptions = Array.from(new Map([...meetings, ...calendarItems].filter((item) => item.governance_unit_id).map((item) => [item.governance_unit_id!, item.unit_name_ar ?? item.governance_unit_name_ar ?? "مجلس"])));
+  const search = query.trim();
+  const matchesSearch = (meeting: Meeting) => !search || [meeting.title_ar, meeting.meeting_no, meeting.unit_name_ar, meeting.governance_unit_name_ar].some((value) => value?.includes(search));
+  // The list is searched on the server; the council narrows it here. The calendar
+  // is read per council on the server, and searched and narrowed by status here.
+  const visibleMeetings = unitFilter ? meetings.filter((meeting) => meeting.governance_unit_id === unitFilter) : meetings;
+  const visibleCalendarItems = calendarItems.filter((meeting) => matchesSearch(meeting) && (activeGroup === "all" || meetingOperationalGroup(meeting, today) === activeGroup));
+  const refinements = [unitFilter, activeGroup !== "all", viewMode === "list" && fromDate, viewMode === "list" && toDate].filter(Boolean).length;
+  const filtersActive = Boolean(query || fromDate || toDate || unitFilter || activeGroup !== "all");
 
   const loadCalendar = useEffectEvent(async () => {
     if (viewMode === "list") return;
@@ -643,35 +656,50 @@ export function MeetingsWorkspace() {
         </div>
       )}
 
-      <div className="rounded-3xl border border-[#dce7f0] bg-white p-4 shadow-[0_10px_35px_rgba(24,48,80,.055)]">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex flex-1 flex-wrap items-end gap-3">
-          <label className="min-w-64 flex-1"><span className="mb-1.5 block text-[9px] font-black text-[#718399]">البحث</span><div className="relative">
-            <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8796a9]" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="العنوان أو رقم الاجتماع" aria-label="البحث في الاجتماعات" className="h-11 w-full rounded-xl border border-[#dfe7ef] bg-[#fafcfe] pr-9 pl-3 text-xs outline-none transition focus:border-[#0877d6] focus:bg-white focus:ring-4 focus:ring-blue-50" />
-          </div></label>
-          <label><span className="mb-1.5 block text-[9px] font-black text-[#718399]">من تاريخ</span><input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="h-11 rounded-xl border border-[#dfe7ef] bg-[#fafcfe] px-3 text-[10px] outline-none focus:border-[#0877d6]" /></label>
-          <label><span className="mb-1.5 block text-[9px] font-black text-[#718399]">إلى تاريخ</span><input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="h-11 rounded-xl border border-[#dfe7ef] bg-[#fafcfe] px-3 text-[10px] outline-none focus:border-[#0877d6]" /></label>
-          {(query || fromDate || toDate) && <button type="button" onClick={() => { setQuery(""); setFromDate(""); setToDate(""); }} className="h-11 rounded-xl border border-[#dbe5ee] px-4 text-[10px] font-black text-[#60758a] hover:bg-[#f7fafc]">مسح الفلاتر</button>}
+      <section aria-label="عرض الاجتماعات وتصفيتها" className="space-y-4 rounded-q-card border border-q-border bg-q-surface p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SegmentedControl label="طريقة عرض الاجتماعات" className="w-full sm:w-auto" value={viewMode} onChange={setViewMode} options={[{ value: "list", label: "القائمة" }, { value: "week", label: "أسبوع" }, { value: "month", label: "شهر" }]}/>
+          <div className="flex items-center gap-3">
+            <span className="text-q-caption text-q-text-2" role="status">{viewMode === "list" ? `${unitFilter ? visibleMeetings.length : total} اجتماع` : `${visibleCalendarItems.length} اجتماع في الفترة`}</span>
+            <Button onClick={() => void openCreateModal()}><Plus size={17} aria-hidden="true"/>إنشاء اجتماع</Button>
           </div>
-          <div className="flex items-center gap-3"><span className="rounded-xl bg-[#f2f7fb] px-3 py-2 text-[10px] font-bold text-[#667b90]">{total} اجتماع</span>
-          <button onClick={() => void openCreateModal()} className="flex h-11 items-center gap-2 rounded-xl bg-[#0877d6] px-5 text-xs font-black text-white shadow-[0_8px_20px_rgba(8,119,214,.22)] hover:bg-[#0668bd]"><Plus size={16} /> إنشاء اجتماع</button></div>
         </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-q-card border border-q-border bg-q-surface p-3">
-        <div className="flex items-center gap-1 rounded-q-control bg-q-surface-2 p-1" aria-label="طريقة عرض الاجتماعات">
-          <Button variant={viewMode === "month" ? "primary" : "ghost"} aria-pressed={viewMode === "month"} onClick={() => setViewMode("month")}><CalendarDays size={17}/>شهري</Button>
-          <Button variant={viewMode === "week" ? "primary" : "ghost"} aria-pressed={viewMode === "week"} onClick={() => setViewMode("week")}><Calendar size={17}/>أسبوعي</Button>
-          <Button variant={viewMode === "list" ? "primary" : "ghost"} aria-pressed={viewMode === "list"} onClick={() => setViewMode("list")}><List size={17}/>القائمة</Button>
+        {/* One set of filters for the list and the calendar alike. On a phone only
+            the search stays open; the rest fold behind one button. */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end">
+          <label className="flex min-w-0 flex-col gap-1.5 text-q-caption font-bold text-q-text-2 lg:min-w-64 lg:flex-1">البحث
+            <span className="relative">
+              <Search size={16} aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-q-text-3"/>
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="العنوان أو رقم الاجتماع أو المجلس" className={`${filterField} w-full ps-9`}/>
+            </span>
+          </label>
+          <Button variant="secondary" className="sm:hidden" aria-expanded={filtersOpen} aria-controls="meeting-filters" onClick={() => setFiltersOpen((open) => !open)}><SlidersHorizontal size={17} aria-hidden="true"/>{refinements ? `خيارات التصفية (${refinements})` : "خيارات التصفية"}</Button>
+          <div id="meeting-filters" className={`${filtersOpen ? "grid" : "hidden"} gap-3 sm:contents`}>
+          <label className="flex min-w-0 flex-col gap-1.5 text-q-caption font-bold text-q-text-2">المجلس
+            <select value={unitFilter} onChange={(event) => setUnitFilter(event.target.value)} className={`${filterField} lg:min-w-56`}>
+              <option value="">كل المجالس المتاحة</option>
+              {councilOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+            </select>
+          </label>
+          <label className="flex min-w-0 flex-col gap-1.5 text-q-caption font-bold text-q-text-2">الحالة
+            <select value={activeGroup} onChange={(event) => { setActiveGroup(event.target.value); setSelected(null); }} className={`${filterField} lg:min-w-48`}>
+              <option value="all">كل الحالات</option>
+              {meetingGroups.map((group) => <option key={group.key} value={group.key}>{group.label}</option>)}
+            </select>
+          </label>
+          {viewMode === "list" && <>
+            <label className="flex min-w-0 flex-col gap-1.5 text-q-caption font-bold text-q-text-2">من تاريخ<input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className={filterField}/></label>
+            <label className="flex min-w-0 flex-col gap-1.5 text-q-caption font-bold text-q-text-2">إلى تاريخ<input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className={filterField}/></label>
+          </>}
+          </div>
+          {filtersActive && <Button variant="ghost" onClick={() => { setQuery(""); setFromDate(""); setToDate(""); setUnitFilter(""); setActiveGroup("all"); }}>مسح الفلاتر</Button>}
         </div>
-        {viewMode !== "list" && <label className="flex min-h-11 items-center gap-2 text-q-caption font-bold text-q-text-2">المجلس<select value={unitFilter} onChange={(event) => setUnitFilter(event.target.value)} className="h-11 min-w-56 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui text-q-text"><option value="">كل المجالس المتاحة</option>{Array.from(new Map([...meetings, ...calendarItems].filter((item) => item.governance_unit_id).map((item) => [item.governance_unit_id!, item.unit_name_ar ?? item.governance_unit_name_ar ?? "مجلس"]))).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>}
-      </div>
+      </section>
 
       {viewMode === "list" ? <>
       <nav className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8" aria-label="تصنيف الاجتماعات">
         {[{ key: "all", label: "كل الاجتماعات", description: "جميع الحالات", statuses: [] as readonly string[] }, ...meetingGroups].map((group) => {
-          const count = group.key === "all" ? meetings.length : meetings.filter((meeting) => meetingOperationalGroup(meeting, today) === group.key).length;
+          const count = group.key === "all" ? visibleMeetings.length : visibleMeetings.filter((meeting) => meetingOperationalGroup(meeting, today) === group.key).length;
           const presentation = groupPresentation[group.key as keyof typeof groupPresentation]; const Icon = presentation.icon;
           return <button key={group.key} type="button" onClick={() => { setActiveGroup(group.key); setSelected(null); }} className={`min-h-24 rounded-2xl border p-3 text-right transition hover:-translate-y-0.5 hover:shadow-md ${activeGroup === group.key ? presentation.active : presentation.tone}`}><div className="flex items-start justify-between"><span className={`grid h-9 w-9 place-items-center rounded-xl ${activeGroup === group.key ? "bg-white/15" : "bg-white/80"}`}><Icon size={17} /></span><strong className="text-xl font-black">{count}</strong></div><h3 className="mt-2 text-[11px] font-black">{group.label}</h3><p className={`mt-0.5 text-[8px] ${activeGroup === group.key ? "text-white/75" : "opacity-70"}`}>{group.description}</p></button>;
         })}
@@ -688,7 +716,7 @@ export function MeetingsWorkspace() {
           {refreshing && !loading && <p role="status" className="m-3 rounded-q-control bg-q-surface-2 px-3 py-2 text-q-caption text-q-text-2">جارٍ تحديث الاجتماعات في الخلفية…</p>}
           {loading ? (
             <div className="grid min-h-[350px] place-items-center"><LoaderCircle className="animate-spin text-[#0066cc]" size={28} /></div>
-          ) : meetings.length === 0 ? (
+          ) : visibleMeetings.length === 0 ? (
             <div className="grid min-h-[350px] place-items-center text-center p-8">
               <div>
                 <Calendar className="mx-auto text-[#86a8c9]" size={34} />
@@ -697,7 +725,7 @@ export function MeetingsWorkspace() {
             </div>
           ) : (
             <div className="space-y-4 p-4">
-              {groupedMeetings(meetings, today).filter((group) => activeGroup === "all" || group.key === activeGroup).map((group) => <section key={group.key} aria-labelledby={`meeting-group-${group.key}`} className="overflow-hidden rounded-2xl border border-[#e4ebf2]">
+              {groupedMeetings(visibleMeetings, today).filter((group) => activeGroup === "all" || group.key === activeGroup).map((group) => <section key={group.key} aria-labelledby={`meeting-group-${group.key}`} className="overflow-hidden rounded-2xl border border-[#e4ebf2]">
                 <header className="flex items-center justify-between border-y border-[#e9f0f6] bg-[#f8fbfe] px-5 py-2.5 first:border-t-0">
                   <h3 id={`meeting-group-${group.key}`} className="text-[10px] font-black text-[#40566f]">{group.label}</h3>
                   <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black text-[#6f8297] ring-1 ring-[#dfe8f0]">{group.meetings.length}</span>
@@ -739,7 +767,7 @@ export function MeetingsWorkspace() {
                 <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
                   <div className="flex items-center gap-1.5 text-[#52647a]"><Calendar size={13} /> {meetingScheduleLabel(selected)}</div>
                   <div className="flex items-center gap-1.5 text-[#52647a]"><Clock size={13} /> {selected.start_time ?? "—"} - {selected.end_time ?? "—"}</div>
-                  <div className="flex items-center gap-1.5 text-[#52647a]"><MapPin size={13} /> {selected.location_details ?? selected.location_type ?? "—"}</div>
+                  <div className="flex items-center gap-1.5 text-[#52647a]"><MapPin size={13} /> {meetingLocationLabel(selected, "—")}</div>
                   <div className="flex items-center gap-1.5 text-[#52647a]"><Users size={13} /> {selected.unit_name_ar ?? "—"}</div>
                 </div>
               </div>
@@ -782,7 +810,7 @@ export function MeetingsWorkspace() {
           )}
         </div> : <div className="hidden min-h-[360px] place-items-center rounded-2xl border border-dashed border-[#cdddea] bg-gradient-to-b from-white to-[#f7fbff] p-8 text-center xl:grid xl:sticky xl:top-4"><div><span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#eaf4ff] text-[#0877d6]"><CalendarDays size={28}/></span><h2 className="mt-4 text-sm font-black text-[#173652]">اختر اجتماعاً لعرض تفاصيله</h2><p className="mx-auto mt-2 max-w-xs text-[10px] leading-6 text-[#718399]">اضغط على أي بطاقة من القائمة، وستظهر هنا بيانات الموعد وجدول الأعمال والجاهزية والإجراءات المتاحة دون الانتقال إلى أسفل الصفحة.</p></div></div>}
       </div>
-      </> : <MeetingsCalendar items={calendarItems} cursor={calendarCursor} mode={viewMode} loading={calendarLoading} onCursorChange={setCalendarCursor} onOpen={(meetingId) => router.push(`/admin/meetings/${meetingId}`)} />}
+      </> : <MeetingsCalendar items={visibleCalendarItems} cursor={calendarCursor} mode={viewMode} loading={calendarLoading} onCursorChange={setCalendarCursor} onOpen={(meetingId) => router.push(`/admin/meetings/${meetingId}`)} onShowDay={(day) => { setCalendarCursor(day); setViewMode("week"); }} />}
 
       {agendaModal && selected && <Dialog title="الموضوعات المقترحة" description={`${eligibleAgendaCount ?? agendaCandidates.length} موضوعات وصلت إلى ${selected.unit_name_ar ?? selected.governance_unit_name_ar ?? "هذا المجلس"} وأصبحت مؤهلة للإدراج`} size="lg" scrollContent onClose={()=>setAgendaModal(false)} closeDisabled={agendaLoading} footer={<Button variant="secondary" disabled={agendaLoading} onClick={()=>setAgendaModal(false)}>إغلاق</Button>}>
         <div className="flex flex-col gap-4">

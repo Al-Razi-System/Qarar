@@ -100,3 +100,26 @@ it("confirms an off-schedule start before opening the live room", async () => {
   }));
   expect(mocks.push).toHaveBeenCalledWith(`/admin/meetings/${readyMeeting.id}/live`);
 });
+
+it("keeps the invitation confirmation on screen while the meeting refreshes, so nothing can be sent twice", async () => {
+  let detailReads = 0;
+  mocks.rpc.mockImplementation((contract: string) => {
+    if (contract === "get_meeting_detail") {
+      detailReads += 1;
+      const fresh = { ...meeting, updated_at: `2026-10-30T08:00:0${detailReads}Z` };
+      // The refresh after sending takes a moment, as it does over a real network.
+      return detailReads === 1 ? Promise.resolve(fresh) : new Promise((resolve) => setTimeout(() => resolve(fresh), 50));
+    }
+    if (contract === "send_meeting_invitations_v2") return Promise.resolve({ queued: 3 });
+    return Promise.resolve({ ready: true, checks: [] });
+  });
+  render(<MeetingDetailsJourney meetingId="meeting-1"/>);
+  fireEvent.click(await screen.findByRole("button", { name: "معاينة الدعوة وتجهيزها" }));
+  fireEvent.click(screen.getByRole("button", { name: /حفظ الوقت وتجهيز الدعوات/ }));
+  await waitFor(() => expect(detailReads).toBe(2));
+  expect(await screen.findByText(/تم حفظ الوقت وتجهيز الدعوات في قائمة الإرسال/)).toBeVisible();
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  expect(await screen.findByText(/تم حفظ الوقت وتجهيز الدعوات في قائمة الإرسال \(3 دعوة جديدة\)/)).toBeVisible();
+  expect(screen.queryByRole("button", { name: /حفظ الوقت وتجهيز الدعوات/ })).not.toBeInTheDocument();
+  expect(mocks.rpc.mock.calls.filter(([name]) => name === "send_meeting_invitations_v2")).toHaveLength(1);
+});

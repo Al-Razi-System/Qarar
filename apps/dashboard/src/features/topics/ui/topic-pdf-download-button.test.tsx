@@ -5,7 +5,7 @@ import { TopicPdfDownloadButton } from "./topic-pdf-download-button";
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 it("downloads once with meeting context and shows local progress", async () => {
-  const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(["pdf"], { type: "application/pdf" }), { status: 200 }));
+  const fetchMock = vi.fn().mockResolvedValue(new Response(new TextEncoder().encode("pdf"), { status: 200, headers: { "Content-Type": "application/pdf" } }));
   vi.stubGlobal("fetch", fetchMock);
   const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
   Object.defineProperty(URL, "createObjectURL", { configurable: true, value: vi.fn(() => "blob:topic") });
