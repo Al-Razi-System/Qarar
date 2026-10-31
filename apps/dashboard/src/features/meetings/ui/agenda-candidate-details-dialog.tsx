@@ -176,6 +176,7 @@ export function AgendaCandidateDetailsDialog({ candidate, meetingId, busy, onClo
 
   const sourceDecision = useMemo(() => history.flatMap((item) => item.decisions).at(0), [history]);
   const sourceMeeting = history.at(0)?.meeting;
+  const sourceDecisionNo = candidate.source_decision_no ?? sourceDecision?.decision_no;
   const snapshot = topic?.typed_creation_request?.snapshot;
   const topicType = snapshot?.topic_type_name_ar ?? topic?.category?.name_ar ?? "موضوع عام";
   const classification = snapshot?.classification_name_ar
@@ -255,14 +256,14 @@ export function AgendaCandidateDetailsDialog({ candidate, meetingId, busy, onClo
       <Card className="overflow-hidden p-0">
         <div className="border-t-4 border-q-primary p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-3xl"><div className="mb-3 flex flex-wrap gap-2"><Badge tone="info">{candidate.topic_no ?? "موضوع مسجل"}</Badge>{candidate.current_step && <Badge tone="warning">{candidate.current_step}</Badge>}{(topic?.priority || candidate.priority) && <Badge tone="neutral">أولوية {priorityLabels[topic?.priority ?? candidate.priority ?? ""] ?? topic?.priority ?? candidate.priority}</Badge>}</div><h2 className="text-q-h2 font-bold text-q-text">{candidate.title_ar}</h2><p className="mt-3 text-q-ui text-q-text-2">ملف موحد يوضح أصل الموضوع ومرفقاته ومساره وما سبق اتخاذه بشأنه.</p></div>
+            <div className="max-w-3xl"><div className="mb-3 flex flex-wrap gap-2"><Badge tone="info">{candidate.topic_no ?? "موضوع مسجل"}</Badge>{sourceDecisionNo && <Badge tone="success">قرار سابق · {sourceDecisionNo}</Badge>}{candidate.current_step && <Badge tone="warning">{candidate.current_step}</Badge>}{(topic?.priority || candidate.priority) && <Badge tone="neutral">أولوية {priorityLabels[topic?.priority ?? candidate.priority ?? ""] ?? topic?.priority ?? candidate.priority}</Badge>}</div><h2 className="text-q-h2 font-bold text-q-text">{candidate.title_ar}</h2><p className="mt-3 text-q-ui text-q-text-2">ملف موحد يوضح أصل الموضوع ومرفقاته ومساره وما سبق اتخاذه بشأنه.</p></div>
             <div className="min-w-64 rounded-q-card bg-q-surface-2 p-4"><p className="text-q-caption text-q-text-3">الجهة الحالية</p><p className="mt-1 text-q-ui font-bold text-q-text">{topic?.governance_unit?.name_ar ?? candidate.current_step ?? "المجلس الحالي"}</p></div>
           </div>
         </div>
         {(candidate.source_unit_name_ar || candidate.source_decision_no || sourceMeeting || sourceDecision) && <div className="grid gap-3 border-t border-q-border bg-q-surface-2 p-4 sm:grid-cols-3">
           <Fact icon={Landmark} label="وصل من" value={candidate.source_unit_name_ar ?? sourceMeeting?.unit_name ?? "جهة سابقة في المسار"} />
           <Fact icon={FileCheck2} label="اجتماع المصدر" value={candidate.source_meeting_title_ar ?? sourceMeeting?.title ?? candidate.source_meeting_no ?? "غير متاح"} />
-          <Fact icon={CheckCircle2} label="القرار السابق" value={candidate.source_decision_no ?? sourceDecision?.decision_no ?? "لم يصدر قرار سابق"} />
+          <Fact icon={CheckCircle2} label="القرار السابق" value={sourceDecisionNo ?? "لم يصدر قرار سابق"} />
         </div>}
       </Card>
 
@@ -280,7 +281,7 @@ export function AgendaCandidateDetailsDialog({ candidate, meetingId, busy, onClo
             <Fact icon={GitBranch} label="تصنيف الموضوع" value={classification} />
             <Fact icon={Clock3} label="تاريخ التقديم" value={dateLabel(topic?.submitted_at ?? topic?.created_at)} />
           </div>
-          {(candidate.source_decision_text || sourceDecision?.decision_text) && <Card className="lg:col-span-2"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-q-caption text-q-text-2">نص القرار السابق</p><h3 className="mt-1 text-q-h3 font-bold">{candidate.source_decision_no ?? sourceDecision?.decision_no}</h3></div><Badge tone="success">موافقة سابقة موثقة</Badge></div><p className="mt-4 whitespace-pre-wrap border-r-4 border-q-success pr-4 text-q-body leading-8">{candidate.source_decision_text ?? sourceDecision?.decision_text}</p></Card>}
+          {(candidate.source_decision_text || sourceDecision?.decision_text) && <Card className="lg:col-span-2"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-q-caption text-q-text-2">نص القرار السابق</p><h3 className="mt-1 text-q-h3 font-bold">{sourceDecisionNo}</h3></div><Badge tone="success">موافقة سابقة موثقة</Badge></div><p className="mt-4 whitespace-pre-wrap border-r-4 border-q-success pr-4 text-q-body leading-8">{candidate.source_decision_text ?? sourceDecision?.decision_text}</p></Card>}
           {snapshot?.authoring?.discussion_instructions?.trim() && <Card className="lg:col-span-2"><div className="mb-4"><p className="text-q-caption text-q-text-2">قادمة من تصنيف الموضوع ويمكن تخصيصها لهذا الاجتماع في الخطوة التالية</p><h3 className="mt-1 text-q-h3 font-bold">تعليمات المناقشة الموروثة</h3></div><InstructionContent value={snapshot.authoring.discussion_instructions} /></Card>}
           {(snapshot?.authoring?.source_items?.length ?? 0) > 0 && <Card className="lg:col-span-2"><h3 className="text-q-h3 font-bold">المرجع النظامي للتصنيف</h3><div className="mt-4 grid gap-3 sm:grid-cols-2">{snapshot?.authoring?.source_items?.map((item, index) => <div key={`${item.reference_number}-${index}`} className="rounded-q-card bg-q-surface-2 p-4"><p className="text-q-caption text-q-text-2">{item.source_document_name ?? "مرجع تنظيمي"} · {item.reference_number ?? ""}</p><p className="mt-2 text-q-ui font-bold">{item.text}</p></div>)}</div></Card>}
           {(snapshot?.authorities?.length ?? 0) > 0 && <Card className="lg:col-span-2"><h3 className="text-q-h3 font-bold">السند والاختصاص</h3><div className="mt-4 grid gap-3 sm:grid-cols-2">{snapshot?.authorities?.map((authority, index) => <div key={`${authority.article_number}-${index}`} className="rounded-q-card border border-q-border p-4"><p className="text-q-caption text-q-text-2">{authority.source_document_name ?? "سند تنظيمي"}{authority.article_number ? ` · المادة ${authority.article_number}` : ""}</p><p className="mt-2 text-q-ui leading-7">{authority.authority_text ?? "لم يضف نص السند."}</p></div>)}</div></Card>}

@@ -10,6 +10,13 @@ describe("InstructionContent legacy guidance", () => {
     expect(screen.getByRole("table")).toHaveTextContent("إدارة النقاش");
     expect(screen.getByRole("separator")).toBeInTheDocument();
   });
+  it("renders prefixed imported escaped Markdown even when it has no legacy HTML wrapper", () => {
+    render(<InstructionContent value={'qarar:markdown:v1\n\\# مناقشة الاعتماد\n\n\\---\n\n\\### استعراض الطلب\n\n\\- اسم الطالب\n\n\\- عنوان الرسالة\n\n1\\. التحقق من المرفقات'} />);
+    expect(screen.getByRole("heading", { level: 1, name: "مناقشة الاعتماد" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "استعراض الطلب" })).toBeInTheDocument();
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  });
   it("renders unprefixed Markdown and safe HTML without rewriting the source", () => {
     render(<InstructionContent value={'### المخاطر المالية\n\n- السيولة\n\n<strong>أرفق التقرير</strong>'} />);
     expect(screen.getByRole("heading", { name: "المخاطر المالية", level: 3 })).toBeInTheDocument();

@@ -33,13 +33,13 @@ export function instructionDisplaySource(value: string) {
     else if (marker && fence && marker[0] === fence[0] && marker.length >= fence.length) fence = null;
   });
   const prose = lines.filter((line, index) => !literal.has(index) && !line.includes("`")).join("\n");
-  const legacyMixed = value.startsWith(INSTRUCTION_MARKDOWN_PREFIX) && /<div\b/i.test(prose)
-    && (prose.match(/^\s*\\(?:#{1,6}\s|[-*+]\s|---\s*$)/gm)?.length ?? 0) >= 2;
+  const escapedBlockCount = prose.match(/^\s*\\(?:#{1,6}\s|[-*+]\s|---\s*$|>\s)/gm)?.length ?? 0;
+  const legacyEscapedMarkdown = value.startsWith(INSTRUCTION_MARKDOWN_PREFIX) && escapedBlockCount >= 2;
   return lines.map((line, index) => {
     if (literal.has(index)) return line;
     if (!line.includes("`")) line = line.replace(/<\/?div\b[^>]*>/gi, "\n\n");
-    if (!legacyMixed) return line;
-    return line.replace(/^(\s*)\\(?=#{1,6}\s|[-*+]\s|---\s*$)/, "$1")
+    if (!legacyEscapedMarkdown) return line;
+    return line.replace(/^(\s*)\\(?=#{1,6}\s|[-*+]\s|---\s*$|>\s)/, "$1")
       .replace(/^(\s*\d+)\\([.)])(?=\s)/, "$1$2")
       .replace(/^(\s*[-*+]\s+)\\\[([ xX])\\\]/, "$1[$2]");
   }).filter((line, index) => {

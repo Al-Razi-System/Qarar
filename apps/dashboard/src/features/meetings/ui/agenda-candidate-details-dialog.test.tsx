@@ -67,6 +67,7 @@ it("shows the complete decision context before offering insertion", async () => 
   expect(screen.getByText("نوع الطلب").parentElement).toHaveTextContent("اعتماد عنوان ومشرف للرسالة");
   expect(screen.getByRole("dialog", { name: "تفاصيل الموضوع" })).toHaveClass("max-w-5xl");
   expect(screen.getByRole("dialog", { name: "تفاصيل الموضوع" })).not.toHaveClass("h-dvh");
+  expect(screen.getByText("قرار سابق · DEC-2026-000002", { selector: "span" })).toBeVisible();
   expect(screen.getByRole("heading", { name: "محاور القرار" })).toBeInTheDocument();
   expect(screen.getByText("تحقق من استيفاء الخطة.")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("radio", { name: "المرفقات" }));
