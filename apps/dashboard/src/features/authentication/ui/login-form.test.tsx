@@ -1,5 +1,6 @@
 import { renderToString } from "react-dom/server";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { hydrateRoot } from "react-dom/client";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LoginForm } from "./login-form";
 
@@ -13,6 +14,20 @@ it("prevents credentials from submitting as GET before hydration", () => {
   expect(html).toContain('<fieldset disabled=""');
   // UA fieldset min-inline-size must not widen the single mobile grid track.
   expect(html).toContain('class="min-w-0 space-y-5"');
+});
+
+it("accepts attributes injected by form-filling extensions before hydration", async () => {
+  const container = document.createElement("div");
+  container.innerHTML = renderToString(<LoginForm />);
+  container.querySelector<HTMLButtonElement>('button[type="button"]')!
+    .setAttribute("fdprocessedid", "extension-generated");
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+  const root = hydrateRoot(container, <LoginForm />);
+  await act(async () => undefined);
+
+  expect(consoleError.mock.calls.flat().join(" ")).not.toContain("hydrated but some attributes");
+  root.unmount();
 });
 
 it("submits credentials by JSON POST and continues to MFA", async () => {

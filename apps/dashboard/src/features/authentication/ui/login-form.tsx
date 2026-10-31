@@ -85,6 +85,7 @@ export function LoginForm() {
           required
         />
         <button
+          suppressHydrationWarning
           type="button"
           onClick={() => setShowPassword((value) => !value)}
           className="absolute bottom-3 left-3 text-[#7a899d] hover:text-[#0066cc]"
@@ -96,6 +97,7 @@ export function LoginForm() {
       <div className="flex items-center justify-between text-xs">
         <label className="flex cursor-pointer items-center gap-2 text-[#52647a]">
           <input
+            suppressHydrationWarning
             type="checkbox"
             className="h-4 w-4 rounded border-[#cbd7e5] accent-[#0066cc]"
           />
@@ -114,6 +116,7 @@ export function LoginForm() {
         </p>
       )}
       <button
+        suppressHydrationWarning
         type="submit"
         disabled={!ready || isSubmitting}
         className="h-12 w-full rounded-xl bg-gradient-to-l from-[#0066cc] to-[#1e88e5] text-sm font-bold text-white shadow-[0_10px_25px_rgba(0,102,204,.2)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(0,102,204,.28)] disabled:cursor-wait disabled:opacity-70"
