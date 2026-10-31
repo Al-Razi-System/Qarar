@@ -8,7 +8,7 @@ import { meetingRpc } from "../api/meetings-client";
 import { meetingJourney, type MeetingJourneyKey } from "../model/meeting-journey";
 import { meetingStatusLabels, type MeetingDetail, type MeetingReadiness, type MeetingStartTiming } from "../model/meeting";
 import { meetingLocationLabel, meetingScheduleLabel } from "../model/meeting-schedule";
-import { InvitationTimingDialog } from "./invitation-timing-dialog";
+import { InvitationStatus, InvitationTimingDialog } from "./invitation-timing-dialog";
 import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dialog";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -84,6 +84,7 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
   const viewingCurrent = selected.key === current.key;
   const unmet = readiness?.checks.filter((check) => !check.complete) ?? [];
   const ready = readiness?.ready !== false;
+  const invitationPrepared = meeting.invitation_summary?.prepared === true;
   const hasSecondaryActions = Boolean(
     meeting.capabilities?.can_manage
       || meeting.capabilities?.can_cancel
@@ -93,7 +94,7 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
 
   const primary = (() => {
     if (meeting.status === "draft") return <Link href={`/admin/meetings?manage=${meeting.id}`} className="inline-flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-5 text-q-ui font-bold text-q-on-primary"><ListChecks size={18}/>استكمال الإعداد وجدول الأعمال</Link>;
-    if (meeting.status === "scheduled" && meeting.capabilities?.can_send_invitations) return <Button disabled={!ready} onClick={() => setInvitationOpen(true)}><Users size={18}/>معاينة الدعوة وتجهيزها</Button>;
+    if (meeting.status === "scheduled" && meeting.capabilities?.can_send_invitations) return <Button variant={invitationPrepared ? "secondary" : "primary"} disabled={!ready} onClick={() => setInvitationOpen(true)}><Users size={18}/>{invitationPrepared ? "عرض الدعوة المجهزة" : "معاينة الدعوة وتجهيزها"}</Button>;
     if (meeting.status === "ready_to_start" && meeting.capabilities?.can_start_session) return <Button variant="success" pending={busy} pendingLabel="جارٍ التحقق من الموعد…" onClick={() => void startSession(false)}><Play size={18}/>فتح الجلسة</Button>;
     if (meeting.status === "in_progress") return <Link href={`/admin/meetings/${meeting.id}/live`} className="inline-flex min-h-11 items-center gap-2 rounded-q-control bg-q-success px-5 text-q-ui font-bold text-q-on-success"><Play size={18}/>متابعة الجلسة الحية</Link>;
     if (["waiting_for_minutes", "waiting_for_approval"].includes(meeting.status)) return <Link href={`/admin/meetings/${meeting.id}/minutes`} className="inline-flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-5 text-q-ui font-bold text-q-on-primary"><FileText size={18}/>فتح المحضر والمصادقات</Link>;
@@ -122,11 +123,12 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
         <p className="text-q-caption font-bold text-q-live">{viewingCurrent ? "المرحلة الحالية" : "مرحلة مكتملة للقراءة"}</p><h2 className="mt-1 text-q-h2 font-bold">{selected.label}</h2><p className="mt-2 text-q-ui leading-7 text-q-text-2">{selected.description}</p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2"><Fact icon={CalendarDays} label="الموعد" value={meetingScheduleLabel(meeting)}/><Fact icon={Clock} label="الوقت" value={`${meeting.start_time ?? "غير محدد"} – ${meeting.end_time ?? "غير محدد"}`}/><Fact icon={MapPin} label="المكان" value={meetingLocationLabel(meeting)}/><Fact icon={ListChecks} label="جدول الأعمال" value={`${meeting.agenda_items?.length ?? 0} بند`}/></div>
         <StageReadingSummary stage={selected.key} meeting={meeting} viewingCurrent={viewingCurrent}/>
+        {viewingCurrent && selected.key === "invitation" && meeting.invitation_summary?.prepared && <InvitationStatus summary={meeting.invitation_summary} className="mt-4"/>}
         {viewingCurrent && <div className="mt-6 border-t border-q-border pt-5"><div className="flex flex-wrap items-center gap-3">{primary}{hasSecondaryActions && <details><summary className="flex min-h-11 cursor-pointer items-center rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link">إجراءات أخرى</summary><div className="mt-2 grid gap-2 rounded-q-card border border-q-border bg-q-surface p-3">{meeting.status === "scheduled" && meeting.capabilities?.can_prepare_session && <Button variant="secondary" pending={busy} disabled={!ready} onClick={() => void transition("ready_to_start")}>إغلاق التحضير وتجهيز الجلسة</Button>}{(meeting.capabilities?.can_manage || meeting.capabilities?.can_cancel || meeting.capabilities?.can_archive) && <Link href={`/admin/meetings?manage=${meeting.id}`} className="inline-flex min-h-11 items-center justify-center rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link">تعديل الموعد أو الإلغاء أو الأرشفة</Link>}</div></details>}</div>{!primary && <p className="text-q-ui text-q-text-2">لا يوجد إجراء مطلوب منك في هذه المرحلة.</p>}{!ready && unmet.length > 0 && <p className="mt-3 text-q-caption text-q-warning">قبل المتابعة: {unmet.map((check) => check.label).join("، ")}.</p>}</div>}
       </Card>
       <Card><h2 className="text-q-h3 font-bold">ملخص جدول الأعمال</h2>{meeting.agenda_items?.length ? <ol className="mt-4 space-y-3">{meeting.agenda_items.map((item, index) => <li key={item.id} className="flex gap-3 rounded-q-control bg-q-surface-2 p-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-q-primary text-q-caption font-bold text-q-on-primary">{index + 1}</span><div><p className="text-q-ui font-bold">{item.topic?.title_ar ?? "بند اجتماع"}</p>{item.topic?.topic_no && <p className="mt-1 text-q-caption text-q-text-2">{item.topic.topic_no}</p>}</div></li>)}</ol> : <p className="mt-3 text-q-ui text-q-text-2">لم تُضف بنود إلى جدول الأعمال بعد.</p>}</Card>
     </div>
-    {invitationOpen && meeting.updated_at && <InvitationTimingDialog meetingId={meeting.id} expectedUpdatedAt={meeting.updated_at} startTime={meeting.start_time} endTime={meeting.end_time} onClose={() => setInvitationOpen(false)} onSent={() => void load()}/>} 
+    {invitationOpen && meeting.updated_at && <InvitationTimingDialog meetingId={meeting.id} expectedUpdatedAt={meeting.updated_at} startTime={meeting.start_time} endTime={meeting.end_time} invitationSummary={meeting.invitation_summary} onClose={() => setInvitationOpen(false)} onSent={() => void load()}/>}
     {startTiming && <MeetingStartConfirmationDialog timing={startTiming} pending={busy} error={error} onClose={() => setStartTiming(null)} onConfirm={() => void startSession(true)}/>} 
   </div>;
 }

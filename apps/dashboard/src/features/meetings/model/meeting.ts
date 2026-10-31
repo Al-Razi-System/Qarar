@@ -68,6 +68,17 @@ export type MeetingDetail = Meeting & {
   agenda_items?: AgendaItem[];
   scheduled_suggestions?: ScheduledAgendaSuggestion[];
   submitted_suggestions?:{items:AgendaCandidate[];total:number;locked?:boolean}|null;
+  invitation_summary?: MeetingInvitationSummary;
+};
+
+export type MeetingInvitationSummary = {
+  prepared: boolean;
+  requested_count: number;
+  pending_count: number;
+  accepted_count: number;
+  delivered_count: number;
+  failed_count: number;
+  prepared_at?: string | null;
 };
 
 export type ScheduledAgendaSuggestion = {

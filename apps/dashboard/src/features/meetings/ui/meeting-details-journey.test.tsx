@@ -123,3 +123,30 @@ it("keeps the invitation confirmation on screen while the meeting refreshes, so 
   expect(screen.queryByRole("button", { name: /حفظ الوقت وتجهيز الدعوات/ })).not.toBeInTheDocument();
   expect(mocks.rpc.mock.calls.filter(([name]) => name === "send_meeting_invitations_v2")).toHaveLength(1);
 });
+
+it("shows the persisted invitation outcome after reload and never offers the prepare action again", async () => {
+  mocks.rpc.mockImplementation((contract: string) => {
+    if (contract === "get_meeting_detail") return Promise.resolve({
+      ...meeting,
+      invitation_summary: {
+        prepared: true,
+        requested_count: 8,
+        pending_count: 0,
+        accepted_count: 0,
+        delivered_count: 0,
+        failed_count: 8,
+        prepared_at: "2026-10-21T20:45:38Z",
+      },
+    });
+    return Promise.resolve({ ready: true, checks: [] });
+  });
+
+  render(<MeetingDetailsJourney meetingId="meeting-1"/>);
+
+  expect(await screen.findByText(/تم تجهيز 8 دعوات/)).toBeVisible();
+  expect(screen.getByText(/تعذر تسليم 8 دعوات/)).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "عرض الدعوة المجهزة" }));
+  expect(await screen.findByRole("dialog", { name: "موعد الاجتماع والدعوات" })).toBeVisible();
+  expect(screen.queryByRole("button", { name: "حفظ الوقت وتجهيز الدعوات" })).not.toBeInTheDocument();
+  expect(mocks.rpc.mock.calls.filter(([name]) => name === "send_meeting_invitations_v2")).toHaveLength(0);
+});
