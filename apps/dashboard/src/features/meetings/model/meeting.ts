@@ -145,12 +145,11 @@ export const meetingStatusLabels: Record<string, string> = {
   cancelled: "ملغاة", archived: "مكتملة · مؤرشفة",
 };
 
-export const meetingStatusTone: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-700", scheduled: "bg-blue-50 text-blue-700",
-  ready_to_start: "bg-orange-50 text-orange-700", in_progress: "bg-emerald-50 text-emerald-700",
-  waiting_for_minutes: "bg-amber-50 text-amber-800", waiting_for_approval: "bg-orange-50 text-orange-800",
-  closed: "bg-slate-100 text-slate-600", cancelled: "bg-red-50 text-red-700",
-  archived: "bg-slate-100 text-slate-500",
+/** The `Badge` tone of each status; the label always carries the meaning. */
+export const meetingStatusTone: Record<string, "neutral" | "info" | "live" | "warning" | "success" | "danger"> = {
+  draft: "neutral", scheduled: "info", ready_to_start: "info", in_progress: "live",
+  waiting_for_minutes: "warning", waiting_for_approval: "warning",
+  closed: "success", archived: "success", cancelled: "danger",
 };
 
 export function isAgendaEditable(status?: string) {

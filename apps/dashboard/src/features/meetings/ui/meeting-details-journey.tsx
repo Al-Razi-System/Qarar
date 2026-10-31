@@ -7,7 +7,7 @@ import { CalendarDays, ChevronLeft, Clock, FileText, ListChecks, MapPin, Play, R
 import { meetingRpc } from "../api/meetings-client";
 import { meetingJourney, type MeetingJourneyKey } from "../model/meeting-journey";
 import { meetingStatusLabels, type MeetingDetail, type MeetingReadiness, type MeetingStartTiming } from "../model/meeting";
-import { meetingLocationLabel, meetingScheduleLabel } from "../model/meeting-schedule";
+import { meetingLocationLabel, meetingScheduleLabel, meetingTimeLabel } from "../model/meeting-schedule";
 import { InvitationTimingDialog } from "./invitation-timing-dialog";
 import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dialog";
 import { Badge } from "@/shared/ui/badge";
@@ -120,7 +120,7 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,.7fr)]">
       <Card live={meeting.status === "in_progress"}>
         <p className="text-q-caption font-bold text-q-live">{viewingCurrent ? "المرحلة الحالية" : "مرحلة مكتملة للقراءة"}</p><h2 className="mt-1 text-q-h2 font-bold">{selected.label}</h2><p className="mt-2 text-q-ui leading-7 text-q-text-2">{selected.description}</p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2"><Fact icon={CalendarDays} label="الموعد" value={meetingScheduleLabel(meeting)}/><Fact icon={Clock} label="الوقت" value={`${meeting.start_time ?? "غير محدد"} – ${meeting.end_time ?? "غير محدد"}`}/><Fact icon={MapPin} label="المكان" value={meetingLocationLabel(meeting)}/><Fact icon={ListChecks} label="جدول الأعمال" value={`${meeting.agenda_items?.length ?? 0} بند`}/></div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2"><Fact icon={CalendarDays} label="الموعد" value={meetingScheduleLabel(meeting)}/><Fact icon={Clock} label="الوقت" value={meetingTimeLabel(meeting)}/><Fact icon={MapPin} label="المكان" value={meetingLocationLabel(meeting)}/><Fact icon={ListChecks} label="جدول الأعمال" value={`${meeting.agenda_items?.length ?? 0} بند`}/></div>
         <StageReadingSummary stage={selected.key} meeting={meeting} viewingCurrent={viewingCurrent}/>
         {viewingCurrent && <div className="mt-6 border-t border-q-border pt-5"><div className="flex flex-wrap items-center gap-3">{primary}{hasSecondaryActions && <details><summary className="flex min-h-11 cursor-pointer items-center rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link">إجراءات أخرى</summary><div className="mt-2 grid gap-2 rounded-q-card border border-q-border bg-q-surface p-3">{meeting.status === "scheduled" && meeting.capabilities?.can_prepare_session && <Button variant="secondary" pending={busy} disabled={!ready} onClick={() => void transition("ready_to_start")}>إغلاق التحضير وتجهيز الجلسة</Button>}{(meeting.capabilities?.can_manage || meeting.capabilities?.can_cancel || meeting.capabilities?.can_archive) && <Link href={`/admin/meetings?manage=${meeting.id}`} className="inline-flex min-h-11 items-center justify-center rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link">تعديل الموعد أو الإلغاء أو الأرشفة</Link>}</div></details>}</div>{!primary && <p className="text-q-ui text-q-text-2">لا يوجد إجراء مطلوب منك في هذه المرحلة.</p>}{!ready && unmet.length > 0 && <p className="mt-3 text-q-caption text-q-warning">قبل المتابعة: {unmet.map((check) => check.label).join("، ")}.</p>}</div>}
       </Card>
