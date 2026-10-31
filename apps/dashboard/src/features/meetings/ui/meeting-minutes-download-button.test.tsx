@@ -5,9 +5,10 @@ import { MeetingMinutesDownloadButton } from "./meeting-minutes-download-button"
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 it("downloads the approved official minutes with local progress", async () => {
-  const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(["minutes"], { type: "application/pdf" }), {
+  // The body is bytes, not a jsdom Blob: Node's Response cannot stream a jsdom Blob.
+  const fetchMock = vi.fn().mockResolvedValue(new Response(new TextEncoder().encode("minutes"), {
     status: 200,
-    headers: { "Content-Disposition": "attachment; filename=\"MTG-1-minutes.pdf\"" },
+    headers: { "Content-Type": "application/pdf", "Content-Disposition": "attachment; filename=\"MTG-1-minutes.pdf\"" },
   }));
   vi.stubGlobal("fetch", fetchMock);
   const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);

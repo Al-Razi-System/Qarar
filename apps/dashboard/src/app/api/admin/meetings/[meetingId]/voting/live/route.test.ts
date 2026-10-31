@@ -16,13 +16,13 @@ describe("authenticated contextual voting channel", () => {
     rpc.mockRejectedValue(Object.assign(new Error(String(message)), { status, code }));
     const response = await GET(new Request("http://localhost/"), context);
     expect(response.status).toBe(status); expect(rpc).toHaveBeenCalledOnce();
-    expect(rpc.mock.calls[0][0]).toBe("get_meeting_session_detail");
+    expect(rpc.mock.calls[0][0]).toBe("get_meeting_detail");
   });
   it("rechecks contextual authority and terminates when revoked, without leaking private fields", async () => {
     vi.useFakeTimers(); let allowed = true;
     rpc.mockImplementation(async (name: string) => {
       if (!allowed) throw Object.assign(new Error("لا صلاحية"), { status: 403, code: "42501" });
-      if (name === "get_meeting_session_detail") return {};
+      if (name === "get_meeting_detail") return {};
       if (name === "list_meeting_voting_rounds") return [{ id: "r1", status: "open", chair_vote: "reject", approve_count: 5, participation: [] }];
       return [{ voting_round_id: "r1", title_ar: "بند", has_voted: false, note: "PRIVATE" }];
     });
@@ -34,10 +34,10 @@ describe("authenticated contextual voting channel", () => {
     expect(first).not.toMatch(/chair_vote|reject|approve_count|PRIVATE/);
     // The room's change signal follows: a revision and a scope, nothing else.
     expect(new TextDecoder().decode((await reader.read()).value)).toBe('event: room\ndata: {"revision":0,"scope":"sync"}\n\n');
-    allowed = false; await vi.advanceTimersByTimeAsync(3000);
+    allowed = false; await vi.advanceTimersByTimeAsync(10_000);
     expect(new TextDecoder().decode((await reader.read()).value)).toContain('"terminal":true');
     expect((await reader.read()).done).toBe(true);
-    expect(rpc.mock.calls[3][0]).toBe("get_meeting_session_detail");
+    expect(rpc.mock.calls[3][0]).toBe("get_meeting_detail");
     expect((rpc.mock.calls[3][2] as { signal: AbortSignal }).signal).toBeInstanceOf(AbortSignal);
   });
 });
