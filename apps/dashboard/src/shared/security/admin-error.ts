@@ -1,3 +1,5 @@
+import { arabicDatabaseMessage } from "./database-error-ar";
+
 type ErrorWithMetadata = {
   status?: unknown;
   code?: unknown;
@@ -10,6 +12,7 @@ const PUBLIC_ERROR_CODES = new Set([
   "42501",
   "23P01",
   "40001",
+  "55000",
   "PT409",
   "P0002",
   "P0003",
@@ -69,6 +72,11 @@ export function safeAdminError(
   const authoredArabicMessage = /[\u0600-\u06ff]/.test(upstreamMessage)
     ? upstreamMessage
     : "";
+  // An older function's known English rule: say what it means, not the generic message.
+  const translated = authoredArabicMessage ? null : arabicDatabaseMessage(upstreamMessage);
+  if (translated) {
+    return { code: code === "ADMIN_OPERATION_FAILED" ? "22023" : code, message: translated, status };
+  }
   const message = code === "42501"
     ? (authoredArabicMessage || "لا تملك الصلاحية المطلوبة لتنفيذ هذه العملية.")
     : code !== "ADMIN_OPERATION_FAILED" && authoredArabicMessage

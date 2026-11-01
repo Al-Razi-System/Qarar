@@ -24,6 +24,10 @@ export type Meeting = {
   scheduled_date?: string;
   planned_window_start?: string | null;
   planned_window_end?: string | null;
+  /** The day its council plan intended; it never moves with the meeting. */
+  planned_date?: string | null;
+  /** Why the meeting is held off its planned day, when it is. */
+  schedule_exception_reason?: string | null;
   schedule_date_confirmed?: boolean;
   start_time?: string;
   end_time?: string;
