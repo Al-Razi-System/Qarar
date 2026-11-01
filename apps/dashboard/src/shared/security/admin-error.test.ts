@@ -74,4 +74,16 @@ describe("safeAdminError", () => {
       status: 503,
     });
   });
+  it("translates a known English database rule into its Arabic meaning instead of the generic message", () => {
+    const equalTimes = Object.assign(new Error("end_time must be after start_time"), { code: "P0001", status: 400 });
+    expect(safeAdminError(equalTimes, "تعذر تنفيذ العملية.")).toEqual({ code: "22023", message: "يجب أن يكون وقت النهاية بعد وقت البداية.", status: 400 });
+    const locked = Object.assign(new Error("meeting details are locked in status in_progress"), { code: "P0001", status: 400 });
+    expect(safeAdminError(locked, "تعذر تنفيذ العملية.").message).toBe("لا يمكن تعديل بيانات الاجتماع بعد بدء الجلسة.");
+    const stale = Object.assign(new Error("meeting was modified; refresh before update"), { code: "40001", status: 409 });
+    expect(safeAdminError(stale, "تعذر تنفيذ العملية.")).toMatchObject({ code: "40001", status: 409, message: "عدّل شخص آخر هذا الاجتماع للتو. حدّث الصفحة ثم أعد المحاولة." });
+  });
+  it("still hides an unknown English database message", () => {
+    expect(safeAdminError(Object.assign(new Error("relation qarar_meetings.x does not exist"), { code: "42P01" }), "تعذر تنفيذ العملية.").message).toBe("تعذر تنفيذ العملية.");
+  });
 });
+

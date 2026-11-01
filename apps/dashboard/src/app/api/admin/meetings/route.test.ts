@@ -127,3 +127,10 @@ it("does not let an item mutation wake a different meeting named only by the cli
     expect(notify).not.toHaveBeenCalled();
   } finally { stop(); }
 });
+it("reschedules a session through its own V2 contract, touching nothing else", async () => {
+  rpcV2.mockResolvedValue({ id: "m1" });
+  const params = { p_meeting_id: "m1", p_scheduled_date: "2026-11-11", p_start_time: "10:00", p_end_time: "12:00", p_location_type: "onsite", p_location_details: null, p_off_plan_reason: "سفر رئيس المجلس", p_expected_updated_at: "2026-11-01T00:00:00Z" };
+  expect((await POST(request("reschedule_meeting_session_v2", params))).status).toBe(200);
+  expect(rpcV2).toHaveBeenCalledWith("reschedule_meeting_session_v2", params);
+  expect(rpc).not.toHaveBeenCalled();
+});

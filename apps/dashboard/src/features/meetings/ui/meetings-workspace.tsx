@@ -4,7 +4,7 @@ import { useDeferredValue, useEffect, useEffectEvent, useRef, useState } from "r
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  AlertCircle, Calendar, CalendarDays, Check, ChevronLeft, Clock, FileText, LoaderCircle, MapPin, Pencil, Play, Plus, Search, Users, X, SlidersHorizontal,
+  AlertCircle, Calendar, CalendarDays, Check, ChevronLeft, Clock, FileText, LoaderCircle, MapPin, Play, Plus, Search, Users, X, SlidersHorizontal,
 } from "lucide-react";
 import { meetingRpc as rpc } from "../api/meetings-client";
 import {
@@ -13,7 +13,6 @@ import {
   type MeetingMinutes, type MeetingReadiness, type MeetingStartTiming, type MeetingTopicAttachment, type MinuteApproval, type SignatureStrokes,
 } from "../model/meeting";
 import { Button } from "@/shared/ui/button";
-import { AdministrativeInput } from "@/shared/ui/administrative-field";
 import { MeetingQuorumField } from "./meeting-quorum-field";
 import { meetingLocationLabel, meetingScheduleLabel, meetingTimeLabel } from "../model/meeting-schedule";
 import { localDateKey, meetingOperationalGroup } from "../model/meeting-operational-state";
@@ -31,6 +30,7 @@ import { DirectAgendaTopicDialog } from "./direct-agenda-topic-dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { Dialog } from "@/shared/ui/dialog";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
+import { MeetingScheduleDialog } from "./meeting-schedule-dialog";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { cn } from "@/shared/lib/utils";
@@ -107,8 +107,6 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
   const [creating, setCreating] = useState(false);
   const [recurring, setRecurring] = useState(false);
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<MeetingSeries["frequency"]>("monthly");
-  const [editRecurrenceFrequency, setEditRecurrenceFrequency] = useState<MeetingSeries["frequency"]>("monthly");
-  const [editRecurring, setEditRecurring] = useState(false);
   const [selectedMeetingTypeId, setSelectedMeetingTypeId] = useState("");
   const [meetingOptions, setMeetingOptions] = useState<MeetingFormOptions | null>(null);
   const [meetingOptionsLoading, setMeetingOptionsLoading] = useState(false);
@@ -326,72 +324,10 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
     }
   }
 
-  async function openEditModal() {
+  function openEditModal() {
     if (!selected || !["draft", "scheduled"].includes(selected.status)) return;
     setNotice(null);
-    let availableOptions = meetingOptions;
-    if (!availableOptions) {
-      setMeetingOptionsLoading(true);
-      try {
-        availableOptions = await rpc<MeetingFormOptions>("get_sprint02_form_options");
-        setMeetingOptions(availableOptions);
-      }
-      catch (err) { setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر تحميل إعدادات الاجتماع." }); return; }
-      finally { setMeetingOptionsLoading(false); }
-    }
-    const currentSeries = series.find((item) => item.occurrences.some((occurrence) => occurrence.meeting_id === selected.id));
-    const selectedType = availableOptions?.meeting_types?.find((type) => type.id === selected.meeting_type_id);
-    const isLegacyRecurring = Boolean(selectedType?.name_ar.includes("دوري"));
-    setEditRecurring(!selected.planned_window_start && (Boolean(currentSeries) || isLegacyRecurring));
-    setEditRecurrenceFrequency(currentSeries?.frequency ?? (selected.title_ar.includes("سنوي") ? "annual" : "monthly"));
     setEditModal(true);
-  }
-
-  async function handleUpdate(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selected) return;
-    const fd = new FormData(event.currentTarget);
-    setCreating(true); setNotice(null);
-    try {
-      await rpc("save_meeting_with_quorum_v2", {
-        p_action: "update",
-        p_quorum_percentage: fd.get("quorum_percentage") ? Number(fd.get("quorum_percentage")) : null,
-        p_values: {
-        p_meeting_id: selected.id,
-        p_title_ar: fd.get("title_ar"),
-        p_scheduled_date: fd.get("scheduled_date"),
-        p_start_time: fd.get("start_time") || null,
-        p_end_time: fd.get("end_time") || null,
-        p_location_type: fd.get("location_type"),
-        p_location_details: fd.get("location_details") || null,
-        p_title_en: selected.title_en ?? null,
-        p_meeting_type_id: fd.get("meeting_type_id"),
-        p_expected_updated_at: selected.updated_at ?? null,
-        },
-      });
-      const currentSeries = series.find((item) => item.occurrences.some((occurrence) => occurrence.meeting_id === selected.id));
-      if (!selected.planned_window_start && currentSeries) {
-        await rpc("update_meeting_series_recurrence", {
-          p_series_id: currentSeries.id,
-          p_anchor_meeting_id: selected.id,
-          p_frequency: fd.get("frequency"),
-          p_interval_count: Number(fd.get("interval_count") || 1),
-          p_anchor_date: fd.get("scheduled_date"),
-        });
-      } else if (!selected.planned_window_start && editRecurring) {
-        await rpc("create_meeting_series_from_existing", {
-          p_meeting_id: selected.id,
-          p_frequency: fd.get("frequency"),
-          p_interval_count: Number(fd.get("interval_count") || 1),
-          p_occurrence_count: Number(fd.get("occurrence_count") || 6),
-        });
-      }
-      setEditModal(false);
-      await openDetail(selected.id);
-      await loadMeetings();
-      setNotice({ kind: "success", text: "تم تحديث اسم الاجتماع وموعده ومكانه وإعداداته بنجاح." });
-    } catch (err) { setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر تحديث الاجتماع." }); }
-    finally { setCreating(false); }
   }
 
   async function transitionMeeting(toStatus: string) {
@@ -798,7 +734,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
 
               {/* Transition Actions */}
               <div className="flex flex-wrap gap-2 p-5">
-                {["draft", "scheduled"].includes(selected.status) && selected.capabilities?.can_manage && <Button variant="secondary" onClick={() => void openEditModal()}><Clock size={18} /> تحديد وقت الاجتماع</Button>}
+                {["draft", "scheduled"].includes(selected.status) && selected.capabilities?.can_manage && <Button variant="secondary" onClick={openEditModal}><Clock size={18} /> موعد الجلسة ومكانها</Button>}
                 {(["waiting_for_minutes", "waiting_for_approval", "closed", "archived"].includes(selected.status)) && <Link href={`/admin/meetings/${selected.id}/minutes`} className="flex items-center gap-1.5 rounded-q-control bg-q-primary px-4 py-2.5 text-q-caption font-bold text-q-on-primary "><FileText size={14} />{["closed", "archived"].includes(selected.status) ? "عرض المحضر النهائي والتواقيع" : "فتح مساحة المحضر والمصادقات"}</Link>}
                 {(selected.capabilities?.can_schedule || (selected.status === "draft" && selected.capabilities?.can_manage && selected.schedule_date_confirmed === false)) && <div><Button pending={detailLoading} disabled={selected.schedule_date_confirmed === false} onClick={() => transitionMeeting("scheduled")}><Play size={14}/>جدولة</Button>{selected.schedule_date_confirmed === false && <p className="mt-2 text-q-caption text-q-text-2">حدد يوم الاجتماع ووقتي البداية والنهاية من تعديل الاجتماع أولاً.</p>}</div>}
                 {selected.status === "scheduled" && <>{selected.capabilities?.can_send_invitations && <button onClick={() => setInvitationModal(true)} disabled={detailLoading || !readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : selected.invitation_summary?.prepared ? "عرض الدعوة المجهزة" : "تجهيز دعوات أعضاء المجلس"} className="flex items-center gap-1.5 rounded-q-control border border-q-border px-3 py-2 text-q-caption font-bold text-q-link disabled:opacity-40"><Users size={14} /> {selected.invitation_summary?.prepared ? "عرض الدعوة" : "تجهيز الدعوات"}</button>}{selected.capabilities?.can_prepare_session && <Button variant="secondary" disabled={detailLoading || !readiness?.ready} onClick={() => setPreparationConfirmationOpen(true)}>اعتماد جدول الأعمال وتجهيز الاجتماع للبدء</Button>}</>}
@@ -915,37 +851,11 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
         </div>
       )}
 
-      {editModal && selected && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-q-scrim p-4" role="dialog" aria-modal="true" aria-label="تعديل إعدادات الاجتماع">
-          <form onSubmit={handleUpdate} className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-q-card bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-q-border px-6 py-5"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-q-control bg-q-surface-2 text-q-link"><Pencil size={19}/></span><div><h2 className="text-q-h3 font-bold text-q-text">تعديل إعدادات الاجتماع</h2><p className="text-q-caption text-q-text-2">متاح للمسودة والاجتماع المجدول قبل بدء الجلسة.</p></div></div><button type="button" onClick={() => setEditModal(false)} aria-label="إغلاق"><X size={20}/></button></div>
-            <div className="grid gap-4 overflow-y-auto p-6">
-              {notice?.kind === "error" && <p role="alert" className="text-q-ui text-q-danger">{notice.text}</p>}
-              <MeetingQuorumField defaultValue={selected.quorum_percentage} disabled={creating}/>
-              <div className="rounded-q-control bg-q-surface-2 px-4 py-3 text-q-caption font-bold text-q-text-2">المجلس: {selected.unit_name_ar ?? selected.governance_unit_name_ar ?? "—"}</div>
-              <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">نوع الاجتماع *</span><select required name="meeting_type_id" defaultValue={selected.meeting_type_id} onChange={(event) => { const type = meetingOptions?.meeting_types?.find((item) => item.id === event.target.value); setEditRecurring(Boolean(type?.name_ar.includes("دوري"))); }} className="h-11 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui">{meetingOptions?.meeting_types?.map((type) => <option key={type.id} value={type.id}>{type.name_ar}</option>)}</select></label>
-              <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">اسم الاجتماع *</span><input required name="title_ar" defaultValue={selected.title_ar} className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-ui"/></label>
-              {(() => {
-                const currentSeries = series.find((item) => item.occurrences.some((occurrence) => occurrence.meeting_id === selected.id));
-                if (selected.planned_window_start || (!currentSeries && !editRecurring)) return null;
-                const occurrence = currentSeries?.occurrences.find((item) => item.meeting_id === selected.id);
-                return <div className="rounded-q-card border border-q-border bg-q-surface-2 p-4">
-                  <div className="mb-3 flex items-start justify-between gap-3"><div><strong className="block text-q-caption text-q-text">إعدادات السلسلة الدورية</strong><small className="mt-1 block text-q-caption leading-5 text-q-text-2">{currentSeries ? `هذا الموعد رقم ${occurrence?.occurrence_number ?? "—"} من ${currentSeries.occurrence_count}. سيُطبق تغيير الدورة على هذا الموعد والمواعيد اللاحقة غير المنعقدة.` : "هذا اجتماع دوري قديم غير مرتبط بسلسلة. عند الحفظ سيصبح الموعد الأول وتُنشأ مواعيده اللاحقة تلقائياً."}</small></div><span className="rounded-full bg-white px-2.5 py-1 text-q-caption font-bold text-q-link">دوري</span></div>
-                  <div className="grid gap-3 sm:grid-cols-2"><label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">نوع الدورة</span><select name="frequency" value={editRecurrenceFrequency} onChange={(event) => setEditRecurrenceFrequency(event.target.value as MeetingSeries["frequency"])} className="h-10 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui"><option value="weekly">أسبوعية</option><option value="monthly">شهرية</option><option value="quarterly">ربعية (كل 3 أشهر)</option><option value="semiannual">نصف سنوية (كل 6 أشهر)</option><option value="annual">سنوية</option><option value="custom">مخصصة</option></select></label>{editRecurrenceFrequency === "custom" ? <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">التكرار كل كم يوم؟</span><input required name="interval_count" type="number" min="1" max="365" defaultValue={currentSeries?.frequency === "custom" ? currentSeries.interval_count : 14} className="h-10 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui"/></label> : <input type="hidden" name="interval_count" value="1"/>}{!currentSeries && <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">إجمالي عدد الاجتماعات</span><input required name="occurrence_count" type="number" min="2" max="36" defaultValue="6" className="h-10 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui"/></label>}</div>
-                </div>;
-              })()}
-              <div className="grid gap-4 sm:grid-cols-3">
-                <AdministrativeInput label="تاريخ الانعقاد" required type="date" name="scheduled_date" min={selected.planned_window_start ?? undefined} max={selected.planned_window_end ?? undefined} defaultValue={selected.schedule_date_confirmed === false ? "" : selected.scheduled_date}/>
-                <AdministrativeInput label="وقت البداية" required={selected.schedule_date_confirmed === false} type="time" name="start_time" defaultValue={selected.start_time ?? ""}/>
-                <AdministrativeInput label="وقت النهاية" required={selected.schedule_date_confirmed === false} type="time" name="end_time" defaultValue={selected.end_time ?? ""}/>
-              </div>
-              {selected.schedule_date_confirmed === false && <p className="text-q-caption text-q-text-2">{meetingScheduleLabel(selected)}</p>}
-              <div className="grid gap-3 sm:grid-cols-2"><label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">نوع المكان</span><select name="location_type" defaultValue={selected.location_type ?? "onsite"} className="h-11 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui"><option value="onsite">حضوري</option><option value="online">افتراضي</option><option value="hybrid">مختلط</option></select></label><label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">تفاصيل المكان</span><input name="location_details" defaultValue={selected.location_details ?? ""} placeholder="القاعة أو رابط الاجتماع" className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-ui"/></label></div>
-            </div>
-            <div className="flex justify-end gap-3 border-t border-q-border bg-q-surface-2 px-6 py-4"><button type="button" onClick={() => setEditModal(false)} disabled={creating} className="h-10 rounded-q-control border border-q-border px-4 text-q-caption font-bold text-q-text-2">إلغاء</button><button disabled={creating} className="h-10 rounded-q-control bg-q-primary px-5 text-q-caption font-bold text-q-on-primary disabled:opacity-50">{creating ? "جارٍ الحفظ…" : "حفظ التعديلات"}</button></div>
-          </form>
-        </div>
-      )}
+      {editModal && selected && <MeetingScheduleDialog meeting={selected} onClose={() => setEditModal(false)} onSaved={(saved) => {
+        setEditModal(false); setSelected(saved);
+        void loadMeetings();
+        setNotice({ kind: "success", text: "حُفظ موعد الجلسة ومكانها." });
+      }}/>}
       {instructionTarget&&selected&&<AgendaInstructionsDialog title={instructionTarget.title} initialValue={instructionTarget.text} inserting={!instructionTarget.updatedAt} onClose={()=>setInstructionTarget(null)} onSave={async text=>{
        await rpc("save_agenda_topic_instructions",{p_meeting_id:selected.id,p_topic_id:instructionTarget.topicId,p_instructions:text,p_expected_updated_at:instructionTarget.updatedAt??null});
        await openDetail(selected.id);setNotice({kind:"success",text:"حُفظت تعليمات هذا الموضوع في الاجتماع دون تغيير التصنيف."});
