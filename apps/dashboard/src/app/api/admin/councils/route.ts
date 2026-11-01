@@ -11,6 +11,9 @@ const contracts = new Set([
   "get_council_form_options",
   "admin_search_councils",
   "admin_get_council_detail",
+  "admin_get_council_detail_v2",
+  "admin_update_council_v2",
+  "admin_create_council_with_plan_v2",
   "admin_get_councils_tree",
   "admin_create_council",
   "admin_create_council_v2",
@@ -33,6 +36,17 @@ const contracts = new Set([
 
 type RequestBody = { contract?: unknown; params?: unknown };
 
+async function readOrExecute(contract: string, params: Record<string, unknown>, id: string) {
+  try {
+    return await (contract.endsWith("_v2") ? qararRpcV2<unknown>(contract, params) : qararRpc<unknown>(contract, params));
+  } catch (error) {
+    if (contract !== "admin_get_council_detail_v2" || !(error instanceof QararApiError) || error.code !== "PGRST202") throw error;
+    logEvent("warn", "council.detail.compatibility_read", { request_id: id, code: error.code });
+    const detail = await qararRpc<Record<string, unknown>>("admin_get_council_detail", params);
+    return { ...detail, meeting_plan_unavailable: true, can_create_meeting_plan: false };
+  }
+}
+
 export async function POST(request: Request) {
   const id = requestId(request);
   const originError = rejectUntrustedMutation(request);
@@ -46,7 +60,7 @@ export async function POST(request: Request) {
     const params = body.params && typeof body.params === "object" && !Array.isArray(body.params)
       ? body.params as Record<string, unknown>
       : {};
-    return apiSuccess(await (contract.endsWith("_v2") ? qararRpcV2<unknown>(contract, params) : qararRpc<unknown>(contract, params)), id);
+    return apiSuccess(await readOrExecute(contract, params, id), id);
   } catch (error) {
     logEvent(error instanceof QararApiError && error.status < 500 ? "warn" : "error", "council.operation.failed", {
       request_id: id,

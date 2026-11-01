@@ -4,6 +4,7 @@ import { useEffect, useEffectEvent, useState } from "react";
 import { CheckCircle2, FileCheck2, LoaderCircle, UserCheck, UserMinus, Users, Vote } from "lucide-react";
 import { meetingRpc } from "../api/meetings-client";
 import type { MeetingDetail, MeetingTopicAttachment } from "../model/meeting";
+import { decisionStatusLabel } from "@/features/tasks/model/follow-up";
 import { TopicAttachmentsPanel } from "./topic-attachments-panel";
 
 type CompletedMeetingData = {
@@ -110,7 +111,7 @@ export function CompletedMeetingSummary({ meeting, attachments }: { meeting: Mee
             {item.discussion_notes && <p className="rounded-xl bg-[#f7fafc] px-3 py-2 text-[10px] leading-5 text-[#536a81]"><strong className="text-[#27445f]">ملخص المناقشة: </strong>{item.discussion_notes}</p>}
             {item.topic?.id && <TopicAttachmentsPanel meetingId={meeting.id} attachments={attachments.filter((attachment) => attachment.topic_id === item.topic?.id)} compact />}
             {finalRound && <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-[#e2eaf2] p-2 text-center"><VoteStat label="النتيجة" value={voteLabels[finalRound.result ?? ""] ?? finalRound.result ?? "—"} /><VoteStat label="موافق" value={finalRound.approve_count ?? 0} /><VoteStat label="غير موافق" value={finalRound.reject_count ?? 0} /><VoteStat label="ممتنع" value={finalRound.abstain_count ?? 0} /></div>}
-            {decision && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3"><div className="flex items-center gap-1.5 text-[9px] font-black text-emerald-800"><CheckCircle2 size={13} />{decision.decision_no} · {decision.decision_status}</div><p className="mt-1.5 text-[10px] leading-5 text-emerald-900">{decision.decision_text}</p></div>}
+            {decision && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3"><div className="flex items-center gap-1.5 text-[9px] font-black text-emerald-800"><CheckCircle2 size={13} />{decision.decision_no} · {decisionStatusLabel(decision.decision_status).label}</div><p className="mt-1.5 text-[10px] leading-5 text-emerald-900">{decision.decision_text}</p></div>}
           </div>;
         })}</div>
       </article>

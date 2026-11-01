@@ -1,3 +1,5 @@
+import { arabicDatabaseMessage } from "./database-error-ar";
+
 type ErrorWithMetadata = {
   status?: unknown;
   code?: unknown;
@@ -10,6 +12,8 @@ const PUBLIC_ERROR_CODES = new Set([
   "42501",
   "23P01",
   "40001",
+  "55000",
+  "PT409",
   "P0002",
   "P0003",
 ]);
@@ -43,6 +47,14 @@ export function safeAdminError(
   }
 
   const metadata = isRecord(error) ? error : undefined;
+  const upstreamCode = metadata?.code;
+  if (upstreamCode === "57014") {
+    return {
+      code: "QUERY_TIMEOUT",
+      message: "استغرق تنفيذ الطلب وقتًا أطول من المتوقع. أعد المحاولة بعد لحظات.",
+      status: 503,
+    };
+  }
   const upstreamStatus = metadata?.status;
   const status =
     typeof upstreamStatus === "number" &&
@@ -51,7 +63,6 @@ export function safeAdminError(
     upstreamStatus <= 599
       ? upstreamStatus
       : fallbackStatus;
-  const upstreamCode = metadata?.code;
   const code =
     typeof upstreamCode === "string" && PUBLIC_ERROR_CODES.has(upstreamCode)
       ? upstreamCode
@@ -61,6 +72,11 @@ export function safeAdminError(
   const authoredArabicMessage = /[\u0600-\u06ff]/.test(upstreamMessage)
     ? upstreamMessage
     : "";
+  // An older function's known English rule: say what it means, not the generic message.
+  const translated = authoredArabicMessage ? null : arabicDatabaseMessage(upstreamMessage);
+  if (translated) {
+    return { code: code === "ADMIN_OPERATION_FAILED" ? "22023" : code, message: translated, status };
+  }
   const message = code === "42501"
     ? (authoredArabicMessage || "لا تملك الصلاحية المطلوبة لتنفيذ هذه العملية.")
     : code !== "ADMIN_OPERATION_FAILED" && authoredArabicMessage

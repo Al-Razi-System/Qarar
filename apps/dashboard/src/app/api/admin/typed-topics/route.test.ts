@@ -4,6 +4,13 @@ vi.mock("@/shared/api/qarar-server", () => ({ qararRpcV2: rpc, qararRpc: rpc, re
 import { GET, POST } from "./route";
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllEnvs(); });
 const id = "79000000-0000-0000-0000-000000000011";
+it("loads council-only contextual options from the typed contract", async () => {
+  rpc.mockResolvedValue({ governance_units: [] });
+  const response = await GET(new Request("http://localhost/api/admin/typed-topics"));
+  expect(response.status).toBe(200);
+  expect(rpc).toHaveBeenCalledWith("get_typed_topic_form_options_v2", {});
+  expect(await response.json()).toEqual({ data: { governance_units: [] } });
+});
 it("validates identities before looking up available types", async () => {
   expect((await GET(new Request("http://localhost/api/admin/typed-topics?unitId=bad"))).status).toBe(400);
   expect(rpc).not.toHaveBeenCalled();

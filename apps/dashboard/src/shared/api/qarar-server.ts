@@ -40,7 +40,7 @@ function accessTokenAal(token: string) {
   } catch { return null; }
 }
 
-async function assertSensitiveMfa(accessToken: string) {
+async function assertSensitiveMfa(accessToken: string, signal?: AbortSignal) {
   // An AAL2 token has already passed MFA; no role lookup can impose a higher
   // assurance level, so avoid an unnecessary database call on every request.
   if (accessTokenAal(accessToken) === "aal2") return;
@@ -48,7 +48,7 @@ async function assertSensitiveMfa(accessToken: string) {
   const response = await fetch(`${localEnv.SUPABASE_URL}/rest/v1/rpc/get_current_user_access_context`, {
     method: "POST",
     headers: { apikey: localEnv.ANON_KEY, Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", "Accept-Profile": "api_v1", "Content-Profile": "api_v1" },
-    body: "{}", cache: "no-store",
+    body: "{}", cache: "no-store", ...(signal ? { signal } : {}),
   });
   if (!response.ok) throw new Error("UNAUTHENTICATED");
   const context = await response.json() as { is_system_admin?: boolean; permissions?: string[]; roles?: Array<{ code?: string }> } | null;
@@ -63,9 +63,11 @@ const assertSensitiveMfaOnce = cache(assertSensitiveMfa);
 export async function qararRpc<T>(
   name: string,
   body: Record<string, unknown>,
+  options: { signal?: AbortSignal } = {},
 ): Promise<T> {
   const accessToken = await getQararAccessToken();
-  await assertSensitiveMfaOnce(accessToken);
+  if (options.signal) await assertSensitiveMfa(accessToken, options.signal);
+  else await assertSensitiveMfaOnce(accessToken);
   const localEnv = await getQararEnv();
   const request = (token: string) => fetch(
     `${localEnv.SUPABASE_URL}/rest/v1/rpc/${name}`,
@@ -80,6 +82,7 @@ export async function qararRpc<T>(
       },
       body: JSON.stringify(body),
       cache: "no-store",
+      ...(options.signal ? { signal: options.signal } : {}),
     },
   );
 
@@ -100,6 +103,8 @@ export async function qararRpc<T>(
     );
   }
 
+  // PostgREST void commands commit successfully and return no JSON body.
+  if (response.status === 204) return null as T;
   return response.json() as Promise<T>;
 }
 
@@ -127,6 +132,7 @@ export async function qararRpcV2<T>(
     const payload = await response.json().catch(() => ({})) as { code?: string; message?: string; details?: string; hint?: string };
     throw new QararApiError(payload.message ?? `QARAR_API_${response.status}`, response.status, payload.code, payload.details, payload.hint);
   }
+  if (response.status === 204) return null as T;
   return response.json() as Promise<T>;
 }
 

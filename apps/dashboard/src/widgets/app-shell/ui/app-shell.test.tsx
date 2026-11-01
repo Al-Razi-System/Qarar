@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppShell, type AppAccessContext } from "./app-shell";
+vi.mock("@/shared/ui/self-avatar", () => ({ SelfAvatar: () => <span>الصورة</span> }));
 
 const replace = vi.fn();
 
@@ -31,5 +32,14 @@ describe("AppShell governance navigation", () => {
     render(<AppShell access={baseAccess}><div>المحتوى</div></AppShell>);
 
     expect(screen.queryByRole("link", { name: /تصنيفات الموضوعات/ })).not.toBeInTheDocument();
+  });
+
+  it("shows WhatsApp administration only to the system administrator", () => {
+    const { rerender } = render(<AppShell access={baseAccess}><div>المحتوى</div></AppShell>);
+    expect(screen.queryByRole("link", { name: /إشعارات واتساب/ })).not.toBeInTheDocument();
+    rerender(<AppShell access={{ ...baseAccess, is_system_admin: true }}><div>المحتوى</div></AppShell>);
+    const entries = screen.getAllByRole("link", { name: /إشعارات واتساب/ });
+    expect(entries).toHaveLength(2);
+    entries.forEach(entry => expect(entry).toHaveAttribute("href", "/admin/settings/notifications"));
   });
 });

@@ -1,0 +1,7 @@
+import {render,screen,waitFor} from "@testing-library/react";
+import {beforeEach,expect,it,vi} from "vitest";
+import {SelfAvatar} from "./self-avatar";
+const fetchMock=vi.fn();beforeEach(()=>{fetchMock.mockReset();vi.stubGlobal("fetch",fetchMock);URL.createObjectURL=vi.fn(()=>"blob:avatar");URL.revokeObjectURL=vi.fn();});
+it("keeps accessible initials for old accounts without an image",async()=>{fetchMock.mockResolvedValue(new Response(null,{status:204}));render(<SelfAvatar name="عمر محمد"/>);await waitFor(()=>expect(fetchMock).toHaveBeenCalled());expect(screen.getByLabelText("الصورة البديلة لـعمر محمد")).toHaveTextContent("عم");expect(fetchMock.mock.calls[0][1].cache).toBe("no-store");});
+it("shows a private blob and releases it on unmount",async()=>{fetchMock.mockResolvedValue(new Response("image",{headers:{"Content-Type":"image/jpeg"}}));const view=render(<SelfAvatar name="عمر"/>);await waitFor(()=>expect(screen.getByAltText("الصورة الشخصية لـعمر")).toBeVisible());view.unmount();expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:avatar");});
+it("falls back on a failed read without exposing another account",async()=>{fetchMock.mockRejectedValue(new TypeError("network"));render(<SelfAvatar name="مستخدم"/>);await waitFor(()=>expect(fetchMock).toHaveBeenCalled());expect(screen.getByLabelText("الصورة البديلة لـمستخدم")).toBeVisible();expect(screen.queryByRole("img")).toBeNull();});

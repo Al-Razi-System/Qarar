@@ -18,13 +18,14 @@ describe("new administration workspaces", () => {
     ["meetings", MeetingsWorkspace, "الاجتماع"],
     ["sessions", SessionsWorkspace, "الجلس"],
     ["sso", SsoWorkspace, "الدخول"],
-    ["topics", TopicsWorkspace, "الموضوع"],
-  ])("renders %s without crashing", (_name, Component) => {
+    ["topics", TopicsWorkspace, "موضوع"],
+  ])("renders %s without crashing", (_name, Component, expectedText) => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ data: { items: [], total: 0 } }), { status: 200 }),
     );
     render(<Component />);
     expect(document.body.firstElementChild).toBeTruthy();
+    expect(document.body).toHaveTextContent(expectedText);
     vi.restoreAllMocks();
   });
 });

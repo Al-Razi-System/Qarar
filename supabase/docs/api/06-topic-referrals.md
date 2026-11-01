@@ -34,9 +34,24 @@ Permission: `topics.refer` on the destination unit.
 }
 ```
 
-`p_decision` is `accept` or `reject`. Rejection requires at least five characters. Acceptance
-atomically moves `topics.current_unit_id`; both outcomes store responder, response reason/time, and
-an audit event.
+`p_decision` is `accept` or `reject`. Rejection requires at least five characters. For a legacy
+topic without a governed workflow, acceptance atomically moves `topics.current_unit_id`. For a
+governed topic, the referral is a temporary consultation: acceptance records the response but keeps
+the topic with its active workflow step and council. Both outcomes store responder, response
+reason/time, `route_effect`, and an audit event.
+
+## Return and Resubmission Across Councils
+
+`get_topic_return_option` evaluates a topic in a draft/scheduled meeting and exposes the return
+action only to the contextual chair. `return_topic_to_previous_council` requires a reason of at
+least ten characters, an idempotency key, and the current step version. It preserves the completed
+cycle and opens a new cycle at the previous council; returning from the first council blocks the
+workflow and returns the topic to its submitter.
+
+The submitter then reads `get_topic_resubmission_option`. When available,
+`resubmit_returned_topic` validates mandatory requirements, opens a new first-council cycle, and
+returns the topic to that council's proposal queue. Other users receive no enabled action and
+cannot invoke the mutation.
 
 ## Route History
 

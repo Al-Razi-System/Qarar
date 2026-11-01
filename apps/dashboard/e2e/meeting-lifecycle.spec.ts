@@ -4,6 +4,9 @@ import { assertIsolatedE2ETarget } from "../src/lib/e2e-target-guard";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dockerEnv, fixturePath } from "./fixture";
+import { closeE2EContexts } from "../src/lib/e2e-cleanup";
+
+test.use({ actionTimeout: 15_000, navigationTimeout: 30_000 });
 
 type Fixture = { userId: string; organizationId: string; email: string; password: string };
 type Lifecycle = Fixture & {
@@ -145,8 +148,8 @@ test.beforeAll(async ({}, testInfo) => {
       (id,organization_id,meeting_no,governance_unit_id,title_ar,scheduled_date,created_by_user_id,status)
       values ('${ids.meeting}','${base.organizationId}','MTG-E2E-${suffix}','${ids.unit}','اجتماع Playwright الشامل',current_date,'${base.userId}','ready_to_start');
     insert into qarar_meetings.agenda_items
-      (id,organization_id,meeting_id,topic_id,agenda_order)
-      values ('${ids.agenda}','${base.organizationId}','${ids.meeting}','${ids.topic}',1);
+      (id,organization_id,meeting_id,topic_id,agenda_order,discussion_instructions_override)
+      values ('${ids.agenda}','${base.organizationId}','${ids.meeting}','${ids.topic}',1,E'### مراجعة المستندات\n\n- راجع الخطة\n\n<strong>قبل التصويت</strong>');
   `;
   execFileSync("docker", ["exec", databaseTarget.container, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "supabase_admin", "-d", databaseTarget.database, "-c", sql]);
   lifecycle = {
@@ -162,38 +165,54 @@ test.afterAll(async () => {
   }
 });
 
-async function login(browser: Browser, email: string, password: string) {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  const response = await page.request.post("/api/auth/login", {
-    data: { email, password }, headers: { "x-qarar-client-ip": `127.0.0.${Math.floor(Math.random() * 200) + 1}` },
-  });
-  expect(response.status(), await response.text()).toBe(200);
-  return { context, page };
+async function login(browser: Browser, email: string, password: string, options: Parameters<Browser["newContext"]>[0]) {
+  const context = await browser.newContext(options);
+  try {
+    const page = await context.newPage();
+    const response = await page.request.post("/api/auth/login", {
+      data: { email, password }, headers: { "x-qarar-client-ip": `127.0.0.${Math.floor(Math.random() * 200) + 1}` },
+      timeout: 30_000,
+    });
+    expect(response.status(), await response.text()).toBe(200);
+    expect((await response.json()).authenticated).toBe(true);
+    return { context, page };
+  } catch (error) {
+    await closeE2EContexts([context], { error });
+    throw error;
+  }
 }
 
 async function rpc<T>(page: Page, contract: string, params: Record<string, unknown> = {}) {
-  const response = await page.request.post("/api/admin/meetings", { data: { contract, params } });
-  const body = await response.json();
-  expect(response.status(), body.error?.message ?? contract).toBe(200);
-  return body.data as T;
+  return test.step(`عقد الاجتماع: ${contract}`, async () => {
+    const response = await page.request.post("/api/admin/meetings", { data: { contract, params }, timeout: 30_000 });
+    const body = await response.json();
+    expect(response.status(), body.error?.message ?? contract).toBe(200);
+    return body.data as T;
+  });
 }
 
 async function openAgenda(page: Page) {
   await page.getByRole("button", { name: /جدول الأعمال والتصويت/ }).click();
 }
 
-async function vote(page: Page) {
+async function vote(page: Page, followsBroadcast = false) {
   await page.reload();
-  await openAgenda(page);
-  await expect(page.getByText("تصويت مفتوح لك الآن")).toBeVisible();
-  await page.getByRole("button", { name: "موافق", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "اجتماع Playwright الشامل" })).toBeVisible({ timeout: 30_000 });
+  if (followsBroadcast) {
+    await expect(page.getByRole("region", { name: "بث الجلسة" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "أقسام غرفة الاجتماع" })).toHaveCount(0);
+  }
+  // An open round puts the private ballot in front of every eligible voter.
+  const ballot = page.getByRole("dialog").filter({ hasText: "تصويت مفتوح لك الآن" });
+  await expect(ballot).toBeVisible();
+  await ballot.getByRole("radio", { name: "موافق", exact: true }).click();
+  await ballot.getByRole("button", { name: "تأكيد التصويت", exact: true }).click();
   await expect(page.getByText("تم تسجيل صوتك وملاحظتك بسرية.")).toBeVisible();
 }
 
 async function sign(page: Page) {
   await page.reload();
-  await expect(page.getByRole("button", { name: "مراجعة المحضر والتوقيع" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "مراجعة المحضر والتوقيع" })).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "مراجعة المحضر والتوقيع" }).click();
   const canvas = page.getByLabel("مربع رسم التوقيع");
   const box = await canvas.boundingBox();
@@ -204,17 +223,21 @@ async function sign(page: Page) {
   await page.mouse.move(box!.x + 220, box!.y + 50, { steps: 6 });
   await page.mouse.up();
   await page.getByRole("button", { name: "توقيع ومصادقة" }).click();
-  await expect(page.getByText("حُفظ توقيعك وربط ببصمة النسخة النهائية.")).toBeVisible();
+  await expect(page.getByText("حُفظ توقيعك وربط ببصمة النسخة النهائية.")).toBeVisible({ timeout: 20_000 });
 }
 
-test("دورة اجتماع حقيقية متعددة الحسابات حتى اعتماد المحضر", async ({ browser }) => {
-  test.setTimeout(240_000);
-  const chair = await login(browser, lifecycle.email, lifecycle.password);
-  const rapporteur = await login(browser, lifecycle.rapporteur.email, lifecycle.rapporteur.password);
-  const member = await login(browser, lifecycle.member.email, lifecycle.member.password);
-  const contexts: BrowserContext[] = [chair.context, rapporteur.context, member.context];
+test("دورة اجتماع حقيقية متعددة الحسابات حتى اعتماد المحضر", async ({ browser }, testInfo) => {
+  test.setTimeout(480_000);
+  const use = testInfo.project.use;
+  const options = { viewport: use.viewport, isMobile: use.isMobile, hasTouch: use.hasTouch, deviceScaleFactor: use.deviceScaleFactor, userAgent: use.userAgent };
+  const contexts: BrowserContext[] = [];
+  let primary: { error: unknown } | undefined;
   try {
-    const opened = await rpc<{ meeting: { updated_at: string } }>(chair.page, "open_meeting_session", {
+    const chair = await login(browser, lifecycle.email, lifecycle.password, options); contexts.push(chair.context);
+    const rapporteur = await login(browser, lifecycle.rapporteur.email, lifecycle.rapporteur.password, options); contexts.push(rapporteur.context);
+    const member = await login(browser, lifecycle.member.email, lifecycle.member.password, options); contexts.push(member.context);
+    expect(chair.page.viewportSize()).toEqual(use.viewport);
+    await rpc<{ meeting: { updated_at: string } }>(chair.page, "open_meeting_session", {
       p_meeting_id: lifecycle.meetingId,
       p_expected_updated_at: (await rpc<{ updated_at: string }>(chair.page, "get_meeting_detail", { p_meeting_id: lifecycle.meetingId })).updated_at,
     });
@@ -231,28 +254,48 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
       await page.goto(`/admin/meetings/${lifecycle.meetingId}/live`);
       await expect(page.getByRole("heading", { name: "اجتماع Playwright الشامل" })).toBeVisible({ timeout: 30_000 });
     }
-    await expect(chair.page.getByText("لوحة رئيس المجلس")).toBeVisible();
-    await expect(rapporteur.page.getByText("لوحة مقرر المجلس")).toBeVisible();
-    await expect(member.page.getByText("بوابة عضو المجلس")).toBeVisible();
+    // Each account sees its own view; the role label lives in the room's display menu.
+    for (const [page, label] of [[chair.page, "لوحة رئيس المجلس"], [rapporteur.page, "لوحة مقرر المجلس"], [member.page, "بوابة عضو المجلس"]] as const) {
+      await page.getByRole("button", { name: "إعدادات العرض" }).click();
+      await expect(page.getByRole("menu", { name: "إعدادات العرض" }).getByText(label)).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("menu", { name: "إعدادات العرض" })).toBeHidden();
+    }
 
     await openAgenda(chair.page);
     await chair.page.getByRole("button", { name: "بدء المناقشة" }).click();
     await expect(chair.page.getByText("بدأت مناقشة البند.")).toBeVisible();
-    await chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" }).click();
+    // The room tells every screen at once; nobody waits for a periodic read.
+    await expect(member.page.getByText("قيد المناقشة").first()).toBeVisible({ timeout: 6_000 });
+    await chair.page.getByRole("button", { name: "وضع العرض على الشاشة" }).click();
+    const finishDiscussion = chair.page.getByRole("button", { name: "إنهاء المناقشة والانتقال للتصويت" });
+    await expect(finishDiscussion).toBeVisible({ timeout: 20_000 });
+    await expect(finishDiscussion).toBeEnabled({ timeout: 20_000 });
+    await chair.page.getByRole("button", { name: "تكبير التعليمات" }).click();
+    await expect(chair.page.getByRole("dialog").getByRole("heading", { name: "مراجعة المستندات" })).toBeVisible();
+    await chair.page.getByRole("button", { name: "إغلاق العرض الموسع" }).click();
+    // The chair can advance without exiting the hall view; no vote choices are exposed there.
+    await expect(finishDiscussion).toBeVisible({ timeout: 20_000 });
+    await finishDiscussion.click();
     await expect(chair.page.getByText("تم حفظ الملخص النهائي للبند بنجاح.")).toBeVisible();
-    await chair.page.getByRole("button", { name: "فتح التصويت للأعضاء" }).click();
+    await chair.page.getByRole("button", { name: "إنهاء وضع العرض", exact: true }).click();
+    const openVote = chair.page.getByRole("button", { name: "فتح التصويت للأعضاء" });
+    await expect(openVote).toBeEnabled({ timeout: 20_000 });
+    await openVote.click();
+    await expect(member.page.getByRole("dialog").filter({ hasText: "تصويت مفتوح لك الآن" })).toBeVisible({ timeout: 6_000 });
     const closeVote = chair.page.getByRole("button", { name: "إغلاق التصويت واحتساب النتيجة" });
     await expect(closeVote).toBeDisabled();
-    await expect(chair.page.getByLabel("متابعة المشاركة في التصويت")).toContainText("0 من 3 صوّتوا");
-    await expect(chair.page.getByLabel("متابعة المشاركة في التصويت")).not.toContainText("النتيجة النهائية");
+    await expect(chair.page.getByRole("img", { name: "صوّت 0 من 3", exact: true })).toBeVisible();
+    await expect(chair.page.getByLabel("النتيجة النهائية للتصويت")).not.toBeVisible();
 
-    await vote(member.page);
+    await vote(member.page, true);
     await vote(rapporteur.page);
     await vote(chair.page);
     await member.page.goto("about:blank");
     await chair.page.reload();
+    await expect(chair.page.getByRole("heading", { name: "اجتماع Playwright الشامل" })).toBeVisible({ timeout: 30_000 });
     await openAgenda(chair.page);
-    await expect(chair.page.getByLabel("متابعة المشاركة في التصويت")).toContainText("3 من 3 صوّتوا");
+    await expect(chair.page.getByRole("img", { name: "صوّت 3 من 3", exact: true })).toBeVisible();
     await expect(closeVote).toBeEnabled();
     await closeVote.click();
     await expect(chair.page.getByText("أُغلقت الجولة وحُسبت النتيجة.")).toBeVisible({ timeout: 15_000 });
@@ -263,7 +306,7 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     const summary = rapporteur.page.getByPlaceholder("اكتب خلاصة المناقشة ونتيجة التصويت والتوصية النهائية...");
     await summary.fill("وافق المجلس على الموضوع وأوصى باستكمال التنفيذ وفق القرار المعتمد.");
     await rapporteur.page.getByRole("button", { name: "حفظ الملخص النهائي" }).click();
-    await expect(rapporteur.page.getByText("تم الحفظ بنجاح")).toBeVisible();
+    await expect(rapporteur.page.getByText("تم الحفظ بنجاح")).toBeVisible({ timeout: 20_000 });
     await rapporteur.page.goto("about:blank");
 
     await chair.page.reload();
@@ -285,7 +328,6 @@ test("دورة اجتماع حقيقية متعددة الحسابات حتى ا
     await sign(rapporteur.page);
     await sign(chair.page);
     await expect(chair.page.getByText("اعتمد المحضر وأُغلق الاجتماع")).toBeVisible();
-  } finally {
-    await Promise.all(contexts.map((context) => context.close()));
-  }
+  } catch (error) { primary = { error }; }
+  await closeE2EContexts(contexts, primary);
 });

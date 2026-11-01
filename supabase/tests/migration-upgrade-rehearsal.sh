@@ -14,7 +14,13 @@ apply_migration() {
   version=$(basename "$migration" .sql)
   checksum=$(sha256sum "$migration" | awk '{print $1}')
   {
-    cat "$migration"
+    # Match the production runner: historical files own an outer transaction,
+    # while the runner must own the transaction that includes the ledger row.
+    awk '
+      tolower($0) ~ /^[[:space:]]*begin[[:space:]]*;[[:space:]]*$/ { next }
+      tolower($0) ~ /^[[:space:]]*commit[[:space:]]*;[[:space:]]*$/ { next }
+      { print }
+    ' "$migration"
     printf "\ninsert into qarar_internal.applied_migrations(version,checksum_sha256) values ('%s','%s');\n" \
       "$version" "$checksum"
   } | docker exec -i qarar-supabase-db psql -U supabase_admin -d postgres \
