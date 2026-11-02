@@ -165,7 +165,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
         roomRpc<MeetingTopicAttachment[]>("list_meeting_topic_attachments", { p_meeting_id: meetingId }),
         roomRpc<PendingRejectedVoteResolutions>("list_pending_rejected_vote_resolutions", { p_meeting_id: meetingId }),
       ]);
-      if (["waiting_for_minutes", "waiting_for_approval", "closed"].includes(live.meeting.status)) {
+      if (["waiting_for_minutes", "waiting_for_approval", "closed", "archived"].includes(live.meeting.status)) {
         router.replace(`/admin/meetings/${meetingId}/minutes`);
         return;
       }

@@ -18,3 +18,17 @@ export function meetingTimeLabel(meeting: { start_time?: string | null; end_time
   const start = meeting.start_time?.slice(0, 5); const end = meeting.end_time?.slice(0, 5);
   return start ? (end ? `${start} – ${end}` : start) : "الوقت غير محدد";
 }
+
+/** «2026/2027» for an academic year that starts on 2026-09-01. */
+export function academicYearLabel(start?: string | null) {
+  if (!start) return null;
+  const year = Number(start.slice(0, 4));
+  return Number.isFinite(year) ? `${year}/${year + 1}` : null;
+}
+
+/** «الجلسة 3 · العام الجامعي 2026/2027», or null for a meeting outside a council year. */
+export function sessionNumberLabel(meeting: { session_sequence_no?: number | null; academic_year_start?: string | null }) {
+  const year = academicYearLabel(meeting.academic_year_start);
+  if (!meeting.session_sequence_no || !year) return null;
+  return `الجلسة ${meeting.session_sequence_no} · العام الجامعي ${year}`;
+}

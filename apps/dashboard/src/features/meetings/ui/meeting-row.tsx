@@ -1,10 +1,10 @@
 "use client";
 
-import { ChevronLeft, Clock, ListChecks, MapPin, Users } from "lucide-react";
+import { ChevronLeft, Clock, Hash, ListChecks, MapPin, Users } from "lucide-react";
 import type { Meeting } from "../model/meeting";
 import { meetingStatusLabels, meetingStatusTone } from "../model/meeting";
 import { meetingOperationalGroup } from "../model/meeting-operational-state";
-import { meetingLocationLabel, meetingTimeLabel } from "../model/meeting-schedule";
+import { meetingLocationLabel, meetingTimeLabel, sessionNumberLabel } from "../model/meeting-schedule";
 import { Badge } from "@/shared/ui/badge";
 import { cn } from "@/shared/lib/utils";
 
@@ -42,6 +42,7 @@ export function MeetingRow({ meeting, today, onOpen }: { meeting: Meeting; today
   const time = meetingTimeLabel(meeting);
   const council = meeting.unit_name_ar ?? meeting.governance_unit_name_ar;
   const items = meeting.agenda_item_count ?? meeting.agenda_count ?? 0;
+  const session = sessionNumberLabel(meeting);
   const where = meeting.location_details || meeting.location_type ? meetingLocationLabel(meeting) : null;
   return <button type="button" onClick={onOpen} className="group flex w-full items-center gap-4 px-4 py-3 text-start transition-colors hover:bg-q-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-q-primary">
     <DateTile meeting={meeting} missed={missed}/>
@@ -49,6 +50,7 @@ export function MeetingRow({ meeting, today, onOpen }: { meeting: Meeting; today
       <span className="text-q-ui font-bold text-q-text">{meeting.title_ar}</span>
       <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-q-caption text-q-text-2">
         {council && <span className="inline-flex items-center gap-1"><Users size={14} aria-hidden="true"/>{council}</span>}
+        {session && <span className="inline-flex items-center gap-1"><Hash size={14} aria-hidden="true"/>{session}</span>}
         <span className="inline-flex items-center gap-1"><Clock size={14} aria-hidden="true"/>{time}</span>
         {where && <span className="inline-flex items-center gap-1"><MapPin size={14} aria-hidden="true"/>{where}</span>}
         <span className="inline-flex items-center gap-1"><ListChecks size={14} aria-hidden="true"/>{items === 0 ? "لا بنود بعد" : `${items} بند`}</span>

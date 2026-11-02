@@ -10,7 +10,7 @@ import type { CouncilDetail, CouncilFormOptions, CouncilFormValues } from "../mo
 const recurrenceNames: Record<string, string> = {weekly:"أسبوعية",monthly:"شهرية",quarterly:"كل ثلاثة أشهر",semiannual:"كل ستة أشهر",annual:"سنوية"};
 
 function emptyValues(options: CouncilFormOptions): CouncilFormValues {
-  return { nameAr: "", nameEn: "", description: "", unitTypeId: "", scopeUnitId: "", governanceClassId: "", minimumActiveMembers: 3, allowDualLeadership: false, createMeetingPlan: false, meetingTypeId: options.meeting_types?.[0]?.id ?? "", recurrence: "monthly", firstMeetingDate: "", planEndsOn: "", missedAfterDays: 7 };
+  return { nameAr: "", nameEn: "", description: "", unitTypeId: "", scopeUnitId: "", governanceClassId: "", minimumActiveMembers: 3, allowDualLeadership: false, createMeetingPlan: false, meetingTypeId: options.meeting_types?.[0]?.id ?? "", recurrence: "monthly", firstMeetingDate: "", planEndsOn: "", missedAfterDays: 7, quorumPercentage: 51 };
 }
 
 export function CouncilFormDialog({ options: initialOptions, mode = "create", initialValues, existingPlan, canCreateMeetingPlan = true, onClose, onSubmit }: { options: CouncilFormOptions; mode?: "create" | "edit"; initialValues?: CouncilFormValues; existingPlan?: CouncilDetail["meeting_plan"]; canCreateMeetingPlan?: boolean; onClose: () => void; onSubmit: (values: CouncilFormValues) => Promise<void> }) {
@@ -57,12 +57,14 @@ export function CouncilFormDialog({ options: initialOptions, mode = "create", in
             <Field label="الدورية"><select value={values.recurrence} onChange={(event) => { update("recurrence", event.target.value as CouncilFormValues["recurrence"]); update("monthlyWeek", null); }} className={inputClass}><option value="weekly">أسبوعية</option><option value="monthly">شهرية</option><option value="quarterly">كل ثلاثة أشهر</option><option value="semiannual">كل ستة أشهر</option><option value="annual">سنوية</option></select></Field>
             {values.recurrence === "monthly" && <Field label="موعد الاجتماع الشهري" hint="اختيار الأسبوع يترك تحديد يوم الانعقاد للمجلس"><select value={values.monthlyWeek ?? ""} onChange={event => update("monthlyWeek", event.target.value ? Number(event.target.value) : null)} className={inputClass}><option value="">يوم محدد</option><option value="1">الأسبوع الأول — من 1 إلى 7</option><option value="2">الأسبوع الثاني — من 8 إلى 14</option><option value="3">الأسبوع الثالث — من 15 إلى 21</option><option value="4">الأسبوع الرابع — من 22 إلى 28</option></select></Field>}
             {values.monthlyWeek ? <Field label="شهر البداية"><input required type="month" value={values.firstMeetingDate.slice(0,7)} onChange={event => update("firstMeetingDate", event.target.value ? `${event.target.value}-01` : "")} className={inputClass}/></Field> : <Field label="موعد أول اجتماع"><input required type="date" value={values.firstMeetingDate} onChange={(event) => update("firstMeetingDate", event.target.value)} className={inputClass}/></Field>}
+            <Field label="نصاب اجتماعات الخطة (٪)" hint="يُطبَّق على كل اجتماعات الخطة؛ لا يُعدَّل من موعد الجلسة"><input required type="number" min={1} max={100} step={1} value={values.quorumPercentage} onChange={(event) => update("quorumPercentage", Number(event.target.value))} className={inputClass}/></Field>
           </div>}
         </section>}
         {existingPlan && <section className="space-y-3 rounded-q-card border border-q-border bg-q-surface-2 p-4">
           <h3 className="text-q-ui font-bold">خطة اجتماعات المجلس</h3>
           <p className="text-q-body">{existingPlan.meeting_type_name_ar} · {recurrenceNames[existingPlan.recurrence] ?? "دورية محفوظة"}</p>
           <p className="text-q-caption text-q-text-2">{existingPlan.monthly_week ? `الأسبوع ${["", "الأول", "الثاني", "الثالث", "الرابع", "الخامس"][existingPlan.monthly_week]} من كل شهر · بداية الخطة: ${existingPlan.first_meeting_date.slice(0,7)}` : `موعد أول اجتماع: ${existingPlan.first_meeting_date}`}</p>
+          {existingPlan.quorum_percentage && <p className="text-q-caption text-q-text-2">نصاب اجتماعات الخطة: {existingPlan.quorum_percentage}٪</p>}
           <p className="text-q-caption text-q-text-2">تعديل بيانات المجلس لا يغيّر مواعيد الاجتماعات القائمة.</p>
           <Link href="/admin/meetings" className="text-q-ui font-bold text-q-link underline">عرض الاجتماعات</Link>
         </section>}
