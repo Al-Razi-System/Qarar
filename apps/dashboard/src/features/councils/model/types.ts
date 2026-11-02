@@ -35,7 +35,7 @@ export type CouncilSummary = {
 export type CouncilDetail = CouncilSummary & {
   meeting_plan_unavailable?: boolean;
   can_create_meeting_plan?: boolean;
-  meeting_plan?: { id: string; recurrence: string; monthly_week?: number | null; first_meeting_date: string; ends_on: string | null; meeting_type_name_ar: string } | null;
+  meeting_plan?: { id: string; recurrence: string; monthly_week?: number | null; quorum_percentage?: number; first_meeting_date: string; ends_on: string | null; meeting_type_name_ar: string } | null;
   scope_unit_id?: string | null;
   scope_unit?: Pick<ReferenceOption, "id" | "code" | "name_ar"> | null;
   unit_type: ReferenceOption;
@@ -97,4 +97,6 @@ export type CouncilFormValues = {
   planEndsOn: string;
   missedAfterDays: number;
   monthlyWeek?: number | null;
+  /** The quorum every meeting of the plan starts with. */
+  quorumPercentage: number;
 };

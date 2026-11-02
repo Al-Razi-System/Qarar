@@ -15,3 +15,10 @@ describe("meetingOperationalGroup", () => {
     expect(meetingOperationalGroup({ status: "cancelled", scheduled_date: "2026-10-01" }, "2026-10-02")).toBe("cancelled");
   });
 });
+
+describe("archived meetings", () => {
+  it("are kept apart from meetings whose minutes just closed", () => {
+    expect(meetingOperationalGroup({ status: "closed" }, "2026-11-02")).toBe("completed");
+    expect(meetingOperationalGroup({ status: "archived" }, "2026-11-02")).toBe("archived");
+  });
+});

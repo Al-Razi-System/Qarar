@@ -29,6 +29,12 @@ export type Meeting = {
   /** Why the meeting is held off its planned day, when it is. */
   schedule_exception_reason?: string | null;
   schedule_date_confirmed?: boolean;
+  /** The session's number within its council's academic year. */
+  session_sequence_no?: number | null;
+  /** The first day of the academic year the session belongs to. */
+  academic_year_start?: string | null;
+  /** False when the name is generated from the session number. */
+  title_is_custom?: boolean;
   start_time?: string;
   end_time?: string;
   location_type?: string;

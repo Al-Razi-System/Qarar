@@ -1,4 +1,4 @@
-export type MeetingOperationalGroup = "upcoming" | "missed" | "live" | "completion" | "completed" | "drafts" | "cancelled" | null;
+export type MeetingOperationalGroup = "upcoming" | "missed" | "live" | "completion" | "completed" | "archived" | "drafts" | "cancelled" | null;
 
 type MeetingStateInput = { status: string; scheduled_date?: string | null };
 
@@ -8,7 +8,8 @@ export function meetingOperationalGroup(meeting: MeetingStateInput, today: strin
   }
   if (meeting.status === "in_progress") return "live";
   if (["waiting_for_minutes", "waiting_for_approval"].includes(meeting.status)) return "completion";
-  if (["closed", "archived"].includes(meeting.status)) return "completed";
+  if (meeting.status === "closed") return "completed";
+  if (meeting.status === "archived") return "archived";
   if (meeting.status === "draft") return "drafts";
   if (meeting.status === "cancelled") return "cancelled";
   return null;

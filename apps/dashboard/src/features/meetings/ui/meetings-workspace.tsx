@@ -14,7 +14,7 @@ import {
 } from "../model/meeting";
 import { Button } from "@/shared/ui/button";
 import { MeetingQuorumField } from "./meeting-quorum-field";
-import { meetingLocationLabel, meetingScheduleLabel, meetingTimeLabel } from "../model/meeting-schedule";
+import { academicYearLabel, meetingLocationLabel, meetingScheduleLabel, meetingTimeLabel } from "../model/meeting-schedule";
 import { localDateKey, meetingOperationalGroup } from "../model/meeting-operational-state";
 import { MeetingAgendaPanel } from "./meeting-agenda-panel";
 import { ScheduledAgendaSuggestions } from "./scheduled-agenda-suggestions";
@@ -31,6 +31,7 @@ import { InlineMessage } from "@/shared/ui/inline-message";
 import { Dialog } from "@/shared/ui/dialog";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
 import { MeetingScheduleDialog } from "./meeting-schedule-dialog";
+import { MeetingArchivePolicy } from "./meeting-archive-policy";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { cn } from "@/shared/lib/utils";
@@ -60,7 +61,8 @@ const meetingGroups = [
   { key: "missed", label: "تحتاج إجراء", description: "فات موعدها ولم تُفتح", statuses: [] },
   { key: "live", label: "منعقدة الآن", description: "جلسات قيد الانعقاد", statuses: ["in_progress"] },
   { key: "completion", label: "قيد الإكمال", description: "المحاضر والمصادقات", statuses: ["waiting_for_minutes", "waiting_for_approval"] },
-  { key: "completed", label: "المكتملة", description: "السجل النهائي والأرشيف", statuses: ["closed", "archived"] },
+  { key: "completed", label: "المكتملة", description: "اعتُمدت محاضرها", statuses: ["closed"] },
+  { key: "archived", label: "الأرشيف", description: "أُرشفت تلقائيًا بعد اعتماد محاضرها", statuses: ["archived"] },
   { key: "drafts", label: "المسودات", description: "اجتماعات قيد التجهيز", statuses: ["draft"] },
   { key: "cancelled", label: "الملغاة", description: "اجتماعات أُلغي انعقادها", statuses: ["cancelled"] },
 ] as const;
@@ -73,6 +75,21 @@ function groupedMeetings(meetings: Meeting[], today: string) {
     ...group,
     meetings: meetings.filter((meeting) => meetingOperationalGroup(meeting, today) === group.key),
   })).filter((group) => group.meetings.length > 0);
+}
+
+/** The archive shelved by council, then academic year (newest first), then session number. */
+function archiveShelves(meetings: Meeting[]) {
+  const shelves = new Map<string, { key: string; label: string; council: string; year: string; meetings: Meeting[] }>();
+  for (const meeting of meetings) {
+    const council = meeting.unit_name_ar ?? meeting.governance_unit_name_ar ?? "مجلس غير محدد";
+    const year = academicYearLabel(meeting.academic_year_start) ?? "";
+    const key = `${council}|${year}`;
+    const shelf = shelves.get(key) ?? { key, council, year, label: year ? `${council} — العام الجامعي ${year}` : council, meetings: [] };
+    shelf.meetings.push(meeting); shelves.set(key, shelf);
+  }
+  return [...shelves.values()]
+    .sort((a, b) => a.council.localeCompare(b.council, "ar") || b.year.localeCompare(a.year))
+    .map((shelf) => ({ ...shelf, meetings: shelf.meetings.sort((a, b) => (b.session_sequence_no ?? 0) - (a.session_sequence_no ?? 0)) }));
 }
 
 function agendaLockMessage(status: string) {
@@ -171,8 +188,9 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
       const seriesRequest = rpc<MeetingSeries[]>("list_meeting_series", {}, { signal: controller.signal, timeoutMs: 12_000 })
         .catch(() => []);
       const result = await rpc<{ items: Meeting[]; total: number }>("search_meetings", {
-        p_query: deferredQuery.trim() || null, p_status: null, p_unit_id: null,
-        p_from_date: fromDate || null, p_to_date: toDate || null, p_limit: 50, p_offset: 0,
+        // The archive grows every year; it is read on its own rather than among the 50 latest.
+        p_query: deferredQuery.trim() || null, p_status: activeGroup === "archived" ? "archived" : null, p_unit_id: null,
+        p_from_date: fromDate || null, p_to_date: toDate || null, p_limit: activeGroup === "archived" ? 100 : 50, p_offset: 0,
       }, { signal: controller.signal, timeoutMs: 12_000 });
       if (controller.signal.aborted) return;
       setMeetings(result.items ?? []);
@@ -543,7 +561,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
       window.clearTimeout(timer);
       listRequestRef.current?.abort();
     };
-  }, [deferredQuery, fromDate, toDate, focused]);
+  }, [deferredQuery, fromDate, toDate, focused, activeGroup === "archived"]);
 
   useEffect(() => { const timer = window.setTimeout(() => { if (!focused && typeof window.matchMedia === "function" && window.matchMedia("(min-width: 768px)").matches) setViewMode("month"); }, 0); return () => window.clearTimeout(timer); }, [focused]);
   useEffect(() => {
@@ -671,6 +689,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
 
       <div className={cn("grid items-start gap-5", !focused && selected && "xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]")}>
         <div className={cn("space-y-4", focused && "hidden")}>
+          {activeGroup === "archived" && !focused && <MeetingArchivePolicy/>}
           {refreshing && !loading && <p role="status" className="m-0 rounded-q-control bg-q-surface-2 px-3 py-2 text-q-caption text-q-text-2">جارٍ تحديث الاجتماعات في الخلفية…</p>}
           {loading ? (
             <Card aria-busy="true" className="grid min-h-72 place-items-center"><p role="status" className="m-0 flex items-center gap-2 text-q-ui text-q-text-2"><LoaderCircle className="animate-spin text-q-link" size={20} aria-hidden="true"/>جارٍ تحميل الاجتماعات…</p></Card>
@@ -687,7 +706,10 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
               <h2 id={`meeting-group-${group.key}`} className="m-0 text-q-ui font-bold text-q-text">{group.label}</h2>
               <span className="text-q-caption text-q-text-2">{group.meetings.length} اجتماع</span>
             </header>
-            <ul className="m-0 list-none divide-y divide-q-border p-0">{group.meetings.map((meeting) => <li key={meeting.id}><MeetingRow meeting={meeting} today={today} onOpen={() => router.push(`/admin/meetings/${meeting.id}`)}/></li>)}</ul>
+            {group.key === "archived" ? archiveShelves(group.meetings).map((shelf) => <div key={shelf.key}>
+              <h3 className="m-0 border-b border-q-border bg-q-surface-2 px-4 py-2 text-q-caption font-bold text-q-text-2">{shelf.label}</h3>
+              <ul className="m-0 list-none divide-y divide-q-border p-0">{shelf.meetings.map((meeting) => <li key={meeting.id}><MeetingRow meeting={meeting} today={today} onOpen={() => router.push(`/admin/meetings/${meeting.id}`)}/></li>)}</ul>
+            </div>) : <ul className="m-0 list-none divide-y divide-q-border p-0">{group.meetings.map((meeting) => <li key={meeting.id}><MeetingRow meeting={meeting} today={today} onOpen={() => router.push(`/admin/meetings/${meeting.id}`)}/></li>)}</ul>}
           </section>)}
         </div>
 

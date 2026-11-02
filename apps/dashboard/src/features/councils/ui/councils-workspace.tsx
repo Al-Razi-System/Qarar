@@ -116,7 +116,7 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
       p_values: {name_ar: values.nameAr, name_en: values.nameEn || null, description: values.description || null,
        unit_type_id: values.unitTypeId, scope_unit_id: values.scopeUnitId || null, parent_council_id: null, governance_class_id: values.governanceClassId || null,
        minimum_active_members: values.minimumActiveMembers, allow_dual_leadership: values.allowDualLeadership},
-      p_meeting_plan: values.createMeetingPlan ? { meeting_type_id: values.meetingTypeId, recurrence: values.recurrence, monthly_week: values.monthlyWeek || null, first_meeting_date: values.firstMeetingDate, ends_on: values.planEndsOn || null, missed_after_days: values.missedAfterDays } : null,
+      p_meeting_plan: values.createMeetingPlan ? { meeting_type_id: values.meetingTypeId, recurrence: values.recurrence, monthly_week: values.monthlyWeek || null, first_meeting_date: values.firstMeetingDate, ends_on: values.planEndsOn || null, missed_after_days: values.missedAfterDays, quorum_percentage: values.quorumPercentage } : null,
       p_client_request_id: creationRequest.current,
     });
     if (!created?.id || !created.reference_number) throw new Error("تعذر تأكيد إنشاء المجلس؛ حدّث القائمة للتحقق قبل المحاولة مجددًا.");
@@ -132,7 +132,7 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
        unit_type_id: values.unitTypeId, governance_class_id: values.governanceClassId || null,
        minimum_active_members: values.minimumActiveMembers, allow_dual_leadership: values.allowDualLeadership},
       p_meeting_plan: values.createMeetingPlan ? {meeting_type_id: values.meetingTypeId, recurrence: values.recurrence, monthly_week: values.monthlyWeek || null,
-       first_meeting_date: values.firstMeetingDate, ends_on: values.planEndsOn || null, missed_after_days: values.missedAfterDays} : null,
+       first_meeting_date: values.firstMeetingDate, ends_on: values.planEndsOn || null, missed_after_days: values.missedAfterDays, quorum_percentage: values.quorumPercentage} : null,
     });
     if (!saved?.saved || saved.id !== detail.id) throw new Error("تعذر تأكيد الحفظ؛ أعد تحميل المجلس للتحقق قبل المحاولة مجددًا.");
     await refreshCouncil(values.createMeetingPlan ? "تم حفظ المجلس وخطته وإنشاء أول اجتماع كمسودة." : "تم حفظ بيانات المجلس بنجاح.");
@@ -254,7 +254,7 @@ function formatDate(value: string) { return new Intl.DateTimeFormat("ar-SA-u-ca-
 function lifecycleTitle(action: Exclude<LifecycleDialog, null>) { return action === "activate" ? "تفعيل المجلس" : action === "deactivate" ? "تعطيل المجلس" : "أرشفة المجلس نهائياً"; }
 function lifecycleDescription(action: Exclude<LifecycleDialog, null>) { return action === "activate" ? "سيصبح المجلس متاحاً للعمليات بعد التحقق النهائي من الجاهزية." : action === "deactivate" ? "سيتم إيقاف العمليات الجديدة مع إبقاء السجل محفوظاً." : "الأرشفة انتقال نهائي ولا تنجح إذا وُجدت مجالس تابعة غير مؤرشفة."; }
 function isLeadershipRole(roleCode: string) { return roleCode === "council_chair" || roleCode === "council_rapporteur"; }
-function toFormValues(detail: CouncilDetail): CouncilFormValues { return { nameAr: detail.name_ar, nameEn: detail.name_en ?? "", description: detail.description ?? "", unitTypeId: detail.unit_type_id, scopeUnitId: detail.scope_unit_id ?? "", governanceClassId: detail.governance_class_id ?? "", minimumActiveMembers: detail.minimum_active_members, allowDualLeadership: detail.allow_dual_leadership, createMeetingPlan: false, meetingTypeId: "", recurrence: "monthly", firstMeetingDate: "", planEndsOn: "", missedAfterDays: 7 }; }
+function toFormValues(detail: CouncilDetail): CouncilFormValues { return { nameAr: detail.name_ar, nameEn: detail.name_en ?? "", description: detail.description ?? "", unitTypeId: detail.unit_type_id, scopeUnitId: detail.scope_unit_id ?? "", governanceClassId: detail.governance_class_id ?? "", minimumActiveMembers: detail.minimum_active_members, allowDualLeadership: detail.allow_dual_leadership, createMeetingPlan: false, meetingTypeId: "", recurrence: "monthly", firstMeetingDate: "", planEndsOn: "", missedAfterDays: 7, quorumPercentage: 51 }; }
 async function fetchCouncilState(): Promise<[CouncilSearchResult, CouncilHierarchyData]> {
   const data = await councilRpc<CouncilHierarchyData>("admin_get_council_organizational_tree_v2");
   if (!Array.isArray(data?.units) || !Array.isArray(data?.councils)) throw new Error("تعذر تأكيد بيانات الهيكل؛ حاول التحديث مجددًا.");
