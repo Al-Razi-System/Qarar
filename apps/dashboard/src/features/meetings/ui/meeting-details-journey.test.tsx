@@ -76,12 +76,57 @@ it("explains that approving the agenda does not start the session before moving 
   }));
 });
 
+it("does not offer preparation or session opening for a plan cycle whose window has not started", async () => {
+  const futureMeeting = {
+    ...meeting,
+    status: "scheduled",
+    planned_window_start: "2027-06-08",
+    planned_window_end: "2027-06-14",
+    cycle_available: false,
+    cycle_unavailable_reason: "تبدأ دورة هذا الاجتماع في 2027-06-08.",
+    capabilities: { can_send_invitations: true, can_prepare_session: false, can_start_session: false },
+  };
+  mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail"
+    ? Promise.resolve(futureMeeting)
+    : Promise.resolve({ ready: true, checks: [] }));
+
+  render(<MeetingDetailsJourney meetingId={futureMeeting.id}/>);
+
+  expect(await screen.findByText("تبدأ دورة هذا الاجتماع في 2027-06-08.")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "اعتماد جدول الأعمال وتجهيز الاجتماع للبدء" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "فتح الجلسة" })).not.toBeInTheDocument();
+});
+
 it("shows a local retry when the meeting cannot be read", async () => {
   mocks.rpc.mockRejectedValue(new Error("تعذر الاتصال بالخادم"));
   render(<MeetingDetailsJourney meetingId="meeting-1"/>);
   expect(await screen.findByText("تعذر الاتصال بالخادم")).toBeVisible();
   expect(screen.getByRole("button", { name: "إعادة المحاولة" })).toBeVisible();
   await waitFor(() => expect(mocks.rpc).toHaveBeenCalledTimes(1));
+});
+
+it("lets an authorised chair reactivate the same cancelled meeting without creating a replacement", async () => {
+  let detailReads = 0;
+  const cancelled = { ...meeting, status: "cancelled", capabilities: { can_manage: true } };
+  mocks.rpc.mockImplementation((contract: string, params: Record<string, unknown>) => {
+    if (contract === "get_meeting_detail") {
+      detailReads += 1;
+      return Promise.resolve(detailReads === 1 ? cancelled : { ...cancelled, status: "scheduled", updated_at: "2026-10-30T08:01:00Z" });
+    }
+    if (contract === "reactivate_cancelled_meeting_v2") return Promise.resolve({ id: meeting.id, status: "scheduled" });
+    if (contract === "get_meeting_readiness") return Promise.resolve({ ready: true, checks: [] });
+    return Promise.reject(new Error(`unexpected contract: ${contract} ${JSON.stringify(params)}`));
+  });
+
+  render(<MeetingDetailsJourney meetingId={meeting.id}/>);
+  fireEvent.click(await screen.findByRole("button", { name: "إعادة تفعيل الاجتماع" }));
+
+  await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("reactivate_cancelled_meeting_v2", {
+    p_meeting_id: meeting.id,
+    p_expected_updated_at: meeting.updated_at,
+  }));
+  expect(await screen.findByText("تمت إعادة تفعيل الاجتماع نفسه، ولم يُنشأ اجتماع بديل.")).toBeVisible();
+  expect(detailReads).toBe(2);
 });
 
 it("confirms an off-schedule start before opening the live room", async () => {

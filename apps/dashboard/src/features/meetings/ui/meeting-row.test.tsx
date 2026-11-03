@@ -29,3 +29,11 @@ it("shows the session number and its academic year when the meeting has one", ()
   render(<MeetingRow today="2026-10-31" onOpen={vi.fn()} meeting={{ id: "m3", title_ar: "الاجتماع الثالث لمجلس كلية العلوم — نوفمبر 2026", status: "draft", scheduled_date: "2026-11-09", session_sequence_no: 3, academic_year_start: "2026-09-01" }}/>);
   expect(screen.getByText("الجلسة 3 · العام الجامعي 2026/2027")).toBeVisible();
 });
+
+it("distinguishes a late draft from a cycle finally classified as not held", () => {
+  const { rerender } = render(<MeetingRow today="2026-11-03" onOpen={vi.fn()} meeting={{ id: "late", title_ar: "اجتماع دورة أكتوبر", status: "draft", schedule_date_confirmed: false, planned_window_start: "2026-10-08", planned_window_end: "2026-10-14" }}/>);
+  expect(screen.getByRole("button")).toHaveTextContent("فاتت الدورة · تحتاج إجراء");
+  rerender(<MeetingRow today="2026-11-08" onOpen={vi.fn()} meeting={{ id: "not-held", title_ar: "اجتماع دورة أكتوبر", status: "not_held", planned_window_start: "2026-10-08", planned_window_end: "2026-10-14" }}/>);
+  expect(screen.getByRole("button")).toHaveTextContent("لم يُنفذ");
+  expect(screen.getByRole("button")).not.toHaveTextContent("تحتاج إجراء");
+});

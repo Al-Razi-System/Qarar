@@ -38,7 +38,11 @@ function DateTile({ meeting, missed }: { meeting: Meeting; missed: boolean }) {
 
 /** One meeting in the list: when, what, where, how much is on its agenda, and its stage. */
 export function MeetingRow({ meeting, today, onOpen }: { meeting: Meeting; today: string; onOpen: () => void }) {
-  const missed = meetingOperationalGroup(meeting, today) === "missed";
+  const operationalGroup = meetingOperationalGroup(meeting, today);
+  const missed = operationalGroup === "missed";
+  const statusLabel = missed
+    ? meeting.status === "draft" ? "فاتت الدورة · تحتاج إجراء" : "فات موعدها"
+    : meetingStatusLabels[meeting.status] ?? "اجتماع";
   const time = meetingTimeLabel(meeting);
   const council = meeting.unit_name_ar ?? meeting.governance_unit_name_ar;
   const items = meeting.agenda_item_count ?? meeting.agenda_count ?? 0;
@@ -57,7 +61,7 @@ export function MeetingRow({ meeting, today, onOpen }: { meeting: Meeting; today
       </span>
     </span>
     <span className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3">
-      <Badge tone={missed ? "warning" : meetingStatusTone[meeting.status] ?? "neutral"}>{missed ? "فات موعدها" : meetingStatusLabels[meeting.status] ?? "اجتماع"}</Badge>
+      <Badge tone={missed ? "warning" : meetingStatusTone[meeting.status] ?? "neutral"}>{statusLabel}</Badge>
       <ChevronLeft size={18} aria-hidden="true" className="hidden text-q-text-3 transition-transform group-hover:-translate-x-0.5 sm:block"/>
     </span>
   </button>;

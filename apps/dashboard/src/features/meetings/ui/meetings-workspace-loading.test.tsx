@@ -55,6 +55,23 @@ it("shows meeting results without waiting for the secondary recurrence list", as
   resolveSeries([]);
 });
 
+it("keeps far-future plan occurrences out of the operational list while leaving them to the calendar", async () => {
+  rpc.mockImplementation((contract: string) => {
+    if (contract === "search_meetings") return Promise.resolve({ items: [{
+      id: "future-cycle", title_ar: "اجتماع يونيو 2027", status: "draft",
+      scheduled_date: "2027-06-08", planned_window_start: "2027-06-08", planned_window_end: "2027-06-14",
+    }], total: 1 });
+    if (contract === "list_meeting_series") return Promise.resolve([]);
+    return Promise.resolve([]);
+  });
+
+  render(<MeetingsWorkspace/>);
+
+  expect(await screen.findByText("لا توجد اجتماعات حالية")).toBeVisible();
+  expect(screen.getByText(/ستظهر دورات الخطط هنا عند بداية نافذتها/)).toBeVisible();
+  expect(screen.queryByRole("button", { name: /اجتماع يونيو 2027/ })).not.toBeInTheDocument();
+});
+
 it("opens the dedicated meeting journey without loading the legacy detail panel", async () => {
   const meeting = {
     id: "meeting-early",

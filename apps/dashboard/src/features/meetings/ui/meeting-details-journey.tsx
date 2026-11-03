@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronLeft, Clock, FileText, ListChecks, MapPin, Play, RefreshCw, Users } from "lucide-react";
 import { meetingRpc } from "../api/meetings-client";
 import { meetingJourney, type MeetingJourneyKey } from "../model/meeting-journey";
-import { meetingStatusLabels, type MeetingDetail, type MeetingReadiness, type MeetingStartTiming } from "../model/meeting";
+import { meetingStatusLabels, meetingStatusTone, type MeetingDetail, type MeetingReadiness, type MeetingStartTiming } from "../model/meeting";
 import { meetingLocationLabel, meetingScheduleLabel, meetingTimeLabel } from "../model/meeting-schedule";
 import { InvitationStatus, InvitationTimingDialog } from "./invitation-timing-dialog";
 import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dialog";
@@ -24,6 +24,7 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [invitationOpen, setInvitationOpen] = useState(false);
   const [startTiming, setStartTiming] = useState<MeetingStartTiming | null>(null);
   const [preparationConfirmationOpen, setPreparationConfirmationOpen] = useState(false);
@@ -58,6 +59,21 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
       return true;
     } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تنفيذ الخطوة التالية."); return false; }
     finally { setBusy(false); }
+  }
+
+  async function reactivateCancelledMeeting() {
+    if (!meeting?.updated_at) return;
+    setBusy(true); setError(null); setSuccess(null);
+    try {
+      await meetingRpc("reactivate_cancelled_meeting_v2", {
+        p_meeting_id: meeting.id,
+        p_expected_updated_at: meeting.updated_at,
+      });
+      await load();
+      setSuccess("تمت إعادة تفعيل الاجتماع نفسه، ولم يُنشأ اجتماع بديل.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "تعذر إعادة تفعيل الاجتماع.");
+    } finally { setBusy(false); }
   }
 
   async function startSession(confirmedOffSchedule: boolean) {
@@ -96,6 +112,7 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
   );
 
   const primary = (() => {
+    if (meeting.status === "cancelled" && meeting.capabilities?.can_manage) return <Button pending={busy} pendingLabel="جارٍ إعادة التفعيل…" onClick={() => void reactivateCancelledMeeting()}><RefreshCw size={18}/>إعادة تفعيل الاجتماع</Button>;
     if (meeting.status === "draft") return <Link href={`/admin/meetings?manage=${meeting.id}`} className="inline-flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-5 text-q-ui font-bold text-q-on-primary"><ListChecks size={18}/>استكمال الإعداد وجدول الأعمال</Link>;
     if (meeting.status === "scheduled" && meeting.capabilities?.can_send_invitations) return <Button variant={invitationPrepared ? "secondary" : "primary"} disabled={!ready} onClick={() => setInvitationOpen(true)}><Users size={18}/>{invitationPrepared ? "عرض الدعوة المجهزة" : "معاينة الدعوة وتجهيزها"}</Button>;
     if (meeting.status === "ready_to_start" && meeting.capabilities?.can_start_session) return <Button variant="success" pending={busy} pendingLabel="جارٍ التحقق من الموعد…" onClick={() => void startSession(false)}><Play size={18}/>فتح الجلسة</Button>;
@@ -107,7 +124,7 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
 
   return <div className="space-y-5" aria-busy={loading}>
     <Card className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><Badge tone={meeting.status === "cancelled" ? "danger" : "info"}>{meetingStatusLabels[meeting.status] ?? "حالة الاجتماع"}</Badge><span className="text-q-caption text-q-text-2">{meeting.meeting_no ?? "اجتماع"}</span></div><h1 className="mt-3 text-q-h1 font-bold">{meeting.title_ar}</h1><p className="mt-2 text-q-ui text-q-text-2">{meeting.unit_name_ar ?? meeting.governance_unit_name_ar ?? "المجلس"}</p></div><Link href="/admin/meetings" className="inline-flex min-h-11 items-center gap-2 rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link"><ChevronLeft size={18}/>كل الاجتماعات</Link></div>
+      <div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-2"><Badge tone={meetingStatusTone[meeting.status] ?? "info"}>{meetingStatusLabels[meeting.status] ?? "حالة الاجتماع"}</Badge><span className="text-q-caption text-q-text-2">{meeting.meeting_no ?? "اجتماع"}</span></div><h1 className="mt-3 text-q-h1 font-bold">{meeting.title_ar}</h1><p className="mt-2 text-q-ui text-q-text-2">{meeting.unit_name_ar ?? meeting.governance_unit_name_ar ?? "المجلس"}</p></div><Link href="/admin/meetings" className="inline-flex min-h-11 items-center gap-2 rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link"><ChevronLeft size={18}/>كل الاجتماعات</Link></div>
       <div className="overflow-x-auto pb-2">
         <JourneyRail
           className="min-w-[36rem]"
@@ -121,6 +138,8 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
     </Card>
 
     {error && <InlineMessage tone="error">{error}</InlineMessage>}
+    {success && <InlineMessage tone="success">{success}</InlineMessage>}
+    {meeting.cycle_available === false && meeting.cycle_unavailable_reason && <InlineMessage tone="warning">{meeting.cycle_unavailable_reason}</InlineMessage>}
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,.7fr)]">
       <Card live={meeting.status === "in_progress"}>
         <p className="text-q-caption font-bold text-q-live">{viewingCurrent ? "المرحلة الحالية" : "مرحلة مكتملة للقراءة"}</p><h2 className="mt-1 text-q-h2 font-bold">{selected.label}</h2><p className="mt-2 text-q-ui leading-7 text-q-text-2">{selected.description}</p>

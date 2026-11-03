@@ -18,6 +18,12 @@ it("routes the authorized calendar read through V2", async () => {
   expect((await POST(request("list_meetings_calendar_v2", params))).status).toBe(200);
   expect(rpcV2).toHaveBeenCalledWith("list_meetings_calendar_v2", params);
 });
+it("routes explicit cancelled-meeting reactivation through V2", async () => {
+  const params = { p_meeting_id: "meeting-1", p_expected_updated_at: "2026-11-03T00:00:00Z" };
+  rpcV2.mockResolvedValue({ id: "meeting-1", status: "scheduled" });
+  expect((await POST(request("reactivate_cancelled_meeting_v2", params))).status).toBe(200);
+  expect(rpcV2).toHaveBeenCalledWith("reactivate_cancelled_meeting_v2", params);
+});
 it("routes the meeting start timing contract through its published V1 facade", async () => {
   const params = { p_meeting_id: "meeting-1" };
   rpc.mockResolvedValue({ timing_status: "early", requires_confirmation: true });

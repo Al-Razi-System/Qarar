@@ -79,6 +79,8 @@ export type MeetingDetail = Meeting & {
   scheduled_suggestions?: ScheduledAgendaSuggestion[];
   submitted_suggestions?:{items:AgendaCandidate[];total:number;locked?:boolean}|null;
   invitation_summary?: MeetingInvitationSummary;
+  cycle_available?: boolean;
+  cycle_unavailable_reason?: string | null;
 };
 
 export type MeetingInvitationSummary = {
@@ -163,14 +165,14 @@ export const meetingStatusLabels: Record<string, string> = {
   draft: "مسودة", scheduled: "مجدولة", ready_to_start: "جاهزة للبدء",
   in_progress: "منعقدة", waiting_for_minutes: "بانتظار المحضر",
   waiting_for_approval: "بانتظار اعتماد المحضر", closed: "مكتملة",
-  cancelled: "ملغاة", archived: "مكتملة · مؤرشفة",
+  cancelled: "ملغاة", not_held: "لم يُنفذ", archived: "مكتملة · مؤرشفة",
 };
 
 /** The `Badge` tone of each status; the label always carries the meaning. */
 export const meetingStatusTone: Record<string, "neutral" | "info" | "live" | "warning" | "success" | "danger"> = {
   draft: "neutral", scheduled: "info", ready_to_start: "info", in_progress: "live",
   waiting_for_minutes: "warning", waiting_for_approval: "warning",
-  closed: "success", archived: "success", cancelled: "danger",
+  closed: "success", archived: "success", cancelled: "danger", not_held: "neutral",
 };
 
 export function isAgendaEditable(status?: string) {

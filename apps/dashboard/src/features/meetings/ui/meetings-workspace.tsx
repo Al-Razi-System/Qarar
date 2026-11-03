@@ -64,6 +64,7 @@ const meetingGroups = [
   { key: "completed", label: "المكتملة", description: "اعتُمدت محاضرها", statuses: ["closed"] },
   { key: "archived", label: "الأرشيف", description: "أُرشفت تلقائيًا بعد اعتماد محاضرها", statuses: ["archived"] },
   { key: "drafts", label: "المسودات", description: "اجتماعات قيد التجهيز", statuses: ["draft"] },
+  { key: "not_held", label: "لم تُنفذ", description: "دورات انتهت دون انعقاد", statuses: ["not_held"] },
   { key: "cancelled", label: "الملغاة", description: "اجتماعات أُلغي انعقادها", statuses: ["cancelled"] },
 ] as const;
 
@@ -97,6 +98,7 @@ function agendaLockMessage(status: string) {
   if (status === "waiting_for_approval") return "انتهت الجلسة، والمحضر الآن بانتظار المصادقات النهائية.";
   if (status === "closed" || status === "archived") return "اكتمل الاجتماع واعتمد محضره؛ جدول الأعمال محفوظ كسجل نهائي.";
   if (status === "cancelled") return "أُلغي الاجتماع وأصبح جدول أعماله للعرض فقط.";
+  if (status === "not_held") return "انتهت دورة الاجتماع دون انعقاده؛ السجل محفوظ للقراءة فقط.";
   return "بدأ الاجتماع، لذلك أصبح جدول الأعمال مقفلًا ولا يمكن إضافة أو إزالة موضوعات.";
 }
 
@@ -162,6 +164,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
   // The list is searched on the server; the council narrows it here. The calendar
   // is read per council on the server, and searched and narrowed by status here.
   const visibleMeetings = unitFilter ? meetings.filter((meeting) => meeting.governance_unit_id === unitFilter) : meetings;
+  const operationalMeetings = visibleMeetings.filter((meeting) => meetingOperationalGroup(meeting, today) !== null);
   const visibleCalendarItems = calendarItems.filter((meeting) => matchesSearch(meeting) && (activeGroup === "all" || meetingOperationalGroup(meeting, today) === activeGroup));
   const refinements = [unitFilter, activeGroup !== "all", viewMode === "list" && fromDate, viewMode === "list" && toDate].filter(Boolean).length;
   const filtersActive = Boolean(query || fromDate || toDate || unitFilter || activeGroup !== "all");
@@ -621,7 +624,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SegmentedControl label="طريقة عرض الاجتماعات" className="w-full sm:w-auto" value={viewMode} onChange={setViewMode} options={[{ value: "list", label: "القائمة" }, { value: "week", label: "أسبوع" }, { value: "month", label: "شهر" }]}/>
           <div className="flex items-center gap-3">
-            <span className="text-q-caption text-q-text-2" role="status">{viewMode === "list" ? `${unitFilter ? visibleMeetings.length : total} اجتماع` : `${visibleCalendarItems.length} اجتماع في الفترة`}</span>
+            <span className="text-q-caption text-q-text-2" role="status">{viewMode === "list" ? `${operationalMeetings.length} اجتماع` : `${visibleCalendarItems.length} اجتماع في الفترة`}</span>
             <Button onClick={() => void openCreateModal()}><Plus size={17} aria-hidden="true"/>إنشاء اجتماع</Button>
           </div>
         </div>
@@ -661,7 +664,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
       {viewMode === "list" ? <>
       {!focused && <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="حالات الاجتماعات">
         {[{ key: "all", label: "كل الاجتماعات" }, ...meetingGroups].map((group) => {
-          const count = group.key === "all" ? visibleMeetings.length : visibleMeetings.filter((meeting) => meetingOperationalGroup(meeting, today) === group.key).length;
+          const count = group.key === "all" ? operationalMeetings.length : operationalMeetings.filter((meeting) => meetingOperationalGroup(meeting, today) === group.key).length;
           const active = activeGroup === group.key;
           return <button key={group.key} type="button" aria-pressed={active} onClick={() => { setActiveGroup(group.key); setSelected(null); }}
             className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-q-control border px-4 font-sans text-q-ui font-bold transition-colors", active ? "border-q-primary bg-q-primary text-q-on-primary" : "border-q-border bg-q-surface text-q-text hover:bg-q-surface-2", !count && !active && "text-q-text-3")}>
@@ -693,15 +696,15 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
           {refreshing && !loading && <p role="status" className="m-0 rounded-q-control bg-q-surface-2 px-3 py-2 text-q-caption text-q-text-2">جارٍ تحديث الاجتماعات في الخلفية…</p>}
           {loading ? (
             <Card aria-busy="true" className="grid min-h-72 place-items-center"><p role="status" className="m-0 flex items-center gap-2 text-q-ui text-q-text-2"><LoaderCircle className="animate-spin text-q-link" size={20} aria-hidden="true"/>جارٍ تحميل الاجتماعات…</p></Card>
-          ) : visibleMeetings.length === 0 ? (
+          ) : operationalMeetings.length === 0 ? (
             <Card className="grid min-h-72 place-items-center text-center">
               <div>
                 <CalendarDays className="mx-auto text-q-text-3" size={32} aria-hidden="true"/>
-                <h2 className="m-0 mt-3 text-q-h3 font-bold">لا توجد اجتماعات</h2>
-                <p className="m-0 mt-1 text-q-ui text-q-text-2">{filtersActive ? "لا يطابق الفلاترَ المختارة أيُّ اجتماع." : "ابدأ بإنشاء اجتماع لمجلسك."}</p>
+                <h2 className="m-0 mt-3 text-q-h3 font-bold">{filtersActive ? "لا توجد اجتماعات" : "لا توجد اجتماعات حالية"}</h2>
+                <p className="m-0 mt-1 text-q-ui text-q-text-2">{filtersActive ? "لا يطابق الفلاترَ المختارة أيُّ اجتماع." : meetings.length > 0 ? "ستظهر دورات الخطط هنا عند بداية نافذتها، ويمكن الاطلاع عليها مسبقًا من التقويم." : "ابدأ بإنشاء اجتماع لمجلسك."}</p>
               </div>
             </Card>
-          ) : groupedMeetings(visibleMeetings, today).filter((group) => activeGroup === "all" || group.key === activeGroup).map((group) => <section key={group.key} aria-labelledby={`meeting-group-${group.key}`} className="overflow-hidden rounded-q-card border border-q-border bg-q-surface">
+          ) : groupedMeetings(operationalMeetings, today).filter((group) => activeGroup === "all" || group.key === activeGroup).map((group) => <section key={group.key} aria-labelledby={`meeting-group-${group.key}`} className="overflow-hidden rounded-q-card border border-q-border bg-q-surface">
             <header className="flex items-center justify-between gap-3 border-b border-q-border px-4 py-3">
               <h2 id={`meeting-group-${group.key}`} className="m-0 text-q-ui font-bold text-q-text">{group.label}</h2>
               <span className="text-q-caption text-q-text-2">{group.meetings.length} اجتماع</span>

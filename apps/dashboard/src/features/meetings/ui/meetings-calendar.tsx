@@ -31,12 +31,13 @@ type Tone = { accent: string; fill: string; text: string; label: string; dashed?
 function toneOf(meeting: Meeting, today: string): Tone {
   const label = meetingStatusLabels[meeting.status] ?? "اجتماع";
   switch (meetingOperationalGroup(meeting, today)) {
-    case "missed": return { accent: "bg-q-warning", fill: "bg-q-warning-soft", text: "text-q-warning", label: "فات موعدها" };
+    case "missed": return { accent: "bg-q-warning", fill: "bg-q-warning-soft", text: "text-q-warning", label: meeting.status === "draft" ? "فاتت الدورة · تحتاج إجراء" : "فات موعدها" };
     case "live": return { accent: "bg-q-live", fill: "bg-q-live-soft", text: "text-q-live", label };
     case "completion": return { accent: "bg-q-warning", fill: "bg-q-warning-soft", text: "text-q-warning", label };
     case "completed":
     case "archived": return { accent: "bg-q-success", fill: "bg-q-success-soft", text: "text-q-success", label };
     case "drafts": return { accent: "bg-q-border-strong", fill: "bg-q-surface", text: "text-q-text-2", label, dashed: true };
+    case "not_held": return { accent: "bg-q-border-strong", fill: "bg-q-surface-2", text: "text-q-text-2", label };
     case "cancelled": return { accent: "bg-q-danger", fill: "bg-q-danger-soft", text: "text-q-danger", label, struck: true };
     default: return { accent: "bg-q-primary", fill: "bg-q-surface-2", text: "text-q-link", label };
   }
