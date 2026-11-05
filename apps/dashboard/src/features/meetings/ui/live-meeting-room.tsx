@@ -114,14 +114,33 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   useEffect(() => {
     let stopped = false;
     let timer: number | undefined;
-    async function refreshAfterCompletion(initial: boolean) {
-      await refreshRoom(!initial);
-      if (!stopped) timer = window.setTimeout(() => void refreshAfterCompletion(false), refreshInterval);
+    let hasLoaded = false;
+    let cycleRunning = false;
+    const isVisible = () => document.visibilityState !== "hidden";
+    async function refreshAfterCompletion() {
+      if (stopped || cycleRunning || !isVisible()) return;
+      cycleRunning = true;
+      try {
+        await refreshRoom(hasLoaded);
+        hasLoaded = true;
+      } finally {
+        cycleRunning = false;
+        if (!stopped && isVisible()) timer = window.setTimeout(() => void refreshAfterCompletion(), refreshInterval);
+      }
     }
-    void refreshAfterCompletion(true);
+    function onVisibilityChange() {
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+        timer = undefined;
+      }
+      if (isVisible()) void refreshAfterCompletion();
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    void refreshAfterCompletion();
     return () => {
       stopped = true;
       if (timer !== undefined) window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [meetingId, refreshInterval]);
 

@@ -11,6 +11,7 @@ import { meetingLocationLabel, meetingScheduleLabel, meetingTimeLabel } from "..
 import { InvitationStatus, InvitationTimingDialog } from "./invitation-timing-dialog";
 import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dialog";
 import { MeetingPreparationConfirmationDialog } from "./meeting-preparation-confirmation-dialog";
+import { ScheduledAgendaSuggestions } from "./scheduled-agenda-suggestions";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
@@ -140,6 +141,7 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
     {error && <InlineMessage tone="error">{error}</InlineMessage>}
     {success && <InlineMessage tone="success">{success}</InlineMessage>}
     {meeting.cycle_available === false && meeting.cycle_unavailable_reason && <InlineMessage tone="warning">{meeting.cycle_unavailable_reason}</InlineMessage>}
+    {meeting.capabilities?.can_manage_agenda && <ScheduledAgendaSuggestions items={meeting.scheduled_suggestions ?? []}/>}
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,.7fr)]">
       <Card live={meeting.status === "in_progress"}>
         <p className="text-q-caption font-bold text-q-live">{viewingCurrent ? "المرحلة الحالية" : "مرحلة مكتملة للقراءة"}</p><h2 className="mt-1 text-q-h2 font-bold">{selected.label}</h2><p className="mt-2 text-q-ui leading-7 text-q-text-2">{selected.description}</p>

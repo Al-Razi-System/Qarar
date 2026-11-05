@@ -24,6 +24,26 @@ it("shows one primary action for the current stage and keeps later stages locked
   expect(screen.queryByRole("link", { name: "فتح المحضر والمصادقات" })).not.toBeInTheDocument();
 });
 
+it("shows due periodic topic suggestions on the direct meeting journey", async () => {
+  mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail" ? Promise.resolve({
+    ...meeting,
+    capabilities: { ...meeting.capabilities, can_manage_agenda: true },
+    scheduled_suggestions: [{
+      topic_type_version_id: "type-version-1",
+      title_ar: "اعتماد برنامج أكاديمي",
+      available_from: "2026-11-01",
+      due_on: "2026-11-07",
+      required_attachment_count: 2,
+    }],
+  }) : Promise.resolve({ ready: true, checks: [] }));
+
+  render(<MeetingDetailsJourney meetingId="meeting-1"/>);
+
+  expect(await screen.findByRole("heading", { name: "اعتماد برنامج أكاديمي" })).toBeVisible();
+  expect(screen.getByText(/مقترحات تحضير، وليست بنودًا معتمدة/)).toBeVisible();
+  expect(screen.getByText(/المرفقات المطلوبة قبل الإدراج: 2/)).toBeVisible();
+});
+
 it("opens completed stages for reading while keeping future stages locked", async () => {
   const minutesMeeting = { ...meeting, status: "waiting_for_minutes", capabilities: {} };
   mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail" ? Promise.resolve(minutesMeeting) : Promise.resolve({ ready: true, checks: [] }));

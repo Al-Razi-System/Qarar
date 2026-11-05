@@ -15,6 +15,23 @@ describe("LiveMeetingRoom polling", () => {
     vi.unstubAllGlobals();
   });
 
+  it("pauses the heavy room refresh while the tab is hidden and refreshes on return", async () => {
+    vi.useFakeTimers();
+    let visibility: DocumentVisibilityState = "hidden";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+    liveMeetingRpc.mockImplementation(() => new Promise(() => undefined));
+
+    const view = render(<LiveMeetingRoom meetingId="00000000-0000-0000-0000-000000000001" />);
+    await act(async () => Promise.resolve());
+    expect(liveMeetingRpc).not.toHaveBeenCalled();
+
+    visibility = "visible";
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
+    expect(liveMeetingRpc).toHaveBeenCalledTimes(7);
+
+    view.unmount();
+  });
+
   it("does not start another refresh batch while the current batch is pending", async () => {
     vi.useFakeTimers();
     liveMeetingRpc.mockImplementation(() => new Promise(() => undefined));

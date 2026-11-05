@@ -64,14 +64,31 @@ export function useMeetingBroadcast(meetingId: string, enabled: boolean, signal?
     if (!enabled) return;
     let stopped = false;
     let timer: number | undefined;
+    let reading = false;
+    const isVisible = () => document.visibilityState !== "hidden";
     async function next() {
-      await refresh();
-      if (!stopped) timer = window.setTimeout(() => void next(), interval);
+      if (stopped || reading || !isVisible()) return;
+      reading = true;
+      try {
+        await refresh();
+      } finally {
+        reading = false;
+        if (!stopped && isVisible()) timer = window.setTimeout(() => void next(), interval);
+      }
     }
+    function onVisibilityChange() {
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+        timer = undefined;
+      }
+      if (isVisible()) void next();
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
     void next();
     return () => {
       stopped = true;
       if (timer !== undefined) window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [meetingId, enabled, interval, tick]);
 

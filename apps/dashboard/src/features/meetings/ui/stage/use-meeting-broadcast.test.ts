@@ -107,6 +107,24 @@ describe("useMeetingBroadcast", () => {
 });
 
 describe("useMeetingBroadcast with the room's change signal", () => {
+  it("pauses fallback reads in a hidden tab and refreshes immediately when it becomes visible", async () => {
+    vi.useFakeTimers();
+    let visibility: DocumentVisibilityState = "hidden";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+    try {
+      rpc.mockResolvedValue(server({ revision: 1 }));
+      renderHook(() => useMeetingBroadcast("m1", true, { tick: 0, connected: false }));
+      await act(async () => { await vi.advanceTimersByTimeAsync(BROADCAST_REFRESH_MS * 2); });
+      expect(rpc).not.toHaveBeenCalled();
+
+      visibility = "visible";
+      await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
+      expect(rpc).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("reads at once when the room says the broadcast changed, and only slowly as a fallback while connected", async () => {
     vi.useFakeTimers();
     try {
