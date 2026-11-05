@@ -124,7 +124,7 @@ it("opens agenda continuation as a focused workspace for the requested meeting",
   expect(screen.getByRole("button", { name: "عرض 1 موضوعات مقترحة" })).toBeVisible();
   expect(screen.getByRole("button", { name: "موضوع مباشر" })).toBeVisible();
   expect(screen.queryByRole("table", { name: "أيام الفترة" })).not.toBeInTheDocument();
-  expect(rpc).toHaveBeenCalledWith("get_meeting_detail", { p_meeting_id: meeting.id });
+  expect(rpc).toHaveBeenCalledWith("get_meeting_detail", { p_meeting_id: meeting.id }, { timeoutMs: 12_000 });
   expect(rpc).not.toHaveBeenCalledWith("search_meetings", expect.anything(), expect.anything());
   expect(rpc).not.toHaveBeenCalledWith("list_meetings_calendar_v2", expect.anything(), expect.anything());
 
@@ -134,6 +134,20 @@ it("opens agenda continuation as a focused workspace for the requested meeting",
   fireEvent.click(within(proposals).getAllByRole("button", { name: "إغلاق" }).at(-1)!);
   fireEvent.click(screen.getByRole("button", { name: "موضوع مباشر" }));
   expect(await screen.findByRole("dialog", { name: "إضافة موضوع مباشر" })).toBeVisible();
+});
+
+it("replaces a failed focused meeting load with its cause and an in-place retry", async () => {
+  rpc.mockRejectedValueOnce(new MeetingApiError(
+    "تعذر الوصول إلى خادم قرار. تحقق من الاتصال ثم أعد المحاولة.",
+    0,
+    "NETWORK_UNREACHABLE",
+  ));
+
+  render(<MeetingsWorkspace initialMeetingId="meeting-unavailable"/>);
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("تعذر الوصول إلى خادم قرار");
+  expect(screen.queryByText("جارٍ فتح جدول أعمال الاجتماع…")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "إعادة المحاولة" })).toBeVisible();
 });
 
 it("keeps the same search, council and status filters in the calendar", async () => {

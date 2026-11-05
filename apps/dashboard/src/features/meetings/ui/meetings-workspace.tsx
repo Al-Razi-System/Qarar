@@ -116,6 +116,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
   const [instructionTarget,setInstructionTarget]=useState<{topicId:string;title:string;text:string;updatedAt?:string}|null>(null);
   const [candidateTarget,setCandidateTarget]=useState<AgendaCandidate|null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [createModal, setCreateModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [invitationModal, setInvitationModal] = useState(false);
@@ -224,17 +225,18 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
   }
 
   async function openDetail(meetingId: string) {
-    setDetailLoading(true); setNotice(null);
+    setDetailLoading(true); setDetailError(null); setNotice(null);
     try {
-      const detail = await rpc<MeetingDetail>("get_meeting_detail", { p_meeting_id: meetingId });
+      const detail = await rpc<MeetingDetail>("get_meeting_detail", { p_meeting_id: meetingId }, { timeoutMs: 12_000 });
+      if (!detail?.id) throw new Error("لم يُرجع الخادم بيانات الاجتماع المطلوبة.");
       setSelected(detail);
-      try { setTopicAttachments(await rpc<MeetingTopicAttachment[]>("list_meeting_topic_attachments", { p_meeting_id: meetingId })); }
+      try { setTopicAttachments(await rpc<MeetingTopicAttachment[]>("list_meeting_topic_attachments", { p_meeting_id: meetingId }, { timeoutMs: 12_000 })); }
       catch { setTopicAttachments([]); }
       if (isAgendaEditable(detail.status) && detail.capabilities?.can_manage_agenda) {
         try {
           const candidates = await rpc<{ total?: number }>("search_eligible_agenda_topics", {
             p_meeting_id: meetingId, p_query: null, p_limit: 1, p_offset: 0,
-          });
+          }, { timeoutMs: 12_000 });
           setEligibleAgendaCount(candidates.total ?? 0);
         } catch {
           setEligibleAgendaCount(null);
@@ -243,7 +245,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
         setEligibleAgendaCount(null);
       }
       if (["draft","scheduled","ready_to_start"].includes(detail.status)) {
-        try { setReadiness(await rpc<MeetingReadiness>("get_meeting_readiness", { p_meeting_id: meetingId })); }
+        try { setReadiness(await rpc<MeetingReadiness>("get_meeting_readiness", { p_meeting_id: meetingId }, { timeoutMs: 12_000 })); }
         catch (error) {
           setReadiness(null);
           setNotice({ kind: "error", text: error instanceof Error ? `تعذر فحص جاهزية الاجتماع: ${error.message}` : "تعذر فحص جاهزية الاجتماع." });
@@ -255,7 +257,9 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
         setMinutes(null); setMinutesText("");
       }
     } catch (err) {
-      setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر التحميل." });
+      const message = err instanceof Error ? err.message : "تعذر تحميل الاجتماع.";
+      setDetailError(message);
+      setNotice({ kind: "error", text: message });
     } finally {
       setDetailLoading(false);
     }
@@ -615,7 +619,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
         </div>
       )}
       {notice && (
-        <div className={`flex items-center gap-2 rounded-q-control border p-3 text-q-caption font-bold ${notice.kind === "success" ? "border-q-success bg-q-success-soft text-q-success" : "border-q-danger bg-q-danger-soft text-q-danger"}`}>
+        <div role={notice.kind === "error" ? "alert" : "status"} className={`flex items-center gap-2 rounded-q-control border p-3 text-q-caption font-bold ${notice.kind === "success" ? "border-q-success bg-q-success-soft text-q-success" : "border-q-danger bg-q-danger-soft text-q-danger"}`}>
           {notice.kind === "success" ? <Check size={15} /> : <AlertCircle size={15} />} {notice.text}
         </div>
       )}
@@ -771,7 +775,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
               </div>
             </div>
           )}
-        </div> : <div className={`${focused ? "grid" : "hidden xl:grid xl:sticky xl:top-4"} min-h-[360px] place-items-center rounded-q-card border border-dashed border-q-border bg-q-surface p-8 text-center`}><div>{focused && detailLoading ? <LoaderCircle className="mx-auto animate-spin text-q-link" size={28}/> : <CalendarDays className="mx-auto text-q-text-3" size={28}/>}<h2 className="mt-4 text-q-h3 font-bold text-q-text">{focused ? "جارٍ فتح جدول أعمال الاجتماع…" : "اختر اجتماعاً لعرض تفاصيله"}</h2><p className="mx-auto mt-2 max-w-xs text-q-caption leading-6 text-q-text-2">{focused ? "تُحمّل صلاحيات الاجتماع وموضوعاته المقترحة الآن." : "اضغط على أي بطاقة من القائمة، وستظهر هنا بيانات الموعد وجدول الأعمال والجاهزية والإجراءات المتاحة دون الانتقال إلى أسفل الصفحة."}</p></div></div>}
+        </div> : <div className={`${focused ? "grid" : "hidden xl:grid xl:sticky xl:top-4"} min-h-[360px] place-items-center rounded-q-card border border-dashed border-q-border bg-q-surface p-8 text-center`}><div>{focused && detailLoading ? <LoaderCircle className="mx-auto animate-spin text-q-link" size={28}/> : <CalendarDays className="mx-auto text-q-text-3" size={28}/>}<h2 className="mt-4 text-q-h3 font-bold text-q-text">{focused ? detailLoading ? "جارٍ فتح جدول أعمال الاجتماع…" : detailError ? "تعذر فتح الاجتماع" : "لم تُحمّل بيانات الاجتماع" : "اختر اجتماعاً لعرض تفاصيله"}</h2><p className="mx-auto mt-2 max-w-xs text-q-caption leading-6 text-q-text-2">{focused ? detailLoading ? "تُحمّل صلاحيات الاجتماع وموضوعاته المقترحة الآن." : detailError ?? "أعد المحاولة لتحميل بيانات الاجتماع." : "اضغط على أي بطاقة من القائمة، وستظهر هنا بيانات الموعد وجدول الأعمال والجاهزية والإجراءات المتاحة دون الانتقال إلى أسفل الصفحة."}</p>{focused && !detailLoading && <Button className="mt-4" variant="secondary" onClick={() => initialMeetingId && void openDetail(initialMeetingId)}>إعادة المحاولة</Button>}</div></div>}
       </div>
       </> : <MeetingsCalendar items={visibleCalendarItems} cursor={calendarCursor} mode={viewMode} loading={calendarLoading} onCursorChange={setCalendarCursor} onOpen={(meetingId) => router.push(`/admin/meetings/${meetingId}`)} onShowDay={(day) => { setCalendarCursor(day); setViewMode("week"); }} />}
 
