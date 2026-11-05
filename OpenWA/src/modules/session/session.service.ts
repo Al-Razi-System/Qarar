@@ -213,7 +213,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     const session = await this.findOne(id);
 
     if (this.engines.has(id)) {
-      throw new BadRequestException('Session is already started');
+      return session;
     }
 
     // Execute hook before starting
@@ -238,11 +238,11 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
       baseDelay: config?.reconnectBaseDelay ?? 5000,
     });
 
-    await this.initializeEngine(id, session);
+    await this.initializeEngine(id, session, false);
     return this.findOne(id);
   }
 
-  private async initializeEngine(id: string, session: Session): Promise<void> {
+  private async initializeEngine(id: string, session: Session, waitForProvider = true): Promise<void> {
     this.logger.log(`Initializing engine for session: ${session.name}`, {
       sessionId: id,
       action: 'engine_init',
@@ -258,7 +258,35 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
     // Persist the initial state before callbacks can advance it to QR_READY/READY.
     await this.updateStatus(id, SessionStatus.INITIALIZING);
 
-    await engine.initialize({
+    const markInitializationFailed = async (error: unknown): Promise<void> => {
+      // Logout/retry may have deliberately detached this engine while the
+      // provider was still resolving initialize(). Do not let that stale
+      // promise overwrite the newer session state with FAILED.
+      if (this.engines.get(id) !== engine) return;
+      this.engines.delete(id);
+      try {
+        await this.updateStatus(id, SessionStatus.FAILED);
+      } catch (statusError) {
+        this.logger.warn(`Failed to persist failed engine status: ${session.name}`, {
+          sessionId: id,
+          error: statusError instanceof Error ? statusError.message : String(statusError),
+        });
+      }
+      try {
+        await engine.destroy();
+      } catch (cleanupError) {
+        this.logger.warn(`Failed to clean up engine after initialization failure: ${session.name}`, {
+          sessionId: id,
+          error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+        });
+      }
+      this.logger.error(
+        `Failed to initialize engine for session: ${session.name}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    };
+
+    const initialization = engine.initialize({
       onQRCode: (): void => {
         this.logger.log('QR code generated', {
           sessionId: id,
@@ -380,6 +408,18 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
         }
       },
     });
+
+    if (!waitForProvider) {
+      void initialization.catch(markInitializationFailed);
+      return;
+    }
+
+    try {
+      await initialization;
+    } catch (error) {
+      await markInitializationFailed(error);
+      throw error;
+    }
   }
 
   private scheduleReconnect(id: string, session: Session): void {
@@ -469,11 +509,19 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
   async logout(id: string): Promise<Session> {
     const session = await this.findOne(id);
     this.cancelReconnect(id);
-    const engine = this.engines.get(id);
-    if (engine) {
-      await engine.logout();
-      this.engines.delete(id);
-    }
+    // A remotely unlinked WhatsApp device can leave no active in-memory engine
+    // after a service restart while LocalAuth data still exists on disk. Create a
+    // lightweight adapter in that case so logout remains idempotent and clears
+    // the persisted authentication directory as well as the database metadata.
+    const engine =
+      this.engines.get(id) ??
+      this.engineFactory.create({
+        sessionId: session.name,
+      });
+    // Detach first so a pending initialize() rejection cannot race logout and
+    // restore FAILED after the operator has successfully disconnected it.
+    this.engines.delete(id);
+    await engine.logout();
     await this.sessionRepository.update(id, {
       status: SessionStatus.DISCONNECTED,
       phone: null,
@@ -486,6 +534,18 @@ export class SessionService implements OnModuleDestroy, OnModuleInit {
       action: 'logout',
     });
     return this.findOne(id);
+  }
+
+  async connectionHealth(id: string): Promise<{
+    connected: boolean;
+    runtimeStatus: EngineStatus;
+    checkedAt: string;
+  }> {
+    await this.findOne(id);
+    const engine = this.engines.get(id);
+    const runtimeStatus = engine?.getStatus() ?? EngineStatus.DISCONNECTED;
+    const connected = runtimeStatus === EngineStatus.READY && Boolean(await engine?.isConnected());
+    return { connected, runtimeStatus, checkedAt: new Date().toISOString() };
   }
 
   async getQRCode(id: string): Promise<{ qrCode: string; status: SessionStatus }> {

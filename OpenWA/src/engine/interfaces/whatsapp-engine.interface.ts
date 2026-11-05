@@ -211,6 +211,7 @@ export interface IWhatsAppEngine {
   destroy(): Promise<void>;
 
   // Status
+  isConnected(): Promise<boolean>;
   getStatus(): EngineStatus;
   getQRCode(): string | null;
   getPhoneNumber(): string | null;

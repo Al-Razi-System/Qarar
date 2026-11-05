@@ -132,6 +132,19 @@ export class SessionController {
     return this.transformSession(session);
   }
 
+  @Get(':id/connection-health')
+  @ApiOperation({ summary: 'Verify the live WhatsApp engine connection' })
+  @ApiParam({ name: 'id', description: 'Session ID' })
+  @ApiResponse({ status: 200, description: 'Live engine connection state' })
+  @ApiResponse({ status: 404, description: 'Session not found' })
+  async connectionHealth(@Param('id') id: string): Promise<{
+    connected: boolean;
+    runtimeStatus: string;
+    checkedAt: string;
+  }> {
+    return this.sessionService.connectionHealth(id);
+  }
+
   @Post(':id/logout')
   @RequireRole(ApiKeyRole.OPERATOR)
   @ApiOperation({ summary: 'Log out a session and require a new QR code' })

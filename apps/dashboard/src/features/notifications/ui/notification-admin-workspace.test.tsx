@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NotificationAdminWorkspace, type NotificationWorkspaceData } from "./notification-admin-workspace";
+import { NotificationAdminWorkspace, waitForPairingQr, type NotificationWorkspaceData } from "./notification-admin-workspace";
 
 const data = {
   channel: { code: "whatsapp", label: "واتساب", connection_evidence: "messages_accepted", last_accepted_at: "2026-10-20T09:00:00Z" },
@@ -22,11 +22,28 @@ const provider = {
   reachable: true,
   session: { id: "session-1", name: "qarar-test", status: "ready", phone: "967773989264", pushName: "Omar", connectedAt: "2026-10-19T23:40:15.228Z", lastActive: "2026-10-20T20:29:48.632Z" },
   credential: { name: "Default Admin Key", keyPrefix: "owa_k1_dd386", role: "admin", isActive: true, lastUsedAt: "2026-10-20T22:21:49.436Z", usageCount: 182 },
+  connection: { connected: true, runtimeStatus: "ready", checkedAt: "2026-10-20T22:22:00.000Z" },
 };
 
 afterEach(() => vi.restoreAllMocks());
 
 describe("NotificationAdminWorkspace", () => {
+  it("keeps waiting for a real pairing code beyond the old five-attempt window", async () => {
+    const requestQr=vi.fn()
+      .mockRejectedValueOnce(new Error("not ready"))
+      .mockRejectedValueOnce(new Error("not ready"))
+      .mockRejectedValueOnce(new Error("not ready"))
+      .mockRejectedValueOnce(new Error("not ready"))
+      .mockRejectedValueOnce(new Error("not ready"))
+      .mockRejectedValueOnce(new Error("not ready"))
+      .mockResolvedValueOnce({qrCode:"data:image/png;base64,ready"});
+    const sleep=vi.fn().mockResolvedValue(undefined);
+
+    await expect(waitForPairingQr(requestQr,{sleep})).resolves.toEqual({qrCode:"data:image/png;base64,ready"});
+    expect(requestQr).toHaveBeenCalledTimes(7);
+    expect(sleep).toHaveBeenCalledTimes(6);
+  });
+
   it("shows full operational delivery details to the system administrator", async () => {
     const user = userEvent.setup();
     render(<NotificationAdminWorkspace initialData={data} initialProvider={provider} />);
@@ -50,6 +67,16 @@ describe("NotificationAdminWorkspace", () => {
     expect(screen.getByRole("button", { name: "ربط رقم جديد" })).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes("owa_k1_dd386"))).toBeInTheDocument();
     expect(screen.queryByText(/لا تؤثر مشكلة واتساب/)).not.toBeInTheDocument();
+  });
+
+  it("shows a stale ready session as disconnected and disables test sending", async () => {
+    const staleProvider = { ...provider, connection: { connected: false, runtimeStatus: "ready", checkedAt: "2026-11-04T18:00:00.000Z" } };
+    const user = userEvent.setup();
+    render(<NotificationAdminWorkspace initialData={data} initialProvider={staleProvider} />);
+    await user.click(screen.getByRole("radio", { name: "الإعدادات" }));
+
+    expect(screen.getByText("الاتصال منقطع")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إرسال رسالة اختبار" })).toBeDisabled();
   });
 
   it("sends a real test through the operational dialog and refreshes the delivery log", async () => {

@@ -7,12 +7,27 @@ describe("OpenWaAdminClient", () => {
   it("returns session and credential metadata without exposing the secret", async () => {
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify([{ id: "s1", name: "qarar-test", status: "ready", phone: "967773989264" }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ connected: true, runtimeStatus: "ready", checkedAt: "2026-11-04T18:00:00.000Z" }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify([{ name: "Qarar", keyPrefix: "owa_k1_abcd", role: "admin", isActive: true }]), { status: 200 }));
     const client = new OpenWaAdminClient({ baseUrl: "http://openwa:2785", apiKey: "super-secret", sessionName: "qarar-test", fetchImpl });
     const status = await client.status();
     expect(status.session?.phone).toBe("967773989264");
+    expect(status.connection).toMatchObject({ connected: true, runtimeStatus: "ready" });
     expect(status.credential?.keyPrefix).toBe("owa_k1_abcd");
     expect(JSON.stringify(status)).not.toContain("super-secret");
+  });
+
+  it("does not trust a persisted ready state when the live engine is disconnected", async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ id: "s1", name: "qarar-test", status: "ready", phone: "967773989264" }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ connected: false, runtimeStatus: "ready", checkedAt: "2026-11-04T18:00:00.000Z" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
+    const client = new OpenWaAdminClient({ baseUrl: "http://openwa:2785", apiKey: "secret", sessionName: "qarar-test", fetchImpl });
+
+    await expect(client.status()).resolves.toMatchObject({
+      reachable: true,
+      connection: { connected: false, runtimeStatus: "ready" },
+    });
   });
 
   it("normalizes the destination and sends the approved test template", async () => {

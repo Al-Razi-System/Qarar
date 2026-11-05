@@ -63,6 +63,9 @@ describe('SessionService', () => {
       initialize: jest.fn().mockResolvedValue(undefined),
       destroy: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
+      logout: jest.fn().mockResolvedValue(undefined),
+      getStatus: jest.fn().mockReturnValue(EngineStatus.READY),
+      isConnected: jest.fn().mockResolvedValue(true),
       getQRCode: jest.fn().mockReturnValue(null),
       getGroups: jest.fn().mockResolvedValue([]),
     };
@@ -178,6 +181,72 @@ describe('SessionService', () => {
     });
   });
 
+  describe('connectionHealth', () => {
+    it('returns live engine health independently from the persisted session status', async () => {
+      const session = createMockSession({ status: SessionStatus.READY });
+      (repository.findOne as jest.Mock).mockResolvedValue(session);
+      (repository.save as jest.Mock).mockImplementation(s => Promise.resolve(s));
+      (repository.update as jest.Mock).mockResolvedValue({ affected: 1 });
+      await service.start(session.id);
+      mockEngine.isConnected.mockResolvedValue(false);
+
+      await expect(service.connectionHealth(session.id)).resolves.toMatchObject({
+        connected: false,
+        runtimeStatus: EngineStatus.READY,
+      });
+    });
+  });
+
+  describe('logout', () => {
+    it('clears persisted authentication even when the engine is not loaded in memory', async () => {
+      const session = createMockSession({
+        status: SessionStatus.READY,
+        phone: '967773989264',
+        pushName: 'Omar',
+      });
+      (repository.findOne as jest.Mock).mockResolvedValue(session);
+      (repository.update as jest.Mock).mockResolvedValue({ affected: 1 });
+
+      await service.logout(session.id);
+
+      expect(engineFactory.create).toHaveBeenCalledWith({ sessionId: session.name });
+      expect(mockEngine.logout).toHaveBeenCalledTimes(1);
+      expect(repository.update).toHaveBeenCalledWith(
+        session.id,
+        expect.objectContaining({
+          status: SessionStatus.DISCONNECTED,
+          phone: null,
+          pushName: null,
+        }),
+      );
+    });
+
+    it('does not let a stale initialization failure overwrite a completed logout', async () => {
+      let rejectInitialization!: (error: Error) => void;
+      mockEngine.initialize.mockReturnValueOnce(
+        new Promise<void>((_resolve, reject) => {
+          rejectInitialization = reject;
+        }),
+      );
+      const session = createMockSession({ status: SessionStatus.INITIALIZING });
+      (repository.findOne as jest.Mock).mockResolvedValue(session);
+      (repository.update as jest.Mock).mockResolvedValue({ affected: 1 });
+
+      await service.start(session.id);
+      await service.logout(session.id);
+      rejectInitialization(new Error('late provider failure'));
+      await new Promise(resolve => setImmediate(resolve));
+
+      expect(repository.update).toHaveBeenLastCalledWith(
+        session.id,
+        expect.objectContaining({ status: SessionStatus.DISCONNECTED }),
+      );
+      expect(repository.update).not.toHaveBeenCalledWith(session.id, {
+        status: SessionStatus.FAILED,
+      });
+    });
+  });
+
   // ── delete ────────────────────────────────────────────────────────
 
   describe('delete', () => {
@@ -239,14 +308,32 @@ describe('SessionService', () => {
       expect(repository.update).toHaveBeenLastCalledWith('sess-uuid-1', { status: SessionStatus.QR_READY });
     });
 
-    it('should throw BadRequestException if session already started', async () => {
+    it('cleans up a failed engine so the administrator can retry linking', async () => {
+      (repository.findOne as jest.Mock).mockResolvedValue(createMockSession());
+      (repository.update as jest.Mock).mockResolvedValue({ affected: 1 });
+      mockEngine.initialize.mockRejectedValueOnce(new Error('provider startup failed'));
+
+      await expect(service.start('sess-uuid-1')).resolves.toBeDefined();
+      await new Promise(resolve => setImmediate(resolve));
+      expect(mockEngine.destroy).toHaveBeenCalledTimes(1);
+      expect(repository.update).toHaveBeenLastCalledWith('sess-uuid-1', {
+        status: SessionStatus.FAILED,
+      });
+
+      mockEngine.initialize.mockResolvedValueOnce(undefined);
+      await expect(service.start('sess-uuid-1')).resolves.toBeDefined();
+      expect(engineFactory.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('treats a repeated start as idempotent while the engine is already running', async () => {
       const session = createMockSession();
       (repository.findOne as jest.Mock).mockResolvedValue(session);
       (repository.update as jest.Mock).mockResolvedValue({ affected: 1 });
 
       await service.start('sess-uuid-1');
 
-      await expect(service.start('sess-uuid-1')).rejects.toThrow(BadRequestException);
+      await expect(service.start('sess-uuid-1')).resolves.toBe(session);
+      expect(engineFactory.create).toHaveBeenCalledTimes(1);
     });
 
     it('should execute session:starting hook before initializing engine', async () => {

@@ -3,6 +3,7 @@ import { Client, LocalAuth, MessageMedia } from 'whatsapp-web.js';
 import * as qrcode from 'qrcode';
 import * as path from 'path';
 import { existsSync, unlinkSync } from 'fs';
+import { rm } from 'node:fs/promises';
 import { installWwjsBrowserCompatibility } from './wwjs-browser-compatibility';
 import {
   IWhatsAppEngine,
@@ -67,6 +68,29 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
 
   private readonly logger = createLogger('WhatsAppWebJsAdapter');
 
+  private async within<T>(operation: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+    let timeout: NodeJS.Timeout | undefined;
+    try {
+      return await Promise.race([
+        operation,
+        new Promise<T>((_, reject) => {
+          timeout = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+  }
+
+  private async removeLocalAuthSession(): Promise<void> {
+    const dataRoot = path.resolve(this.config.sessionDataPath);
+    const sessionPath = path.resolve(dataRoot, `session-${this.config.sessionId}`);
+    if (!sessionPath.startsWith(`${dataRoot}${path.sep}`)) {
+      throw new Error('Refusing to remove a session path outside the configured data directory');
+    }
+    await rm(sessionPath, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+  }
+
   async initialize(callbacks: EngineEventCallbacks): Promise<void> {
     this.callbacks = callbacks;
     this.setStatus(EngineStatus.INITIALIZING);
@@ -123,11 +147,6 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
         },
         userAgent:
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-        webVersionCache: {
-          type: 'remote',
-          remotePath:
-            'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/{version}.html',
-        },
       });
 
       this.setupEventHandlers();
@@ -309,22 +328,28 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
   }
 
   async logout(): Promise<void> {
-    if (this.client) {
+    const client = this.client;
+    this.client = null;
+    if (client) {
       try {
         // Logout clears session data - user will need to scan QR again
-        await this.client.logout();
+        await this.within(client.logout(), 7_000, 'WhatsApp logout');
       } catch (error) {
         this.logger.warn('Logout failed:', String(error));
-        // Fall back to destroy if logout fails
+        // A remotely unlinked client can hang forever. Bound the fallback as well.
         try {
-          await this.client.destroy();
+          await this.within(client.destroy(), 3_000, 'WhatsApp client destroy');
         } catch (destroyError) {
           this.logger.warn('Client destroy also failed during logout fallback', String(destroyError));
         }
       }
-      this.client = null;
-      this.setStatus(EngineStatus.DISCONNECTED);
     }
+    await this.removeLocalAuthSession();
+    this.qrCode = null;
+    this.qrGeneratedAt = 0;
+    this.phoneNumber = null;
+    this.pushName = null;
+    this.setStatus(EngineStatus.DISCONNECTED);
   }
 
   async destroy(): Promise<void> {
@@ -337,6 +362,16 @@ export class WhatsAppWebJsAdapter extends EventEmitter implements IWhatsAppEngin
 
   getStatus(): EngineStatus {
     return this.status;
+  }
+
+  async isConnected(): Promise<boolean> {
+    if (!this.client || this.status !== EngineStatus.READY) return false;
+    try {
+      return await this.within(this.client.getState(), 5_000, 'WhatsApp connection check') === 'CONNECTED';
+    } catch (error) {
+      this.logger.warn('Live WhatsApp connection check failed', String(error));
+      return false;
+    }
   }
 
   getQRCode(): string | null {

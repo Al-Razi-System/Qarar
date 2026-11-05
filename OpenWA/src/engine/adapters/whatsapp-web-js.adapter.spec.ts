@@ -7,6 +7,8 @@ jest.mock('whatsapp-web.js', () => {
     Client: jest.fn(() => Object.assign(new EventEmitter(), {
       initialize: jest.fn().mockResolvedValue(undefined),
       destroy: jest.fn().mockResolvedValue(undefined),
+      logout: jest.fn().mockResolvedValue(undefined),
+      getState: jest.fn().mockResolvedValue('CONNECTED'),
       pupPage: { evaluate: jest.fn().mockResolvedValue(undefined) },
     })),
     LocalAuth: jest.fn(),
@@ -29,6 +31,11 @@ describe('WhatsApp pairing QR freshness', () => {
 
   it('does not expose QR before the provider emits it', () => {
     expect(adapter.getQRCode()).toBeNull();
+  });
+  it('uses the provider default web cache so authentication modules match the live WhatsApp client', () => {
+    expect(Client).toHaveBeenCalledWith(
+      expect.not.objectContaining({ webVersionCache: expect.anything() }),
+    );
   });
   it('rejects a cached image after its conservative display lease', async () => {
     client.emit('qr', 'first');
@@ -54,6 +61,15 @@ describe('WhatsApp pairing QR freshness', () => {
     await Promise.resolve();
     client.emit('disconnected', 'test');
     expect(adapter.getQRCode()).toBeNull();
+  });
+
+  it('verifies the live WhatsApp state instead of trusting the cached engine status', async () => {
+    client.emit('ready');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(await adapter.isConnected()).toBe(true);
+    (client as any).getState.mockResolvedValue('UNPAIRED');
+    expect(await adapter.isConnected()).toBe(false);
   });
 });
 

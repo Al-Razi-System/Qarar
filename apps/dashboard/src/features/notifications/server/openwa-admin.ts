@@ -5,7 +5,8 @@ import { readFile } from "node:fs/promises";
 type FetchLike = typeof fetch;
 type Session = { id:string;name:string;status:string;phone:string|null;pushName:string|null;connectedAt:string|null;lastActive:string|null };
 type Credential = { name:string;keyPrefix:string;role:string;isActive:boolean;expiresAt?:string|null;lastUsedAt?:string|null;usageCount?:number };
-export type OpenWaProviderStatus = { configured:boolean;reachable:boolean;session:Session|null;credential:Credential|null;message?:string };
+type LiveConnection = { connected:boolean;runtimeStatus:string;checkedAt:string };
+export type OpenWaProviderStatus = { configured:boolean;reachable:boolean;session:Session|null;connection:LiveConnection|null;credential:Credential|null;message?:string };
 
 export class OpenWaAdminError extends Error {
   constructor(public readonly code:string,message:string,public readonly httpStatus:number|null=null){super(message);}
@@ -25,12 +26,12 @@ export class OpenWaAdminClient {
     this.baseUrl=parsed.toString().replace(/\/$/,"");this.apiKey=apiKey;this.sessionName=sessionName;this.sessionId=sessionId;this.fetchImpl=fetchImpl;
   }
 
-  private async request<T>(path:string,init:RequestInit={}):Promise<T>{
+  private async request<T>(path:string,init:RequestInit={},options:{timeoutMs?:number;timeoutCode?:string;timeoutMessage?:string}={}):Promise<T>{
     let response:Response;
-    try{response=await this.fetchImpl(`${this.baseUrl}/api${path}`,{...init,headers:{"x-api-key":this.apiKey,...(init.body?{"content-type":"application/json"}:{}),...init.headers},signal:AbortSignal.timeout(45_000)});}
+    try{response=await this.fetchImpl(`${this.baseUrl}/api${path}`,{...init,headers:{"x-api-key":this.apiKey,...(init.body?{"content-type":"application/json"}:{}),...init.headers},signal:AbortSignal.timeout(options.timeoutMs??45_000)});}
     catch(error){
       if(error instanceof Error&&(error.name==="TimeoutError"||error.name==="AbortError")){
-        throw new OpenWaAdminError("OPENWA_TIMEOUT_AMBIGUOUS","انتهت مهلة مزود واتساب؛ قد تكون الرسالة وصلت، فتحقق قبل إعادة الإرسال.");
+        throw new OpenWaAdminError(options.timeoutCode??"OPENWA_TIMEOUT",options.timeoutMessage??"انتهت مهلة الاستجابة من خدمة واتساب. أعد المحاولة.");
       }
       throw new OpenWaAdminError("OPENWA_UNREACHABLE","تعذر الاتصال بخدمة واتساب.");
     }
@@ -48,14 +49,18 @@ export class OpenWaAdminClient {
 
   async status():Promise<OpenWaProviderStatus>{
     const session=await this.resolveSession();
+    let connection:LiveConnection|null=null;
+    let message:string|undefined;
+    try{connection=await this.request<LiveConnection>(`/sessions/${encodeURIComponent(session.id)}/connection-health`,{}, {timeoutMs:8_000,timeoutCode:"OPENWA_HEALTH_TIMEOUT",timeoutMessage:"تعذر التحقق المباشر من اتصال واتساب ضمن المهلة."});}
+    catch(error){message=error instanceof OpenWaAdminError?error.message:"تعذر التحقق المباشر من اتصال واتساب.";}
     let credential:Credential|null=null;
     try{const keys=await this.request<Credential[]>("/auth/api-keys");credential=keys.find(key=>key.isActive)??keys[0]??null;}catch(error){if(!(error instanceof OpenWaAdminError)||![401,403].includes(error.httpStatus??0))throw error;}
-    return {configured:true,reachable:true,session,credential};
+    return {configured:true,reachable:true,session,connection,credential,message};
   }
 
   async start(){const session=await this.resolveSession();return this.request<Session>(`/sessions/${encodeURIComponent(session.id)}/start`,{method:"POST"});}
   async stop(){const session=await this.resolveSession();return this.request<Session>(`/sessions/${encodeURIComponent(session.id)}/stop`,{method:"POST"});}
-  async unlink(){const session=await this.resolveSession();return this.request<Session>(`/sessions/${encodeURIComponent(session.id)}/logout`,{method:"POST"});}
+  async unlink(){const session=await this.resolveSession();return this.request<Session>(`/sessions/${encodeURIComponent(session.id)}/logout`,{method:"POST"},{timeoutMs:15_000,timeoutCode:"OPENWA_UNLINK_TIMEOUT",timeoutMessage:"تعذر تأكيد فصل الرقم ضمن المهلة. تحقق من الحالة قبل إعادة المحاولة."});}
   async qr(){const session=await this.resolveSession();return this.request<{qrCode:string;status:string}>(`/sessions/${encodeURIComponent(session.id)}/qr`);}
 
   async sendTest(destination:string,deliveryId:string){
@@ -63,7 +68,7 @@ export class OpenWaAdminClient {
     if(!/^\+[1-9][0-9]{7,14}$/.test(normalized))throw new OpenWaAdminError("INVALID_DESTINATION","أدخل رقمًا دوليًا صحيحًا يبدأ بعلامة +.");
     const session=this.sessionId?{id:this.sessionId}:await this.resolveSession();
     const text=["*قرار | اختبار اتصال واتساب*","","تم إرسال هذه الرسالة للتحقق من جاهزية قناة الإشعارات في نظام قرار.","",`*مرجع الاختبار:* ${deliveryId.slice(0,8).toUpperCase()}`,"*النتيجة:* الاتصال بالقناة يعمل بنجاح","","_نظام قرار - جامعة الرازي_"].join("\n");
-    const result=await this.request<{messageId:string}>(`/sessions/${encodeURIComponent(session.id)}/messages/send-text`,{method:"POST",headers:{"x-qarar-delivery-id":deliveryId},body:JSON.stringify({chatId:`${normalized.slice(1)}@c.us`,text})});
+    const result=await this.request<{messageId:string}>(`/sessions/${encodeURIComponent(session.id)}/messages/send-text`,{method:"POST",headers:{"x-qarar-delivery-id":deliveryId},body:JSON.stringify({chatId:`${normalized.slice(1)}@c.us`,text})},{timeoutCode:"OPENWA_TIMEOUT_AMBIGUOUS",timeoutMessage:"انتهت مهلة مزود واتساب؛ قد تكون الرسالة وصلت، فتحقق قبل إعادة الإرسال."});
     if(!result.messageId)throw new OpenWaAdminError("OPENWA_MISSING_MESSAGE_ID","لم تُعد خدمة واتساب مرجع الرسالة.");
     return {providerCode:"openwa",providerMessageId:result.messageId};
   }
@@ -79,6 +84,6 @@ export async function getOpenWaAdminClient(){
 }
 
 export async function getOpenWaProviderStatus():Promise<OpenWaProviderStatus>{
-  try{const client=await getOpenWaAdminClient();if(!client)return {configured:false,reachable:false,session:null,credential:null,message:"لم تكتمل إعدادات اتصال خدمة واتساب على الخادم."};return await client.status();}
-  catch(error){return {configured:true,reachable:false,session:null,credential:null,message:error instanceof OpenWaAdminError?error.message:"تعذر التحقق من خدمة واتساب."};}
+  try{const client=await getOpenWaAdminClient();if(!client)return {configured:false,reachable:false,session:null,connection:null,credential:null,message:"لم تكتمل إعدادات اتصال خدمة واتساب على الخادم."};return await client.status();}
+  catch(error){return {configured:true,reachable:false,session:null,connection:null,credential:null,message:error instanceof OpenWaAdminError?error.message:"تعذر التحقق من خدمة واتساب."};}
 }
