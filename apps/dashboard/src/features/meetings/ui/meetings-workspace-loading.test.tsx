@@ -169,6 +169,49 @@ it("keeps the proposal browser visible when the current eligible count is zero",
   expect(within(proposals).getByRole("link", { name: "فتح الموضوعات والتحقق من المسار" })).toBeVisible();
 });
 
+it("includes periodic obligations in the proposal count and proposal browser", async () => {
+  const meeting = {
+    id: "inactive-department-council-meeting",
+    meeting_no: "MTG-2026-000003",
+    title_ar: "الاجتماع الأول لمجلس قسم التخدير",
+    status: "draft",
+    scheduled_date: "2026-11-05",
+    updated_at: "2026-11-05T18:00:00Z",
+    unit_name_ar: "مجلس قسم التخدير",
+    agenda_items: [],
+    capabilities: { can_manage: true, can_manage_agenda: true, can_add_direct_topic: false },
+    submitted_suggestions: { items: [], total: 0 },
+    scheduled_suggestions: [{
+      occurrence_id: "occurrence-1",
+      reference_number: "SCH-2026-000001",
+      period_key: "month:2026-11",
+      topic_type_version_id: "topic-type-version-1",
+      title_ar: "اعتماد البرنامج الأكاديمي",
+      available_from: "2026-11-01",
+      due_on: "2026-11-07",
+      timing_status: "due",
+      required_attachment_count: 1,
+    }],
+  };
+  rpc.mockImplementation((contract: string) => {
+    if (contract === "get_meeting_detail") return Promise.resolve(meeting);
+    if (contract === "get_meeting_readiness") return Promise.resolve({ ready: false, checks: [] });
+    if (contract === "search_eligible_agenda_topics") return Promise.resolve({ items: [], total: 0 });
+    if (contract === "list_meeting_topic_attachments" || contract === "list_meeting_series") return Promise.resolve([]);
+    return Promise.reject(new Error(`unexpected contract: ${contract}`));
+  });
+
+  render(<MeetingsWorkspace initialMeetingId={meeting.id}/>);
+
+  const openProposals = await screen.findByRole("button", { name: "عرض 1 موضوعات مقترحة" });
+  fireEvent.click(openProposals);
+
+  const proposals = await screen.findByRole("dialog", { name: "الموضوعات المقترحة" });
+  expect(within(proposals).getByRole("heading", { name: "مقترحات دورية مستحقة لهذا الاجتماع" })).toBeVisible();
+  expect(within(proposals).getByRole("heading", { name: "اعتماد البرنامج الأكاديمي" })).toBeVisible();
+  expect(within(proposals).queryByRole("heading", { name: "لا توجد موضوعات مؤهلة حاليًا" })).not.toBeInTheDocument();
+});
+
 it("replaces a failed focused meeting load with its cause and an in-place retry", async () => {
   rpc.mockRejectedValueOnce(new MeetingApiError(
     "تعذر الوصول إلى خادم قرار. تحقق من الاتصال ثم أعد المحاولة.",

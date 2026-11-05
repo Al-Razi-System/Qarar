@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(37);
+select plan(39);
 
 insert into qarar_core.organizations(id,code,name_ar)
 values('56000000-0000-0000-0000-000000000001','governance-v2-read-ci','منظمة اختبار قراءة الحوكمة');
@@ -103,6 +103,21 @@ delete from qarar_governance.topic_type_origin_scopes_v2 where topic_type_versio
 insert into qarar_governance.topic_type_origin_scopes_v2 values('56000000-0000-0000-0000-000000000022','56000000-0000-0000-0000-000000000001',null,'56000000-0000-0000-0000-000000000010');
 select is(jsonb_array_length(qarar_governance.list_effective_topic_types_v2('56000000-0000-0000-0000-000000000012',current_date)),1,'class scope allows matching council class');
 select is(qarar_governance.preview_topic_route_v2('56000000-0000-0000-0000-000000000022','56000000-0000-0000-0000-000000000012',current_date)#>>'{authoring,required_attachment_count}','2','presenter preview carries attachment requirement');
+-- Council creation deliberately starts inactive while its agenda is prepared.
+-- A periodic classification scoped to the council class must still be proposed
+-- for its already-materialized draft meetings; opening the session remains a
+-- separate council-activation gate.
+reset role;
+update qarar_core.governance_units set status='inactive' where id='56000000-0000-0000-0000-000000000012';
+set local role qarar_governance_executor;
+update qarar_governance.topic_type_authoring_profiles_v2 set submission_mode='automatic_agenda' where topic_type_version_id='56000000-0000-0000-0000-000000000022';
+update qarar_governance.topic_schedule_policies_v2 set rule_type='monthly_week',rule_config='{"week":1,"starts_on":"2026-01-01","ends_on":"2026-12-31"}' where topic_type_version_id='56000000-0000-0000-0000-000000000022';
+select is((select count(*)::int from qarar_governance.topic_schedule_occurrences_v2 where governance_unit_id='56000000-0000-0000-0000-000000000012' and period_key='month:2026-11'),1,'periodic obligation is materialized while an inactive council prepares its existing meeting');
+select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000012','2026-11-04')),1,'inactive council meeting exposes its periodic proposal during agenda preparation');
+delete from qarar_governance.topic_schedule_occurrences_v2 where governance_unit_id='56000000-0000-0000-0000-000000000012';
+reset role;
+update qarar_core.governance_units set status='active' where id='56000000-0000-0000-0000-000000000012';
+set local role qarar_governance_executor;
 update qarar_governance.topic_type_authoring_profiles_v2 set submission_mode='automatic_agenda',scope_kind='councils' where topic_type_version_id='56000000-0000-0000-0000-000000000022';
 delete from qarar_governance.topic_type_origin_scopes_v2 where topic_type_version_id='56000000-0000-0000-0000-000000000022';
 insert into qarar_governance.topic_type_origin_scopes_v2 values('56000000-0000-0000-0000-000000000022','56000000-0000-0000-0000-000000000001','56000000-0000-0000-0000-000000000011',null);
