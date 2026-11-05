@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(29);
+select plan(37);
 
 insert into qarar_core.organizations(id,code,name_ar)
 values('56000000-0000-0000-0000-000000000001','governance-v2-read-ci','منظمة اختبار قراءة الحوكمة');
@@ -107,20 +107,34 @@ update qarar_governance.topic_type_authoring_profiles_v2 set submission_mode='au
 delete from qarar_governance.topic_type_origin_scopes_v2 where topic_type_version_id='56000000-0000-0000-0000-000000000022';
 insert into qarar_governance.topic_type_origin_scopes_v2 values('56000000-0000-0000-0000-000000000022','56000000-0000-0000-0000-000000000001','56000000-0000-0000-0000-000000000011',null);
 update qarar_governance.topic_schedule_policies_v2 set rule_type='monthly_week',rule_config='{"week":1,"starts_on":"2026-01-01","ends_on":"2026-12-31"}' where topic_type_version_id='56000000-0000-0000-0000-000000000022';
-select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-04')),1,'scheduled effective type is automatically proposed inside its window');
-select is(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-04')->0->>'required_attachment_count','2','proposal carries attachment requirement');
-select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-12')),0,'outside weekly window there is no proposal');
+select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-05')),1,'scheduled effective type is automatically proposed inside its window');
+select is(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-05')->0->>'required_attachment_count','2','proposal carries attachment requirement');
+select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-12')),1,'an unmet periodic occurrence remains proposed after its original window');
+select is(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-12')->0->>'timing_status','overdue','carried proposal exposes its overdue timing');
 select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000012','2026-11-04')),0,'another council cannot receive restricted proposal');
-select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2027-11-04')),0,'expired recurrence creates no proposal');
-select is(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-04'),qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-04'),'refresh returns stable nonduplicated suggestions');
+select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2027-11-04')),2,'an expired policy creates no new periods but preserves its two unresolved obligations');
+select is((select count(distinct value->>'period_key')::int from jsonb_array_elements(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2027-11-04'))),2,'carried obligations retain separate period identities');
+select is(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-05'),qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-05'),'refresh returns stable nonduplicated suggestions');
+select is(qarar_governance.topic_schedule_window_v2('seasonal','{"starts_on":"2026-01-01","dates":[{"month":3,"day":15},{"month":9,"day":1}]}','2026-03-15')->>'is_due','true','seasonal policy accepts the first of several fixed annual dates');
+select is(qarar_governance.topic_schedule_window_v2('seasonal','{"starts_on":"2026-01-01","dates":[{"month":3,"day":15},{"month":9,"day":1}]}','2026-09-01')->>'is_due','true','seasonal policy accepts the second fixed annual date');
 reset role;
 insert into qarar_meetings.meetings(id,organization_id,meeting_no,governance_unit_id,title_ar,scheduled_date,created_by_user_id)
-values('56000000-0000-0000-0000-000000000050','56000000-0000-0000-0000-000000000001','MTG-READ-CI','56000000-0000-0000-0000-000000000011','تحضير جدول الأعمال','2026-11-04','56000000-0000-0000-0000-000000000002');
+values('56000000-0000-0000-0000-000000000050','56000000-0000-0000-0000-000000000001','MTG-READ-CI','56000000-0000-0000-0000-000000000011','تحضير جدول الأعمال','2026-11-12','56000000-0000-0000-0000-000000000002');
 select is(jsonb_array_length(api_v1.get_meeting_detail('56000000-0000-0000-0000-000000000050')->'scheduled_suggestions'),1,'existing meeting detail exposes scheduled proposals');
 select is(jsonb_array_length(api_v1.get_meeting_detail('56000000-0000-0000-0000-000000000050')->'agenda_items'),0,'suggestions do not silently become approved agenda items');
 set local role qarar_governance_executor;
+update qarar_governance.topic_type_authoring_profiles_v2 set required_attachment_count=0 where topic_type_version_id='56000000-0000-0000-0000-000000000022';
+reset role;
+create temporary table scheduled_topic as select (qarar_topics.create_topic_from_type_v2('موضوع الاستحقاق الدوري','وصف موضوع الاستحقاق الدوري الكامل','56000000-0000-0000-0000-000000000022','56000000-0000-0000-0000-000000000011',gen_random_uuid())->>'topic_id')::uuid id;
+create temporary table scheduled_item as select (api_v1.add_agenda_item('56000000-0000-0000-0000-000000000050',(select id from scheduled_topic),false,null)->>'id')::uuid id;
+select is((select status from qarar_governance.topic_schedule_occurrences_v2 where agenda_item_id=(select id from scheduled_item)),'scheduled','adding the typed topic links exactly one due occurrence');
+update qarar_meetings.agenda_items set agenda_status='discussed' where id=(select id from scheduled_item);
+select is((select status from qarar_governance.topic_schedule_occurrences_v2 where agenda_item_id=(select id from scheduled_item)),'completed','discussing the linked agenda item completes its occurrence');
+select is((select execution_timing from qarar_governance.topic_schedule_occurrences_v2 where agenda_item_id=(select id from scheduled_item)),'late','completion after the due window is retained as late execution');
+select is((select count(*)::int from qarar_audit.audit_logs where entity_id=(select id from qarar_governance.topic_schedule_occurrences_v2 where agenda_item_id=(select id from scheduled_item)) and action in('governance.topic_schedule_occurrence.scheduled','governance.topic_schedule_occurrence.completed')),2,'occurrence assignment and completion are both audited');
+set local role qarar_governance_executor;
 update qarar_governance.topic_type_authoring_profiles_v2 set submission_mode='manual' where topic_type_version_id='56000000-0000-0000-0000-000000000022';
-select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-04')),0,'scheduled manual type is not automatically proposed');
+select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-05')),0,'scheduled manual type is not automatically proposed');
 reset role;
 update qarar_iam.users set is_system_admin=false where id='56000000-0000-0000-0000-000000000003';
 set local "request.jwt.claims"='{"sub":"56000000-0000-0000-0000-000000000003","role":"authenticated"}';

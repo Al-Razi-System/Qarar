@@ -134,7 +134,10 @@ export function TopicTypesWorkspace() {
       automaticAgenda: detail.authoring?.submission_mode === "automatic_agenda",
       scheduleKind: detail.schedule?.rule_type ?? "none", date: String(config.date ?? ""),
       startsOn: String(config.starts_on ?? ""), endsOn: String(config.ends_on ?? ""),
-      week: Number(config.week ?? 1), month: Number(config.month ?? 1), day: Number(config.day ?? 1) });
+      week: Number(config.week ?? 1), month: Number(config.month ?? 1), day: Number(config.day ?? 1),
+      seasonalDates: Array.isArray(config.dates) && config.dates.length
+        ? config.dates.map(item => ({ month: Number((item as Record<string, unknown>).month), day: Number((item as Record<string, unknown>).day) }))
+        : [{ month: Number(config.month ?? 1), day: Number(config.day ?? 1) }] });
     beginCreating();
   }
   function next() {

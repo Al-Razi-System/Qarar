@@ -94,10 +94,14 @@ export type MeetingInvitationSummary = {
 };
 
 export type ScheduledAgendaSuggestion = {
+  occurrence_id?: string;
+  reference_number?: string;
+  period_key?: string;
   topic_type_version_id: string;
   title_ar: string;
   available_from: string;
   due_on: string;
+  timing_status?: "due" | "overdue";
   required_attachment_count: number;
 };
 

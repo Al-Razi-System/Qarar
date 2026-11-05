@@ -24,4 +24,10 @@ describe("topic type requirements", () => {
     expect(requirementsError({ ...initialRequirements, scheduleKind: "monthly_week", startsOn: "2026-10-01", endsOn: "2026-09-01" })).toMatch(/بداية/);
     expect(requirementsError({ ...initialRequirements, requiredAttachmentCount: 51 })).toMatch(/المرفقات/);
   });
+  it("serializes several fixed annual seasonal dates and rejects duplicates", () => {
+    const value = { ...initialRequirements, scheduleKind: "seasonal" as const, startsOn: "2026-01-01", seasonalDates: [{ month: 3, day: 15 }, { month: 9, day: 1 }] };
+    expect(requirementsError(value)).toBeNull();
+    expect(requirementsPayload(value).schedule.rule_config).toEqual({ starts_on: "2026-01-01", ends_on: null, dates: [{ month: 3, day: 15 }, { month: 9, day: 1 }] });
+    expect(requirementsError({ ...value, seasonalDates: [{ month: 3, day: 15 }, { month: 3, day: 15 }] })).toMatch(/تكرر/);
+  });
 });

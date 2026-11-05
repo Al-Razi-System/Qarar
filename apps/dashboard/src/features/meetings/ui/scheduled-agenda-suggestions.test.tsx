@@ -14,4 +14,9 @@ describe("scheduled agenda suggestions", () => {
     expect(screen.getByText(/المرفقات المطلوبة قبل الإدراج: 2/)).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+  it("marks a carried occurrence as overdue and exposes its stable reference", () => {
+    render(<ScheduledAgendaSuggestions items={[{ occurrence_id: "occurrence-1", reference_number: "TSO-2026-000001", topic_type_version_id: "type-1", title_ar: "الخطة السنوية", available_from: "2026-10-01", due_on: "2026-10-07", timing_status: "overdue", required_attachment_count: 0 }]}/>);
+    expect(screen.getByText("متأخر عن دورته")).toBeInTheDocument();
+    expect(screen.getByText(/TSO-2026-000001/)).toBeInTheDocument();
+  });
 });
