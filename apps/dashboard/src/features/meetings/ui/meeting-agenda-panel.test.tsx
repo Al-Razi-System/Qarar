@@ -9,10 +9,18 @@ it("keeps proposed topics behind one compact counter action inside the agenda he
  expect(screen.getByText("جدول الأعمال فارغ")).toBeInTheDocument();
 });
 
-it("offers the contextual direct-topic action independently from governed proposals",()=>{
+it("keeps the proposal browser available at zero and the direct-topic action independent",()=>{
+ const open=vi.fn();
  const direct=vi.fn();
- render(<MeetingAgendaPanel meetingId="meeting" items={[]} attachments={[]} editable busy={false} eligibleCount={0} canAddDirect onAddProposals={()=>{}} onAddDirect={direct} onMove={()=>{}} onRemove={()=>{}}/>);
+ render(<MeetingAgendaPanel meetingId="meeting" items={[]} attachments={[]} editable busy={false} eligibleCount={0} canAddDirect onAddProposals={open} onAddDirect={direct} onMove={()=>{}} onRemove={()=>{}}/>);
+ fireEvent.click(screen.getByRole("button",{name:"عرض 0 موضوعات مقترحة"}));
  fireEvent.click(screen.getByRole("button",{name:"موضوع مباشر"}));
+ expect(open).toHaveBeenCalledTimes(1);
  expect(direct).toHaveBeenCalledTimes(1);
- expect(screen.queryByText("المقترحات")).not.toBeInTheDocument();
+});
+
+it("does not expose agenda actions when the meeting is not editable for the viewer",()=>{
+ render(<MeetingAgendaPanel meetingId="meeting" items={[]} attachments={[]} editable={false} busy={false} eligibleCount={4} canAddDirect onAddProposals={()=>{}} onAddDirect={()=>{}} onMove={()=>{}} onRemove={()=>{}}/>);
+ expect(screen.queryByRole("button",{name:"عرض 4 موضوعات مقترحة"})).not.toBeInTheDocument();
+ expect(screen.queryByRole("button",{name:"موضوع مباشر"})).not.toBeInTheDocument();
 });

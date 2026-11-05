@@ -136,6 +136,39 @@ it("opens agenda continuation as a focused workspace for the requested meeting",
   expect(await screen.findByRole("dialog", { name: "إضافة موضوع مباشر" })).toBeVisible();
 });
 
+it("keeps the proposal browser visible when the current eligible count is zero", async () => {
+  const meeting = {
+    id: "meeting-without-current-proposals",
+    meeting_no: "MTG-2026-000008",
+    title_ar: "اجتماع ينتظر المقترحات",
+    status: "draft",
+    scheduled_date: "2026-11-05",
+    updated_at: "2026-11-05T18:00:00Z",
+    unit_name_ar: "مجلس قسم التمريض",
+    agenda_items: [],
+    capabilities: { can_manage: true, can_manage_agenda: true, can_add_direct_topic: false },
+    submitted_suggestions: { items: [], total: 0 },
+  };
+  rpc.mockImplementation((contract: string) => {
+    if (contract === "get_meeting_detail") return Promise.resolve(meeting);
+    if (contract === "get_meeting_readiness") return Promise.resolve({ ready: false, checks: [] });
+    if (contract === "search_eligible_agenda_topics") return Promise.resolve({ items: [], total: 0 });
+    if (contract === "list_meeting_topic_attachments" || contract === "list_meeting_series") return Promise.resolve([]);
+    if (contract === "search_meetings") return Promise.resolve({ items: [], total: 0 });
+    return Promise.reject(new Error(`unexpected contract: ${contract}`));
+  });
+
+  render(<MeetingsWorkspace initialMeetingId={meeting.id}/>);
+
+  const openProposals = await screen.findByRole("button", { name: "عرض 0 موضوعات مقترحة" });
+  expect(openProposals).toBeVisible();
+  fireEvent.click(openProposals);
+
+  const proposals = await screen.findByRole("dialog", { name: "الموضوعات المقترحة" });
+  expect(within(proposals).getByRole("heading", { name: "لا توجد موضوعات مؤهلة حاليًا" })).toBeVisible();
+  expect(within(proposals).getByRole("link", { name: "فتح الموضوعات والتحقق من المسار" })).toBeVisible();
+});
+
 it("replaces a failed focused meeting load with its cause and an in-place retry", async () => {
   rpc.mockRejectedValueOnce(new MeetingApiError(
     "تعذر الوصول إلى خادم قرار. تحقق من الاتصال ثم أعد المحاولة.",
