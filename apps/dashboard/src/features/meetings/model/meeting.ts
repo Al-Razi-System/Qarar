@@ -28,6 +28,8 @@ export type Meeting = {
   planned_date?: string | null;
   /** Why the meeting is held off its planned day, when it is. */
   schedule_exception_reason?: string | null;
+  /** False when the meeting's council is not active; its session cannot be opened. */
+  council_active?: boolean;
   schedule_date_confirmed?: boolean;
   /** The session's number within its council's academic year. */
   session_sequence_no?: number | null;

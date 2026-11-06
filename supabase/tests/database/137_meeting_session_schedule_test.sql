@@ -28,7 +28,10 @@ create temporary table weekly_council as select api_v2.admin_create_council_v2('
   jsonb_build_object('meeting_type_id','63700000-0000-0000-0000-000000000040','recurrence','weekly','first_meeting_date','2026-11-02','ends_on','2026-11-30'),'63700000-0000-0000-0000-000000000051') payload;
 create temporary table monthly_council as select api_v2.admin_create_council_v2('مجلس شهري',null,null,'63700000-0000-0000-0000-000000000021',(select (payload->>'id')::uuid from scope_unit),null,null,3,false,null,'63700000-0000-0000-0000-000000000052') payload;
 select api_v2.save_council_meeting_plan_v2((select (payload->>'id')::uuid from monthly_council),
-  jsonb_build_object('meeting_type_id','63700000-0000-0000-0000-000000000040','recurrence','monthly','monthly_week',2,'first_meeting_date','2026-11-01','ends_on','2027-01-31'),'63700000-0000-0000-0000-000000000053');
+  -- The plan starts this month, so its first cycle is already open for preparation.
+  jsonb_build_object('meeting_type_id','63700000-0000-0000-0000-000000000040','recurrence','monthly','monthly_week',1,
+    'first_meeting_date',to_char(date_trunc('month',current_date),'YYYY-MM-DD'),
+    'ends_on',to_char(date_trunc('month',current_date)+interval '3 months'-interval '1 day','YYYY-MM-DD')),'63700000-0000-0000-0000-000000000053');
 
 create temporary table weekly_plan as select id from qarar_meetings.council_meeting_plans_v2 where governance_unit_id=(select (payload->>'id')::uuid from weekly_council);
 create temporary table monthly_plan as select id from qarar_meetings.council_meeting_plans_v2 where governance_unit_id=(select (payload->>'id')::uuid from monthly_council);

@@ -71,6 +71,8 @@ select is((select array_agg(id order by id) from weekly where status<>'cancelled
 select is((select count(*)::integer from weekly where status<>'cancelled' and quorum_percentage=65),4,'and gives them the new quorum');
 
 -- A session that starts is numbered by the order sessions are held, and keeps it.
+-- Only an active council opens a session.
+update qarar_core.governance_units set status='active',activated_at=clock_timestamp() where id=(select (payload->>'id')::uuid from weekly_council);
 alter table qarar_meetings.meetings disable trigger enforce_ready_meeting_integrity;
 create temporary table started as select id from weekly where scheduled_date='2027-08-30';
 select api_v2.reschedule_meeting_session_v2((select id from started),'2027-08-30','10:00','12:00','onsite',null,null,(select updated_at from weekly where id=(select id from started)));
