@@ -19,7 +19,7 @@ const contracts = new Set([
   "get_topic_resubmission_option", "resubmit_returned_topic",
   "list_topic_corrections_v2", "get_topic_correction_v2", "open_topic_correction_v2",
   "decide_topic_correction_station_v2", "withdraw_topic_correction_v2", "sign_corrected_minutes_v2",
-  "revise_topic_correction_v2",
+  "revise_topic_correction_v2", "get_topic_schedule_occurrences_v2",
   "list_topic_attachments", "add_topic_attachment", "remove_topic_attachment",
   "get_topic_requirements_status", "fulfill_topic_requirement", "get_topic_meeting_history", "get_topic_activity_timeline",
 ]);
