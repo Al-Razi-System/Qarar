@@ -53,6 +53,13 @@ dates, meeting numbers, and lifecycle statuses.
 authorized meeting reader or roster participant, so the same evidence remains available before,
 during, and after the meeting.
 
+Download metadata preserves `download_allowed` as the participant policy and adds
+`viewer_download_allowed` as the effective permission for the authenticated caller.
+An active `council_chair` membership in this meeting's council retains downloading
+even when participant downloads are disabled. Rapporteurs, administrators without
+that contextual chair role, and other council chairs receive no exception. Both
+file routes enforce the effective server permission; inline viewing is unchanged.
+
 ## Update Meeting
 
 Permission: `meetings.manage`. Allowed only in `draft` or `scheduled`.
@@ -127,3 +134,18 @@ in `12-contract-reference.md`. They do not start a meeting or send invitations.
 - `update_meeting_series_recurrence`: changes the recurrence from an editable
   anchor occurrence and updates later draft/scheduled dates. Started/completed
   occurrences are not rescheduled. Returns the number changed.
+# نصاب الاجتماع المستقل (V2)
+
+`api_v2.save_meeting_with_quorum_v2(p_action text, p_values jsonb, p_quorum_percentage integer default null)`
+يحفظ بيانات الاجتماع ونصابه ذرياً. `p_action`: `create` أو `series` أو `update`؛ `p_values` يحتوي معاملات عقد V1 المقابل (`create_meeting`/`create_meeting_series`/`update_meeting`) بأسمائها نفسها.
+النسبة اختيارية بين 1 و100، وغيابها يستخدم 51٪ مستقلًا عن المجلس. القائم يحتفظ بنسبته السابقة عند ترقية المخطط. `get_meeting_detail` يعيد `quorum_percentage`.
+
+### سياق الموضوع داخل الاجتماع
+
+تتضمن `agenda_items[].topic.context` الوصف `description`، ومراحل التنفيذ `route`
+(الاسم، المجلس، الترتيب، الحالة، وعلامة المرحلة الحالية)، و`previous_decisions`
+لقرارات اجتماعات أخرى مغلقة أو مؤرشفة فقط. تُقرأ بعد حارس الاجتماع والمؤسسة،
+لموضوعاته المدرجة فقط، حتى بعد انتقالها إلى مجلس آخر. لا تمنح صلاحية عامة على
+الموضوعات ولا تعيد تعليقات المراحل أو لقطاتها الخام أو اختيارات الأصوات. الحقل
+إضافي، ويمكن أن يغيب أثناء ترقية الخادم؛ الوصف قد يكون فارغًا والمسار غير مبدوء.
+إنشاء الاجتماع يحتاج `meetings.create` في جهة الاجتماع؛ التعديل يحتاج `meetings.manage` ورمز `p_expected_updated_at`، ويقتصر على المسودة والمجدول قبل تثبيت الحضور. الإيصال السابق لا يغير النسبة؛ نسبة مختلفة على الإيصال نفسه ترفض بـ40001. تُدقق النسبة السابقة والجديدة في `meetings.quorum.set`. لا يُعطل النصاب بترك الحقل فارغاً.

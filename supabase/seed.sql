@@ -119,7 +119,7 @@ from (
       'General Administration'
     )
 ) as values_to_insert(id, organization_id, unit_type_code, code, name_ar, name_en)
-join public.governance_unit_types unit_type
+join qarar_core.governance_unit_types unit_type
   on unit_type.organization_id = values_to_insert.organization_id
  and unit_type.code = values_to_insert.unit_type_code
 on conflict (organization_id, code) do update

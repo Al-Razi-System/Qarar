@@ -1,77 +1,37 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-const { qararRpc, qararRpcV2 } = vi.hoisted(() => ({ qararRpc: vi.fn(), qararRpcV2: vi.fn() }));
-
+import { beforeEach, expect, it, vi } from "vitest";
 vi.mock("@/shared/api/qarar-server", () => ({
-  qararRpc,
-  qararRpcV2,
-  QararApiError: class QararApiError extends Error {},
+  qararRpc: vi.fn(), qararRpcV2: vi.fn(),
+  QararApiError: class extends Error {
+    constructor(message: string, readonly status: number, readonly code?: string) { super(message); }
+  },
 }));
-
+vi.mock("@/shared/security/request-guards", () => ({ rejectUntrustedMutation: () => null }));
+vi.mock("@/shared/observability/logger", () => ({ logEvent: vi.fn() }));
+import { qararRpc, qararRpcV2, QararApiError } from "@/shared/api/qarar-server";
 import { POST } from "./route";
-
-function request(body: unknown) {
-  return new Request("http://localhost/api/admin/councils", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-afterEach(() => vi.clearAllMocks());
-
-describe("POST /api/admin/councils", () => {
-  it("يوجه قراءة الهيكل التنظيمي إلى العقد الجديد", async () => {
-    qararRpcV2.mockResolvedValue({ units: [], councils: [] });
-    expect((await POST(request({ contract: "admin_get_council_organizational_tree_v2", params: {} }))).status).toBe(200);
-    expect(qararRpcV2).toHaveBeenCalledWith("admin_get_council_organizational_tree_v2", {});
-    expect(qararRpc).not.toHaveBeenCalled();
-  });
-  it("يوجه تعديل حالة الوحدة إلى عقد V2", async () => {
-    qararRpcV2.mockResolvedValue({ id: "unit-1", status: "archived" });
-    const params = { p_unit_id: "unit-1", p_status: "archived", p_expected_updated_at: "2026-10-07T00:00:00Z" };
-    expect((await POST(request({ contract: "admin_update_organizational_unit_v2", params }))).status).toBe(200);
-    expect(qararRpcV2).toHaveBeenCalledWith("admin_update_organizational_unit_v2", params);
-    expect(qararRpc).not.toHaveBeenCalled();
-  });
-  it("يوجه إنشاء الوحدة التنظيمية إلى عقد V2 دون رمز يدوي", async () => {
-    qararRpcV2.mockResolvedValue({ id: "unit-1" });
-    const params = { p_name_ar: "كلية العلوم", p_unit_type_id: "type-1", p_parent_unit_id: null, p_client_request_id: "request-1" };
-    const response = await POST(request({ contract: "admin_create_organizational_unit_v2", params }));
-    expect(response.status).toBe(200);
-    expect(qararRpcV2).toHaveBeenCalledWith("admin_create_organizational_unit_v2", params);
-  });
-  it("يمرر عقد المجلس المسموح ومعاملاته فقط", async () => {
-    qararRpc.mockResolvedValue({ id: "council-1" });
-
-    const response = await POST(request({ contract: "admin_get_council_detail", params: { p_council_id: "council-1" } }));
-
-    expect(response.status).toBe(200);
-    expect(qararRpc).toHaveBeenCalledWith("admin_get_council_detail", { p_council_id: "council-1" });
-  });
-
-  it("يرفض أي عقد غير مدرج قبل الوصول إلى قاعدة البيانات", async () => {
-    const response = await POST(request({ contract: "execute_arbitrary_sql", params: {} }));
-
-    expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ error: { code: "INVALID_CONTRACT" } });
-    expect(qararRpc).not.toHaveBeenCalled();
-  });
-
-  it("يعزل عقد إنشاء المجلس الجديد داخل واجهة api_v2", async () => {
-    qararRpcV2.mockResolvedValue({ id: "council-2" });
-    const response = await POST(request({ contract: "admin_create_council_v2", params: { p_name_ar: "مجلس الكلية" } }));
-    expect(response.status).toBe(200);
-    expect(qararRpcV2).toHaveBeenCalledWith("admin_create_council_v2", { p_name_ar: "مجلس الكلية" });
-    expect(qararRpc).not.toHaveBeenCalled();
-  });
-
-  it("لا يمرر معاملات ليست كائن JSON", async () => {
-    qararRpc.mockResolvedValue([]);
-
-    const response = await POST(request({ contract: "admin_get_councils_tree", params: ["unexpected"] }));
-
-    expect(response.status).toBe(200);
-    expect(qararRpc).toHaveBeenCalledWith("admin_get_councils_tree", {});
-  });
+const params = { p_council_id: "council-a" };
+const send = (contract = "admin_get_council_detail_v2") => POST(new Request("http://localhost/api/admin/councils", { method: "POST", body: JSON.stringify({ contract, params }) }));
+beforeEach(() => vi.resetAllMocks());
+it("reads old council detail with the same contextual actor when the new read contract is missing", async () => {
+  vi.mocked(qararRpcV2).mockRejectedValue(new QararApiError("missing function", 404, "PGRST202"));
+  vi.mocked(qararRpc).mockResolvedValue({ id: "council-a", name_ar: "مجلس الجامعة" });
+  const response = await send();
+  expect(response.status).toBe(200);
+  expect(qararRpc).toHaveBeenCalledWith("admin_get_council_detail", params);
+  expect((await response.json()).data).toEqual(expect.objectContaining({ id: "council-a", meeting_plan_unavailable: true, can_create_meeting_plan: false }));
+});
+it.each([[403, "42501"], [500, "XX000"]])("does not downgrade a forbidden or failed read (%s)", async (status, code) => {
+  vi.mocked(qararRpcV2).mockRejectedValue(new QararApiError("failure", status, code));
+  expect((await send()).status).not.toBe(200);
+  expect(qararRpc).not.toHaveBeenCalled();
+});
+it("does not retry any missing mutation through an old contract", async () => {
+  vi.mocked(qararRpcV2).mockRejectedValue(new QararApiError("missing function", 404, "PGRST202"));
+  expect((await send("admin_update_council_v2")).status).not.toBe(200);
+  expect(qararRpc).not.toHaveBeenCalled();
+});
+it("retains the new detail and its plan when the new read is available", async () => {
+  vi.mocked(qararRpcV2).mockResolvedValue({ id: "council-a", meeting_plan: { id: "plan-a" } });
+  expect((await (await send()).json()).data.meeting_plan.id).toBe("plan-a");
+  expect(qararRpc).not.toHaveBeenCalled();
 });

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { fixturePath } from "./fixture";
+import type { LibraryDetail } from "../src/features/regulations/model/regulation-library";
 
 async function login(page: Page) {
   const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
@@ -17,32 +18,44 @@ async function login(page: Page) {
 test("يسجل مدير الاختبار الدخول ويصل إلى إدارة اللوائح", async ({ page }) => {
   await login(page);
   await page.goto("/admin/regulations");
-  await expect(page.getByRole("heading", { name: "اللوائح والمسارات" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "اللوائح والبنود" })).toBeVisible();
 });
 
-test("ينشئ لائحة وإصدار مسودة من الواجهة", async ({ page }, testInfo) => {
+test("ينشئ لائحة ومسودتها تلقائيًا ثم يحفظ أول بند ويعيد قراءته", async ({ page }, testInfo) => {
   const fixture = await login(page);
-  const policyCode = `${fixture.policyCode}-${testInfo.project.name.replace(/[^a-z0-9]+/g, "-")}`;
+  const name = `لائحة Playwright ${fixture.policyCode} ${testInfo.project.name}`;
   await page.goto("/admin/regulations");
 
-  await page.getByRole("button", { name: "إنشاء لائحة" }).click();
-  await page.getByLabel("رمز اللائحة").fill(policyCode);
-  await page.getByLabel("الاسم بالعربية").fill("لائحة Playwright التجريبية");
-  await page.getByLabel("الوصف").fill("لائحة مؤقتة للتحقق من دورة الواجهة المتكاملة.");
-  await page.getByRole("button", { name: "حفظ اللائحة" }).click();
-  const createdPolicyLink = page.getByRole("link", { name: `فتح سجل اللائحة ${policyCode}` });
-  await expect(createdPolicyLink).toBeVisible();
-  await createdPolicyLink.click();
-  await page.getByRole("button", { name: "إنشاء إصدار العمل" }).click();
-  await page.getByRole("tab", { name: /الإصدارات/ }).click();
-  await page.getByRole("button", { name: "إنشاء الإصدار الأول" }).click();
-  await page.getByLabel("وسم الإصدار").fill("1.0");
-  await page.getByLabel("ملخص التغييرات").fill("الإصدار التجريبي الأول.");
-  await page.getByRole("button", { name: "إنشاء المسودة" }).click();
-  await expect(page.getByRole("status")).toContainText("تم إنشاء إصدار مسودة جديد");
-  await expect(page.getByLabel("إصدار العمل الحالي")).not.toHaveValue("");
-  await expect(page.getByLabel("إصدار العمل الحالي").locator("option:checked")).toHaveText("1.0 · مسودة");
-  await expect(page.getByRole("tab", { name: /الهيكل والمحتوى/ })).toBeVisible();
-  await expect(page.getByRole("tab", { name: /القواعد والمسارات/ })).toBeVisible();
-  await expect(page.getByRole("tab", { name: /الاعتماد والنفاذ/ })).toBeVisible();
+  await page.getByRole("button", { name: "إضافة لائحة", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("رمز اللائحة")).toHaveCount(0);
+  await dialog.getByLabel("اسم اللائحة").fill(name);
+  await dialog.getByText("وصف مختصر · اختياري", { exact: true }).click();
+  await dialog.getByLabel("الوصف", { exact: true }).fill("لائحة مؤقتة للتحقق من دورة الواجهة المتكاملة.");
+  const createResponse = page.waitForResponse((response) => response.url().endsWith("/api/admin/regulations") && response.request().method() === "POST" && response.request().postDataJSON()?.params?.p_action === "create");
+  await dialog.getByRole("button", { name: "حفظ اللائحة" }).click();
+  const created = await createResponse;
+  expect(created.status()).toBe(200);
+  const { data } = await created.json() as { data: LibraryDetail };
+  expect(data.policy.description).toBe("لائحة مؤقتة للتحقق من دورة الواجهة المتكاملة.");
+  // The library's internal code is the lowercase generated REG reference.
+  expect(data.policy.code).toMatch(/^reg-\d{4}-\d{6,}$/);
+  expect((data.policy.versions ?? []).some((version) => version.id === data.working_version_id && version.legal_status === "draft")).toBe(true);
+  expect(created.request().postDataJSON().params.p_payload).not.toHaveProperty("code");
+  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/admin/regulations/${data.policy.id}$`));
+  await page.getByRole("button", { name: "إضافة بند", exact: true }).click();
+  await dialog.getByLabel("عنوان البند").fill("بند Playwright المحفوظ");
+  await dialog.getByLabel("النص النظامي").fill("نص تجريبي للتحقق من حفظ المسودة وإعادة قراءتها دون تغيير اللائحة المنشورة.");
+  const itemResponse = page.waitForResponse((response) => response.url().endsWith("/api/admin/regulations") && response.request().method() === "POST" && response.request().postDataJSON()?.params?.p_action === "save_item");
+  await dialog.getByRole("button", { name: "حفظ البند" }).click();
+  const saved = await itemResponse;
+  expect(saved.status()).toBe(200);
+  const { data: itemData } = await saved.json() as { data: LibraryDetail };
+  const item = (itemData.policy.versions ?? []).flatMap((version) => version.items).find((entry) => entry.id === itemData.item_id);
+  expect(item?.item_code).toMatch(/^ART-\d{4}-\d{6,}$/);
+  await page.reload();
+  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "بند Playwright المحفوظ", exact: true })).toBeVisible();
+  await expect(page.getByText("نص تجريبي للتحقق من حفظ المسودة وإعادة قراءتها دون تغيير اللائحة المنشورة.", { exact: true })).toBeVisible();
 });

@@ -69,7 +69,7 @@ values
     'service_claims_elevated',
     'Service claims elevated',
     'organization'
-  );
+  ) on conflict (organization_id,code) do nothing;
 
 insert into qarar_iam.permissions(id, organization_id, code, module, action, context_scope, name_ar)
 values
@@ -90,19 +90,19 @@ values
     'roles.assign',
     'governance_unit',
     'Assign roles'
-  );
+  ) on conflict (organization_id,code) do nothing;
 
 insert into qarar_iam.role_permissions(organization_id, role_id, permission_id)
 values
   (
     '41000000-0000-0000-0000-000000000001',
     '41000000-0000-0000-0000-000000000201',
-    '41000000-0000-0000-0000-000000000301'
+    (select id from qarar_iam.permissions where organization_id='41000000-0000-0000-0000-000000000001' and code='iam.users.manage')
   ),
   (
     '41000000-0000-0000-0000-000000000001',
     '41000000-0000-0000-0000-000000000201',
-    '41000000-0000-0000-0000-000000000302'
+    (select id from qarar_iam.permissions where organization_id='41000000-0000-0000-0000-000000000001' and code='iam.roles.assign')
   );
 
 insert into qarar_iam.memberships(organization_id, user_id, governance_unit_id, role_id)
@@ -200,10 +200,11 @@ select is(
       (to_regprocedure('qarar_iam.service_consume_iam_rate_limit(uuid,text,integer,integer)')),
       (to_regprocedure('qarar_iam.service_finalize_invited_user(uuid,uuid,text,text,text,text,text,uuid,uuid,text)'))
     ) as wrappers(function_oid)
-    where pg_get_functiondef(function_oid) like '%set_config(''request.jwt.claim'', v_actor_claims, true)%'
-      and pg_get_functiondef(function_oid) like '%set_config(''request.jwt.claims'', v_actor_claims, true)%'
-      and pg_get_functiondef(function_oid) like '%set_config(''request.jwt.claim.sub'', p_actor_user_id::text, true)%'
-      and pg_get_functiondef(function_oid) like '%set_config(''request.jwt.claim.role'', ''authenticated'', true)%'
+    -- Spacing and the local variable name are free; the four claim settings are not.
+    where pg_get_functiondef(function_oid) ~ 'set_config\(''request\.jwt\.claim'',\s*\w*actor_claims,\s*true\)'
+      and pg_get_functiondef(function_oid) ~ 'set_config\(''request\.jwt\.claims'',\s*\w*actor_claims,\s*true\)'
+      and pg_get_functiondef(function_oid) ~ 'set_config\(''request\.jwt\.claim\.sub'',\s*p_actor_user_id::text,\s*true\)'
+      and pg_get_functiondef(function_oid) ~ 'set_config\(''request\.jwt\.claim\.role'',\s*''authenticated'',\s*true\)'
   ),
   2,
   'both service wrappers normalize every supported JWT claim representation'

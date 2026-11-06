@@ -36,18 +36,20 @@ insert into public.permissions(id,organization_id,code,module,action,context_sco
 ('44000000-0000-0000-0000-000000000050','44000000-0000-0000-0000-000000000001','attendance.verify','attendance','verify','governance_unit','Verify attendance'),
 ('44000000-0000-0000-0000-000000000051','44000000-0000-0000-0000-000000000001','attendance.override','attendance','override','governance_unit','Override attendance'),
 ('44000000-0000-0000-0000-000000000052','44000000-0000-0000-0000-000000000001','attendance.lock','attendance','lock','governance_unit','Lock attendance'),
-('44000000-0000-0000-0000-000000000053','44000000-0000-0000-0000-000000000001','topics.read','topics','read','governance_unit','Read governed topics');
+('44000000-0000-0000-0000-000000000053','44000000-0000-0000-0000-000000000001','topics.read','topics','read','governance_unit','Read governed topics') on conflict (organization_id,code) do nothing;
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select '44000000-0000-0000-0000-000000000001','44000000-0000-0000-0000-000000000031',id
 from public.permissions
 where organization_id='44000000-0000-0000-0000-000000000001'
-  and left(id::text,8)='44000000';
+  and code in ('meetings.manage','attendance.read','attendance.manage','quorum.read','quorum.manage',
+    'voting.read','voting.manage','voting.cast','attendance.check_in','attendance.verify',
+    'attendance.override','attendance.lock','topics.read');
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select '44000000-0000-0000-0000-000000000001','44000000-0000-0000-0000-000000000032',id
 from public.permissions where id in(
- '44000000-0000-0000-0000-000000000042','44000000-0000-0000-0000-000000000044',
- '44000000-0000-0000-0000-000000000046','44000000-0000-0000-0000-000000000048',
- '44000000-0000-0000-0000-000000000049');
+ (select id from qarar_iam.permissions where organization_id='44000000-0000-0000-0000-000000000001' and code='attendance.read'),(select id from qarar_iam.permissions where organization_id='44000000-0000-0000-0000-000000000001' and code='quorum.read'),
+ (select id from qarar_iam.permissions where organization_id='44000000-0000-0000-0000-000000000001' and code='voting.read'),(select id from qarar_iam.permissions where organization_id='44000000-0000-0000-0000-000000000001' and code='voting.cast'),
+ (select id from qarar_iam.permissions where organization_id='44000000-0000-0000-0000-000000000001' and code='attendance.check_in'));
 insert into public.memberships(id,organization_id,user_id,governance_unit_id,role_id) values
 ('44000000-0000-0000-0000-000000000061','44000000-0000-0000-0000-000000000001','44000000-0000-0000-0000-000000000011','44000000-0000-0000-0000-000000000022','44000000-0000-0000-0000-000000000031'),
 ('44000000-0000-0000-0000-000000000062','44000000-0000-0000-0000-000000000001','44000000-0000-0000-0000-000000000012','44000000-0000-0000-0000-000000000022','44000000-0000-0000-0000-000000000032'),

@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { TopicsWorkspace } from "@/features/topics/ui/topics-workspace";
 import { qararRpc } from "@/shared/api/qarar-server";
-import { PageHeader } from "@/shared/ui/page-header";
+import { Card } from "@/shared/ui/card";
 
 export const metadata: Metadata = { title: "المعاملات والموضوعات" };
 
@@ -13,11 +12,10 @@ export default async function TopicsPage({
 }) {
   const params = await searchParams;
   const initialQuery = typeof params.query === "string" ? params.query : "";
-  const access = await qararRpc<{ permissions?: string[] }>("get_current_user_access_context", {});
+  const access = await qararRpc<{ is_system_admin?: boolean; permissions?: string[] }>("get_current_user_access_context", {});
   const initialTab = access.permissions?.includes("topics.review") ? "review" : "mine";
   return <div className="mx-auto max-w-[1480px]">
-    <PageHeader eyebrow="الحوكمة والمعاملات" title="المعاملات والموضوعات" description="إدارة الطلبات من الإنشاء وتحديد المرجع النظامي، إلى المراجعة والإحالة والاعتماد." meta={<span className="inline-flex rounded-full bg-[#edf6ff] px-3 py-1.5 text-[10px] font-bold text-[#0066cc]">إنشاء ← مراجعة ← إحالة ← اعتماد</span>} />
-    {access.permissions?.includes("topics.create") && <div className="mb-4"><Link className="inline-flex rounded-xl bg-[#0066cc] px-5 py-3 text-sm font-bold text-white" href="/admin/topics/new">تقديم موضوع من تصنيف</Link></div>}
-    <TopicsWorkspace key={`${initialTab}:${initialQuery}`} initialQuery={initialQuery} initialTab={initialTab} />
+    <Card className="mb-5"><h1 className="text-q-h1 font-bold">المعاملات والموضوعات</h1><p className="mt-2 text-q-body text-q-text-2">اختر المجلس ثم تصنيف الموضوع؛ يستمد النظام المسار والمتطلبات والتعليمات من التصنيف.</p></Card>
+    <TopicsWorkspace key={`${initialTab}:${initialQuery}`} initialQuery={initialQuery} initialTab={initialTab} canCreate={Boolean(access.is_system_admin || access.permissions?.includes("topics.create"))} />
   </div>;
 }

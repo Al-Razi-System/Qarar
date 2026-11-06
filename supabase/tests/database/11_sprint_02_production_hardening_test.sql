@@ -30,13 +30,14 @@ insert into public.permissions(id,organization_id,code,module,action,context_sco
 ('43000000-0000-0000-0000-000000000044','43000000-0000-0000-0000-000000000001','meetings.read','meetings','read','governance_unit','Read'),
 ('43000000-0000-0000-0000-000000000045','43000000-0000-0000-0000-000000000001','meetings.manage','meetings','manage','governance_unit','Manage'),
 ('43000000-0000-0000-0000-000000000046','43000000-0000-0000-0000-000000000001','agenda.manage','agenda','manage','governance_unit','Agenda'),
-('43000000-0000-0000-0000-000000000047','43000000-0000-0000-0000-000000000001','agenda.exception','agenda','exception','governance_unit','Exception');
+('43000000-0000-0000-0000-000000000047','43000000-0000-0000-0000-000000000001','agenda.exception','agenda','exception','governance_unit','Exception') on conflict (organization_id,code) do nothing;
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select '43000000-0000-0000-0000-000000000001','43000000-0000-0000-0000-000000000031',id
-from public.permissions where id between '43000000-0000-0000-0000-000000000041' and '43000000-0000-0000-0000-000000000047';
+from public.permissions where organization_id='43000000-0000-0000-0000-000000000001'
+ and code in ('topics.refer','topics.referrals.read','meetings.create','meetings.read','meetings.manage','agenda.manage','agenda.exception');
 insert into public.role_permissions(organization_id,role_id,permission_id) values
-('43000000-0000-0000-0000-000000000001','43000000-0000-0000-0000-000000000032','43000000-0000-0000-0000-000000000041'),
-('43000000-0000-0000-0000-000000000001','43000000-0000-0000-0000-000000000032','43000000-0000-0000-0000-000000000042');
+('43000000-0000-0000-0000-000000000001','43000000-0000-0000-0000-000000000032',(select id from qarar_iam.permissions where organization_id='43000000-0000-0000-0000-000000000001' and code='topics.refer')),
+('43000000-0000-0000-0000-000000000001','43000000-0000-0000-0000-000000000032',(select id from qarar_iam.permissions where organization_id='43000000-0000-0000-0000-000000000001' and code='topics.referrals.read'));
 insert into public.memberships(organization_id,user_id,governance_unit_id,role_id) values
 ('43000000-0000-0000-0000-000000000001','43000000-0000-0000-0000-000000000011','43000000-0000-0000-0000-000000000022','43000000-0000-0000-0000-000000000031'),
 ('43000000-0000-0000-0000-000000000001','43000000-0000-0000-0000-000000000012','43000000-0000-0000-0000-000000000023','43000000-0000-0000-0000-000000000032');

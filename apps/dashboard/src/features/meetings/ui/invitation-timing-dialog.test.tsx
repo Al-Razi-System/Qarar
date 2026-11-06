@@ -11,6 +11,8 @@ it("requires invitation times and sends the atomic V2 command", async () => {
   expect(screen.getByLabelText("وقت البداية")).toBeRequired();
   fireEvent.change(screen.getByLabelText("وقت البداية"), { target: { value: "09:00" } });
   fireEvent.change(screen.getByLabelText("وقت النهاية"), { target: { value: "11:00" } });
+  expect(screen.getByAltText("معاينة دعوة الاجتماع")).toHaveAttribute("src", expect.stringContaining("start=09%3A00"));
+  expect(screen.getByRole("link", { name: "تنزيل PDF" })).toHaveAttribute("href", expect.stringContaining("/invitation/pdf"));
   fireEvent.click(screen.getByRole("button", { name: "حفظ الوقت وتجهيز الدعوات" }));
   expect(await screen.findByRole("status")).toHaveTextContent("4");
   expect(rpc).toHaveBeenCalledWith("send_meeting_invitations_v2", { p_meeting_id: "meeting-1", p_start_time: "09:00", p_end_time: "11:00", p_expected_updated_at: props.expectedUpdatedAt });

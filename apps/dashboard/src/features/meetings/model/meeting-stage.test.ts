@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AgendaDiscussionItem, Attendance, LiveMeetingSession, VotingRound } from "./live-meeting";
+import type { AgendaDiscussionItem, Attendance, LiveMeetingSession, MemberProfile, VotingRound } from "./live-meeting";
 import { deriveMeetingStage } from "./meeting-stage";
 
 function seat(id: string, name: string, status = "present", verification = "verified"): Attendance {
@@ -24,7 +24,7 @@ function sessionOf(overrides: { mode?: "chair" | "rapporteur" | "member"; locked
 }
 
 const item = (id: string, order: number, extra: Partial<AgendaDiscussionItem> = {}): AgendaDiscussionItem => ({
-  id, agenda_order: order, agenda_status: "pending", topic: { id: `t-${id}`, title_ar: `موضوع ${order}` }, ...extra,
+  id, agenda_order: order, agenda_status: "pending", discussion_notes: "ملخص نهائي محفوظ", topic: { id: `t-${id}`, title_ar: `موضوع ${order}` }, ...extra,
 });
 
 describe("deriveMeetingStage seats", () => {
@@ -38,7 +38,21 @@ describe("deriveMeetingStage seats", () => {
     expect(stage.seats.map((s) => s.status)).toEqual(["present", "present", "pending", "pending", "excused", "absent"]);
   });
 
-  it("labels only the viewer's own seat, and marks the chair only when the viewer is the chair", () => {
+  it("labels the chair and the rapporteur on every screen once the member cards are loaded", () => {
+    const profile = (userId: string, role: string | null, photo = 0): MemberProfile => ({
+      user_id: userId, attendance_record_id: `att-${userId}`, full_name_ar: userId, council_role_code: role,
+      has_avatar: photo > 0, avatar_revision: photo,
+    });
+    const profiles = [profile("u1", "council_chair"), profile("u2", "council_rapporteur", 4), profile("u3", "council_member")];
+    const asMember = deriveMeetingStage({ ...sessionOf({ mode: "member" }), viewer: { ...sessionOf().viewer, user_id: "u3" } }, [], [], [], profiles);
+    expect(asMember.seats.map((s) => [s.roleLabel, s.chair])).toEqual([["الرئيس", true], ["المقرر", false], ["أنت", false]]);
+    expect(asMember.seats[1].photoUrl).toBe("/api/admin/meetings/m1/members/u2/avatar?v=4");
+    expect(asMember.seats[0].photoUrl).toBeUndefined();
+    const asChair = deriveMeetingStage(sessionOf({ mode: "chair" }), [], [], [], profiles);
+    expect(asChair.seats[0]).toMatchObject({ roleLabel: "الرئيس · أنت", chair: true, userId: "u1" });
+  });
+
+  it("labels only the viewer's own seat before the member cards load", () => {
     const asChair = deriveMeetingStage(sessionOf({ mode: "chair" }), [], [], []);
     expect(asChair.seats[0]).toMatchObject({ roleLabel: "الرئيس · أنت", chair: true });
     expect(asChair.seats[1]).toMatchObject({ roleLabel: undefined, chair: false });
@@ -98,6 +112,12 @@ describe("deriveMeetingStage phase", () => {
     expect(pending).toMatchObject({ kind: "result", round: { id: "r2" } });
     const decided = deriveMeetingStage(sessionOf(), agenda, [first, second], [{ id: "d1", decision_no: "DEC-1", agenda_item_id: "a1", decision_status: "draft", decision_text: "نص" }]).phase;
     expect(decided).toEqual({ kind: "idle", item: expect.objectContaining({ id: "a2" }) });
+  });
+
+  it("moves past a referred item: it needs no vote", () => {
+    const agenda = [item("a1", 1, { agenda_status: "discussed", requires_voting: true }), item("a2", 2)];
+    expect(deriveMeetingStage(sessionOf(), agenda, [], []).phase).toEqual({ kind: "idle", item: expect.objectContaining({ id: "a1" }) });
+    expect(deriveMeetingStage(sessionOf(), agenda, [], [], [], ["a1"]).phase).toEqual({ kind: "idle", item: expect.objectContaining({ id: "a2" }) });
   });
 
   it("distinguishes an empty agenda from a finished one", () => {

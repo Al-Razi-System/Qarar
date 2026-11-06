@@ -58,6 +58,33 @@ Generate one `p_client_request_id` when the user starts submission and reuse it 
 the request returns the original topic with `idempotent_replay: true`; it never creates a duplicate.
 Creation is limited to 20 attempts per user per 10 minutes.
 
+## Meeting history, prior minutes, and audit timeline
+
+`get_topic_meeting_history` returns only meetings whose agenda contains the requested
+topic. Every item includes the meeting, agenda state, voting rounds, decisions, and a
+nullable `minutes` object. The official minute `content` is returned only when its
+status is `approved`; drafts are never exposed through this topic read model.
+
+`get_topic_activity_timeline` returns the persisted chronological history of the
+topic: status transitions and successful audit events attached to the topic, its
+agenda item, voting rounds, decisions, referrals, or approved minute. Meeting-wide
+events such as invitations and attendance are intentionally excluded. Both contracts
+enforce the topic's tenant and contextual read permissions.
+
+## Official topic PDF export receipt
+
+`GET /api/admin/topics/[topicId]/pdf` is the supported frontend route for the
+official Arabic topic document. The route reads the existing topic contracts,
+renders the document, and only then calls `record_topic_pdf_export` with the
+topic ID and optional meeting ID. The RPC returns the audit receipt; it does not
+return PDF bytes.
+
+`record_topic_pdf_export` rechecks topic visibility. When a meeting ID is
+provided it also requires the caller to manage that meeting's agenda and the
+topic to be an eligible proposal for that exact meeting. A successful call
+appends `topics.pdf.export`; failed authorization or rendering must not be
+recorded as a successful export.
+
 ## My Topics
 
 `POST /rest/v1/rpc/search_my_topics`

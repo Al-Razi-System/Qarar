@@ -21,7 +21,16 @@ const eslintConfig = defineConfig([
     // Add a feature folder here when its screens are migrated to the standards.
     files: [
       "src/shared/ui/**/*.tsx",
+      "src/features/permissions/ui/permission-matrix.tsx",
+      "src/app/(dashboard)/admin/permissions/**/*.tsx",
+      "src/features/account/ui/**/*.tsx",
+      "src/features/topics/ui/typed-topic-creator.tsx",
+      "src/features/topics/ui/topic-submission-attachments.tsx",
+      "src/app/(dashboard)/admin/topics/new/page.tsx",
       "src/features/meetings/ui/stage/**/*.tsx",
+      "src/features/meetings/ui/meeting-agenda-panel.tsx",
+      "src/features/meetings/ui/submitted-agenda-suggestions.tsx",
+      "src/features/meetings/ui/agenda-instructions-dialog.tsx",
       // The live meeting room, migrated file by file.
       "src/features/meetings/ui/live-meeting-room.tsx",
       "src/features/meetings/ui/chair-attendance-console.tsx",

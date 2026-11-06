@@ -96,10 +96,10 @@ select is(api_v1.admin_get_council_detail((select (payload->>'id')::uuid from cr
  'قسم الذكاء الاصطناعي','detail displays linked organizational scope');
 select is((select parent_unit_id from qarar_core.governance_units where id=(select (payload->>'id')::uuid from created)),
  null::uuid,'new council does not duplicate organizational hierarchy');
-select is((select count(*)::integer from qarar_meetings.meetings where governance_unit_id=(select (payload->>'id')::uuid from created)),1,'plan creates exactly one first meeting despite inactive council');
-select is((select status from qarar_meetings.meetings where governance_unit_id=(select (payload->>'id')::uuid from created)),'draft','first meeting remains draft');
-select is((select scheduled_date from qarar_meetings.meetings where governance_unit_id=(select (payload->>'id')::uuid from created)),'2026-11-01'::date,'first meeting date matches plan');
-select ok((select start_time is null and end_time is null and created_by_user_id='59000000-0000-0000-0000-000000000010' from qarar_meetings.meetings where governance_unit_id=(select (payload->>'id')::uuid from created)),'no invented times and original actor preserved');
+select ok((select count(*)>0 from qarar_meetings.meetings where governance_unit_id=(select (payload->>'id')::uuid from created)),'plan materializes its rolling horizon despite inactive council');
+select ok((select bool_and(status='draft') from qarar_meetings.meetings where governance_unit_id=(select (payload->>'id')::uuid from created)),'materialized meetings remain draft');
+select is((select min(scheduled_date) from qarar_meetings.meetings where governance_unit_id=(select (payload->>'id')::uuid from created)),'2026-11-01'::date,'first meeting date matches plan');
+select ok((select bool_and(start_time is null and end_time is null and created_by_user_id='59000000-0000-0000-0000-000000000010') from qarar_meetings.meetings where governance_unit_id=(select (payload->>'id')::uuid from created)),'no invented times and original actor preserved');
 select throws_ok($$update qarar_meetings.meetings set governance_unit_id='59000000-0000-0000-0000-000000000030'
  where governance_unit_id=(select (payload->>'id')::uuid from created)$$,'23503',null,
  'a plan occurrence cannot be reassigned to a different council');

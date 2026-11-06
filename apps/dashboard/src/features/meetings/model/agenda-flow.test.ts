@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { activeAgendaItemId, agendaItemState, chairActions, completionBlockers, itemFlow, sortAgenda } from "./agenda-flow";
-import type { AgendaDiscussionItem, Decision, LiveMeetingSession, VotingRound } from "./live-meeting";
+import type { AgendaDiscussionItem, Decision, ItemReferral, LiveMeetingSession, VotingRound } from "./live-meeting";
 
 function session(overrides: Partial<LiveMeetingSession["meeting"]> = {}, quorumStatus = "met"): LiveMeetingSession {
   return {
@@ -32,6 +32,13 @@ describe("chairActions", () => {
     expect(done.note).toBe("ق-1 · تم إنشاء القرار.");
   });
 
+  it("offers to edit a saved decision only when the server allows it", () => {
+    const editable = kinds(item({ agenda_status: "discussed" }), session(), [approved], [{ ...decision, can_edit_text: true }]);
+    expect(editable.actions).toEqual([{ kind: "edit_decision", label: "تعديل القرار" }]);
+    expect(editable.note).toBe("ق-1 · تم إنشاء القرار.");
+    expect(kinds(item({ agenda_status: "discussed" }), session(), [approved], [{ ...decision, can_edit_text: false }]).actions).toEqual([]);
+  });
+
   it("ends a discussion-only item without mentioning a vote", () => {
     expect(kinds(item({ agenda_status: "under_discussion", requires_voting: false }), session()).actions[0].label).toBe("إنهاء المناقشة");
   });
@@ -51,8 +58,25 @@ describe("chairActions", () => {
 
   it("explains why voting cannot open before attendance is locked or without a quorum", () => {
     const ready = item({ agenda_status: "discussed", voting_available_now: true });
-    expect(kinds(ready, session({ attendance_locked: false })).actions[0].disabledReason).toBe("ثبّت سجل الحضور أولاً لفتح التصويت.");
-    expect(kinds(ready, session({}, "not_met")).actions[0].disabledReason).toBe("النصاب غير مكتمل، فلا يُفتح التصويت.");
+    expect(kinds(ready, session({ attendance_locked: false }))).toEqual({ actions: [], note: "ثبّت سجل الحضور قبل بدء المناقشة." });
+    expect(kinds(ready, session({}, "not_met"))).toEqual({ actions: [], note: "بانتظار اختيار رئيس المجلس: تأجيل الاجتماع أو المتابعة بنصاب غير مكتمل." });
+    const allowed = session({ quorum_continuation: { authorized_by: "chair", authorized_at: "2026-10-19", reason: "قرار موثق", quorum: {} } }, "not_met");
+    expect(kinds(ready, allowed).actions[0]).toEqual({ kind: "open_round", label: "فتح التصويت للأعضاء", disabledReason: undefined });
+  });
+
+  it("opens the vote only after the discussion, and says why when the route cannot be voted on", () => {
+    expect(kinds(item({ voting_available_now: true }), session()).actions.map((a) => a.kind)).toEqual(["start"]);
+    const blocked = kinds(item({ agenda_status: "discussed", voting_available_now: false, voting_unavailable_reason: "مرحلة «عرض» لا تحدد ما يحدث عند القبول والرفض." }), session());
+    expect(blocked.actions).toEqual([
+      { kind: "open_round", label: "فتح التصويت للأعضاء", disabledReason: "مرحلة «عرض» لا تحدد ما يحدث عند القبول والرفض." },
+      { kind: "postpone", label: "تأجيل البند" },
+    ]);
+    expect(kinds(item({ agenda_status: "discussed" }), session()).actions[0].disabledReason).toBe("لا يُفتح التصويت على هذا البند الآن.");
+  });
+
+  it("explains that a tie leaves the topic where it was", () => {
+    expect(kinds(item({ agenda_status: "discussed" }), session(), [{ ...approved, result: "tied" }]).note)
+      .toBe("تعادلت الأصوات، فبقي الموضوع في مرحلته من مساره.");
   });
 
   it("offers no decision for a rejected result", () => {
@@ -84,6 +108,14 @@ describe("agenda state and focus", () => {
   });
 });
 
+describe("postponed items", () => {
+  it("need no vote: they neither hold the focus nor block the end of the session", () => {
+    const postponed = item({ agenda_status: "postponed", discussion_notes: "سبب التأجيل" });
+    expect(activeAgendaItemId(session(), [postponed], [], [])).toBeNull();
+    expect(completionBlockers(session(), [postponed], [], [])).toEqual([]);
+  });
+});
+
 describe("completionBlockers", () => {
   it("is empty only when every item is finished, summarised, voted and decided", () => {
     const finished = item({ agenda_status: "discussed", discussion_notes: "الملخص النهائي", updated_at: "2026-10-10T09:30:00Z" });
@@ -95,5 +127,39 @@ describe("completionBlockers", () => {
   it("asks for the final summary again when it is older than the vote result", () => {
     const stale = item({ agenda_status: "discussed", discussion_notes: "ملاحظات أولية", updated_at: "2026-10-10T08:30:00Z" });
     expect(completionBlockers(session(), [stale], [approved], [decision])).toEqual(["البند 1 «الخطة»: تحديث الملخص النهائي بعد احتساب نتيجة التصويت."]);
+  });
+});
+
+describe("referred items", () => {
+  const referral: ItemReferral = { agenda_item_id: "a1", referral_id: "f1", to_unit_id: "u9", to_unit_name_ar: "لجنة الخطط", reason: "يحتاج دراسة اللجنة", status: "pending", referred_at: "2026-10-10T09:00:00Z" };
+  const referredKinds = (it_: AgendaDiscussionItem, canRefer: boolean, referrals: ItemReferral[] = []) =>
+    chairActions(it_, session(), itemFlow(it_, session(), [], [], referrals), { canRefer });
+
+  it("offers the chair a referral once the discussion starts and until a vote opens", () => {
+    expect(referredKinds(item(), true).actions.map((a) => a.kind)).toEqual(["start"]);
+    expect(referredKinds(item({ agenda_status: "under_discussion" }), true).actions.map((a) => a.kind)).toEqual(["end", "postpone", "refer"]);
+    expect(referredKinds(item({ agenda_status: "discussed", voting_available_now: true }), true).actions.map((a) => a.kind)).toEqual(["open_round", "refer"]);
+    expect(chairActions(item({ agenda_status: "discussed" }), session(), itemFlow(item({ agenda_status: "discussed" }), session(), [open], []), { canRefer: true }).actions.map((a) => a.kind)).toEqual(["close_round"]);
+  });
+
+  it("offers no referral to anyone but the chair", () => {
+    expect(referredKinds(item({ agenda_status: "under_discussion" }), false).actions.map((a) => a.kind)).toEqual(["end", "postpone"]);
+  });
+
+  it("shows where a referred item went and offers no vote on it", () => {
+    const referred = item({ agenda_status: "discussed", voting_available_now: true });
+    const result = referredKinds(referred, true, [referral]);
+    expect(result.actions).toEqual([]);
+    expect(result.note).toBe("أُحيل البند إلى لجنة الخطط، بانتظار قبولها.");
+    expect(referredKinds(referred, true, [{ ...referral, status: "accepted" }]).note).toBe("أُحيل البند إلى لجنة الخطط، وقبلت الإحالة.");
+    expect(referredKinds(referred, true, [{ ...referral, status: "rejected" }]).note).toBe("أُحيل البند إلى لجنة الخطط، ورفضت الإحالة.");
+    expect(agendaItemState(referred, itemFlow(referred, session(), [], [], [referral]))).toEqual({ label: "محال إلى لجنة الخطط", tone: "info" });
+  });
+
+  it("need no vote: once summarised they neither hold the focus nor block the end of the session", () => {
+    const referred = item({ agenda_status: "discussed", discussion_notes: "ملخص المناقشة" });
+    expect(activeAgendaItemId(session(), [referred], [], [], [referral])).toBeNull();
+    expect(completionBlockers(session(), [referred], [], [], [referral])).toEqual([]);
+    expect(completionBlockers(session(), [referred], [], [])).toEqual(["البند 1 «الخطة»: إجراء التصويت وإغلاق الجولة."]);
   });
 });

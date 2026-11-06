@@ -1,9 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { createHmac } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
-import { fixturePath } from "./fixture";
+import { dockerEnv, fixturePath } from "./fixture";
+import { assertIsolatedE2ETarget } from "../src/lib/e2e-target-guard";
 
 type Fixture = {
+  organizationId: string;
   privilegedEmail: string;
   privilegedPassword: string;
   privilegedMfaSecret?: string;
@@ -82,21 +85,33 @@ async function loginWithMfa(page: Page) {
 
 test("تعرض إدارة المستخدمين جميع السجلات بعد أول 25 وتبحث خارج الصفحة الأولى", async ({ page }) => {
   const fixture = await loginWithMfa(page);
+  const env = await dockerEnv();
+  const target = assertIsolatedE2ETarget({ ...process.env, ...env });
+  expect(fixture.organizationId).toMatch(/^[0-9a-f-]{36}$/i);
+  // Other serial journeys may add real identities in this disposable tenant.
+  // Verify the UI total against SQL, not a count from before those journeys.
+  const expectedTotal = Number(execFileSync("docker", [
+    "exec", target.container, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "supabase_admin",
+    "-d", target.database, "-Atqc",
+    `select count(*) from qarar_iam.users where organization_id='${fixture.organizationId}'`,
+  ], { encoding: "utf8" }).trim());
+  expect(expectedTotal).toBeGreaterThanOrEqual(32);
+  const expectedPages = Math.ceil(expectedTotal / 25);
   await page.goto("/admin/users");
 
   await expect(page.getByRole("heading", { name: "المستخدمون" })).toBeVisible();
-  await expect(page.getByText(/إجمالي المستخدمين:/)).toContainText("32");
+  await expect(page.getByText(/إجمالي المستخدمين:/)).toHaveText(`إجمالي المستخدمين: ${expectedTotal}`);
   await expect(page.getByText(fixture.userPageTarget.fullNameAr)).toHaveCount(0);
 
   const pagination = page.getByRole("navigation", { name: "ترقيم صفحات المستخدمين" });
-  await expect(pagination).toContainText("الصفحة 1 من 2");
+  await expect(pagination).toContainText(`الصفحة 1 من ${expectedPages}`);
   const nextPageResponse = page.waitForResponse((response) =>
     response.url().includes("/api/admin/users?offset=25"),
   );
   await pagination.getByRole("button", { name: "الصفحة التالية" }).click();
   const nextPageResult = await nextPageResponse;
   expect(nextPageResult.status(), await nextPageResult.text()).toBe(200);
-  await expect(pagination).toContainText("الصفحة 2 من 2");
+  await expect(pagination).toContainText(`الصفحة 2 من ${expectedPages}`);
   await expect(page.getByText(fixture.userPageTarget.fullNameAr)).toBeVisible();
 
   const search = page.getByPlaceholder("ابحث بالاسم، البريد أو الرقم الوظيفي...");

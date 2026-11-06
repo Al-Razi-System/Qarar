@@ -58,6 +58,8 @@
   /* Orange marks the one live thing on a screen; it is never a status colour. */
   --q-live: #c95f00;
   --q-live-soft: #fff0e0;
+  /* The live colour where it sits on the navy header bar. */
+  --q-live-on-header: #ffa24d;
 
   --q-success: #0f7a55;
   --q-success-soft: #e3f5ed;
@@ -110,6 +112,7 @@
 
   --q-live: #ff8a1f;
   --q-live-soft: #3a2410;
+  --q-live-on-header: #ff8a1f;
 
   --q-success: #3ecf98;
   --q-success-soft: #0f2f27;
@@ -154,6 +157,7 @@
   --color-q-seat: var(--q-seat);
   --color-q-live: var(--q-live);
   --color-q-live-soft: var(--q-live-soft);
+  --color-q-live-on-header: var(--q-live-on-header);
   --color-q-success: var(--q-success);
   --color-q-success-soft: var(--q-success-soft);
   --color-q-on-success: var(--q-on-success);
@@ -278,6 +282,25 @@ button:disabled {
   transition: stroke-dasharray 0.7s ease;
 }
 
+@keyframes q-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.q-live-dot {
+  animation: q-live-pulse 1.4s ease-in-out infinite;
+}
+
+/* A new stage of the meeting fades in instead of jumping. */
+@keyframes q-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.q-enter {
+  animation: q-enter 0.35s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .q-seat-waiting {
     animation: none;
@@ -285,6 +308,11 @@ button:disabled {
 
   .q-ring-progress {
     transition: none;
+  }
+
+  .q-live-dot,
+  .q-enter {
+    animation: none;
   }
 }
 

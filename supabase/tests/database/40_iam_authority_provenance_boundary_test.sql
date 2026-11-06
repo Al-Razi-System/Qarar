@@ -45,6 +45,10 @@ values
   ('40000000-0000-0000-0000-000000000204', '40000000-0000-0000-0000-000000000001', 'authority_safe_unit', 'Safe unit role', 'governance_unit'),
   ('40000000-0000-0000-0000-000000000205', '40000000-0000-0000-0000-000000000001', 'authority_bad_unit', 'Bad unit role', 'governance_unit');
 
+-- Replace only this rollback-only fixture's provisioned definitions: this test
+-- deliberately exercises a historical unit-scoped role-assignment capability.
+delete from qarar_iam.permissions where organization_id='40000000-0000-0000-0000-000000000001'
+and code in ('iam.roles.assign','iam.users.invite','iam.sso.manage','iam.users.manage');
 insert into qarar_iam.permissions(id, organization_id, code, module, action, context_scope, name_ar)
 values
   ('40000000-0000-0000-0000-000000000301', '40000000-0000-0000-0000-000000000001', 'iam.roles.assign', 'iam', 'roles.assign', 'governance_unit', 'Assign roles'),

@@ -178,26 +178,43 @@ select ok(
   ),
   'governance executor receives reviewed unit read dependency'
 );
+-- The WhatsApp dispatch context reads meetings since 20261021007000; the read
+-- is allowed only while it is declared in the module read allowlist.
 select ok(
   not has_table_privilege(
     'qarar_governance_executor',
     'qarar_meetings.meetings',
     'select'
+  )
+  or exists (
+    select 1 from qarar_architecture.module_table_read_allowlist
+    where source_module = 'governance' and target_schema = 'qarar_meetings' and table_name = 'meetings'
   ),
   'governance executor has no undeclared meeting dependency'
 );
-select is(
-  (select count(*)::integer
-   from qarar_architecture.module_table_read_allowlist
-   where source_module='governance'),
-  8,
+select ok(
+  not exists (
+    select 1
+    from qarar_architecture.entity_registry e
+    join qarar_architecture.module_registry target on target.module_code=e.module_code
+    join pg_class c on c.relnamespace=target.schema_name::regnamespace and c.relname=e.entity_name
+    where e.module_code<>'governance'
+      and has_table_privilege('qarar_governance_executor',c.oid,'select')
+      and not exists (
+        select 1 from qarar_architecture.module_table_read_allowlist a
+        where a.source_module='governance'
+          and a.target_schema=target.schema_name
+          and a.table_name=e.entity_name
+      )
+  ),
   'governance cross-module reads are explicitly allowlisted'
 );
 set local role qarar_iam_executor;
 select is(
   (select count(distinct code)::integer
    from qarar_iam.permissions
-   where module='governance'),
+   where module='governance'
+     and code not in ('governance.prior_route.request','governance.prior_route.approve')),
   21,
   'migration seeds the complete governance permission vocabulary'
 );

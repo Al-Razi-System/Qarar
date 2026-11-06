@@ -26,11 +26,14 @@ describe("TopicSummaryPanel", () => {
     expect(screen.getAllByText("المسار جاهز").length).toBeGreaterThan(0);
   });
 
-  it("executes approval directly from the primary button", async () => {
+  it("keeps council decisions inside meetings and only offers completeness return", async () => {
     const onReview = vi.fn();
     render(<TopicSummaryPanel topic={topic} loading={false} reviewMode busy={false} onReview={onReview} onRefer={vi.fn()} onOpenDetails={vi.fn()} />);
-    await userEvent.click(screen.getByRole("button", { name: "اعتماد مباشر" }));
-    expect(onReview).toHaveBeenCalledWith("approve");
+    expect(screen.queryByRole("button", { name: "اعتماد مباشر" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "رفض الموضوع" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "إحالة" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "طلب استكمال" }));
+    expect(onReview).toHaveBeenCalledWith("return");
   });
 
   it("does not expose review actions for a returned topic", () => {

@@ -12,10 +12,12 @@ values(
  '52000000-0000-0000-0000-000000000001',
  'matcher-admin@test.local','Matcher Admin',true
 );
-insert into qarar_core.governance_unit_types(id,organization_id,code,name_ar)
+-- A council type is flagged as such, as 20260729000000 backfilled for every
+-- existing 'council' type; the route resolver of 20261007019000 relies on it.
+insert into qarar_core.governance_unit_types(id,organization_id,code,name_ar,is_council_type)
 values(
  '52000000-0000-0000-0000-000000000021',
- '52000000-0000-0000-0000-000000000001','council','Council'
+ '52000000-0000-0000-0000-000000000001','council','Council',true
 );
 insert into qarar_governance.governance_unit_classes(
  id,organization_id,code,name_ar,governance_level

@@ -34,7 +34,7 @@ insert into public.permissions(organization_id,code,module,action,context_scope,
  ('20202020-2020-2020-2020-202020202020','iam.permissions.manage','iam','permissions.manage','organization','Manage permissions'),
  ('20202020-2020-2020-2020-202020202020','iam.sso.manage','iam','sso.manage','organization','Manage SSO'),
  ('20202020-2020-2020-2020-202020202020','topics.review','topics','review','governance_unit','Review topics'),
- ('20202020-2020-2020-2020-202020202020','topics.comment','topics','comment','governance_unit','Comment on topics');
+ ('20202020-2020-2020-2020-202020202020','topics.comment','topics','comment','governance_unit','Comment on topics') on conflict (organization_id,code) do nothing;
 insert into public.role_permissions(organization_id,role_id,permission_id)
 select p.organization_id,'23232323-2323-2323-2323-232323232323',p.id from public.permissions p where p.organization_id='20202020-2020-2020-2020-202020202020' and p.code like 'iam.%';
 insert into public.role_permissions(organization_id,role_id,permission_id)

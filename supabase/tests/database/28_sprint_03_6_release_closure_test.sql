@@ -13,7 +13,7 @@ select is((select count(*)::integer from qarar_architecture.api_contract_registr
  'admin_deactivate_council','admin_archive_council')),21,
  'all 21 council management contracts are registered');
 select is((select contract_count from qarar_architecture.api_release_registry where api_version='v1'),
- 222,'final API release count includes activation and governed offboarding contracts');
+ 251,'final API release count includes all reviewed operations');
 select ok((select contract_hash~'^[0-9a-f]{32}$' from qarar_architecture.api_release_registry where api_version='v1'),
  'final API release hash is frozen');
 insert into qarar_core.organizations(id,code,name_ar)values(
@@ -51,6 +51,11 @@ select ok(position('لا يمنح صلاحية' in obj_description(
  'the reusable reference explicitly documents its authorization boundary');
 select ok(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
  where n.nspname in('qarar_core','qarar_iam') and p.proname like '%council%'
+ -- Product decision: creating a council also creates its periodic governance
+ -- meeting plan, so the council creation command and its form options may name
+ -- meeting types. No other council function may carry meeting policy.
+ and not (n.nspname='qarar_core' and p.proname in('admin_create_council_v2','get_council_form_options',
+  'admin_get_council_detail_v2','admin_update_council_v2','admin_create_council_with_plan_v2'))
  and(pg_get_functiondef(p.oid) ilike '%meeting%' or pg_get_functiondef(p.oid) ilike '%quorum%'
   or pg_get_functiondef(p.oid) ilike '%voting%' or pg_get_functiondef(p.oid) ilike '%minute%')),
  'council implementation contains no meeting, quorum, voting, or minute policy');

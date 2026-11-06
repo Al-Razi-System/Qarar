@@ -1,4 +1,7 @@
 begin;
+-- Historical compatibility: construct an old incomplete topic through the
+-- revoked archival facade. Fresh public submissions are tested in 89/90 and
+-- must use preparation; this test preserves repair/read behavior for old data.
 create extension if not exists pgtap;
 select plan(32);
 
@@ -79,11 +82,11 @@ set local "request.jwt.claims"='{"sub":"79000000-0000-0000-0000-000000000002","r
 select lives_ok($$select api_v2.set_user_submission_enabled_v2('79000000-0000-0000-0000-000000000004',2,true,gen_random_uuid())$$,'reenable before real submission');
 set local "request.jwt.claims"='{"sub":"79000000-0000-0000-0000-000000000004","role":"authenticated"}';
 select is(api_v2.prepare_typed_topic_v2('79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011')->>'ok','true','published scoped type can prepare');
-create temporary table created as select api_v2.create_topic_from_type_v2('عنوان الموضوع التجريبي','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050') payload;
+create temporary table created as select api_v2.create_topic_from_type_before_preparation_v2('عنوان الموضوع التجريبي','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050') payload;
 grant select on created to qarar_topics_executor,qarar_governance_executor;
 select is((select payload->>'ok' from created),'true','typed submission succeeds');
-select is(api_v2.create_topic_from_type_v2('عنوان الموضوع التجريبي','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050')#>>'{data,idempotent_replay}','true','submission replays once');
-select is(api_v2.create_topic_from_type_v2('عنوان موضوع آخر','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050')->>'error_code','MODEL_VERSION_CONFLICT','request reuse with different input conflicts');
+select is(api_v2.create_topic_from_type_before_preparation_v2('عنوان الموضوع التجريبي','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050')#>>'{data,idempotent_replay}','true','submission replays once');
+select is(api_v2.create_topic_from_type_before_preparation_v2('عنوان موضوع آخر','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050')->>'error_code','MODEL_VERSION_CONFLICT','request reuse with different input conflicts');
 set local "request.jwt.claims"='{"sub":"79000000-0000-0000-0000-000000000002","role":"authenticated"}';
 set local role qarar_topics_executor;
 select is((select topic_type_version_id from qarar_topics.topics where id=(select (payload#>>'{data,topic_id}')::uuid from created)),'79000000-0000-0000-0000-000000000022'::uuid,'topic binds to immutable version');
@@ -95,9 +98,9 @@ select is(qarar_governance.list_governance_topic_types_v2()#>>'{items,0,submitte
 select is(qarar_governance.get_governance_bundle_v2('79000000-0000-0000-0000-000000000040')->>'submitted_topic_count','1','detail counts submitted topic');
 set local role qarar_api_executor;
 select is(api_v2.manage_topic_type_v2('79000000-0000-0000-0000-000000000040','disable',5,gen_random_uuid(),null)#>>'{data,is_enabled}','false','disable gates future submission');
-select is(api_v2.create_topic_from_type_v2('عنوان موضوع جديد','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011',gen_random_uuid())->>'ok','false','disabled type rejects new topics');
+select is(api_v2.create_topic_from_type_before_preparation_v2('عنوان موضوع جديد','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011',gen_random_uuid())->>'ok','false','disabled type rejects new topics');
 set local "request.jwt.claims"='{"sub":"79000000-0000-0000-0000-000000000004","role":"authenticated"}';
-select is(api_v2.create_topic_from_type_v2('عنوان الموضوع التجريبي','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050')#>>'{data,idempotent_replay}','true','disabled type still replays completed request');
+select is(api_v2.create_topic_from_type_before_preparation_v2('عنوان الموضوع التجريبي','وصف الموضوع التجريبي الكامل','79000000-0000-0000-0000-000000000022','79000000-0000-0000-0000-000000000011','79000000-0000-0000-0000-000000000050')#>>'{data,idempotent_replay}','true','disabled type still replays completed request');
 set local "request.jwt.claims"='{"sub":"79000000-0000-0000-0000-000000000002","role":"authenticated"}';
 set local role qarar_topics_executor;
 select is((select count(*)::integer from qarar_topics.topics where organization_id='79000000-0000-0000-0000-000000000001'),1,'disable does not delete or duplicate existing topic');

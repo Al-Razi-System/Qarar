@@ -26,7 +26,7 @@ export type TopicTypeDetail = {
 };
 const statuses: Record<string, string> = { draft: "مسودة", under_review: "قيد المراجعة", changes_requested: "تحتاج تعديلًا", approved: "معتمد", effective: "منشور", retired: "سابق" };
 function rowStatus(row: Row) { return row.has_effective && row.is_enabled === false ? "معطّل" : statuses[row.status] ?? "غير متاح"; }
-const schedules: Record<string, string> = { none: "غير مجدول", fixed_date: "تاريخ محدد", monthly_week: "أسبوع شهري", seasonal: "موعد سنوي" };
+const schedules: Record<string, string> = { none: "غير مجدول", fixed_date: "تاريخ محدد", monthly_week: "أسبوع شهري", seasonal: "مواعيد موسمية" };
 async function read(url: string, signal: AbortSignal) {
   const response = await fetch(url, { cache: "no-store", signal });
   const payload = await response.json();

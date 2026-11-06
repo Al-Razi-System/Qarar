@@ -4,6 +4,13 @@ vi.mock("@/shared/api/qarar-server", () => ({ qararRpcV2: rpc, qararRpc: rpc, re
 import { GET, POST } from "./route";
 afterEach(() => { vi.clearAllMocks(); vi.unstubAllEnvs(); });
 const id = "79000000-0000-0000-0000-000000000011";
+it("loads council-only contextual options from the typed contract", async () => {
+  rpc.mockResolvedValue({ governance_units: [] });
+  const response = await GET(new Request("http://localhost/api/admin/typed-topics"));
+  expect(response.status).toBe(200);
+  expect(rpc).toHaveBeenCalledWith("get_typed_topic_form_options_v2", {});
+  expect(await response.json()).toEqual({ data: { governance_units: [] } });
+});
 it("validates identities before looking up available types", async () => {
   expect((await GET(new Request("http://localhost/api/admin/typed-topics?unitId=bad"))).status).toBe(400);
   expect(rpc).not.toHaveBeenCalled();
@@ -14,6 +21,29 @@ it("uses explicit typed submission and returns conflict trace", async () => {
   expect(response.status).toBe(409);
   expect((await response.json()).error.traceId).toBe("trace");
   expect(rpc).toHaveBeenCalledWith("create_topic_from_type_v2", expect.objectContaining({ p_topic_type_version_id: id, p_client_request_id: id }));
+});
+it("submits a completed periodic proposal into its meeting through the atomic contract", async () => {
+  rpc.mockResolvedValue({ ok: true, data: { topic_id: id, agenda_item_id: id }, trace_id: "trace" });
+  const response = await POST(new Request("http://localhost/api/admin/typed-topics", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "submit_scheduled", requestId: id, meetingId: id, occurrenceId: id }),
+  }));
+  expect(response.status).toBe(200);
+  expect(rpc).toHaveBeenCalledWith("submit_scheduled_agenda_proposal_v2", {
+    p_request_id: id,
+    p_meeting_id: id,
+    p_occurrence_id: id,
+  });
+});
+it("rejects malformed periodic proposal identities before calling the database", async () => {
+  const response = await POST(new Request("http://localhost/api/admin/typed-topics", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "submit_scheduled", requestId: id, meetingId: "bad", occurrenceId: id }),
+  }));
+  expect(response.status).toBe(400);
+  expect(rpc).not.toHaveBeenCalled();
 });
 it("does not accept cross-origin mutations", async () => {
   vi.stubEnv("APP_ORIGIN", "https://devqarar.prideidea.com");

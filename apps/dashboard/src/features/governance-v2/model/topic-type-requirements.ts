@@ -1,21 +1,22 @@
 export type ScopeKind = "route" | "councils" | "classes";
 export type ScheduleKind = "none" | "fixed_date" | "monthly_week" | "seasonal";
 export type NamedOption = { id: string; name_ar: string; document_name?: string; reference_number?: string };
+export type SeasonalDate = { month: number; day: number };
 export type Requirements = {
   scopeKind: ScopeKind; scopeIds: string[]; sourceItemIds: string[];
   requiredAttachmentCount: number; automaticAgenda: boolean;
   scheduleKind: ScheduleKind; date: string; startsOn: string; endsOn: string;
-  week: number; month: number; day: number;
+  week: number; month: number; day: number; seasonalDates: SeasonalDate[];
   submissionInstructions: string; discussionInstructions: string;
 };
 export const initialRequirements: Requirements = {
   scopeKind: "route", scopeIds: [], sourceItemIds: [], requiredAttachmentCount: 0,
   automaticAgenda: false, scheduleKind: "none", date: "", startsOn: "", endsOn: "",
-  week: 1, month: 1, day: 1,
+  week: 1, month: 1, day: 1, seasonalDates: [{ month: 1, day: 1 }],
   submissionInstructions: "", discussionInstructions: "",
 };
 export const scheduleNames: Record<ScheduleKind, string> = {
-  none: "غير مجدول", fixed_date: "تاريخ محدد", monthly_week: "أسبوع شهري", seasonal: "موعد سنوي",
+  none: "غير مجدول", fixed_date: "تاريخ محدد", monthly_week: "أسبوع شهري", seasonal: "مواعيد موسمية",
 };
 export function requirementsError(value: Requirements): string | null {
   if (value.submissionInstructions.length > 10000 || value.discussionInstructions.length > 10000) return "التعليمات يجب ألا تتجاوز 10000 حرف لكل قسم.";
@@ -28,15 +29,17 @@ export function requirementsError(value: Requirements): string | null {
   if (!validDate(value.startsOn) || (value.endsOn && (!validDate(value.endsOn) || value.endsOn < value.startsOn))) return "حدد بداية الدورية، واجعل نهايتها بعدها أو اتركها مفتوحة.";
   if (value.scheduleKind === "monthly_week" && ![1, 2, 3, 4].includes(value.week)) return "اختر أسبوع الانعقاد من الأول إلى الرابع.";
   if (value.scheduleKind === "seasonal") {
-    const date = `${value.startsOn.slice(0, 4)}-${String(value.month).padStart(2, "0")}-${String(value.day).padStart(2, "0")}`;
-    if (!validDate(date)) return "اليوم المحدد غير موجود في هذا الشهر.";
+    if (!value.seasonalDates.length || value.seasonalDates.length > 24) return "أضف موعدًا موسميًا واحدًا على الأقل، وبحد أقصى 24 موعدًا.";
+    const identities = value.seasonalDates.map(item => `${item.month}:${item.day}`);
+    if (new Set(identities).size !== identities.length) return "لا تكرر الموعد الموسمي نفسه.";
+    if (value.seasonalDates.some(item => !validDate(`${value.startsOn.slice(0, 4)}-${String(item.month).padStart(2, "0")}-${String(item.day).padStart(2, "0")}`))) return "راجع اليوم والشهر في المواعيد الموسمية.";
   }
   return null;
 }
 export function requirementsPayload(value: Requirements) {
   const ruleConfig = value.scheduleKind === "none" ? {} : value.scheduleKind === "fixed_date" ? { date: value.date }
     : { starts_on: value.startsOn, ends_on: value.endsOn || null,
-      ...(value.scheduleKind === "monthly_week" ? { week: value.week } : { month: value.month, day: value.day }) };
+      ...(value.scheduleKind === "monthly_week" ? { week: value.week } : { dates: value.seasonalDates }) };
   return {
     authoring: { scope_kind: value.scopeKind, scope_ids: value.scopeKind === "route" ? [] : value.scopeIds,
       source_item_ids: value.sourceItemIds, required_attachment_count: value.requiredAttachmentCount,

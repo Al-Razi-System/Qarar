@@ -45,6 +45,7 @@ function Showcase() {
         </div>
         <InlineMessage tone="error">حدد موعداً قبل حفظ التكليف.</InlineMessage>
         <InlineMessage tone="success">تم حفظ القرار.</InlineMessage>
+        <InlineMessage tone="warning">لا يُرسل المحضر قبل أن يتضمن النص الحالي للقرار.</InlineMessage>
       </Card>
 
       <Card className="flex flex-col gap-4">

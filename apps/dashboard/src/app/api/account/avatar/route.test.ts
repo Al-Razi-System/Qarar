@@ -1,0 +1,15 @@
+// @vitest-environment node
+import { beforeEach, expect, it, vi } from "vitest";
+const {rpc,normalize}=vi.hoisted(()=>({rpc:vi.fn(),normalize:vi.fn()}));
+vi.mock("@/shared/api/qarar-server",()=>({qararRpcV2:rpc}));
+vi.mock("@/shared/security/avatar-image",()=>({normalizeAvatar:normalize,MAX_AVATAR_BYTES:2*1024*1024}));
+import {GET,POST,DELETE} from "./route";
+beforeEach(()=>{rpc.mockReset();normalize.mockReset();});
+function request(method="POST",extra?:[string,string]){const body=new FormData();body.set("revision","0");body.set("request_id","86000000-0000-0000-0000-000000000010");body.set("file",new File(["image"],"photo.png",{type:"image/png"}));if(extra)body.set(...extra);return new Request("http://localhost/api/account/avatar",{method,body});}
+it("stores only normalized self image and never a client identity",async()=>{rpc.mockResolvedValueOnce({revision:0}).mockResolvedValueOnce({saved:true,revision:1,has_image:true});normalize.mockResolvedValue(Buffer.from("normalized"));expect((await POST(request())).status).toBe(200);expect(rpc).toHaveBeenLastCalledWith("set_my_avatar_v2",{p_content_base64:Buffer.from("normalized").toString("base64"),p_expected_revision:0,p_request_id:"86000000-0000-0000-0000-000000000010"});});
+it("authenticates before image processing",async()=>{rpc.mockRejectedValue(Error("UNAUTHENTICATED"));expect((await POST(request())).status).toBe(401);expect(normalize).not.toHaveBeenCalled();});
+it("rejects another user target",async()=>{rpc.mockResolvedValue({});expect((await POST(request("POST",["user_id","other"]))).status).toBe(400);expect(normalize).not.toHaveBeenCalled();});
+it("invalid image never reaches a mutation",async()=>{rpc.mockResolvedValue({});normalize.mockRejectedValue(Error("الصورة غير صالحة"));expect((await POST(request())).status).toBe(400);expect(rpc).toHaveBeenCalledTimes(1);});
+it("returns conflict locally with trace without reflecting SQL",async()=>{rpc.mockResolvedValueOnce({}).mockRejectedValueOnce(Object.assign(Error("private SQL"),{status:400,code:"40001"}));normalize.mockResolvedValue(Buffer.from("normalized"));const response=await POST(request());expect(response.status).toBe(409);expect(await response.json()).toMatchObject({traceId:expect.any(String),message:expect.not.stringContaining("SQL")});});
+it("removes bytes through the same checked revision contract",async()=>{rpc.mockResolvedValueOnce({}).mockResolvedValueOnce({saved:true,revision:1,has_image:false});expect((await DELETE(request("DELETE"))).status).toBe(200);expect(rpc.mock.calls[1][1].p_content_base64).toBeNull();expect(normalize).not.toHaveBeenCalled();});
+it("serves private no-store self image without accepting path or target",async()=>{rpc.mockResolvedValue({revision:1,has_image:true,content_base64:Buffer.from("image").toString("base64")});const response=await GET(new Request("http://localhost/api/account/avatar?user_id=other"));expect(response.headers.get("Cache-Control")).toContain("no-store");expect(response.headers.get("Content-Type")).toBe("image/jpeg");expect(await response.text()).toBe("image");expect(rpc).toHaveBeenCalledWith("get_my_avatar_v2",{p_include_content:true});});

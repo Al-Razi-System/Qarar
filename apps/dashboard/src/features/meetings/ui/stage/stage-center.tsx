@@ -8,16 +8,16 @@ function titleOf(phase: Extract<StagePhase, { item: unknown }>) {
   return phase.item?.topic?.title_ar ?? null;
 }
 
-function VoteRing({ cast, eligible }: { cast: number; eligible: number }) {
+function VoteRing({ cast, eligible, compact }: { cast: number; eligible: number; compact: boolean }) {
   const fraction = eligible > 0 ? Math.min(1, cast / eligible) : 0;
   return (
-    <div className="relative grid h-44 w-44 place-items-center" role="img" aria-label={`صوّت ${cast} من ${eligible}`}>
+    <div className={compact ? "relative grid h-28 w-28 place-items-center" : "relative grid h-48 w-48 place-items-center"} role="img" aria-label={`صوّت ${cast} من ${eligible}`}>
       <svg viewBox="0 0 180 180" className="absolute inset-0 h-full w-full -rotate-90 text-q-on-stage" aria-hidden="true">
         <circle cx="90" cy="90" r={RING_RADIUS} fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="11" />
         <circle className="q-ring-progress" cx="90" cy="90" r={RING_RADIUS} fill="none" stroke="currentColor" strokeWidth="11" strokeLinecap="round" strokeDasharray={`${RING_LENGTH * fraction} ${RING_LENGTH}`} />
       </svg>
       <div className="flex flex-col items-center">
-        <span dir="ltr" className="text-q-h1 font-bold leading-none">{cast}<span className="text-q-h3 opacity-80"> / {eligible}</span></span>
+        <span dir="ltr" className={compact ? "text-q-h2 font-bold leading-none" : "text-q-h1 font-bold leading-none"}>{cast}<span className={compact ? "text-q-ui opacity-80" : "text-q-h3 opacity-80"}> / {eligible}</span></span>
         <span className="mt-1 text-q-caption font-bold">صوّتوا حتى الآن</span>
       </div>
     </div>
@@ -32,7 +32,7 @@ const verdictLabel: Record<string, string> = {
   cancelled: "أُلغيت الجولة",
 };
 
-function VoteResult({ round }: { round: VotingRound }) {
+function VoteResult({ round, compact }: { round: VotingRound; compact: boolean }) {
   const approve = round.approve_count ?? 0;
   const reject = round.reject_count ?? 0;
   const abstain = round.abstain_count ?? 0;
@@ -50,14 +50,14 @@ function VoteResult({ round }: { round: VotingRound }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-5">
       {total > 0 && (
-        <svg viewBox="0 0 180 180" className="h-36 w-36 -rotate-90" aria-hidden="true">
+        <svg viewBox="0 0 180 180" className={compact ? "h-16 w-16 -rotate-90" : "h-40 w-40 -rotate-90"} aria-hidden="true">
           {segments.filter((segment) => segment.length > 0).map((segment) => (
             <circle key={segment.key} className={segment.stroke} cx="90" cy="90" r={RING_RADIUS} fill="none" stroke="currentColor" strokeWidth="20" strokeDasharray={`${segment.length} ${RING_LENGTH}`} strokeDashoffset={-segment.offset} />
           ))}
         </svg>
       )}
       <div className="flex flex-col gap-1 text-right">
-        <span className="text-q-h2 font-bold">{verdictLabel[round.result ?? ""] ?? "أُغلقت الجولة"}</span>
+        <span className={compact ? "text-q-ui font-bold" : "text-q-h2 font-bold"}>{verdictLabel[round.result ?? ""] ?? "أُغلقت الجولة"}</span>
         {round.tie_break_applied && <span className="text-q-caption font-bold">رُجّح بصوت رئيس المجلس</span>}
         {parts.map((part) => (
           <span key={part.key} className="flex items-center gap-2 text-q-ui font-bold">
@@ -71,7 +71,7 @@ function VoteResult({ round }: { round: VotingRound }) {
 }
 
 /** What is happening right now, shown in the middle of the council table. */
-export function StageCenter({ phase }: { phase: StagePhase }) {
+export function StageCenter({ phase, compact = false }: { phase: StagePhase; compact?: boolean }) {
   if (phase.kind === "attendance") {
     return (
       <div className="flex flex-col items-center gap-1 text-center">
@@ -87,9 +87,9 @@ export function StageCenter({ phase }: { phase: StagePhase }) {
     return (
       <div className="flex flex-col items-center gap-2 text-center">
         {phase.cast !== null && phase.eligible !== null
-          ? <VoteRing cast={phase.cast} eligible={phase.eligible} />
+          ? <VoteRing cast={phase.cast} eligible={phase.eligible} compact={compact} />
           : <><span className="text-q-h2 font-bold">التصويت مفتوح</span><span className="text-q-caption">تظهر النتيجة للجميع بعد إغلاق الجولة</span></>}
-        {title && <span className="max-w-full text-q-ui font-bold">{title}</span>}
+        {title && !compact && <span className="max-w-full text-q-ui font-bold">{title}</span>}
       </div>
     );
   }
@@ -97,8 +97,8 @@ export function StageCenter({ phase }: { phase: StagePhase }) {
   if (phase.kind === "result") {
     return (
       <div className="flex flex-col items-center gap-3 text-center">
-        <VoteResult round={phase.round} />
-        {titleOf(phase) && <span className="text-q-ui font-bold">{titleOf(phase)}</span>}
+        <VoteResult round={phase.round} compact={compact} />
+        {titleOf(phase) && !compact && <span className="text-q-ui font-bold">{titleOf(phase)}</span>}
       </div>
     );
   }
@@ -107,7 +107,7 @@ export function StageCenter({ phase }: { phase: StagePhase }) {
     return (
       <div className="flex flex-col items-center gap-2 text-center">
         <span className="text-q-ui font-bold">قيد المناقشة</span>
-        <span className="text-q-h2 font-bold">{titleOf(phase) ?? "بند جدول الأعمال"}</span>
+        <span title={titleOf(phase) ?? undefined} className={compact ? "line-clamp-3 text-q-caption font-bold" : "line-clamp-4 text-q-h3 font-bold"}>{titleOf(phase) ?? "بند جدول الأعمال"}</span>
       </div>
     );
   }
@@ -125,7 +125,7 @@ export function StageCenter({ phase }: { phase: StagePhase }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <span className="text-q-ui font-bold">{title ? "البند التالي" : "لا بنود في جدول الأعمال"}</span>
-      {title && <span className="text-q-h2 font-bold">{title}</span>}
+      {title && <span title={title} className={compact ? "line-clamp-3 text-q-caption font-bold" : "line-clamp-4 text-q-h3 font-bold"}>{title}</span>}
     </div>
   );
 }

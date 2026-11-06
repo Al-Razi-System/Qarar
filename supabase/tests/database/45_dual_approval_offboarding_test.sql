@@ -14,13 +14,13 @@ insert into qarar_iam.users(id,organization_id,email,full_name_ar,status,is_syst
 ('45000000-0000-0000-0000-000000000104','45000000-0000-0000-0000-000000000001','successor@offboard.test','Successor','active',false);
 insert into qarar_iam.permissions(id,organization_id,code,module,action,context_scope,name_ar) values
 ('45000000-0000-0000-0000-000000000201','45000000-0000-0000-0000-000000000001','iam.users.manage','iam','users.manage','organization','Manage users'),
-('45000000-0000-0000-0000-000000000202','45000000-0000-0000-0000-000000000001','iam.permissions.read','iam','permissions.read','organization','Read permissions');
+('45000000-0000-0000-0000-000000000202','45000000-0000-0000-0000-000000000001','iam.permissions.read','iam','permissions.read','organization','Read permissions') on conflict (organization_id,code) do nothing;
 insert into qarar_iam.roles(id,organization_id,code,name_ar,role_scope) values('45000000-0000-0000-0000-000000000301','45000000-0000-0000-0000-000000000001','offboard_admin','Offboard admin','organization');
 insert into qarar_core.governance_unit_types(id,organization_id,code,name_ar) values('45000000-0000-0000-0000-000000000311','45000000-0000-0000-0000-000000000001','office','Office');
 insert into qarar_core.governance_units(id,organization_id,unit_type_id,code,name_ar) values('45000000-0000-0000-0000-000000000312','45000000-0000-0000-0000-000000000001','45000000-0000-0000-0000-000000000311','office','Office');
 insert into qarar_iam.role_permissions(organization_id,role_id,permission_id) values
-('45000000-0000-0000-0000-000000000001','45000000-0000-0000-0000-000000000301','45000000-0000-0000-0000-000000000201'),
-('45000000-0000-0000-0000-000000000001','45000000-0000-0000-0000-000000000301','45000000-0000-0000-0000-000000000202');
+('45000000-0000-0000-0000-000000000001','45000000-0000-0000-0000-000000000301',(select id from qarar_iam.permissions where organization_id='45000000-0000-0000-0000-000000000001' and code='iam.users.manage')),
+('45000000-0000-0000-0000-000000000001','45000000-0000-0000-0000-000000000301',(select id from qarar_iam.permissions where organization_id='45000000-0000-0000-0000-000000000001' and code='iam.permissions.read'));
 insert into qarar_iam.memberships(id,organization_id,user_id,governance_unit_id,role_id,membership_status) values
 ('45000000-0000-0000-0000-000000000401','45000000-0000-0000-0000-000000000001','45000000-0000-0000-0000-000000000101','45000000-0000-0000-0000-000000000312','45000000-0000-0000-0000-000000000301','active'),
 ('45000000-0000-0000-0000-000000000402','45000000-0000-0000-0000-000000000001','45000000-0000-0000-0000-000000000102','45000000-0000-0000-0000-000000000312','45000000-0000-0000-0000-000000000301','active'),

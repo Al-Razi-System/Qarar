@@ -22,8 +22,8 @@ select ok((select pg_get_functiondef('qarar_topics.review_topic(uuid,text,text,t
 select ok((select pg_get_functiondef('qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure) like '%review_topic%'),'governance review keeps topic status synchronized');
 select ok((select pg_get_functiondef('qarar_governance.act_topic_workflow_step(uuid,text,text,uuid,integer)'::regprocedure) like '%تُنفذ من الاجتماع%'),'meeting-owned workflow steps cannot be bypassed from topic review');
 select ok(has_function_privilege('qarar_governance_executor','qarar_topics.assert_topic_requirements_ready(uuid,text)','EXECUTE'),'governance executor can enforce topic requirements');
-select ok((select pg_get_functiondef('qarar_meetings.search_eligible_agenda_topics(uuid,text,integer,integer)'::regprocedure) like '%routing_ready%'),'agenda search checks routing readiness');
-select ok((select pg_get_functiondef('qarar_meetings.search_eligible_agenda_topics(uuid,text,integer,integer)'::regprocedure) like '%responsibility%'),'agenda search checks workflow responsibility');
+select ok((select pg_get_functiondef('qarar_meetings.search_eligible_agenda_topics_governed_core(uuid,text,integer,integer)'::regprocedure) like '%routing_ready%'),'agenda search checks routing readiness');
+select ok((select pg_get_functiondef('qarar_meetings.search_eligible_agenda_topics_governed_core(uuid,text,integer,integer)'::regprocedure) like '%responsibility%'),'agenda search checks workflow responsibility');
 select ok(exists(select 1 from pg_trigger where tgname='agenda_items_governance_guard' and not tgisinternal),'authoritative agenda governance guard exists');
 select ok(exists(select 1 from pg_trigger where tgname='voting_rounds_governance_guard' and not tgisinternal),'authoritative voting workflow guard exists');
 select ok(exists(select 1 from pg_trigger where tgname='voting_round_topic_requirements_guard' and not tgisinternal),'mandatory requirements guard exists before voting');

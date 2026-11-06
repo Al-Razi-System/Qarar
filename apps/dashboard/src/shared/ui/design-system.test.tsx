@@ -47,6 +47,13 @@ describe("Badge and InlineMessage", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("حدد موعداً قبل الحفظ.");
     expect(screen.getByRole("status")).toHaveTextContent("تم الحفظ.");
   });
+
+  it("states an unmet requirement as a polite warning", () => {
+    render(<InlineMessage tone="warning">حدّث نص القرار في المحضر.</InlineMessage>);
+    const message = screen.getByRole("status");
+    expect(message).toHaveTextContent("حدّث نص القرار في المحضر.");
+    expect(message.className).toContain("text-q-warning");
+  });
 });
 
 describe("Card", () => {
