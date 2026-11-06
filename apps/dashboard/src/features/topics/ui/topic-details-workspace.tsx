@@ -14,6 +14,7 @@ import {InlineMessage} from "@/shared/ui/inline-message";
 import {TopicPdfDownloadButton} from "./topic-pdf-download-button";
 import {MeetingMinutesDownloadButton} from "@/features/meetings/ui/meeting-minutes-download-button";
 import { TopicCorrectionsPanel } from "./topic-corrections-panel";
+import { TopicScheduleOccurrences } from "./topic-schedule-occurrences";
 
 type TopicDetail = {
   id: string;
@@ -425,7 +426,7 @@ export function TopicDetailsWorkspace({ topicId }: { topicId: string }) {
     </div>
 
     <section className="rounded-3xl border border-[#dce7f1] bg-white p-5 shadow-[0_10px_28px_rgba(24,48,80,.045)] sm:p-7">
-      {activeTab === "summary" && <Summary topic={topic} workflow={workflow} preview={preview} priorRouteRequest={priorRouteRequest} resubmissionOption={resubmissionOption} resubmitting={resubmitting} onResubmit={resubmitTopic} />}
+      {activeTab === "summary" && <div className="space-y-6"><Summary topic={topic} workflow={workflow} preview={preview} priorRouteRequest={priorRouteRequest} resubmissionOption={resubmissionOption} resubmitting={resubmitting} onResubmit={resubmitTopic} /><TopicScheduleOccurrences topicId={topic.id}/></div>}
       {activeTab === "regulation" && (topic.topic_type_version_id ? <TypedTopicAuthorities snapshot={topic.typed_creation_request?.snapshot} /> : <Regulation topic={topic} preview={preview} references={regulationReferences} />)}
       {activeTab === "requirements" && <Requirements preview={preview} requirementsStatus={requirementsStatus} attachments={attachments} priorRouteRequest={priorRouteRequest} busy={attachmentBusy} onUpload={uploadAttachment} onUploadPriorEvidence={uploadPriorRouteEvidence} onSubmitPriorRoute={submitPriorRouteRequest} onRemove={removeAttachment} onFulfill={fulfillRequirement} />}
       {activeTab === "workflow" && <Workflow workflow={workflow} priorRouteRequest={priorRouteRequest} />}
