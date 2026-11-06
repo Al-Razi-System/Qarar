@@ -33,7 +33,7 @@ it("names every stage in Arabic and marks a past meeting that never opened", () 
     { id: "b", title_ar: "مجلس ب", status: "waiting_for_minutes", scheduled_date: "2026-10-06" },
     { id: "c", title_ar: "مجلس ج", status: "scheduled", scheduled_date: "2026-11-03" },
   ]} />);
-  expect(within(desktop()).getByRole("button", { name: /مجلس أ، فات موعدها، 09:00/ })).toBeVisible();
+  expect(within(desktop()).getByRole("button", { name: /مجلس أ، فاتت الدورة، 09:00/ })).toBeVisible();
   expect(within(desktop()).getByRole("button", { name: /مجلس ب، بانتظار المحضر، الوقت غير محدد/ })).toBeVisible();
   expect(screen.queryByText(/ready_to_start|waiting_for_minutes/)).not.toBeInTheDocument();
 });

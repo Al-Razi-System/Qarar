@@ -7,7 +7,8 @@ import { CalendarDays, ChevronLeft, Clock, FileText, ListChecks, MapPin, Play, R
 import { meetingRpc } from "../api/meetings-client";
 import { meetingJourney, type MeetingJourneyKey } from "../model/meeting-journey";
 import { meetingStatusLabels, meetingStatusTone, type MeetingDetail, type MeetingReadiness, type MeetingStartTiming } from "../model/meeting";
-import { meetingLocationLabel, meetingScheduleLabel, meetingTimeLabel } from "../model/meeting-schedule";
+import { lateCycleMessage, meetingLocationLabel, meetingScheduleLabel, meetingTimeLabel } from "../model/meeting-schedule";
+import { localDateKey } from "../model/meeting-operational-state";
 import { InvitationStatus, InvitationTimingDialog } from "./invitation-timing-dialog";
 import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dialog";
 import { MeetingPreparationConfirmationDialog } from "./meeting-preparation-confirmation-dialog";
@@ -152,6 +153,7 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
     {error && <InlineMessage tone="error">{error}</InlineMessage>}
     {success && <InlineMessage tone="success">{success}</InlineMessage>}
     {meeting.cycle_available === false && meeting.cycle_unavailable_reason && <InlineMessage tone="warning">{meeting.cycle_unavailable_reason}</InlineMessage>}
+    {lateCycleMessage(meeting, localDateKey()) && <InlineMessage tone="warning">{lateCycleMessage(meeting, localDateKey())}{meeting.capabilities?.can_manage && <> <Link href={`/admin/meetings?manage=${meeting.id}`} className="font-bold text-q-link underline">تحديد الموعد الجديد</Link></>}</InlineMessage>}
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,.7fr)]">
       <Card live={meeting.status === "in_progress"}>
         <p className="text-q-caption font-bold text-q-live">{viewingCurrent ? "المرحلة الحالية" : "مرحلة مكتملة للقراءة"}</p><h2 className="mt-1 text-q-h2 font-bold">{selected.label}</h2><p className="mt-2 text-q-ui leading-7 text-q-text-2">{selected.description}</p>

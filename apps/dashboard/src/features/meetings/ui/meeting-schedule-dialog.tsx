@@ -7,6 +7,7 @@ import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { TextArea } from "@/shared/ui/text-area";
+import { dayBefore, dayLabel } from "../model/meeting-schedule";
 
 const field = "mt-1.5 h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 font-sans text-q-ui font-normal text-q-text outline-none focus:border-q-primary focus:ring-2 focus:ring-q-primary/20";
 const label = "block text-q-caption font-bold text-q-text-2";
@@ -47,12 +48,14 @@ export function MeetingScheduleDialog({ meeting, onClose, onSaved }: { meeting: 
   const sending = useRef(false);
   const planned = plannedLabel(meeting);
   const outside = offPlan(meeting, date);
+  const lastDay = meeting.next_cycle_start ? dayBefore(meeting.next_cycle_start) : null;
   const reasonError = problem === "reason" ? "اكتب سبب الانعقاد خارج أسبوع الدورة (5 أحرف على الأقل)." : null;
 
   async function save() {
     if (sending.current) return;
     if (!date || !start || !end) { setProblem("حدد التاريخ ووقتي البداية والنهاية."); return; }
     if (end <= start) { setProblem("يجب أن يكون وقت النهاية بعد وقت البداية."); return; }
+    if (lastDay && date > lastDay) { setProblem(`يقع هذا اليوم في دورة الاجتماع التالية؛ اختر يومًا حتى ${dayLabel(lastDay)}.`); return; }
     if (outside && reason.trim().length < 5) { setProblem("reason"); return; }
     sending.current = true; setPending(true); setProblem(null);
     try {
@@ -74,9 +77,9 @@ export function MeetingScheduleDialog({ meeting, onClose, onSaved }: { meeting: 
       <Button pending={pending} pendingLabel="جارٍ حفظ الموعد…" onClick={() => void save()}>حفظ الموعد والمكان</Button>
     </>}>
     <div className="grid gap-4 font-sans">
-      {planned && <p className="m-0 rounded-q-control bg-q-surface-2 px-3 py-2 text-q-caption text-q-text-2">{planned}</p>}
+      {planned && <p className="m-0 rounded-q-control bg-q-surface-2 px-3 py-2 text-q-caption text-q-text-2">{planned}{lastDay && <> · آخر يوم يمكن الانعقاد فيه: {dayLabel(lastDay)}</>}</p>}
       <div className="grid gap-4 sm:grid-cols-3">
-        <label className={label}>تاريخ الانعقاد<input type="date" required value={date} onChange={(event) => { setDate(event.target.value); setProblem(null); }} className={field}/></label>
+        <label className={label}>تاريخ الانعقاد<input type="date" required value={date} max={lastDay ?? undefined} onChange={(event) => { setDate(event.target.value); setProblem(null); }} className={field}/></label>
         <label className={label}>وقت البداية<input type="time" required value={start} onChange={(event) => { setStart(event.target.value); setProblem(null); }} className={field}/></label>
         <label className={label}>وقت النهاية<input type="time" required value={end} onChange={(event) => { setEnd(event.target.value); setProblem(null); }} className={field}/></label>
       </div>

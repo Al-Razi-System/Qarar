@@ -17,7 +17,7 @@ it("shows when, where and how much is on the agenda, in Arabic, and opens the me
 
 it("marks a scheduled meeting whose day passed without opening, and a meeting still planned within a window", () => {
   const { rerender } = render(<MeetingRow today="2026-10-31" onOpen={vi.fn()} meeting={{ id: "m1", title_ar: "اجتماع فائت", status: "scheduled", scheduled_date: "2026-10-20" }}/>);
-  expect(screen.getByRole("button")).toHaveTextContent("فات موعدها");
+  expect(screen.getByRole("button")).toHaveTextContent("فاتت الدورة — يحتاج إجراء");
   expect(screen.getByRole("button")).toHaveTextContent("الوقت غير محدد");
   rerender(<MeetingRow today="2026-10-31" onOpen={vi.fn()} meeting={{ id: "m2", title_ar: "اجتماع دوري", status: "draft", schedule_date_confirmed: false, planned_window_start: "2026-11-08", planned_window_end: "2026-11-14" }}/>);
   expect(screen.getByRole("button")).toHaveTextContent("خلال");

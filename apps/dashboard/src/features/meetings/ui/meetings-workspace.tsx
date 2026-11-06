@@ -61,7 +61,7 @@ function meetingErrorMessage(error: unknown, fallback: string) {
 const meetingGroups = [
   { key: "upcoming", label: "القادمة", description: "مجدولة وجاهزة للبدء", statuses: ["ready_to_start", "scheduled"] },
   { key: "future", label: "المستقبلية", description: "دورات لم تبدأ فترة إعدادها؛ للاطلاع فقط", statuses: [] },
-  { key: "missed", label: "تحتاج إجراء", description: "فات موعدها ولم تُفتح", statuses: [] },
+  { key: "missed", label: "تحتاج إجراء", description: "انتهت فترة دورتها ولم تنعقد؛ تُعقد بسبب حتى بداية الدورة التالية", statuses: [] },
   { key: "live", label: "منعقدة الآن", description: "جلسات قيد الانعقاد", statuses: ["in_progress"] },
   { key: "completion", label: "قيد الإكمال", description: "المحاضر والمصادقات", statuses: ["waiting_for_minutes", "waiting_for_approval"] },
   { key: "completed", label: "المكتملة", description: "اعتُمدت محاضرها", statuses: ["closed"] },

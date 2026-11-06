@@ -35,7 +35,7 @@ type Tone = { accent: string; fill: string; text: string; label: string; dashed?
 function toneOf(meeting: Meeting, today: string): Tone {
   const label = meetingStatusLabels[meeting.status] ?? "اجتماع";
   switch (meetingOperationalGroup(meeting, today)) {
-    case "missed": return { accent: "bg-q-warning", fill: "bg-q-warning-soft", text: "text-q-warning", label: meeting.status === "draft" ? "فاتت الدورة · تحتاج إجراء" : "فات موعدها" };
+    case "missed": return { accent: "bg-q-warning", fill: "bg-q-warning-soft", text: "text-q-warning", label: meeting.status === "draft" ? "فاتت الدورة · تحتاج إجراء" : "فاتت الدورة" };
     case "live": return { accent: "bg-q-live", fill: "bg-q-live-soft", text: "text-q-live", label };
     case "completion": return { accent: "bg-q-warning", fill: "bg-q-warning-soft", text: "text-q-warning", label };
     case "completed":
