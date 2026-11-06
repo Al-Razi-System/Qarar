@@ -161,7 +161,10 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
   const lastListSuccessAtRef = useRef(0);
   const initialManagedMeetingRef = useRef<string | null>(null);
   const today = localDateKey();
-  const councilOptions = Array.from(new Map([...meetings, ...calendarItems].filter((item) => item.governance_unit_id).map((item) => [item.governance_unit_id!, item.unit_name_ar ?? item.governance_unit_name_ar ?? "مجلس"])));
+  const councilOptions = Array.from(new Map([...meetings, ...calendarItems].filter((item) => item.governance_unit_id).map((item) => [item.governance_unit_id!, {
+    name: item.unit_name_ar ?? item.governance_unit_name_ar ?? "مجلس",
+    status: item.governance_unit_status,
+  }])));
   const search = query.trim();
   const matchesSearch = (meeting: Meeting) => !search || [meeting.title_ar, meeting.meeting_no, meeting.unit_name_ar, meeting.governance_unit_name_ar].some((value) => value?.includes(search));
   // The list is searched on the server; the council narrows it here. The calendar
@@ -648,7 +651,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
           <label className="flex min-w-0 flex-col gap-1.5 text-q-caption font-bold text-q-text-2">المجلس
             <select value={unitFilter} onChange={(event) => setUnitFilter(event.target.value)} className={`${filterField} lg:min-w-56`}>
               <option value="">كل المجالس المتاحة</option>
-              {councilOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+              {councilOptions.map(([id, council]) => <option key={id} value={id}>{council.name}{council.status === "inactive" ? " — غير مفعّل" : ""}</option>)}
             </select>
           </label>
           {/* In the list the status tabs below do this; the calendar has no room for them. */}
@@ -737,7 +740,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
                   <div className="flex items-center gap-1.5 text-q-text-2"><Calendar size={13} /> {meetingScheduleLabel(selected)}</div>
                   <div className="flex items-center gap-1.5 text-q-text-2"><Clock size={13} /> {meetingTimeLabel(selected)}</div>
                   <div className="flex items-center gap-1.5 text-q-text-2"><MapPin size={13} /> {meetingLocationLabel(selected, "—")}</div>
-                  <div className="flex items-center gap-1.5 text-q-text-2"><Users size={13} /> {selected.unit_name_ar ?? "—"}</div>
+                  <div className="flex flex-wrap items-center gap-1.5 text-q-text-2"><Users size={13} /> {selected.unit_name_ar ?? selected.governance_unit_name_ar ?? "—"}{selected.governance_unit_status === "inactive" && <Badge tone="warning">المجلس غير مفعّل</Badge>}</div>
                 </div>
               </div>
 
@@ -873,7 +876,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
                   <span><strong className="block text-q-ui text-q-text">اجتماع غير محكوم</strong><span className="mt-1 block text-q-caption leading-6 text-q-text-2">جدول أعمال مستقل يبنيه الرئيس من موضوعات مباشرة، من دون لائحة أو تصنيف أو مسار اعتماد.</span></span>
                 </label>
               </fieldset>
-              <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">المجلس أو الجهة *</span><select required name="governance_unit_id" disabled={meetingOptionsLoading || !(meetingOptions?.meeting_units?.length)} className="h-11 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui outline-none focus:border-q-primary disabled:cursor-not-allowed disabled:bg-q-surface-2"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الجهات…" : meetingOptions?.meeting_units?.length ? "اختر المجلس أو الجهة" : "لا توجد جهة متاحة ضمن صلاحياتك"}</option>{meetingOptions?.meeting_units?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name_ar}</option>)}</select><small className="mt-1 block text-q-caption text-q-text-2">تظهر الجهات التي تملك صلاحية إنشاء اجتماع فيها فقط.</small></label>
+              <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">المجلس أو الجهة *</span><select required name="governance_unit_id" disabled={meetingOptionsLoading || !(meetingOptions?.meeting_units?.length)} className="h-11 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui outline-none focus:border-q-primary disabled:cursor-not-allowed disabled:bg-q-surface-2"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الجهات…" : meetingOptions?.meeting_units?.length ? "اختر المجلس أو الجهة" : "لا توجد جهة متاحة ضمن صلاحياتك"}</option>{meetingOptions?.meeting_units?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name_ar}{unit.status === "inactive" ? " — غير مفعّل" : ""}</option>)}</select><small className="mt-1 block text-q-caption text-q-text-2">تظهر الجهات التي تملك صلاحية إنشاء اجتماع فيها فقط، وتُميّز الجهة غير المفعّلة صراحةً.</small></label>
               <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">نوع الاجتماع *</span><select required name="meeting_type_id" value={selectedMeetingTypeId} onChange={(event) => { const meetingTypeId = event.target.value; setSelectedMeetingTypeId(meetingTypeId); const meetingType = meetingOptions?.meeting_types?.find((type) => type.id === meetingTypeId); if (meetingType?.name_ar.includes("دوري")) setRecurring(true); }} disabled={meetingOptionsLoading || !(meetingOptions?.meeting_types?.length)} className="h-11 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui outline-none focus:border-q-primary disabled:cursor-not-allowed disabled:bg-q-surface-2"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الأنواع…" : meetingOptions?.meeting_types?.length ? "اختر نوع الاجتماع" : "لا توجد أنواع اجتماعات نشطة"}</option>{meetingOptions?.meeting_types?.map((type) => <option key={type.id} value={type.id}>{type.name_ar}</option>)}</select><small className="mt-1 block text-q-caption text-q-text-2">عند اختيار «اجتماع دوري» ستظهر إعدادات دورة الانعقاد تلقائياً.</small></label>
               <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">عنوان الاجتماع *</span><input required name="title_ar" placeholder="مثال: الاجتماع الثالث لمجلس القسم" className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-ui outline-none focus:border-q-primary" /></label>
               <label className={`flex cursor-pointer items-center justify-between rounded-q-card border p-4 transition ${recurring ? "border-q-primary bg-q-surface-2 ring-2 ring-q-primary/20" : "border-q-border bg-q-surface-2"}`}><span><strong className="block text-q-caption text-q-text-2">تفعيل التكرار التلقائي</strong><small className="mt-1 block text-q-caption text-q-text-2">ينشئ النظام جميع مواعيد الدورة ويربطها في سلسلة واحدة.</small></span><span className={`relative h-6 w-11 rounded-full transition ${recurring ? "bg-q-primary" : "bg-q-neutral-soft"}`}><input aria-label="تفعيل الاجتماع الدوري" type="checkbox" checked={recurring} onChange={(event) => setRecurring(event.target.checked)} className="sr-only"/><span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${recurring ? "right-6" : "right-1"}`}/></span></label>

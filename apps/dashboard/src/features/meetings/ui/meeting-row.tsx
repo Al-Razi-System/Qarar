@@ -53,7 +53,7 @@ export function MeetingRow({ meeting, today, onOpen }: { meeting: Meeting; today
     <span className="flex min-w-0 flex-1 flex-col gap-1">
       <span className="text-q-ui font-bold text-q-text">{meeting.title_ar}</span>
       <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-q-caption text-q-text-2">
-        {council && <span className="inline-flex items-center gap-1"><Users size={14} aria-hidden="true"/>{council}</span>}
+        {council && <span className="inline-flex flex-wrap items-center gap-1"><Users size={14} aria-hidden="true"/>{council}{meeting.governance_unit_status === "inactive" && <Badge tone="warning">المجلس غير مفعّل</Badge>}</span>}
         {session && <span className="inline-flex items-center gap-1"><Hash size={14} aria-hidden="true"/>{session}</span>}
         <span className="inline-flex items-center gap-1"><Clock size={14} aria-hidden="true"/>{time}</span>
         {where && <span className="inline-flex items-center gap-1"><MapPin size={14} aria-hidden="true"/>{where}</span>}

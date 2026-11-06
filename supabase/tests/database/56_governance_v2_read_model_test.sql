@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(39);
+select plan(41);
 
 insert into qarar_core.organizations(id,code,name_ar)
 values('56000000-0000-0000-0000-000000000001','governance-v2-read-ci','منظمة اختبار قراءة الحوكمة');
@@ -109,11 +109,26 @@ select is(qarar_governance.preview_topic_route_v2('56000000-0000-0000-0000-00000
 -- separate council-activation gate.
 reset role;
 update qarar_core.governance_units set status='inactive' where id='56000000-0000-0000-0000-000000000012';
+select is(
+  api_v1.get_sprint02_form_options()->'meeting_units' @> '[{"id":"56000000-0000-0000-0000-000000000012","status":"inactive"}]'::jsonb,
+  true,
+  'meeting council options label an inactive council explicitly'
+);
 set local role qarar_governance_executor;
 update qarar_governance.topic_type_authoring_profiles_v2 set submission_mode='automatic_agenda' where topic_type_version_id='56000000-0000-0000-0000-000000000022';
 update qarar_governance.topic_schedule_policies_v2 set rule_type='monthly_week',rule_config='{"week":1,"starts_on":"2026-01-01","ends_on":"2026-12-31"}' where topic_type_version_id='56000000-0000-0000-0000-000000000022';
 select is((select count(*)::int from qarar_governance.topic_schedule_occurrences_v2 where governance_unit_id='56000000-0000-0000-0000-000000000012' and period_key='month:2026-11'),1,'periodic obligation is materialized while an inactive council prepares its existing meeting');
 select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000012','2026-11-04')),1,'inactive council meeting exposes its periodic proposal during agenda preparation');
+reset role;
+select is(
+  api_v2.prepare_typed_submission_v2(
+    '56000000-0000-0000-0000-000000000060',
+    '{"title":"استكمال استحقاق مجلس غير مفعل","description":"يجهز رئيس المجلس الموضوع الدوري ومرفقاته قبل تفعيل المجلس وفتح جلسته","versionId":"56000000-0000-0000-0000-000000000022","unitId":"56000000-0000-0000-0000-000000000012","evidence":[]}'::jsonb
+  )->>'ok',
+  'true',
+  'inactive council permits typed preparation while its first agenda is assembled'
+);
+set local role qarar_governance_executor;
 delete from qarar_governance.topic_schedule_occurrences_v2 where governance_unit_id='56000000-0000-0000-0000-000000000012';
 reset role;
 update qarar_core.governance_units set status='active' where id='56000000-0000-0000-0000-000000000012';

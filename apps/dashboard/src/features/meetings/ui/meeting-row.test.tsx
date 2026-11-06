@@ -11,6 +11,7 @@ it("shows when, where and how much is on the agenda, in Arabic, and opens the me
   expect(row).toHaveTextContent("3 بند");
   expect(row).toHaveTextContent("مجدولة");
   expect(row).not.toHaveTextContent(/onsite|scheduled/);
+  expect(row).not.toHaveTextContent("المجلس غير مفعّل");
   fireEvent.click(row);
   expect(onOpen).toHaveBeenCalledOnce();
 });
@@ -28,6 +29,12 @@ it("marks a scheduled meeting whose day passed without opening, and a meeting st
 it("shows the session number and its academic year when the meeting has one", () => {
   render(<MeetingRow today="2026-10-31" onOpen={vi.fn()} meeting={{ id: "m3", title_ar: "الاجتماع الثالث لمجلس كلية العلوم — نوفمبر 2026", status: "draft", scheduled_date: "2026-11-09", session_sequence_no: 3, academic_year_start: "2026-09-01" }}/>);
   expect(screen.getByText("الجلسة 3 · العام الجامعي 2026/2027")).toBeVisible();
+});
+
+it("marks the council itself when it is not activated", () => {
+  render(<MeetingRow today="2026-11-06" onOpen={vi.fn()} meeting={{ id: "inactive-council", title_ar: "اجتماع التحضير الأول", status: "draft", governance_unit_name_ar: "مجلس قسم علوم الحاسوب", governance_unit_status: "inactive" }}/>);
+  expect(screen.getByRole("button")).toHaveTextContent("مجلس قسم علوم الحاسوب");
+  expect(screen.getByText("المجلس غير مفعّل")).toBeVisible();
 });
 
 it("distinguishes a late draft from a cycle finally classified as not held", () => {

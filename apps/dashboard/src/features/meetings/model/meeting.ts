@@ -41,6 +41,7 @@ export type Meeting = {
   location_details?: string;
   unit_name_ar?: string;
   governance_unit_name_ar?: string;
+  governance_unit_status?: "active" | "inactive" | "archived" | string | null;
   meeting_type_name_ar?: string;
   agenda_count?: number;
   agenda_item_count?: number;
@@ -162,7 +163,7 @@ export type AgendaCandidate = {
   source_minutes_status?: string | null;
   source_minutes_approved_at?: string | null;
 };
-export type MeetingReference = { id: string; name_ar: string; code?: string };
+export type MeetingReference = { id: string; name_ar: string; code?: string; status?: "active" | "inactive" | "archived" | string };
 export type MeetingFormOptions = { meeting_units?: MeetingReference[]; meeting_types?: MeetingReference[]; location_types?: string[] };
 
 export const meetingStatusLabels: Record<string, string> = {
