@@ -52,6 +52,7 @@ export function MeetingRow({ meeting, today, onOpen }: { meeting: Meeting; today
     <DateTile meeting={meeting} missed={missed}/>
     <span className="flex min-w-0 flex-1 flex-col gap-1">
       <span className="text-q-ui font-bold text-q-text">{meeting.title_ar}</span>
+      {meeting.schedule_exception_reason && <span className="text-q-caption font-bold text-q-warning">منعقد خارج موعد الدورة</span>}
       <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-q-caption text-q-text-2">
         {council && <span className="inline-flex items-center gap-1"><Users size={14} aria-hidden="true"/>{council}</span>}
         {session && <span className="inline-flex items-center gap-1"><Hash size={14} aria-hidden="true"/>{session}</span>}

@@ -6,7 +6,7 @@ it("shows when, where and how much is on the agenda, in Arabic, and opens the me
   const onOpen = vi.fn();
   render(<MeetingRow today="2026-10-31" onOpen={onOpen} meeting={{ id: "m1", title_ar: "اجتماع مجلس الكلية", status: "scheduled", scheduled_date: "2026-11-09", start_time: "12:45:00", end_time: "14:45:00", unit_name_ar: "مجلس كلية العلوم", location_type: "onsite", agenda_count: 3 }}/>);
   const row = screen.getByRole("button", { name: /اجتماع مجلس الكلية/ });
-  expect(row).toHaveTextContent("12:45 – 14:45");
+  expect(row).toHaveTextContent("من 12:45 إلى 14:45");
   expect(row).toHaveTextContent("حضوري");
   expect(row).toHaveTextContent("3 بند");
   expect(row).toHaveTextContent("مجدولة");

@@ -39,6 +39,7 @@ import { cn } from "@/shared/lib/utils";
 import { MeetingRow } from "./meeting-row";
 import { calendarRange, MeetingsCalendar, type CalendarMode } from "./meetings-calendar";
 
+type MeetingSearchResult = { items: Meeting[]; total: number; counts?: Record<string, number>; councils?: Array<{ id: string; name_ar: string }> };
 type Notice = { kind: "success" | "error"; text: string };
 type MeetingSeries = {
   id: string; title_ar: string; frequency: "weekly" | "monthly" | "quarterly" | "semiannual" | "annual" | "custom"; interval_count: number;
@@ -59,6 +60,7 @@ function meetingErrorMessage(error: unknown, fallback: string) {
 
 const meetingGroups = [
   { key: "upcoming", label: "القادمة", description: "مجدولة وجاهزة للبدء", statuses: ["ready_to_start", "scheduled"] },
+  { key: "future", label: "المستقبلية", description: "دورات لم تبدأ فترة إعدادها؛ للاطلاع فقط", statuses: [] },
   { key: "missed", label: "تحتاج إجراء", description: "فات موعدها ولم تُفتح", statuses: [] },
   { key: "live", label: "منعقدة الآن", description: "جلسات قيد الانعقاد", statuses: ["in_progress"] },
   { key: "completion", label: "قيد الإكمال", description: "المحاضر والمصادقات", statuses: ["waiting_for_minutes", "waiting_for_approval"] },
@@ -151,6 +153,9 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
   const [calendarItems, setCalendarItems] = useState<Meeting[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [unitFilter, setUnitFilter] = useState("");
+  const [stageCounts, setStageCounts] = useState<Record<string, number>>({});
+  const [councils, setCouncils] = useState<Array<{ id: string; name_ar: string }>>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [minutes, setMinutes] = useState<MeetingMinutes | null>(null);
   const [minutesLoading, setMinutesLoading] = useState(false);
@@ -161,13 +166,16 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
   const lastListSuccessAtRef = useRef(0);
   const initialManagedMeetingRef = useRef<string | null>(null);
   const today = localDateKey();
-  const councilOptions = Array.from(new Map([...meetings, ...calendarItems].filter((item) => item.governance_unit_id).map((item) => [item.governance_unit_id!, item.unit_name_ar ?? item.governance_unit_name_ar ?? "مجلس"])));
+  const councilOptions = Array.from(new Map([
+    ...councils.map((council) => [council.id, council.name_ar] as const),
+    ...[...meetings, ...calendarItems].filter((item) => item.governance_unit_id).map((item) => [item.governance_unit_id!, item.unit_name_ar ?? item.governance_unit_name_ar ?? "مجلس"] as const),
+  ]));
   const search = query.trim();
   const matchesSearch = (meeting: Meeting) => !search || [meeting.title_ar, meeting.meeting_no, meeting.unit_name_ar, meeting.governance_unit_name_ar].some((value) => value?.includes(search));
-  // The list is searched on the server; the council narrows it here. The calendar
-  // is read per council on the server, and searched and narrowed by status here.
-  const visibleMeetings = unitFilter ? meetings.filter((meeting) => meeting.governance_unit_id === unitFilter) : meetings;
-  const operationalMeetings = visibleMeetings.filter((meeting) => meetingOperationalGroup(meeting, today) !== null);
+  // The list is searched, narrowed by council and by stage, and counted on the
+  // server, so a tab shows every meeting of its stage, not those among the latest
+  // fifty. The calendar is read per council on the server and narrowed by stage here.
+  const operationalMeetings = meetings;
   const visibleCalendarItems = calendarItems.filter((meeting) => matchesSearch(meeting) && (activeGroup === "all" || meetingOperationalGroup(meeting, today) === activeGroup));
   const refinements = [unitFilter, activeGroup !== "all", viewMode === "list" && fromDate, viewMode === "list" && toDate].filter(Boolean).length;
   const filtersActive = Boolean(query || fromDate || toDate || unitFilter || activeGroup !== "all");
@@ -193,14 +201,15 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
     try {
       const seriesRequest = rpc<MeetingSeries[]>("list_meeting_series", {}, { signal: controller.signal, timeoutMs: 12_000 })
         .catch(() => []);
-      const result = await rpc<{ items: Meeting[]; total: number }>("search_meetings", {
-        // The archive grows every year; it is read on its own rather than among the 50 latest.
-        p_query: deferredQuery.trim() || null, p_status: activeGroup === "archived" ? "archived" : null, p_unit_id: null,
-        p_from_date: fromDate || null, p_to_date: toDate || null, p_limit: activeGroup === "archived" ? 100 : 50, p_offset: 0,
+      const result = await rpc<MeetingSearchResult>("search_meetings_v2", {
+        p_query: deferredQuery.trim() || null, p_stage: activeGroup === "all" ? null : activeGroup, p_unit_id: unitFilter || null,
+        p_from_date: fromDate || null, p_to_date: toDate || null, p_limit: 50, p_offset: 0,
       }, { signal: controller.signal, timeoutMs: 12_000 });
       if (controller.signal.aborted) return;
       setMeetings(result.items ?? []);
       setTotal(result.total ?? 0);
+      setStageCounts(result.counts ?? {});
+      setCouncils(result.councils ?? []);
       lastListSuccessAtRef.current = Date.now();
       setLoading(false);
       const nextMeetings = result.items ?? [];
@@ -570,7 +579,22 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
       window.clearTimeout(timer);
       listRequestRef.current?.abort();
     };
-  }, [deferredQuery, fromDate, toDate, focused, activeGroup === "archived"]);
+  }, [deferredQuery, fromDate, toDate, focused, activeGroup, unitFilter]);
+
+  async function loadMoreMeetings() {
+    if (loadingMore) return;
+    setLoadingMore(true); setLoadError(null);
+    try {
+      const result = await rpc<MeetingSearchResult>("search_meetings_v2", {
+        p_query: deferredQuery.trim() || null, p_stage: activeGroup === "all" ? null : activeGroup, p_unit_id: unitFilter || null,
+        p_from_date: fromDate || null, p_to_date: toDate || null, p_limit: 50, p_offset: meetings.length,
+      }, { timeoutMs: 12_000 });
+      setMeetings((current) => [...current, ...(result.items ?? []).filter((item) => !current.some((known) => known.id === item.id))]);
+      setTotal(result.total ?? total);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "تعذر تحميل المزيد من الاجتماعات.");
+    } finally { setLoadingMore(false); }
+  }
 
   useEffect(() => { const timer = window.setTimeout(() => { if (!focused && typeof window.matchMedia === "function" && window.matchMedia("(min-width: 768px)").matches) setViewMode("month"); }, 0); return () => window.clearTimeout(timer); }, [focused]);
   useEffect(() => {
@@ -670,7 +694,10 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
       {viewMode === "list" ? <>
       {!focused && <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" aria-label="حالات الاجتماعات">
         {[{ key: "all", label: "كل الاجتماعات" }, ...meetingGroups].map((group) => {
-          const count = group.key === "all" ? operationalMeetings.length : operationalMeetings.filter((meeting) => meetingOperationalGroup(meeting, today) === group.key).length;
+          // Counted on the server across every meeting the filters match.
+          const count = group.key === "all"
+            ? Object.entries(stageCounts).filter(([stage]) => stage !== "future").reduce((sum, [, value]) => sum + value, 0)
+            : stageCounts[group.key] ?? 0;
           const active = activeGroup === group.key;
           return <button key={group.key} type="button" aria-pressed={active} onClick={() => { setActiveGroup(group.key); setSelected(null); }}
             className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-q-control border px-4 font-sans text-q-ui font-bold transition-colors", active ? "border-q-primary bg-q-primary text-q-on-primary" : "border-q-border bg-q-surface text-q-text hover:bg-q-surface-2", !count && !active && "text-q-text-3")}>
@@ -699,6 +726,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
       <div className={cn("grid items-start gap-5", !focused && selected && "xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]")}>
         <div className={cn("space-y-4", focused && "hidden")}>
           {activeGroup === "archived" && !focused && <MeetingArchivePolicy/>}
+          {activeGroup === "future" && !focused && <InlineMessage tone="info">اجتماعات دورات لم تبدأ فترة إعدادها بعد. يمكن الاطلاع عليها، ويُفتح إعدادها ودعواتها وجلستها عند بداية دورتها.</InlineMessage>}
           {refreshing && !loading && <p role="status" className="m-0 rounded-q-control bg-q-surface-2 px-3 py-2 text-q-caption text-q-text-2">جارٍ تحديث الاجتماعات في الخلفية…</p>}
           {loading ? (
             <Card aria-busy="true" className="grid min-h-72 place-items-center"><p role="status" className="m-0 flex items-center gap-2 text-q-ui text-q-text-2"><LoaderCircle className="animate-spin text-q-link" size={20} aria-hidden="true"/>جارٍ تحميل الاجتماعات…</p></Card>
@@ -707,7 +735,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
               <div>
                 <CalendarDays className="mx-auto text-q-text-3" size={32} aria-hidden="true"/>
                 <h2 className="m-0 mt-3 text-q-h3 font-bold">{filtersActive ? "لا توجد اجتماعات" : "لا توجد اجتماعات حالية"}</h2>
-                <p className="m-0 mt-1 text-q-ui text-q-text-2">{filtersActive ? "لا يطابق الفلاترَ المختارة أيُّ اجتماع." : meetings.length > 0 ? "ستظهر دورات الخطط هنا عند بداية نافذتها، ويمكن الاطلاع عليها مسبقًا من التقويم." : "ابدأ بإنشاء اجتماع لمجلسك."}</p>
+                <p className="m-0 mt-1 text-q-ui text-q-text-2">{filtersActive ? "لا يطابق الفلاترَ المختارة أيُّ اجتماع." : (stageCounts.future ?? 0) > 0 ? `يوجد ${stageCounts.future} اجتماع مستقبلي في تبويب «المستقبلية»؛ يُفتح إعداده عند بداية دورته.` : "ابدأ بإنشاء اجتماع لمجلسك."}</p>
               </div>
             </Card>
           ) : groupedMeetings(operationalMeetings, today).filter((group) => activeGroup === "all" || group.key === activeGroup).map((group) => <section key={group.key} aria-labelledby={`meeting-group-${group.key}`} className="overflow-hidden rounded-q-card border border-q-border bg-q-surface">
@@ -720,6 +748,10 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
               <ul className="m-0 list-none divide-y divide-q-border p-0">{shelf.meetings.map((meeting) => <li key={meeting.id}><MeetingRow meeting={meeting} today={today} onOpen={() => router.push(`/admin/meetings/${meeting.id}`)}/></li>)}</ul>
             </div>) : <ul className="m-0 list-none divide-y divide-q-border p-0">{group.meetings.map((meeting) => <li key={meeting.id}><MeetingRow meeting={meeting} today={today} onOpen={() => router.push(`/admin/meetings/${meeting.id}`)}/></li>)}</ul>}
           </section>)}
+          {!loading && meetings.length > 0 && meetings.length < total && <div className="flex flex-wrap items-center justify-center gap-3">
+            <span className="text-q-caption text-q-text-2">يُعرض {meetings.length} من {total}</span>
+            <Button variant="secondary" pending={loadingMore} pendingLabel="جارٍ التحميل…" onClick={() => void loadMoreMeetings()}>عرض المزيد</Button>
+          </div>}
         </div>
 
         {/* Detail Panel */}

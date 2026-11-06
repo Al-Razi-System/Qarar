@@ -43,10 +43,13 @@ export function meetingLocationLabel(meeting: { location_details?: string | null
   return meeting.location_details?.trim() || LOCATION_TYPES[meeting.location_type ?? ""] || fallback;
 }
 
-/** «12:45 – 14:45», «12:45», or that the time is not set yet. */
+/**
+ * «من 12:45 إلى 14:45», «12:45», or that the time is not set yet. Words, not a
+ * dash: two numbers around a dash read in either order in a right-to-left line.
+ */
 export function meetingTimeLabel(meeting: { start_time?: string | null; end_time?: string | null }) {
   const start = meeting.start_time?.slice(0, 5); const end = meeting.end_time?.slice(0, 5);
-  return start ? (end ? `${start} – ${end}` : start) : "الوقت غير محدد";
+  return start ? (end ? `من ${start} إلى ${end}` : start) : "الوقت غير محدد";
 }
 
 /** «2026/2027» for an academic year that starts on 2026-09-01. */

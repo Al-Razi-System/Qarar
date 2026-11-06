@@ -62,32 +62,33 @@ select set_config('request.jwt.claim.sub','63900000-0000-0000-0000-000000000010'
 create temporary table cancelled as select id,updated_at from qarar_meetings.meetings
 where governance_unit_id=(select (payload->>'id')::uuid from week_one_council) and planned_date='2026-11-01';
 update qarar_meetings.meetings set status='cancelled' where id=(select id from cancelled);
-select is((api_v2.reactivate_cancelled_meeting_v2((select id from cancelled),(select updated_at from qarar_meetings.meetings where id=(select id from cancelled)))->>'status'),'draft','an unconfirmed cancelled occurrence reactivates as the same draft');
+select is((api_v2.reactivate_cancelled_meeting_with_reason_v2((select id from cancelled),'قرر الرئيس عقد الاجتماع',(select updated_at from qarar_meetings.meetings where id=(select id from cancelled)))->>'status'),'draft','an unconfirmed cancelled occurrence reactivates as the same draft');
 select is((select count(*)::integer from qarar_meetings.meetings where governance_unit_id=(select (payload->>'id')::uuid from week_one_council) and planned_date='2026-11-01'),1,'reactivation never creates a replacement');
 
 select api_v2.reschedule_meeting_session_v2((select id from cancelled),'2026-11-03','09:00','10:00','onsite','قاعة الاختبار',null,(select updated_at from qarar_meetings.meetings where id=(select id from cancelled)));
 select api_v1.transition_meeting((select id from cancelled),'scheduled',null,(select updated_at from qarar_meetings.meetings where id=(select id from cancelled)));
 select api_v1.transition_meeting((select id from cancelled),'cancelled','إلغاء تجريبي للدورة',(select updated_at from qarar_meetings.meetings where id=(select id from cancelled)));
-select is((api_v2.reactivate_cancelled_meeting_v2((select id from cancelled),(select updated_at from qarar_meetings.meetings where id=(select id from cancelled)))->>'status'),'scheduled','a fully timed cancelled occurrence reactivates as scheduled');
+select is((api_v2.reactivate_cancelled_meeting_with_reason_v2((select id from cancelled),'قرر الرئيس عقد الاجتماع',(select updated_at from qarar_meetings.meetings where id=(select id from cancelled)))->>'status'),'scheduled','a fully timed cancelled occurrence reactivates as scheduled');
 select ok(exists(select 1 from qarar_meetings.meeting_status_history where meeting_id=(select id from cancelled) and from_status='cancelled' and to_status='scheduled'),'reactivation is recorded in status history');
 select ok(exists(select 1 from qarar_audit.audit_logs where entity_id=(select id from cancelled) and action='meeting.cancelled.reactivated'),'reactivation is audited');
 
-select throws_ok($$select api_v2.reactivate_cancelled_meeting_v2((select id from cancelled),'2000-01-01')$$,'23514','لا يمكن إعادة تفعيل اجتماع غير ملغى.','a non-cancelled meeting cannot be reactivated');
+select throws_ok($$select api_v2.reactivate_cancelled_meeting_with_reason_v2((select id from cancelled),'قرر الرئيس عقد الاجتماع','2000-01-01')$$,'23514','لا يمكن إعادة تفعيل اجتماع غير ملغى.','a non-cancelled meeting cannot be reactivated');
 select api_v1.transition_meeting((select id from cancelled),'cancelled','إلغاء ثانٍ لاختبار التعارض',(select updated_at from qarar_meetings.meetings where id=(select id from cancelled)));
-select throws_ok($$select api_v2.reactivate_cancelled_meeting_v2((select id from cancelled),'2000-01-01')$$,'40001',null,'a stale version is rejected');
+select throws_ok($$select api_v2.reactivate_cancelled_meeting_with_reason_v2((select id from cancelled),'قرر الرئيس عقد الاجتماع','2000-01-01')$$,'40001',null,'a stale version is rejected');
 select set_config('request.jwt.claim.sub','63900000-0000-0000-0000-000000000011',true);
-select throws_ok($$select api_v2.reactivate_cancelled_meeting_v2((select id from cancelled),(select updated_at from qarar_meetings.meetings where id=(select id from cancelled)))$$,'42501',null,'a user without contextual management cannot reactivate');
+select throws_ok($$select api_v2.reactivate_cancelled_meeting_with_reason_v2((select id from cancelled),'قرر الرئيس عقد الاجتماع',(select updated_at from qarar_meetings.meetings where id=(select id from cancelled)))$$,'42501',null,'a user without contextual management cannot reactivate');
 
--- A generated future occurrence can be prepared as a plan, but cannot become
--- session-ready before its own cycle window begins.
+-- A generated future occurrence is for viewing only until its own cycle window
+-- begins: its date, time and place are not set and it is not scheduled.
 select set_config('request.jwt.claim.sub','63900000-0000-0000-0000-000000000010',true);
 create temporary table future_occurrence as select id from qarar_meetings.meetings
 where governance_unit_id=(select (payload->>'id')::uuid from future_council) and planned_date='2027-06-08';
-select api_v2.reschedule_meeting_session_v2((select id from future_occurrence),'2027-06-10','09:00','10:00','onsite','قاعة مستقبلية','اختبار منع دورة مستقبلية',(select updated_at from qarar_meetings.meetings where id=(select id from future_occurrence)));
-select api_v1.transition_meeting((select id from future_occurrence),'scheduled',null,(select updated_at from qarar_meetings.meetings where id=(select id from future_occurrence)));
 select throws_ok(
-  $$select api_v1.transition_meeting((select id from future_occurrence),'ready_to_start',null,(select updated_at from qarar_meetings.meetings where id=(select id from future_occurrence)))$$,
-  '23514','لا يمكن تجهيز الجلسة قبل بدء دورة الاجتماع في 2027-06-08.','a future plan occurrence cannot be prepared for session before its window starts');
+  $$select api_v2.reschedule_meeting_session_v2((select id from future_occurrence),'2027-06-10','09:00','10:00','onsite','قاعة مستقبلية','اختبار منع دورة مستقبلية',(select updated_at from qarar_meetings.meetings where id=(select id from future_occurrence)))$$,
+  '55000','لم تبدأ فترة إعداد هذا الاجتماع بعد؛ تبدأ دورته في 8 يونيو 2027.','a future plan occurrence takes no date, time or place before its window starts');
+select throws_ok(
+  $$select api_v1.transition_meeting((select id from future_occurrence),'scheduled',null,(select updated_at from qarar_meetings.meetings where id=(select id from future_occurrence)))$$,
+  null,null,'a future plan occurrence cannot be scheduled before its window starts');
 select is(
   (qarar_meetings.search_meetings(null,null,(select (payload->>'id')::uuid from future_council),null,null,25,0)->>'total')::integer,
   0,'the operational search hides plan cycles whose windows have not started');

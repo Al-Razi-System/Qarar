@@ -34,13 +34,13 @@ it("keeps a failed meeting load visible with its reason and an in-place retry", 
 
   fireEvent.click(retry);
 
-  await waitFor(() => expect(rpc).toHaveBeenCalledWith("search_meetings", expect.any(Object), expect.objectContaining({ signal: expect.any(AbortSignal) })));
+  await waitFor(() => expect(rpc).toHaveBeenCalledWith("search_meetings_v2", expect.any(Object), expect.objectContaining({ signal: expect.any(AbortSignal) })));
 });
 
 it("shows meeting results without waiting for the secondary recurrence list", async () => {
   let resolveSeries: (value: unknown[]) => void = () => undefined;
   const seriesPending = new Promise<unknown[]>((resolve) => { resolveSeries = resolve; });
-  rpc.mockImplementation((contract: string) => contract === "search_meetings"
+  rpc.mockImplementation((contract: string) => contract === "search_meetings_v2"
     ? Promise.resolve({ items: [{
         id: "meeting-1",
         title_ar: "اجتماع الأداء",
@@ -55,12 +55,13 @@ it("shows meeting results without waiting for the secondary recurrence list", as
   resolveSeries([]);
 });
 
-it("keeps far-future plan occurrences out of the operational list while leaving them to the calendar", async () => {
-  rpc.mockImplementation((contract: string) => {
-    if (contract === "search_meetings") return Promise.resolve({ items: [{
-      id: "future-cycle", title_ar: "اجتماع يونيو 2027", status: "draft",
-      scheduled_date: "2027-06-08", planned_window_start: "2027-06-08", planned_window_end: "2027-06-14",
-    }], total: 1 });
+it("keeps plan occurrences ahead of their cycle in their own tab, counted on the server", async () => {
+  const future = { id: "future-cycle", title_ar: "اجتماع يونيو 2027", status: "draft",
+    scheduled_date: "2027-06-08", planned_window_start: "2027-06-08", planned_window_end: "2027-06-14" };
+  rpc.mockImplementation((contract: string, params: Record<string, unknown>) => {
+    if (contract === "search_meetings_v2") return Promise.resolve(params.p_stage === "future"
+      ? { items: [future], total: 1, counts: { future: 1 } }
+      : { items: [], total: 0, counts: { future: 1 } });
     if (contract === "list_meeting_series") return Promise.resolve([]);
     return Promise.resolve([]);
   });
@@ -68,8 +69,11 @@ it("keeps far-future plan occurrences out of the operational list while leaving 
   render(<MeetingsWorkspace/>);
 
   expect(await screen.findByText("لا توجد اجتماعات حالية")).toBeVisible();
-  expect(screen.getByText(/ستظهر دورات الخطط هنا عند بداية نافذتها/)).toBeVisible();
+  expect(screen.getByText(/1 اجتماع مستقبلي في تبويب «المستقبلية»/)).toBeVisible();
   expect(screen.queryByRole("button", { name: /اجتماع يونيو 2027/ })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /^المستقبلية/ }));
+  expect(await screen.findByRole("button", { name: /اجتماع يونيو 2027/ })).toBeVisible();
+  expect(rpc).toHaveBeenCalledWith("search_meetings_v2", expect.objectContaining({ p_stage: "future" }), expect.anything());
 });
 
 it("opens the dedicated meeting journey without loading the legacy detail panel", async () => {
@@ -85,7 +89,7 @@ it("opens the dedicated meeting journey without loading the legacy detail panel"
     unit_name_ar: "مجلس الجامعة",
   };
   rpc.mockImplementation((contract: string) => {
-    if (contract === "search_meetings") return Promise.resolve({ items: [meeting], total: 1 });
+    if (contract === "search_meetings_v2") return Promise.resolve({ items: [meeting], total: 1 });
     if (contract === "list_meeting_series") return Promise.resolve([]);
     return Promise.reject(new Error(`unexpected contract: ${contract}`));
   });
@@ -114,7 +118,7 @@ it("opens agenda continuation as a focused workspace for the requested meeting",
     if (contract === "get_meeting_readiness") return Promise.resolve({ ready: false, checks: [] });
     if (contract === "search_eligible_agenda_topics") return Promise.resolve({ items: [], total: 1 });
     if (contract === "list_meeting_topic_attachments" || contract === "list_meeting_series") return Promise.resolve([]);
-    if (contract === "search_meetings") return Promise.resolve({ items: [], total: 0 });
+    if (contract === "search_meetings_v2") return Promise.resolve({ items: [], total: 0 });
     return Promise.reject(new Error(`unexpected contract: ${contract}`));
   });
 
@@ -125,7 +129,7 @@ it("opens agenda continuation as a focused workspace for the requested meeting",
   expect(screen.getByRole("button", { name: "موضوع مباشر" })).toBeVisible();
   expect(screen.queryByRole("table", { name: "أيام الفترة" })).not.toBeInTheDocument();
   expect(rpc).toHaveBeenCalledWith("get_meeting_detail", { p_meeting_id: meeting.id }, { timeoutMs: 12_000 });
-  expect(rpc).not.toHaveBeenCalledWith("search_meetings", expect.anything(), expect.anything());
+  expect(rpc).not.toHaveBeenCalledWith("search_meetings_v2", expect.anything(), expect.anything());
   expect(rpc).not.toHaveBeenCalledWith("list_meetings_calendar_v2", expect.anything(), expect.anything());
 
   fireEvent.click(screen.getByRole("button", { name: "عرض 1 موضوعات مقترحة" }));
@@ -154,7 +158,7 @@ it("keeps the proposal browser visible when the current eligible count is zero",
     if (contract === "get_meeting_readiness") return Promise.resolve({ ready: false, checks: [] });
     if (contract === "search_eligible_agenda_topics") return Promise.resolve({ items: [], total: 0 });
     if (contract === "list_meeting_topic_attachments" || contract === "list_meeting_series") return Promise.resolve([]);
-    if (contract === "search_meetings") return Promise.resolve({ items: [], total: 0 });
+    if (contract === "search_meetings_v2") return Promise.resolve({ items: [], total: 0 });
     return Promise.reject(new Error(`unexpected contract: ${contract}`));
   });
 

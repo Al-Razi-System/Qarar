@@ -20,7 +20,7 @@ describe("meetingLocationLabel", () => {
 
 describe("meetingTimeLabel", () => {
   it("shows the range without seconds, the start alone, or that it is not set", () => {
-    expect(meetingTimeLabel({ start_time: "12:45:00", end_time: "14:45:00" })).toBe("12:45 – 14:45");
+    expect(meetingTimeLabel({ start_time: "12:45:00", end_time: "14:45:00" })).toBe("من 12:45 إلى 14:45");
     expect(meetingTimeLabel({ start_time: "09:00" })).toBe("09:00");
     expect(meetingTimeLabel({})).toBe("الوقت غير محدد");
   });
