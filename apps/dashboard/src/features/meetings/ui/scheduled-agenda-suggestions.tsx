@@ -1,7 +1,8 @@
 import { CalendarClock, Paperclip } from "lucide-react";
 import type { ScheduledAgendaSuggestion } from "../model/meeting";
+import { Button } from "@/shared/ui/button";
 
-export function ScheduledAgendaSuggestions({ items }: { items: ScheduledAgendaSuggestion[] }) {
+export function ScheduledAgendaSuggestions({ items, onPrepare }: { items: ScheduledAgendaSuggestion[]; onPrepare: (item: ScheduledAgendaSuggestion) => void }) {
   if (!items.length) return null;
   return <section aria-labelledby="scheduled-agenda-suggestions-title" className="space-y-3 rounded-q-card border border-q-border bg-q-surface p-5">
     <div className="flex flex-wrap items-center gap-2 text-q-link"><CalendarClock size={18}/><h3 id="scheduled-agenda-suggestions-title" className="text-q-h3 font-bold text-q-text">مقترحات دورية مستحقة لهذا الاجتماع</h3><span className="rounded-full bg-q-info-soft px-2 py-1 text-q-caption font-bold text-q-link">{items.length}</span></div>
@@ -11,6 +12,7 @@ export function ScheduledAgendaSuggestions({ items }: { items: ScheduledAgendaSu
       {item.reference_number && <p className="mt-1 text-q-caption text-q-text-2">مرجع الاستحقاق: <bdi>{item.reference_number}</bdi></p>}
       <p className="mt-2 text-q-caption text-q-text-2">فترة المناقشة: <time dateTime={item.available_from}>{item.available_from}</time>{item.due_on !== item.available_from && <> — <time dateTime={item.due_on}>{item.due_on}</time></>}</p>
       {item.required_attachment_count > 0 && <p className="mt-2 flex items-center gap-1.5 text-q-caption font-bold text-q-link"><Paperclip size={14}/>المرفقات المطلوبة قبل الإدراج: {item.required_attachment_count} على الأقل</p>}
+      <Button className="mt-4" variant="secondary" onClick={() => onPrepare(item)} aria-label={`استكمال وإدراج ${item.title_ar}`}>استكمال البيانات والمرفقات</Button>
     </article>)}</div>
   </section>;
 }

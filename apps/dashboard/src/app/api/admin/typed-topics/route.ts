@@ -6,7 +6,7 @@ type Envelope = { ok: boolean; data?: unknown; error_code?: string; message_ar?:
 const uuid = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 function reply(value: Envelope) {
   return NextResponse.json(value.ok ? { data: value.data } : { error: { message: value.message_ar ?? "تعذر إتمام العملية.", traceId: value.trace_id } },
-    { status: value.ok ? 200 : value.error_code === "MODEL_PERMISSION_DENIED" ? 403 : value.error_code === "MODEL_VERSION_CONFLICT" ? 409 : value.error_code === "MODEL_SERVER_FAILURE" ? 500 : 400, headers: { "Cache-Control": "no-store" } });
+    { status: value.ok ? 200 : value.error_code === "MODEL_PERMISSION_DENIED" ? 403 : value.error_code === "MODEL_VERSION_CONFLICT" || value.error_code === "MODEL_INVALID_STATE" ? 409 : value.error_code === "MODEL_SERVER_FAILURE" ? 500 : 400, headers: { "Cache-Control": "no-store" } });
 }
 function failure(error: unknown) {
   if (error instanceof Error && error.message === "UNAUTHENTICATED") return NextResponse.json({ error: { message: "انتهت الجلسة؛ سجل الدخول مجددًا." } }, { status: 401 });
@@ -30,6 +30,16 @@ export async function POST(request: Request) {
     if (parsed.value.action === "submit") {
       if (!uuid(parsed.value.requestId)) return NextResponse.json({error:{message:"معرّف الطلب غير صالح."}},{status:400});
       return reply(await qararRpcV2<Envelope>("submit_typed_submission_v2",{p_request_id:parsed.value.requestId}));
+    }
+    if (parsed.value.action === "submit_scheduled") {
+      if (!uuid(parsed.value.requestId) || !uuid(parsed.value.meetingId) || !uuid(parsed.value.occurrenceId)) {
+        return NextResponse.json({error:{message:"بيانات الاجتماع أو المقترح الدوري غير صالحة."}},{status:400});
+      }
+      return reply(await qararRpcV2<Envelope>("submit_scheduled_agenda_proposal_v2",{
+        p_request_id:parsed.value.requestId,
+        p_meeting_id:parsed.value.meetingId,
+        p_occurrence_id:parsed.value.occurrenceId,
+      }));
     }
     const { title, description, versionId, unitId, requestId } = parsed.value;
     if (!uuid(versionId) || !uuid(unitId) || !uuid(requestId) || typeof title !== "string" || title.trim().length < 5 || title.length > 300 || typeof description !== "string" || description.trim().length < 10 || description.length > 10000) return NextResponse.json({ error: { message: "أكمل المجلس والتصنيف وعنوان الموضوع ووصفه." } }, { status: 400 });

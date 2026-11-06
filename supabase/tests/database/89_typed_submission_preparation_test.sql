@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(33);
+select plan(44);
 
 insert into qarar_core.organizations(id,code,name_ar)
 values('89000000-0000-0000-0000-000000000001','typed-submission-ci','منظمة اختبار قراءة الحوكمة');
@@ -123,5 +123,39 @@ select is((select count(*)::integer from qarar_meetings.agenda_items where meeti
 select is(jsonb_array_length(api_v1.list_meeting_topic_attachments('89000000-0000-0000-0000-000000000060')),2,'meeting discussion receives pre-submission files');
 select is(api_v1.get_meeting_detail('89000000-0000-0000-0000-000000000060')#>>'{submitted_suggestions,total}','0','inserted topic no longer offered as a duplicate proposal');
 select is((select status from qarar_topics.topics where organization_id='89000000-0000-0000-0000-000000000001'),'new','reading and insertion do not approve the topic');
+
+reset role;
+insert into qarar_meetings.meetings(id,organization_id,meeting_no,governance_unit_id,title_ar,scheduled_date,created_by_user_id)
+values('89000000-0000-0000-0000-000000000062','89000000-0000-0000-0000-000000000001','MTG-TEST-89-SCHEDULED','89000000-0000-0000-0000-000000000011','اجتماع الاستحقاق الدوري',current_date,'89000000-0000-0000-0000-000000000002');
+insert into qarar_governance.topic_schedule_occurrences_v2(
+ id,organization_id,schedule_policy_id,topic_type_version_id,governance_unit_id,period_key,available_from,due_on
+) select '89000000-0000-0000-0000-000000000080',organization_id,id,topic_type_version_id,
+ '89000000-0000-0000-0000-000000000011','test:scheduled-agenda',current_date,current_date
+from qarar_governance.topic_schedule_policies_v2 where organization_id='89000000-0000-0000-0000-000000000001' limit 1;
+
+set local role qarar_api_executor;
+select is(api_v2.prepare_typed_submission_v2('89000000-0000-0000-0000-000000000070','{"title":"موضوع الاستحقاق الدوري","description":"وصف مكتمل لموضوع الاستحقاق الدوري قبل إدراجه","versionId":"89000000-0000-0000-0000-000000000022","unitId":"89000000-0000-0000-0000-000000000011","evidence":[]}')->>'ok','true','periodic proposal preparation is created without a topic');
+select is(api_v2.submit_scheduled_agenda_proposal_v2('89000000-0000-0000-0000-000000000070','89000000-0000-0000-0000-000000000062','89000000-0000-0000-0000-000000000080')->>'ok','false','atomic periodic insertion rejects missing required files');
+reset role;
+insert into storage.objects(bucket_id,name,metadata) values
+('qarar-evidence','topic-preparations/89000000-0000-0000-0000-000000000070/89000000-0000-0000-0000-000000000071.png','{"size":100,"mimetype":"image/png"}'),
+('qarar-evidence','topic-preparations/89000000-0000-0000-0000-000000000070/89000000-0000-0000-0000-000000000072.png','{"size":100,"mimetype":"image/png"}');
+set local role qarar_api_executor;
+select is(api_v2.register_typed_submission_file_v2('89000000-0000-0000-0000-000000000070','89000000-0000-0000-0000-000000000071','periodic-1.png','topic-preparations/89000000-0000-0000-0000-000000000070/89000000-0000-0000-0000-000000000071.png','image/png',100,'https://example.test/api/admin/typed-topics/files?submissionId=89000000-0000-0000-0000-000000000070&fileId=89000000-0000-0000-0000-000000000071',null)->>'ok','true','first periodic proposal file is registered');
+select is(api_v2.register_typed_submission_file_v2('89000000-0000-0000-0000-000000000070','89000000-0000-0000-0000-000000000072','periodic-2.png','topic-preparations/89000000-0000-0000-0000-000000000070/89000000-0000-0000-0000-000000000072.png','image/png',100,'https://example.test/api/admin/typed-topics/files?submissionId=89000000-0000-0000-0000-000000000070&fileId=89000000-0000-0000-0000-000000000072',null)->>'ok','true','second periodic proposal file is registered');
+create temporary table scheduled_submission as select api_v2.submit_scheduled_agenda_proposal_v2('89000000-0000-0000-0000-000000000070','89000000-0000-0000-0000-000000000062','89000000-0000-0000-0000-000000000080') payload;
+select is((select payload->>'ok' from scheduled_submission),'true','topic submission and agenda insertion succeed atomically');
+reset role;
+select is((select count(*)::integer from qarar_meetings.agenda_items where meeting_id='89000000-0000-0000-0000-000000000062'),1,'periodic meeting receives one agenda item');
+select is((select status from qarar_governance.topic_schedule_occurrences_v2 where id='89000000-0000-0000-0000-000000000080'),'scheduled','selected occurrence is linked and no longer due');
+select is((select count(*)::integer from qarar_topics.topic_attachments where topic_id=(select topic_id from qarar_governance.topic_schedule_occurrences_v2 where id='89000000-0000-0000-0000-000000000080')),2,'created agenda topic owns both required files');
+set local role qarar_api_executor;
+select is(api_v2.submit_scheduled_agenda_proposal_v2('89000000-0000-0000-0000-000000000070','89000000-0000-0000-0000-000000000062','89000000-0000-0000-0000-000000000080')#>>'{data,idempotent_replay}','true','retry returns the same scheduled proposal without duplication');
+reset role;
+select is((select count(*)::integer from qarar_meetings.agenda_items where meeting_id='89000000-0000-0000-0000-000000000062'),1,'retry does not duplicate the agenda item');
+set local role qarar_api_executor;
+set local "request.jwt.claims"='{"sub":"89000000-0000-0000-0000-000000000004","role":"authenticated"}';
+select is(api_v2.submit_scheduled_agenda_proposal_v2('89000000-0000-0000-0000-000000000070','89000000-0000-0000-0000-000000000062','89000000-0000-0000-0000-000000000080')->>'error_code','MODEL_PERMISSION_DENIED','unrelated user cannot replay another actor periodic proposal');
+reset role;
 select * from finish();
 rollback;

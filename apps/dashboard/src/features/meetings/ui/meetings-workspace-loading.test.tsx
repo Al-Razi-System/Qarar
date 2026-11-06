@@ -209,6 +209,7 @@ it("includes periodic obligations in the proposal count and proposal browser", a
   const proposals = await screen.findByRole("dialog", { name: "الموضوعات المقترحة" });
   expect(within(proposals).getByRole("heading", { name: "مقترحات دورية مستحقة لهذا الاجتماع" })).toBeVisible();
   expect(within(proposals).getByRole("heading", { name: "اعتماد البرنامج الأكاديمي" })).toBeVisible();
+  expect(within(proposals).getByRole("button", { name: "استكمال وإدراج اعتماد البرنامج الأكاديمي" })).toBeVisible();
   expect(within(proposals).queryByRole("heading", { name: "لا توجد موضوعات مؤهلة حاليًا" })).not.toBeInTheDocument();
 });
 

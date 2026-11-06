@@ -24,7 +24,7 @@ it("shows one primary action for the current stage and keeps later stages locked
   expect(screen.queryByRole("link", { name: "فتح المحضر والمصادقات" })).not.toBeInTheDocument();
 });
 
-it("shows due periodic topic suggestions on the direct meeting journey", async () => {
+it("keeps periodic proposals out of the journey and inside agenda management", async () => {
   mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail" ? Promise.resolve({
     ...meeting,
     capabilities: { ...meeting.capabilities, can_manage_agenda: true },
@@ -39,9 +39,9 @@ it("shows due periodic topic suggestions on the direct meeting journey", async (
 
   render(<MeetingDetailsJourney meetingId="meeting-1"/>);
 
-  expect(await screen.findByRole("heading", { name: "اعتماد برنامج أكاديمي" })).toBeVisible();
-  expect(screen.getByText(/مقترحات تحضير، وليست بنودًا معتمدة/)).toBeVisible();
-  expect(screen.getByText(/المرفقات المطلوبة قبل الإدراج: 2/)).toBeVisible();
+  expect(await screen.findByRole("heading", { name: "اجتماع مجلس الجامعة" })).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "اعتماد برنامج أكاديمي" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/مقترحات دورية مستحقة لهذا الاجتماع/)).not.toBeInTheDocument();
 });
 
 it("opens completed stages for reading while keeping future stages locked", async () => {

@@ -10,7 +10,7 @@ import { meetingRpc as rpc } from "../api/meetings-client";
 import {
   isAgendaEditable, meetingStatusLabels as statusLabels, meetingStatusTone as statusTone,
   type AgendaCandidate, type Meeting, type MeetingDetail, type MeetingFormOptions,
-  type MeetingMinutes, type MeetingReadiness, type MeetingStartTiming, type MeetingTopicAttachment, type MinuteApproval, type SignatureStrokes,
+  type MeetingMinutes, type MeetingReadiness, type MeetingStartTiming, type MeetingTopicAttachment, type MinuteApproval, type ScheduledAgendaSuggestion, type SignatureStrokes,
 } from "../model/meeting";
 import { Button } from "@/shared/ui/button";
 import { MeetingQuorumField } from "./meeting-quorum-field";
@@ -18,6 +18,7 @@ import { academicYearLabel, meetingLocationLabel, meetingScheduleLabel, meetingT
 import { localDateKey, meetingOperationalGroup } from "../model/meeting-operational-state";
 import { MeetingAgendaPanel } from "./meeting-agenda-panel";
 import { ScheduledAgendaSuggestions } from "./scheduled-agenda-suggestions";
+import { ScheduledAgendaProposalDialog } from "./scheduled-agenda-proposal-dialog";
 import {AgendaCandidateCard} from "./submitted-agenda-suggestions";
 import {AgendaInstructionsDialog} from "./agenda-instructions-dialog";
 import {AgendaCandidateDetailsDialog} from "./agenda-candidate-details-dialog";
@@ -135,6 +136,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
   const [eligibleAgendaCount, setEligibleAgendaCount] = useState<number | null>(null);
   const [agendaLoading, setAgendaLoading] = useState(false);
   const [agendaModal, setAgendaModal] = useState(false);
+  const [scheduledProposal, setScheduledProposal] = useState<ScheduledAgendaSuggestion | null>(null);
   const [directTopicModal, setDirectTopicModal] = useState(false);
   const [directTopicPending, setDirectTopicPending] = useState(false);
   const [directTopicError, setDirectTopicError] = useState<string | null>(null);
@@ -780,7 +782,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
 
       {agendaModal && selected && <Dialog title="الموضوعات المقترحة" description={`${(eligibleAgendaCount ?? agendaCandidates.length) + (selected.scheduled_suggestions?.length ?? 0)} موضوعات وصلت إلى ${selected.unit_name_ar ?? selected.governance_unit_name_ar ?? "هذا المجلس"} وأصبحت مؤهلة للإدراج`} size="lg" scrollContent onClose={()=>setAgendaModal(false)} closeDisabled={agendaLoading} footer={<Button variant="secondary" disabled={agendaLoading} onClick={()=>setAgendaModal(false)}>إغلاق</Button>}>
         <div className="flex flex-col gap-4">
-          <ScheduledAgendaSuggestions items={selected.scheduled_suggestions ?? []}/>
+          <ScheduledAgendaSuggestions items={selected.scheduled_suggestions ?? []} onPrepare={(item) => { setAgendaModal(false); setScheduledProposal(item); }}/>
           <div className="flex flex-col gap-3 rounded-q-card bg-q-surface-2 p-3 sm:flex-row">
             <label className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-q-control border border-q-border bg-q-surface px-3"><Search className="shrink-0 text-q-text-3" size={19}/><span className="sr-only">البحث في الموضوعات المقترحة</span><input autoFocus value={agendaQuery} onChange={(event)=>setAgendaQuery(event.target.value)} onKeyDown={(event)=>{if(event.key==="Enter")void loadAgendaCandidates();}} placeholder="اسم الموضوع أو رقمه" className="min-w-0 flex-1 bg-transparent text-q-ui text-q-text outline-none placeholder:text-q-text-3"/></label>
             <Button pending={agendaLoading} onClick={()=>void loadAgendaCandidates()}>بحث</Button>
@@ -789,6 +791,18 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
           {agendaLoading?<div className="grid min-h-48 place-items-center"><div className="text-center"><LoaderCircle className="mx-auto animate-spin text-q-link" size={28}/><p className="mt-3 text-q-ui font-bold">جاري تحديث المقترحات…</p></div></div>:agendaCandidates.length?<ul className="grid gap-4">{agendaCandidates.map(topic=><li key={topic.id}><AgendaCandidateCard item={topic} busy={detailLoading} onReview={(item)=>{setAgendaModal(false);setCandidateTarget(item);}}/></li>)}</ul>:(selected.scheduled_suggestions?.length ?? 0)===0?<div className="rounded-q-card border border-dashed border-q-border p-6 text-center"><Search className="mx-auto text-q-text-3" size={28}/><h3 className="mt-3 text-q-h3 font-bold">لا توجد موضوعات مؤهلة حاليًا</h3><p className="mx-auto mt-2 max-w-lg text-q-ui leading-7 text-q-text-2">يظهر الموضوع عندما تصل مرحلته إلى هذا المجلس، يعتمد محضر المجلس السابق إن وجد، ولا يكون مرتبطًا باجتماع آخر مفتوح.</p><Link href="/admin/topics" className="mt-4 inline-flex min-h-11 items-center rounded-q-control border border-q-primary px-4 text-q-ui font-bold text-q-link">فتح الموضوعات والتحقق من المسار</Link></div>:null}
         </div>
       </Dialog>}
+      {scheduledProposal && selected?.governance_unit_id && <ScheduledAgendaProposalDialog
+        meetingId={selected.id}
+        unitId={selected.governance_unit_id}
+        item={scheduledProposal}
+        onClose={() => setScheduledProposal(null)}
+        onCompleted={() => {
+          const meetingId = selected.id;
+          setScheduledProposal(null);
+          setNotice({ kind: "success", text: "تم إنشاء الموضوع وإضافته إلى جدول الأعمال مع مرفقاته." });
+          void openDetail(meetingId);
+        }}
+      />}
       {directTopicModal && selected && <DirectAgendaTopicDialog
         pending={directTopicPending}
         error={directTopicError}
