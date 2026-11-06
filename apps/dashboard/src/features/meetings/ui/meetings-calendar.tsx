@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
+
 import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import type { Meeting } from "../model/meeting";
 import { meetingStatusLabels } from "../model/meeting";
 import { meetingOperationalGroup } from "../model/meeting-operational-state";
-import { meetingLocationLabel } from "../model/meeting-schedule";
+import { meetingCompactTitle, meetingLocationLabel } from "../model/meeting-schedule";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
 
@@ -13,6 +15,8 @@ export type CalendarMode = "month" | "week";
 const weekDays = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 // Every target is at least 44px tall, so a month cell shows two meetings and a link to the rest.
 const MAX_IN_DAY = 2;
+/** From this many meetings sharing one window, they are shown as one bar that opens. */
+const GROUP_FROM = 3;
 
 export function calendarRange(cursor: Date, mode: CalendarMode) {
   if (mode === "month") {
@@ -74,6 +78,26 @@ function windowLabel(meeting: Meeting) {
     : `${dayLabel(start, { day: "numeric", month: "long" })} – ${dayLabel(end, { day: "numeric", month: "long" })}`;
 }
 
+/** Meetings waiting for their day in the same window are one entry; a few stay apart. */
+type WindowEntry = { key: string; start: string; end: string; meetings: Meeting[] };
+function windowEntries(meetings: Meeting[], open: Set<string>): WindowEntry[] {
+  const byWindow = new Map<string, Meeting[]>();
+  for (const meeting of meetings.filter(isWindow)) {
+    const key = `${meeting.planned_window_start}|${meeting.planned_window_end}`;
+    byWindow.set(key, [...(byWindow.get(key) ?? []), meeting]);
+  }
+  const entries: WindowEntry[] = [];
+  for (const [key, group] of byWindow) {
+    const [start, end] = key.split("|");
+    if (group.length >= GROUP_FROM) entries.push({ key, start, end, meetings: group });
+    if (group.length < GROUP_FROM || open.has(key)) for (const meeting of group) entries.push({ key: meeting.id, start, end, meetings: [meeting] });
+  }
+  return entries.sort((a, b) => a.start.localeCompare(b.start) || b.meetings.length - a.meetings.length);
+}
+
+/** «3 اجتماعات» … «10 اجتماعات», «11 اجتماعًا» and on. */
+function meetingsCount(count: number) { return `${count} ${count <= 10 ? "اجتماعات" : "اجتماعًا"}`; }
+
 function describe(meeting: Meeting, tone: Tone) {
   const when = isWindow(meeting)
     ? `يوم الانعقاد لم يُحدد، خلال ${windowLabel(meeting)}`
@@ -112,6 +136,8 @@ export function MeetingsCalendar({ items, cursor, mode, loading, onCursorChange,
     onCursorChange(next);
   };
   const empty = !loading && items.length === 0;
+  const [open, setOpen] = useState<Set<string>>(() => new Set());
+  const toggle = (key: string) => setOpen((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
 
   return <section className="overflow-hidden rounded-q-card border border-q-border bg-q-surface font-sans text-q-text" aria-label={`تقويم الاجتماعات: ${mode === "month" ? title : range}`} aria-busy={loading}>
     <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-q-border px-4 py-3 sm:px-5">
@@ -132,14 +158,14 @@ export function MeetingsCalendar({ items, cursor, mode, loading, onCursorChange,
       <div role="row" className="grid grid-cols-7 border-b border-q-border bg-q-surface">
         {weekDays.map((day) => <div role="columnheader" key={day} className="px-3 py-2 text-start text-q-caption font-bold text-q-text-2">{day}</div>)}
       </div>
-      {weeks.map((week) => <Week key={dateKey(week[0])} week={week} mode={mode} month={cursor.getMonth()} items={items} todayKey={todayKey} onOpen={onOpen} onShowDay={onShowDay}/>)}
+      {weeks.map((week) => <Week key={dateKey(week[0])} week={week} mode={mode} month={cursor.getMonth()} items={items} todayKey={todayKey} onOpen={onOpen} onShowDay={onShowDay} open={open} onToggle={toggle}/>)}
     </div>
 
     <ol className="m-0 list-none divide-y divide-q-border p-0 md:hidden" aria-label="أيام الفترة التي فيها اجتماعات">
       {days.filter((day) => mode === "week" || day.getMonth() === cursor.getMonth()).map((day) => {
         const key = dateKey(day);
         const dated = datedOn(items, key);
-        const windows = items.filter((meeting) => isWindow(meeting) && meeting.planned_window_start === key);
+        const windows = windowEntries(items, open).filter((entry) => entry.start === key);
         if (!dated.length && !windows.length) return null;
         return <li key={key} className="px-4 py-3">
           <p className="m-0 flex items-center gap-2 text-q-caption font-bold text-q-text-2">
@@ -147,7 +173,9 @@ export function MeetingsCalendar({ items, cursor, mode, loading, onCursorChange,
             {key === todayKey && <span className="rounded-full bg-q-primary px-2 text-q-caption text-q-on-primary">اليوم</span>}
           </p>
           <div className="mt-2 grid gap-2">
-            {windows.map((meeting) => <WindowBar key={meeting.id} meeting={meeting} todayKey={todayKey} onOpen={onOpen} detailed/>)}
+            {windows.map((entry) => entry.meetings.length > 1
+              ? <WindowGroupBar key={entry.key} entry={entry} open={open.has(entry.key)} onToggle={toggle} detailed/>
+              : <WindowBar key={entry.key} meeting={entry.meetings[0]} todayKey={todayKey} onOpen={onOpen} detailed/>)}
             {dated.map((meeting) => <MeetingLine key={meeting.id} meeting={meeting} todayKey={todayKey} onOpen={onOpen} detailed/>)}
           </div>
         </li>;
@@ -156,17 +184,17 @@ export function MeetingsCalendar({ items, cursor, mode, loading, onCursorChange,
   </section>;
 }
 
-function Week({ week, mode, month, items, todayKey, onOpen, onShowDay }: { week: Date[]; mode: CalendarMode; month: number; items: Meeting[]; todayKey: string; onOpen: (id: string) => void; onShowDay?: (day: Date) => void }) {
+function Week({ week, mode, month, items, todayKey, onOpen, onShowDay, open, onToggle }: { week: Date[]; mode: CalendarMode; month: number; items: Meeting[]; todayKey: string; onOpen: (id: string) => void; onShowDay?: (day: Date) => void; open: Set<string>; onToggle: (key: string) => void }) {
   const first = dateKey(week[0]); const last = dateKey(week[6]);
   // Windows that touch this week, packed into as few lanes as possible.
-  const lanes: Array<Array<{ meeting: Meeting; start: number; end: number }>> = [];
-  for (const meeting of items.filter(isWindow).sort((a, b) => a.planned_window_start!.localeCompare(b.planned_window_start!))) {
-    if (meeting.planned_window_end! < first || meeting.planned_window_start! > last) continue;
-    const start = Math.max(0, week.findIndex((day) => dateKey(day) >= meeting.planned_window_start!));
-    const endIndex = week.findIndex((day) => dateKey(day) > meeting.planned_window_end!);
+  const lanes: Array<Array<{ entry: WindowEntry; start: number; end: number }>> = [];
+  for (const entry of windowEntries(items, open)) {
+    if (entry.end < first || entry.start > last) continue;
+    const start = Math.max(0, week.findIndex((day) => dateKey(day) >= entry.start));
+    const endIndex = week.findIndex((day) => dateKey(day) > entry.end);
     const end = endIndex === -1 ? 6 : endIndex - 1;
     const lane = lanes.find((row) => row.every((placed) => placed.end < start || placed.start > end));
-    if (lane) lane.push({ meeting, start, end }); else lanes.push([{ meeting, start, end }]);
+    if (lane) lane.push({ entry, start, end }); else lanes.push([{ entry, start, end }]);
   }
   const rows = `auto ${"auto ".repeat(lanes.length)}minmax(${mode === "month" ? "7rem" : "22rem"}, 1fr)`;
   return <div role="row" className="relative grid grid-cols-7 border-b border-q-border last:border-b-0" style={{ gridTemplateRows: rows }}>
@@ -183,8 +211,10 @@ function Week({ week, mode, month, items, todayKey, onOpen, onShowDay }: { week:
         <span className={cn("inline-grid h-7 min-w-7 place-items-center rounded-full px-1 text-q-caption font-bold", isToday ? "bg-q-primary text-q-on-primary" : outside ? "text-q-text-3" : "text-q-text")} aria-label={dayLabel(day, { weekday: "long", day: "numeric", month: "long" })}>{day.getDate()}</span>
       </div>;
     })}
-    {lanes.map((lane, laneIndex) => lane.map(({ meeting, start, end }) => <div key={`w-${meeting.id}`} className="relative px-1 pt-1" style={{ gridColumn: `${start + 1} / ${end + 2}`, gridRow: laneIndex + 2 }}>
-      <WindowBar meeting={meeting} todayKey={todayKey} onOpen={onOpen}/>
+    {lanes.map((lane, laneIndex) => lane.map(({ entry, start, end }) => <div key={`w-${entry.key}`} className="relative px-1 pt-1" style={{ gridColumn: `${start + 1} / ${end + 2}`, gridRow: laneIndex + 2 }}>
+      {entry.meetings.length > 1
+        ? <WindowGroupBar entry={entry} open={open.has(entry.key)} onToggle={onToggle}/>
+        : <WindowBar meeting={entry.meetings[0]} todayKey={todayKey} onOpen={onOpen}/>}
     </div>))}
     {week.map((day, index) => {
       const dated = datedOn(items, dateKey(day));
@@ -206,7 +236,7 @@ function MeetingLine({ meeting, todayKey, onOpen, detailed = false }: { meeting:
     <span className="flex min-w-0 flex-1 flex-col">
       <span className="flex min-w-0 items-baseline gap-1.5">
         {time && <span className={cn("shrink-0 text-q-caption font-bold tabular-nums", tone.text)}>{detailed ? time : time.slice(0, 5)}</span>}
-        <span className={cn("min-w-0 text-q-caption font-bold text-q-text", detailed ? "line-clamp-2" : "truncate", tone.struck && "line-through")}>{meeting.title_ar}</span>
+        <span className={cn("min-w-0 text-q-caption font-bold text-q-text", detailed ? "line-clamp-2" : "truncate", tone.struck && "line-through")}>{detailed ? meeting.title_ar : meetingCompactTitle(meeting)}</span>
       </span>
       {detailed && <>
         {councilOf(meeting) && <span className="truncate text-q-caption text-q-text-2">{councilOf(meeting)}</span>}
@@ -219,14 +249,29 @@ function MeetingLine({ meeting, todayKey, onOpen, detailed = false }: { meeting:
   </button>;
 }
 
+/** Many councils waiting for their day in the same window: one bar naming a few, that opens to all. */
+function WindowGroupBar({ entry, open, onToggle, detailed = false }: { entry: WindowEntry; open: boolean; onToggle: (key: string) => void; detailed?: boolean }) {
+  const councils = entry.meetings.map((meeting) => councilOf(meeting) ?? meeting.title_ar);
+  const preview = councils.slice(0, 2).join("، ") + (councils.length > 2 ? ` و${councils.length - 2} غيرها` : "");
+  return <button type="button" aria-expanded={open} onClick={() => onToggle(entry.key)}
+    className={cn("flex min-h-11 w-full min-w-0 items-center gap-2 rounded-q-control border border-dashed border-q-border-strong bg-q-surface-2 px-2 py-1 text-start transition-colors hover:bg-q-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-q-primary", detailed && "py-2")}>
+    <CalendarDays size={14} aria-hidden="true" className="shrink-0 text-q-text-2"/>
+    <span className="min-w-0 flex-1 truncate text-q-caption text-q-text">
+      <span className="font-bold">{meetingsCount(entry.meetings.length)} يُحدَّد يومها خلال هذا الأسبوع</span>
+      <span className="text-q-text-2"> · {preview}</span>
+    </span>
+    <span className="shrink-0 text-q-caption font-bold text-q-link">{open ? "إخفاء" : "عرضها"}</span>
+  </button>;
+}
+
 function WindowBar({ meeting, todayKey, onOpen, detailed = false }: { meeting: Meeting; todayKey: string; onOpen: (id: string) => void; detailed?: boolean }) {
   const tone = toneOf(meeting, todayKey);
   return <button type="button" onClick={() => onOpen(meeting.id)} aria-label={describe(meeting, tone)} title={describe(meeting, tone)}
     className={cn("flex min-h-11 w-full min-w-0 gap-2 rounded-q-control border border-dashed border-q-border-strong bg-q-surface px-2 py-1 text-start transition-colors hover:bg-q-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-q-primary", detailed ? "items-start py-2" : "items-center")}>
     <CalendarDays size={14} aria-hidden="true" className={cn("shrink-0 text-q-text-2", detailed && "mt-1")}/>
     {detailed
-      ? <span className="flex min-w-0 flex-col"><span className="text-q-caption font-bold text-q-text">{meeting.title_ar}</span><span className="text-q-caption text-q-text-2">يوم الانعقاد لم يُحدد · خلال {windowLabel(meeting)}</span></span>
-      : <><span className="min-w-0 truncate text-q-caption font-bold text-q-text">{meeting.title_ar}</span><span className="shrink-0 text-q-caption text-q-text-2">يوم الانعقاد لم يُحدد</span></>}
+      ? <span className="flex min-w-0 flex-col"><span className="text-q-caption font-bold text-q-text">{meetingCompactTitle(meeting)}</span><span className="text-q-caption text-q-text-2">يوم الانعقاد لم يُحدد · خلال {windowLabel(meeting)}</span></span>
+      : <><span className="min-w-0 truncate text-q-caption font-bold text-q-text">{meetingCompactTitle(meeting)}</span><span className="shrink-0 text-q-caption text-q-text-2">لم يُحدد يومه</span></>}
   </button>;
 }
 
