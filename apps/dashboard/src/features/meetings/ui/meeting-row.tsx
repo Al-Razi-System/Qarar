@@ -41,7 +41,7 @@ export function MeetingRow({ meeting, today, onOpen }: { meeting: Meeting; today
   const operationalGroup = meetingOperationalGroup(meeting, today);
   const missed = operationalGroup === "missed";
   const statusLabel = missed
-    ? meeting.status === "draft" ? "فاتت الدورة · تحتاج إجراء" : "فات موعدها"
+    ? meeting.status === "draft" ? "فاتت الدورة · تحتاج إجراء" : "فاتت الدورة — يحتاج إجراء"
     : meetingStatusLabels[meeting.status] ?? "اجتماع";
   const time = meetingTimeLabel(meeting);
   const council = meeting.unit_name_ar ?? meeting.governance_unit_name_ar;

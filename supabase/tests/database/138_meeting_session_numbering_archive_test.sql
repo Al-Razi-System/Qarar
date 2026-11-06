@@ -71,28 +71,42 @@ select is((select array_agg(id order by id) from weekly where status<>'cancelled
 select is((select count(*)::integer from weekly where status<>'cancelled' and quorum_percentage=65),4,'and gives them the new quorum');
 
 -- A session that starts is numbered by the order sessions are held, and keeps it.
+-- A session is only held inside an open cycle, so this council meets weekly from
+-- last week: last week's session is still unheld when this week's opens.
+create temporary table current_council as select api_v2.admin_create_council_v2('مجلس أسبوعي حالي',null,null,'63800000-0000-0000-0000-000000000021',(select (payload->>'id')::uuid from scope_unit),null,null,3,false,null,'63800000-0000-0000-0000-000000000057') payload;
+select api_v2.save_council_meeting_plan_v2((select (payload->>'id')::uuid from current_council),
+  jsonb_build_object('meeting_type_id','63800000-0000-0000-0000-000000000040','recurrence','weekly','first_meeting_date',to_char(current_date-7,'YYYY-MM-DD'),'ends_on',to_char(current_date+14,'YYYY-MM-DD')),'63800000-0000-0000-0000-000000000058');
+create temporary view current_weekly as select id,scheduled_date,status,session_sequence_no,academic_year_start,title_ar,updated_at from qarar_meetings.meetings
+  where governance_unit_id=(select (payload->>'id')::uuid from current_council) order by scheduled_date;
 -- Only an active council opens a session.
-update qarar_core.governance_units set status='active',activated_at=clock_timestamp() where id=(select (payload->>'id')::uuid from weekly_council);
+update qarar_core.governance_units set status='active',activated_at=clock_timestamp() where id=(select (payload->>'id')::uuid from current_council);
 alter table qarar_meetings.meetings disable trigger enforce_ready_meeting_integrity;
-create temporary table started as select id from weekly where scheduled_date='2027-08-30';
-select api_v2.reschedule_meeting_session_v2((select id from started),'2027-08-30','10:00','12:00','onsite',null,null,(select updated_at from weekly where id=(select id from started)));
+create temporary table started as select id,academic_year_start from current_weekly where scheduled_date=current_date;
+create temporary table earlier as select id from current_weekly where scheduled_date=current_date-7;
+select api_v2.reschedule_meeting_session_v2((select id from started),current_date,'10:00','12:00','onsite',null,null,(select updated_at from current_weekly where id=(select id from started)));
 update qarar_meetings.meetings set status='scheduled' where id=(select id from started);
 update qarar_meetings.meetings set status='ready_to_start' where id=(select id from started);
 update qarar_meetings.meetings set status='in_progress' where id=(select id from started);
 alter table qarar_meetings.meetings enable trigger enforce_ready_meeting_integrity;
-select is((select session_sequence_no from weekly where id=(select id from started)),1,'the first session held this year is the first, whatever its date');
-select is((select title_ar from weekly where id=(select id from started)),'الاجتماع الأول لمجلس أسبوعي — أغسطس 2027','and is named so');
-select is((select session_sequence_no from weekly where scheduled_date='2027-08-16'),2,'the earlier session not yet held comes after it');
+select is((select session_sequence_no from current_weekly where id=(select id from started)),1,'the first session held this year is the first, whatever its date');
+select is((select title_ar from current_weekly where id=(select id from started)),
+  qarar_meetings.council_session_title_v2('مجلس أسبوعي حالي',1,current_date),'and is named so');
+select is((select session_sequence_no from current_weekly where id=(select id from earlier)),
+  -- Across the academic year's first week the earlier session belongs to the year before.
+  case when (select academic_year_start from current_weekly where id=(select id from earlier))=(select academic_year_start from started) then 2 else 1 end,
+  'the earlier session not yet held comes after it');
 
--- Rescheduling after invitations went out tells the invitees.
+-- An invitation waits for its session's cycle.
+create temporary table invited as select id from current_weekly where scheduled_date=current_date+7;
 insert into qarar_governance.notification_outbox(organization_id,aggregate_type,aggregate_id,event_type,payload,deduplication_key)
 select '63800000-0000-0000-0000-000000000001','meeting',id,'meeting.invitation.requested',
   jsonb_build_object('meeting_id',id,'recipient_user_id','63800000-0000-0000-0000-000000000011'),'invite-test:'||id
-from weekly where scheduled_date='2027-08-16';
-select api_v2.reschedule_meeting_session_v2((select id from weekly where scheduled_date='2027-08-16'),'2027-08-17','09:00','11:00','online',null,'تعارض مع مناقشات التخرج',(select updated_at from weekly where scheduled_date='2027-08-16'));
-select is((select count(*)::integer from qarar_governance.notification_outbox where event_type='meeting.postponed'
-  and payload->>'recipient_user_id'='63800000-0000-0000-0000-000000000011'
-  and aggregate_id=(select id from weekly where scheduled_date='2027-08-17')),1,'an invitee is told when the session moves');
+from current_weekly where id=(select id from started);
+select is((select count(*)::integer from qarar_governance.notification_outbox where event_type='meeting.invitation.requested'
+  and aggregate_id=(select id from started)),1,'an invitation is queued for a session in its open cycle');
+select throws_ok(format($$insert into qarar_governance.notification_outbox(organization_id,aggregate_type,aggregate_id,event_type,payload,deduplication_key)
+  values('63800000-0000-0000-0000-000000000001','meeting',%L,'meeting.invitation.requested','{}','invite-early')$$,(select id from invited)),
+  '55000',null,'no invitation is queued for next week''s session before its cycle opens');
 
 select ok((select session_sequence_no is not null and academic_year_start is not null from jsonb_to_record(
   (api_v1.search_meetings(null::text,null::text,null::uuid,'2027-08-01'::date,'2027-08-31'::date,10,0)->'items')->0) as x(session_sequence_no integer,academic_year_start date)),
@@ -104,10 +118,11 @@ select is((api_v2.get_meeting_settings_v2()->>'academic_year_start_month')::inte
 select throws_ok($$select api_v2.save_meeting_settings_v2(9,0,null)$$,'22023','مدة الأرشفة يجب أن تكون من 1 إلى 365 يومًا.','an archive delay of zero days is refused');
 select lives_ok($$select api_v2.save_meeting_settings_v2(8,10,null)$$,'a manager saves the settings');
 select throws_ok($$select api_v2.save_meeting_settings_v2(8,15,'2000-01-01')$$,'40001',null,'a stale settings version is refused');
--- With the year starting in August, 17 Aug–13 Sep 2027 is one year; the session
+-- With the year starting in August, 16 Aug–13 Sep 2027 is one year; a session
 -- already held keeps the number and year it was held under.
-select is((select session_sequence_no from weekly where scheduled_date='2027-09-06'),2,'moving the year start to August renumbers the sessions ahead');
-select is((select session_sequence_no::text||' '||academic_year_start from weekly where id=(select id from started)),'1 2026-09-01','a held session keeps its number and year');
+select is((select session_sequence_no from weekly where scheduled_date='2027-09-06'),3,'moving the year start to August renumbers the sessions ahead');
+select is((select session_sequence_no::text||' '||academic_year_start from current_weekly where id=(select id from started)),
+  '1 '||(select academic_year_start from started),'a held session keeps its number and year');
 select set_config('request.jwt.claim.sub','63800000-0000-0000-0000-000000000011',true);
 select throws_ok($$select api_v2.save_meeting_settings_v2(9,30,(select updated_at from qarar_meetings.meeting_settings where organization_id='63800000-0000-0000-0000-000000000001'))$$,
   '42501',null,'a user without meeting management cannot change the settings');

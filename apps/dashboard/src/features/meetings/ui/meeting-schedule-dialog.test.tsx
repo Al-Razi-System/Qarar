@@ -64,3 +64,13 @@ it("needs no reason inside the planned week and keeps a server refusal in place"
   expect(rpc).toHaveBeenCalledWith("reschedule_meeting_session_v2", expect.objectContaining({ p_off_plan_reason: null }));
   expect(screen.getByLabelText("تاريخ الانعقاد")).toHaveValue("2026-10-12");
 });
+
+it("refuses a day inside the next cycle before sending anything", async () => {
+  render(<MeetingScheduleDialog meeting={{ ...planned, next_cycle_start: "2026-11-08" } as never} onClose={vi.fn()} onSaved={vi.fn()}/>);
+  expect(screen.getByText(/آخر يوم يمكن الانعقاد فيه: السبت، 7 نوفمبر 2026/)).toBeVisible();
+  fill("2026-11-09", "10:00", "12:00");
+  fireEvent.change(screen.getByLabelText("سبب الانعقاد خارج أسبوع الدورة"), { target: { value: "تأخر بسبب السفر" } });
+  fireEvent.click(screen.getByRole("button", { name: "حفظ الموعد والمكان" }));
+  expect(await screen.findByText("يقع هذا اليوم في دورة الاجتماع التالية؛ اختر يومًا حتى السبت، 7 نوفمبر 2026.")).toBeVisible();
+  expect(rpc).not.toHaveBeenCalled();
+});

@@ -9,6 +9,23 @@ export function meetingScheduleLabel(meeting: Meeting): string {
 const arabic = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", options);
 function parseDay(key: string) { const [year, month, day] = key.split("-").map(Number); return new Date(year, month - 1, day); }
 
+/** The day before a «YYYY-MM-DD» key, as a key. */
+export function dayBefore(key: string) {
+  const day = parseDay(key); day.setDate(day.getDate() - 1);
+  return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * A plan meeting whose window ended without its session: it can still be held,
+ * on a new day with a stated reason, until the next cycle begins.
+ */
+export function lateCycleMessage(meeting: { status: string; planned_window_end?: string | null; schedule_exception_reason?: string | null; next_cycle_start?: string | null }, today: string) {
+  if (!["draft", "scheduled", "ready_to_start"].includes(meeting.status) || !meeting.planned_window_end || meeting.planned_window_end >= today) return null;
+  if (meeting.schedule_exception_reason) return null;
+  const until = meeting.next_cycle_start ? ` حتى ${dayLabel(dayBefore(meeting.next_cycle_start))}` : "";
+  return `فاتت الدورة — يحتاج إجراء: انتهت فترة دورة هذا الاجتماع في ${dayLabel(meeting.planned_window_end)}. يمكن عقده${until} بعد تحديد موعد جديد وكتابة سبب انعقاده خارج الدورة.`;
+}
+
 /** «الاثنين، 12 أكتوبر 2026». */
 export function dayLabel(key: string) {
   return arabic({ weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(parseDay(key));

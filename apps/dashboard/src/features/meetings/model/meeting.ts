@@ -83,6 +83,8 @@ export type MeetingDetail = Meeting & {
   invitation_summary?: MeetingInvitationSummary;
   cycle_available?: boolean;
   cycle_unavailable_reason?: string | null;
+  /** The day the plan's next cycle begins; from then this meeting is no longer held. */
+  next_cycle_start?: string | null;
 };
 
 export type MeetingInvitationSummary = {
