@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { InstructionEditor } from "@/shared/ui/instruction-editor";
-import { type NamedOption, type Requirements, type ScopeKind, type ScheduleKind, scheduleNames } from "../model/topic-type-requirements";
+import { type NamedOption, type Requirements, type ScopeKind, type ScheduleKind, scheduleNames, seasonText } from "../model/topic-type-requirements";
 import styles from "./topic-types-workspace.module.css";
 
 type Props = { value: Requirements; onChange: (next: Requirements) => void };
@@ -26,7 +26,12 @@ export function TopicTypeScopeEditor({ value, onChange, councils, classes, loadi
 }
 export function TopicTypeRequirementsEditor({ value, onChange, sourceItems, loading, error, onRetry }: Props & { sourceItems: NamedOption[]; loading: boolean; error: string; onRetry: () => void }) {
   const update = <K extends keyof Requirements>(key: K, next: Requirements[K]) => onChange({ ...value, [key]: next });
-  const updateSeasonalDate = (index: number, key: "month" | "day", next: number) => update("seasonalDates", value.seasonalDates.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: next } : item));
+  const updateSeasonalDate = (index: number, key: "month" | "day" | "toMonth" | "toDay", next: number) => update("seasonalDates", value.seasonalDates.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: next } : item));
+  const setSeasonEnd = (index: number, hasEnd: boolean) => update("seasonalDates", value.seasonalDates.map((item, itemIndex) => {
+    if (itemIndex !== index) return item;
+    if (!hasEnd) return { month: item.month, day: item.day };
+    return { ...item, toMonth: item.month, toDay: new Date(Date.UTC(2024, item.month, 0)).getUTCDate() };
+  }));
   return <div className={styles.requirements}>
     <section className={styles.settingsSection}><h3>أسانيد التصنيف</h3><p>اختر بنود الاختصاص التي يستند إليها هذا النوع. يمكن استخدام البند نفسه لأكثر من تصنيف؛ لن تتغير نصوص اللوائح.</p>
       {loading ? <p role="status">جارٍ تحميل البنود النافذة…</p> : error ? <div role="alert" className={styles.error}>{error}<button type="button" onClick={onRetry} className={styles.secondary}>إعادة تحميل الخيارات</button></div> : <SelectionList title="بنود الاختصاص النافذة" options={sourceItems} selected={value.sourceItemIds} onChange={ids => update("sourceItemIds", ids)} empty="لا توجد بنود نشطة منشورة. أضف بندًا ونشّطه من اللوائح والبنود؛ يمكنك حفظ التصنيف كمسودة الآن."/>}
@@ -49,12 +54,17 @@ export function TopicTypeRequirementsEditor({ value, onChange, sourceItems, load
         {value.seasonalDates.map((item, index) => <div className={styles.controlGrid} key={index}>
           <label className={styles.control}>شهر الموعد {index + 1}<input aria-label={`شهر الموعد الموسمي ${index + 1}`} type="number" min={1} max={12} value={item.month} onChange={event => updateSeasonalDate(index, "month", Number(event.target.value))}/></label>
           <label className={styles.control}>يوم الموعد {index + 1}<input aria-label={`يوم الموعد الموسمي ${index + 1}`} type="number" min={1} max={31} value={item.day} onChange={event => updateSeasonalDate(index, "day", Number(event.target.value))}/></label>
+          <label className={styles.toggle}><input type="checkbox" checked={item.toMonth != null} onChange={event => setSeasonEnd(index, event.target.checked)}/><span><strong>فترة وليست يومًا واحدًا</strong><small>يبقى الموضوع مستحقًا حتى نهاية الفترة ولا يتأخر قبلها.</small></span></label>
+          {item.toMonth != null && <>
+            <label className={styles.control}>شهر نهاية الفترة {index + 1}<input aria-label={`شهر نهاية الفترة الموسمية ${index + 1}`} type="number" min={1} max={12} value={item.toMonth} onChange={event => updateSeasonalDate(index, "toMonth", Number(event.target.value))}/></label>
+            <label className={styles.control}>يوم نهاية الفترة {index + 1}<input aria-label={`يوم نهاية الفترة الموسمية ${index + 1}`} type="number" min={1} max={31} value={item.toDay} onChange={event => updateSeasonalDate(index, "toDay", Number(event.target.value))}/></label>
+          </>}
           {value.seasonalDates.length > 1 && <button type="button" className={styles.secondary} onClick={() => update("seasonalDates", value.seasonalDates.filter((_, itemIndex) => itemIndex !== index))}>حذف الموعد</button>}
         </div>)}
         {value.seasonalDates.length < 24 && <button type="button" className={styles.secondary} onClick={() => update("seasonalDates", [...value.seasonalDates, { month: 1, day: 1 }])}>إضافة موعد موسمي</button>}
       </div>}
       {(value.scheduleKind === "monthly_week" || value.scheduleKind === "seasonal") && <div className={styles.controlGrid}><label className={styles.control}>بداية الدورية<input type="date" value={value.startsOn} onChange={event => update("startsOn", event.target.value)}/></label><label className={styles.control}>نهاية الدورية <small>اختياري</small><input type="date" min={value.startsOn} value={value.endsOn} onChange={event => update("endsOn", event.target.value)}/></label></div>}
-      {value.scheduleKind !== "none" && <p className={styles.settingsHint}>{value.scheduleKind === "monthly_week" ? `كل شهر في الأسبوع ${["الأول", "الثاني", "الثالث", "الرابع"][value.week - 1]}` : value.scheduleKind === "seasonal" ? `كل سنة في ${value.seasonalDates.map(item => `${item.day}/${item.month}`).join("، ")}` : value.date || "حدد التاريخ"}{value.endsOn && value.scheduleKind !== "fixed_date" ? `، حتى ${value.endsOn}` : ""}. يحفظ الموعد دون إنشاء اجتماعات تلقائيًا.</p>}
+      {value.scheduleKind !== "none" && <p className={styles.settingsHint}>{value.scheduleKind === "monthly_week" ? `كل شهر في الأسبوع ${["الأول", "الثاني", "الثالث", "الرابع"][value.week - 1]}` : value.scheduleKind === "seasonal" ? `كل سنة في ${seasonText(value.seasonalDates)}` : value.date || "حدد التاريخ"}{value.endsOn && value.scheduleKind !== "fixed_date" ? `، حتى ${value.endsOn}` : ""}. يحفظ الموعد دون إنشاء اجتماعات تلقائيًا.</p>}
       {value.scheduleKind !== "none" && <label className={styles.toggle}><input type="checkbox" checked={value.automaticAgenda} onChange={event => update("automaticAgenda", event.target.checked)}/><span><strong>يضاف مباشرة إلى مقترحات جدول الأعمال</strong><small>يظهر التصنيف النافذ كمقترح لاجتماع المجلس المطابق خلال الموعد المحدد، دون طلب تقديم. المقترح منفصل عن جدول الأعمال المعتمد.</small></span></label>}
     </section>
   </div>;

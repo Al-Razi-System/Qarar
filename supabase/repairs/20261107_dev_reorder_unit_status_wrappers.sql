@@ -1,5 +1,5 @@
--- Development databases only. Safe to run repeatedly; it does nothing once the
--- wrappers are gone.
+-- Development databases only. Safe to run repeatedly: it acts only while the ledger
+-- still holds the two OLD migration numbers, and otherwise does nothing.
 --
 -- Why: the migrations 20261106030000_inactive_council_agenda_preparation_contract
 -- and 20261106031000_inactive_council_route_resolution_and_labels were renumbered
@@ -19,6 +19,14 @@ declare
   v_search regprocedure:=to_regprocedure('qarar_meetings.search_meetings_before_unit_status(text,text,uuid,date,date,integer,integer)');
   v_detail regprocedure:=to_regprocedure('qarar_meetings.get_meeting_detail_before_unit_status(uuid)');
 begin
+  -- Only a database that recorded the OLD numbers has the wrappers in the wrong
+  -- place. After the renumbered migrations ran, the wrappers are correct and
+  -- must stay, so there is nothing to do.
+  if not exists(select 1 from qarar_internal.applied_migrations where version in(
+    '20261106030000_inactive_council_agenda_preparation_contract',
+    '20261106031000_inactive_council_route_resolution_and_labels')) then
+    return;
+  end if;
   if v_search is not null then
     delete from qarar_architecture.function_registry
     where function_oid='qarar_meetings.search_meetings(text,text,uuid,date,date,integer,integer)'::regprocedure;

@@ -5,7 +5,7 @@ import { TopicStagePolicyEditor, defaultStagePolicies, type TopicStagePolicy, ty
 import { GovernancePageHeader } from "@/shared/ui/governance-page-header";
 import styles from "./topic-types-workspace.module.css";
 import { TopicTypesList, type TopicTypeDetail } from "./topic-types-list";
-import { initialRequirements, requirementsError, requirementsPayload, scheduleNames, type NamedOption, type Requirements } from "../model/topic-type-requirements";
+import { initialRequirements, requirementsError, requirementsPayload, scheduleNames, seasonalDatesFromConfig, type NamedOption, type Requirements } from "../model/topic-type-requirements";
 import { TopicTypeScopeEditor, TopicTypeRequirementsEditor } from "./topic-type-requirements-editor";
 import { TopicInstructions } from "./topic-instructions";
 import {
@@ -135,9 +135,7 @@ export function TopicTypesWorkspace() {
       scheduleKind: detail.schedule?.rule_type ?? "none", date: String(config.date ?? ""),
       startsOn: String(config.starts_on ?? ""), endsOn: String(config.ends_on ?? ""),
       week: Number(config.week ?? 1), month: Number(config.month ?? 1), day: Number(config.day ?? 1),
-      seasonalDates: Array.isArray(config.dates) && config.dates.length
-        ? config.dates.map(item => ({ month: Number((item as Record<string, unknown>).month), day: Number((item as Record<string, unknown>).day) }))
-        : [{ month: Number(config.month ?? 1), day: Number(config.day ?? 1) }] });
+      seasonalDates: seasonalDatesFromConfig(config) });
     beginCreating();
   }
   function next() {
