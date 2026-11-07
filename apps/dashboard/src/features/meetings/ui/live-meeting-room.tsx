@@ -497,7 +497,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     { value: "agenda", label: "جدول الأعمال والتصويت", count: pendingVotes.length },
   ];
 
-  const ballots = pendingVotes.slice(0, 1).map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy || Boolean(activeVotingError)} unavailableReason={activeVotingError} onCast={castVote} />);
+  const ballots = pendingVotes.slice(0, 1).map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} onScreen={presenting} busy={busy || Boolean(activeVotingError)} unavailableReason={activeVotingError} onCast={castVote} />);
   const steering = session.viewer.mode !== "member" || session.viewer.can_manage_voting;
   const stageProps = { session, agenda, rounds, decisions, referrals: referrals?.referrals, profiles, profilesError };
 
@@ -525,7 +525,6 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
         fullscreen={session.viewer.can_manage_session ? undefined : { active: fullscreen, onToggle: toggleFullscreen }}
       />
 
-      {presenting && pendingVotes.length > 0 && <InlineMessage tone="info">لديك تصويت مفتوح. أنهِ وضع العرض لتسجيل صوتك دون أن يظهر على الشاشة.</InlineMessage>}
       {!presenting && activeTab !== "agenda" && ballots}
 
       {!presenting && tabs.length > 1 && (

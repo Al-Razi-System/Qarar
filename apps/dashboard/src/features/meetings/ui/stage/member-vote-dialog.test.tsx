@@ -42,3 +42,8 @@ describe("private voting dialog", () => {
     expect(cast).toHaveBeenCalledTimes(1);
   });
 });
+
+it("warns the voter when their screen is the one shown to the room", () => {
+  render(<MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "بند", has_voted: false } as never} busy={false} onScreen onCast={vi.fn()} />);
+  expect(screen.getByText(/شاشتك معروضة الآن على القاعة/)).toBeInTheDocument();
+});

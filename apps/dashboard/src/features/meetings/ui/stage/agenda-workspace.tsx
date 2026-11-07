@@ -190,7 +190,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
       onSummaryDraftChange={(text) => setSummaryDrafts((drafts) => ({ ...drafts, [selected.id]: text }))}
       onUpdateDiscussion={onUpdateDiscussion}
       onEditDecision={(decision) => onEditDecision(decision, selected, flow.closed)}
-      ballot={presenting ? undefined : ballot}
+      ballot={ballot}
       panel={live ? live.panel : undefined}
       onPanelChange={controls && onBroadcast ? (panel) => onBroadcast(selected.id, panel) : undefined}
       panelLockedReason={live && !controls ? `يعرض ${controllerName} هذا القسم على كل الشاشات.` : null}
