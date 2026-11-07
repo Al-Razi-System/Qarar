@@ -7,7 +7,8 @@ import { CalendarDays, ChevronLeft, Clock, FileText, ListChecks, MapPin, Play, R
 import { meetingRpc } from "../api/meetings-client";
 import { meetingJourney, type MeetingJourneyKey } from "../model/meeting-journey";
 import { meetingStatusLabels, meetingStatusTone, type MeetingDetail, type MeetingReadiness, type MeetingStartTiming } from "../model/meeting";
-import { meetingLocationLabel, meetingScheduleLabel, meetingTimeLabel } from "../model/meeting-schedule";
+import { lateCycleMessage, meetingLocationLabel, meetingScheduleLabel, meetingTimeLabel } from "../model/meeting-schedule";
+import { localDateKey } from "../model/meeting-operational-state";
 import { InvitationStatus, InvitationTimingDialog } from "./invitation-timing-dialog";
 import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dialog";
 import { MeetingPreparationConfirmationDialog } from "./meeting-preparation-confirmation-dialog";
@@ -15,6 +16,8 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { InlineMessage } from "@/shared/ui/inline-message";
+import { Dialog } from "@/shared/ui/dialog";
+import { TextArea } from "@/shared/ui/text-area";
 import { JourneyRail } from "@/shared/ui/journey-rail";
 
 export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
@@ -28,6 +31,9 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
   const [invitationOpen, setInvitationOpen] = useState(false);
   const [startTiming, setStartTiming] = useState<MeetingStartTiming | null>(null);
   const [preparationConfirmationOpen, setPreparationConfirmationOpen] = useState(false);
+  const [reactivationOpen, setReactivationOpen] = useState(false);
+  const [reactivationReason, setReactivationReason] = useState("");
+  const [reactivationError, setReactivationError] = useState<string | null>(null);
   const [selectedStageKey, setSelectedStageKey] = useState<MeetingJourneyKey | null>(null);
 
   async function load() {
@@ -36,7 +42,8 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
       const detail = await meetingRpc<MeetingDetail>("get_meeting_detail", { p_meeting_id: meetingId }, { timeoutMs: 12_000 });
       setMeeting(detail);
       setSelectedStageKey(meetingJourney(detail.status).find((step) => step.state === "current")?.key ?? "setup");
-      if (["draft", "scheduled", "ready_to_start"].includes(detail.status)) {
+      // A meeting ahead of its cycle cannot be prepared, so its readiness is not asked for.
+      if (["draft", "scheduled", "ready_to_start"].includes(detail.status) && detail.cycle_available !== false) {
         try { setReadiness(await meetingRpc<MeetingReadiness>("get_meeting_readiness", { p_meeting_id: meetingId }, { timeoutMs: 12_000 })); }
         catch (cause) { setReadiness(null); setError(cause instanceof Error ? `تعذر فحص جاهزية الاجتماع: ${cause.message}` : "تعذر فحص جاهزية الاجتماع."); }
       } else setReadiness(null);
@@ -62,17 +69,21 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
   }
 
   async function reactivateCancelledMeeting() {
-    if (!meeting?.updated_at) return;
-    setBusy(true); setError(null); setSuccess(null);
+    if (!meeting?.updated_at || busy) return;
+    const reason = reactivationReason.trim();
+    if (reason.length < 5) { setReactivationError("اكتب سبب إعادة تفعيل الاجتماع (5 أحرف على الأقل)."); return; }
+    setBusy(true); setReactivationError(null); setError(null); setSuccess(null);
     try {
-      await meetingRpc("reactivate_cancelled_meeting_v2", {
+      await meetingRpc("reactivate_cancelled_meeting_with_reason_v2", {
         p_meeting_id: meeting.id,
+        p_reason: reason,
         p_expected_updated_at: meeting.updated_at,
       });
+      setReactivationOpen(false); setReactivationReason("");
       await load();
       setSuccess("تمت إعادة تفعيل الاجتماع نفسه، ولم يُنشأ اجتماع بديل.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "تعذر إعادة تفعيل الاجتماع.");
+      setReactivationError(cause instanceof Error ? cause.message : "تعذر إعادة تفعيل الاجتماع.");
     } finally { setBusy(false); }
   }
 
@@ -112,7 +123,9 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
   );
 
   const primary = (() => {
-    if (meeting.status === "cancelled" && meeting.capabilities?.can_manage) return <Button pending={busy} pendingLabel="جارٍ إعادة التفعيل…" onClick={() => void reactivateCancelledMeeting()}><RefreshCw size={18}/>إعادة تفعيل الاجتماع</Button>;
+    if (meeting.status === "cancelled" && meeting.capabilities?.can_manage) return <Button onClick={() => { setReactivationError(null); setReactivationOpen(true); }}><RefreshCw size={18}/>إعادة تفعيل الاجتماع</Button>;
+    // Before its cycle opens a plan meeting is for viewing only; the reason sits beside the action.
+    if (meeting.cycle_available === false && ["draft", "scheduled"].includes(meeting.status)) return <span className="flex flex-col gap-1"><Button disabled><ListChecks size={18}/>استكمال الإعداد وجدول الأعمال</Button><span className="text-q-caption text-q-text-2">{meeting.cycle_unavailable_reason}</span></span>;
     if (meeting.status === "draft") return <Link href={`/admin/meetings?manage=${meeting.id}`} className="inline-flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-5 text-q-ui font-bold text-q-on-primary"><ListChecks size={18}/>استكمال الإعداد وجدول الأعمال</Link>;
     if (meeting.status === "scheduled" && meeting.capabilities?.can_send_invitations) return <Button variant={invitationPrepared ? "secondary" : "primary"} disabled={!ready} onClick={() => setInvitationOpen(true)}><Users size={18}/>{invitationPrepared ? "عرض الدعوة المجهزة" : "معاينة الدعوة وتجهيزها"}</Button>;
     if (meeting.status === "ready_to_start" && meeting.capabilities?.can_start_session) return <Button variant="success" pending={busy} pendingLabel="جارٍ التحقق من الموعد…" onClick={() => void startSession(false)}><Play size={18}/>فتح الجلسة</Button>;
@@ -140,9 +153,11 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
     {error && <InlineMessage tone="error">{error}</InlineMessage>}
     {success && <InlineMessage tone="success">{success}</InlineMessage>}
     {meeting.cycle_available === false && meeting.cycle_unavailable_reason && <InlineMessage tone="warning">{meeting.cycle_unavailable_reason}</InlineMessage>}
+    {lateCycleMessage(meeting, localDateKey()) && <InlineMessage tone="warning">{lateCycleMessage(meeting, localDateKey())}{meeting.capabilities?.can_manage && <> <Link href={`/admin/meetings?manage=${meeting.id}`} className="font-bold text-q-link underline">تحديد الموعد الجديد</Link></>}</InlineMessage>}
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,.7fr)]">
       <Card live={meeting.status === "in_progress"}>
         <p className="text-q-caption font-bold text-q-live">{viewingCurrent ? "المرحلة الحالية" : "مرحلة مكتملة للقراءة"}</p><h2 className="mt-1 text-q-h2 font-bold">{selected.label}</h2><p className="mt-2 text-q-ui leading-7 text-q-text-2">{selected.description}</p>
+        {meeting.schedule_exception_reason && <InlineMessage tone="warning" className="mt-4"><strong>منعقد خارج موعد الدورة.</strong> السبب: {meeting.schedule_exception_reason}</InlineMessage>}
         <div className="mt-5 grid gap-3 sm:grid-cols-2"><Fact icon={CalendarDays} label="الموعد" value={meetingScheduleLabel(meeting)}/><Fact icon={Clock} label="الوقت" value={meetingTimeLabel(meeting)}/><Fact icon={MapPin} label="المكان" value={meetingLocationLabel(meeting)}/><Fact icon={ListChecks} label="جدول الأعمال" value={`${meeting.agenda_items?.length ?? 0} بند`}/></div>
         <StageReadingSummary stage={selected.key} meeting={meeting} viewingCurrent={viewingCurrent}/>
         {viewingCurrent && selected.key === "invitation" && meeting.invitation_summary?.prepared && <InvitationStatus summary={meeting.invitation_summary} className="mt-4"/>}
@@ -152,6 +167,14 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
     </div>
     {invitationOpen && meeting.updated_at && <InvitationTimingDialog meetingId={meeting.id} expectedUpdatedAt={meeting.updated_at} startTime={meeting.start_time} endTime={meeting.end_time} invitationSummary={meeting.invitation_summary} onClose={() => setInvitationOpen(false)} onSent={() => void load()}/>}
     {startTiming && <MeetingStartConfirmationDialog timing={startTiming} pending={busy} error={error} onClose={() => setStartTiming(null)} onConfirm={() => void startSession(true)}/>}
+    {reactivationOpen && <Dialog title="إعادة تفعيل الاجتماع" description="يعود الاجتماع الملغى نفسه دون إنشاء اجتماع بديل، ويُحفظ السبب في سجله وسجل التدقيق." onClose={() => { if (!busy) setReactivationOpen(false); }} closeDisabled={busy}
+      footer={<>
+        {reactivationError && <InlineMessage tone="error" className="w-full">{reactivationError}</InlineMessage>}
+        <Button variant="secondary" disabled={busy} onClick={() => setReactivationOpen(false)}>إلغاء</Button>
+        <Button pending={busy} pendingLabel="جارٍ إعادة التفعيل…" onClick={() => void reactivateCancelledMeeting()}>إعادة التفعيل</Button>
+      </>}>
+      <TextArea label="سبب إعادة التفعيل" value={reactivationReason} onChange={(event) => { setReactivationReason(event.target.value); setReactivationError(null); }} maxLength={1000} rows={3}/>
+    </Dialog>}
     {preparationConfirmationOpen && <MeetingPreparationConfirmationDialog pending={busy} error={error} onClose={() => { if (!busy) { setPreparationConfirmationOpen(false); setError(null); } }} onConfirm={() => void (async () => { if (await transition("ready_to_start")) setPreparationConfirmationOpen(false); })()}/>}
   </div>;
 }

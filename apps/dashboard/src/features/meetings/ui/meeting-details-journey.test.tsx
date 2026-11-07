@@ -103,7 +103,7 @@ it("does not offer preparation or session opening for a plan cycle whose window 
     planned_window_start: "2027-06-08",
     planned_window_end: "2027-06-14",
     cycle_available: false,
-    cycle_unavailable_reason: "تبدأ دورة هذا الاجتماع في 2027-06-08.",
+    cycle_unavailable_reason: "لم تبدأ فترة إعداد هذا الاجتماع بعد؛ تبدأ دورته في 8 يونيو 2027.",
     capabilities: { can_send_invitations: true, can_prepare_session: false, can_start_session: false },
   };
   mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail"
@@ -112,7 +112,10 @@ it("does not offer preparation or session opening for a plan cycle whose window 
 
   render(<MeetingDetailsJourney meetingId={futureMeeting.id}/>);
 
-  expect(await screen.findByText("تبدأ دورة هذا الاجتماع في 2027-06-08.")).toBeVisible();
+  // Said above the stage and again beside the disabled action.
+  expect((await screen.findAllByText("لم تبدأ فترة إعداد هذا الاجتماع بعد؛ تبدأ دورته في 8 يونيو 2027."))[0]).toBeVisible();
+  expect(screen.getByRole("button", { name: "استكمال الإعداد وجدول الأعمال" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "معاينة الدعوة وتجهيزها" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "اعتماد جدول الأعمال وتجهيز الاجتماع للبدء" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "فتح الجلسة" })).not.toBeInTheDocument();
 });
@@ -133,16 +136,23 @@ it("lets an authorised chair reactivate the same cancelled meeting without creat
       detailReads += 1;
       return Promise.resolve(detailReads === 1 ? cancelled : { ...cancelled, status: "scheduled", updated_at: "2026-10-30T08:01:00Z" });
     }
-    if (contract === "reactivate_cancelled_meeting_v2") return Promise.resolve({ id: meeting.id, status: "scheduled" });
+    if (contract === "reactivate_cancelled_meeting_with_reason_v2") return Promise.resolve({ id: meeting.id, status: "scheduled" });
     if (contract === "get_meeting_readiness") return Promise.resolve({ ready: true, checks: [] });
     return Promise.reject(new Error(`unexpected contract: ${contract} ${JSON.stringify(params)}`));
   });
 
   render(<MeetingDetailsJourney meetingId={meeting.id}/>);
   fireEvent.click(await screen.findByRole("button", { name: "إعادة تفعيل الاجتماع" }));
+  // A reason is required before anything is sent.
+  fireEvent.click(screen.getByRole("button", { name: "إعادة التفعيل" }));
+  expect(await screen.findByText("اكتب سبب إعادة تفعيل الاجتماع (5 أحرف على الأقل).")).toBeVisible();
+  expect(mocks.rpc).not.toHaveBeenCalledWith("reactivate_cancelled_meeting_with_reason_v2", expect.anything());
+  fireEvent.change(screen.getByLabelText("سبب إعادة التفعيل"), { target: { value: "قرر الرئيس عقد الاجتماع" } });
+  fireEvent.click(screen.getByRole("button", { name: "إعادة التفعيل" }));
 
-  await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("reactivate_cancelled_meeting_v2", {
+  await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("reactivate_cancelled_meeting_with_reason_v2", {
     p_meeting_id: meeting.id,
+    p_reason: "قرر الرئيس عقد الاجتماع",
     p_expected_updated_at: meeting.updated_at,
   }));
   expect(await screen.findByText("تمت إعادة تفعيل الاجتماع نفسه، ولم يُنشأ اجتماع بديل.")).toBeVisible();

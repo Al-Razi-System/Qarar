@@ -31,6 +31,22 @@ describe("CouncilFormDialog", () => {
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({ monthlyWeek: 2, firstMeetingDate: "2026-11-01", createMeetingPlan: true }));
     expect(screen.queryByLabelText("وقت البداية")).not.toBeInTheDocument();
   });
+  it("ينهي الخطة بعدد دورات بدل التاريخ ويحفظ نصابها", async () => {
+    const submit = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<CouncilFormDialog mode="edit" options={options} onClose={vi.fn()} onSubmit={submit} />);
+    await user.type(screen.getByLabelText("اسم المجلس"), "مجلس الكلية");
+    await user.selectOptions(screen.getByLabelText("نوع المجلس"), "type-1");
+    await user.click(screen.getByLabelText(/^إنشاء خطة اجتماعات/));
+    fireEvent.change(screen.getByLabelText("موعد أول اجتماع"), { target: { value: "2026-11-10" } });
+    fireEvent.change(screen.getByLabelText(/^نصاب اجتماعات الخطة/), { target: { value: "60" } });
+    await user.click(screen.getByRole("button", { name: /الإعدادات المتقدمة/ }));
+    await user.selectOptions(screen.getByLabelText("طريقة نهاية الخطة"), "count");
+    expect(screen.queryByLabelText("تاريخ نهاية الخطة")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("عدد الدورات"), { target: { value: "12" } });
+    await user.click(screen.getByRole("button", { name: "حفظ التعديلات" }));
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({ planEndMode: "count", occurrenceCount: 12, planEndsOn: "", quorumPercentage: 60 }));
+  });
   it("يشرح منع إنشاء الخطة لمن لا يملك الصلاحية المؤسسية", () => {
     render(<CouncilFormDialog mode="edit" canCreateMeetingPlan={false} options={options} onClose={vi.fn()} onSubmit={vi.fn()} />);
     expect(screen.getByLabelText(/^إنشاء خطة اجتماعات/)).toBeDisabled();

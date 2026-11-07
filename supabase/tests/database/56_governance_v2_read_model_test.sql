@@ -162,6 +162,15 @@ update qarar_meetings.agenda_items set agenda_status='discussed' where id=(selec
 select is((select status from qarar_governance.topic_schedule_occurrences_v2 where agenda_item_id=(select id from scheduled_item)),'completed','discussing the linked agenda item completes its occurrence');
 select is((select execution_timing from qarar_governance.topic_schedule_occurrences_v2 where agenda_item_id=(select id from scheduled_item)),'late','completion after the due window is retained as late execution');
 select is((select count(*)::int from qarar_audit.audit_logs where entity_id=(select id from qarar_governance.topic_schedule_occurrences_v2 where agenda_item_id=(select id from scheduled_item)) and action in('governance.topic_schedule_occurrence.scheduled','governance.topic_schedule_occurrence.completed')),2,'occurrence assignment and completion are both audited');
+-- The topic's obligation shows the meeting, the day it was discussed, its timing
+-- and the decision issued for its agenda item.
+insert into qarar_decisions.decisions(organization_id,decision_no,topic_id,meeting_id,agenda_item_id,governance_unit_id,decision_text,issued_by_user_id)
+values('56000000-0000-0000-0000-000000000001','DEC-READ-CI',(select id from scheduled_topic),'56000000-0000-0000-0000-000000000050',(select id from scheduled_item),
+  '56000000-0000-0000-0000-000000000011','اعتماد موضوع الاستحقاق الدوري','56000000-0000-0000-0000-000000000002');
+select is(qarar_governance.get_topic_schedule_occurrences_v2((select id from scheduled_topic))->0#>>'{decision,decision_no}','DEC-READ-CI','the obligation links the decision issued for it');
+select is(qarar_governance.get_topic_schedule_occurrences_v2((select id from scheduled_topic))->0#>>'{meeting,meeting_no}','MTG-READ-CI','and the meeting it was discussed in');
+select is(qarar_governance.get_topic_schedule_occurrences_v2((select id from scheduled_topic))->0->>'execution_timing','late','and whether it was on time');
+select ok(qarar_governance.get_topic_schedule_occurrences_v2((select id from scheduled_topic))->0->>'discussed_on' is not null,'and the day it was discussed');
 set local role qarar_governance_executor;
 update qarar_governance.topic_type_authoring_profiles_v2 set submission_mode='manual' where topic_type_version_id='56000000-0000-0000-0000-000000000022';
 select is(jsonb_array_length(qarar_governance.scheduled_agenda_suggestions_v2('56000000-0000-0000-0000-000000000011','2026-11-05')),0,'scheduled manual type is not automatically proposed');

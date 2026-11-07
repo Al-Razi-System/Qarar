@@ -25,31 +25,36 @@ select set_config('request.jwt.claim.role','authenticated',true);
 
 create temporary table scope_unit as select api_v2.admin_create_organizational_unit_v2('كلية المواعيد','63700000-0000-0000-0000-000000000020',null,'63700000-0000-0000-0000-000000000050') payload;
 create temporary table weekly_council as select api_v2.admin_create_council_v2('مجلس أسبوعي',null,null,'63700000-0000-0000-0000-000000000021',(select (payload->>'id')::uuid from scope_unit),null,null,3,false,
-  jsonb_build_object('meeting_type_id','63700000-0000-0000-0000-000000000040','recurrence','weekly','first_meeting_date','2026-11-02','ends_on','2026-11-30'),'63700000-0000-0000-0000-000000000051') payload;
+  jsonb_build_object('meeting_type_id','63700000-0000-0000-0000-000000000040','recurrence','weekly',
+    -- Starts today, so its first cycle (this week) is open for preparation.
+    'first_meeting_date',to_char(current_date,'YYYY-MM-DD'),'ends_on',to_char(current_date+28,'YYYY-MM-DD')),'63700000-0000-0000-0000-000000000051') payload;
 create temporary table monthly_council as select api_v2.admin_create_council_v2('مجلس شهري',null,null,'63700000-0000-0000-0000-000000000021',(select (payload->>'id')::uuid from scope_unit),null,null,3,false,null,'63700000-0000-0000-0000-000000000052') payload;
 select api_v2.save_council_meeting_plan_v2((select (payload->>'id')::uuid from monthly_council),
-  jsonb_build_object('meeting_type_id','63700000-0000-0000-0000-000000000040','recurrence','monthly','monthly_week',2,'first_meeting_date','2026-11-01','ends_on','2027-01-31'),'63700000-0000-0000-0000-000000000053');
+  -- The plan starts this month, so its first cycle is already open for preparation.
+  jsonb_build_object('meeting_type_id','63700000-0000-0000-0000-000000000040','recurrence','monthly','monthly_week',1,
+    'first_meeting_date',to_char(date_trunc('month',current_date),'YYYY-MM-DD'),
+    'ends_on',to_char(date_trunc('month',current_date)+interval '3 months'-interval '1 day','YYYY-MM-DD')),'63700000-0000-0000-0000-000000000053');
 
 create temporary table weekly_plan as select id from qarar_meetings.council_meeting_plans_v2 where governance_unit_id=(select (payload->>'id')::uuid from weekly_council);
 create temporary table monthly_plan as select id from qarar_meetings.council_meeting_plans_v2 where governance_unit_id=(select (payload->>'id')::uuid from monthly_council);
-select is((select count(*)::integer from qarar_meetings.meetings where source_plan_id=(select id from weekly_plan)),5,'the weekly plan holds its five November meetings');
+select is((select count(*)::integer from qarar_meetings.meetings where source_plan_id=(select id from weekly_plan)),5,'the weekly plan holds its five meetings');
 select is((select count(*)::integer from qarar_meetings.meetings where source_plan_id=(select id from weekly_plan) and planned_date is null),0,'every planned meeting records its planned day');
 
-create temporary table weekly_meeting as select id from qarar_meetings.meetings where source_plan_id=(select id from weekly_plan) and scheduled_date='2026-11-09';
+create temporary table weekly_meeting as select id from qarar_meetings.meetings where source_plan_id=(select id from weekly_plan) and scheduled_date=current_date;
 update qarar_meetings.meetings set quorum_percentage=60 where id=(select id from weekly_meeting);
-select throws_ok($$select api_v2.reschedule_meeting_session_v2((select id from weekly_meeting),'2026-11-11','10:00','10:00','onsite',null,null,(select updated_at from qarar_meetings.meetings where id=(select id from weekly_meeting)))$$,
+select throws_ok($$select api_v2.reschedule_meeting_session_v2((select id from weekly_meeting),current_date-extract(dow from current_date)::integer-1,'10:00','10:00','onsite',null,null,(select updated_at from qarar_meetings.meetings where id=(select id from weekly_meeting)))$$,
   '22023','يجب أن يكون وقت النهاية بعد وقت البداية.','an end that is not after the start is refused in Arabic');
-select throws_ok($$select api_v2.reschedule_meeting_session_v2((select id from weekly_meeting),'2026-11-11','10:00','12:00','onsite',null,null,(select updated_at from qarar_meetings.meetings where id=(select id from weekly_meeting)))$$,
+select throws_ok($$select api_v2.reschedule_meeting_session_v2((select id from weekly_meeting),current_date-extract(dow from current_date)::integer-1,'10:00','12:00','onsite',null,null,(select updated_at from qarar_meetings.meetings where id=(select id from weekly_meeting)))$$,
   '22023',null,'moving a planned meeting off its day needs a reason');
-select throws_ok($$select api_v2.reschedule_meeting_session_v2((select id from weekly_meeting),'2026-11-11','10:00','12:00','onsite',null,'بسبب',(select updated_at from qarar_meetings.meetings where id=(select id from weekly_meeting)))$$,
+select throws_ok($$select api_v2.reschedule_meeting_session_v2((select id from weekly_meeting),current_date-extract(dow from current_date)::integer-1,'10:00','12:00','onsite',null,'بسبب',(select updated_at from qarar_meetings.meetings where id=(select id from weekly_meeting)))$$,
   '22023',null,'a reason shorter than five characters is refused');
-select throws_ok($$select api_v2.reschedule_meeting_session_v2((select id from weekly_meeting),'2026-11-11','10:00','12:00','onsite',null,'تعارض مع اختبارات الفصل','2000-01-01')$$,
+select throws_ok($$select api_v2.reschedule_meeting_session_v2((select id from weekly_meeting),current_date-extract(dow from current_date)::integer-1,'10:00','12:00','onsite',null,'تعارض مع اختبارات الفصل','2000-01-01')$$,
   '40001',null,'a stale version is refused');
-select lives_ok($$select api_v2.reschedule_meeting_session_v2((select id from weekly_meeting),'2026-11-11','10:00','12:00','onsite','القاعة الكبرى','تعارض مع اختبارات الفصل',(select updated_at from qarar_meetings.meetings where id=(select id from weekly_meeting)))$$,
+select lives_ok($$select api_v2.reschedule_meeting_session_v2((select id from weekly_meeting),current_date-extract(dow from current_date)::integer-1,'10:00','12:00','onsite','القاعة الكبرى','تعارض مع اختبارات الفصل',(select updated_at from qarar_meetings.meetings where id=(select id from weekly_meeting)))$$,
   'a stated reason lets the meeting move off its planned day');
 select is((select schedule_exception_reason from qarar_meetings.meetings where id=(select id from weekly_meeting)),'تعارض مع اختبارات الفصل','the reason is kept on the meeting');
 select ok((select quorum_percentage=60 and meeting_type_id='63700000-0000-0000-0000-000000000040' and title_ar is not null from qarar_meetings.meetings where id=(select id from weekly_meeting)),'rescheduling leaves the quorum, type and name as they were');
-select is((select planned_date from qarar_meetings.meetings where id=(select id from weekly_meeting)),'2026-11-09'::date,'the planned day stays what the plan intended');
+select is((select planned_date from qarar_meetings.meetings where id=(select id from weekly_meeting)),current_date,'the planned day stays what the plan intended');
 select ok(exists(select 1 from qarar_audit.audit_logs where entity_id=(select id from weekly_meeting) and action='meetings.session.rescheduled'),'the move and its reason are audited');
 select lives_ok($$select qarar_meetings.materialize_council_meeting_plan_v2((select id from weekly_plan))$$,'the plan materializes again after a meeting moved');
 select is((select count(*)::integer from qarar_meetings.meetings where source_plan_id=(select id from weekly_plan)),5,'a moved meeting is not created a second time');

@@ -1,10 +1,10 @@
-export type MeetingOperationalGroup = "upcoming" | "missed" | "live" | "completion" | "completed" | "archived" | "drafts" | "cancelled" | "not_held" | null;
+export type MeetingOperationalGroup = "future" | "upcoming" | "missed" | "live" | "completion" | "completed" | "archived" | "drafts" | "cancelled" | "not_held" | null;
 
 type MeetingStateInput = { status: string; scheduled_date?: string | null; planned_window_start?: string | null; planned_window_end?: string | null };
 
 export function meetingOperationalGroup(meeting: MeetingStateInput, today: string): MeetingOperationalGroup {
   if (["draft", "scheduled", "ready_to_start"].includes(meeting.status)
-    && meeting.planned_window_start && meeting.planned_window_start > today) return null;
+    && meeting.planned_window_start && meeting.planned_window_start > today) return "future";
   if (["scheduled", "ready_to_start"].includes(meeting.status)) {
     return meeting.scheduled_date && meeting.scheduled_date < today ? "missed" : "upcoming";
   }

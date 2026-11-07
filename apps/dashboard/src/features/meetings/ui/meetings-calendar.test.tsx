@@ -33,7 +33,7 @@ it("names every stage in Arabic and marks a past meeting that never opened", () 
     { id: "b", title_ar: "مجلس ب", status: "waiting_for_minutes", scheduled_date: "2026-10-06" },
     { id: "c", title_ar: "مجلس ج", status: "scheduled", scheduled_date: "2026-11-03" },
   ]} />);
-  expect(within(desktop()).getByRole("button", { name: /مجلس أ، فات موعدها، 09:00/ })).toBeVisible();
+  expect(within(desktop()).getByRole("button", { name: /مجلس أ، فاتت الدورة، 09:00/ })).toBeVisible();
   expect(within(desktop()).getByRole("button", { name: /مجلس ب، بانتظار المحضر، الوقت غير محدد/ })).toBeVisible();
   expect(screen.queryByText(/ready_to_start|waiting_for_minutes/)).not.toBeInTheDocument();
 });
@@ -52,4 +52,18 @@ it("shows only the weeks of the month", () => {
   // October 2026 runs from Thursday the 1st to Saturday the 31st: five weeks, no November week.
   expect(within(desktop()).getAllByRole("row")).toHaveLength(1 + 5);
   expect(screen.getByText("لا توجد اجتماعات في هذه الفترة بحسب الفلاتر المختارة.")).toBeVisible();
+});
+
+it("folds many councils waiting for their day in the same week into one bar that opens to each", () => {
+  const councils = ["مجلس قسم الصيدلة", "مجلس قسم التحرير", "مجلس قسم القانون", "مجلس قسم العلاج الطبيعي"];
+  const items = councils.map((council, index) => ({ id: `w${index}`, title_ar: `الاجتماع الأول ل${council} — نوفمبر 2026`, title_is_custom: false, unit_name_ar: council, session_sequence_no: 1,
+    status: "draft", schedule_date_confirmed: false, planned_window_start: "2026-11-01", planned_window_end: "2026-11-07" } as Meeting));
+  render(<MeetingsCalendar {...base} cursor={new Date(2026, 10, 1)} mode="month" onOpen={vi.fn()} items={items} />);
+  const group = within(desktop()).getByRole("button", { name: /4 اجتماعات يُحدَّد يومها خلال هذا الأسبوع/ });
+  expect(group).toHaveAttribute("aria-expanded", "false");
+  expect(within(desktop()).queryByRole("button", { name: /مجلس قسم القانون/ })).toBeNull();
+  fireEvent.click(group);
+  expect(within(desktop()).getByRole("button", { name: /4 اجتماعات/ })).toHaveAttribute("aria-expanded", "true");
+  // Each opens as its own bar, led by the council rather than the repeated ordinal.
+  expect(within(desktop()).getByText("مجلس قسم القانون · الجلسة 1")).toBeVisible();
 });

@@ -99,4 +99,7 @@ export type CouncilFormValues = {
   monthlyWeek?: number | null;
   /** The quorum every meeting of the plan starts with. */
   quorumPercentage: number;
+  /** The plan ends on a date, or after a number of cycles. */
+  planEndMode?: "date" | "count";
+  occurrenceCount?: number;
 };

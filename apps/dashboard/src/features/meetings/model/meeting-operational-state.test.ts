@@ -15,9 +15,9 @@ describe("meetingOperationalGroup", () => {
     expect(meetingOperationalGroup({ status: "not_held", planned_window_end: "2026-10-14" }, "2026-11-08")).toBe("not_held");
   });
 
-  it("لا يضع دورة الخطة المستقبلية في قائمة العمل قبل بداية نافذتها", () => {
-    expect(meetingOperationalGroup({ status: "draft", planned_window_start: "2027-06-08", planned_window_end: "2027-06-14" }, "2026-11-04")).toBeNull();
-    expect(meetingOperationalGroup({ status: "scheduled", scheduled_date: "2027-06-10", planned_window_start: "2027-06-08", planned_window_end: "2027-06-14" }, "2026-11-04")).toBeNull();
+  it("يضع دورة الخطة المستقبلية في تبويبها المستقل قبل بداية نافذتها، لا في قائمة العمل", () => {
+    expect(meetingOperationalGroup({ status: "draft", planned_window_start: "2027-06-08", planned_window_end: "2027-06-14" }, "2026-11-04")).toBe("future");
+    expect(meetingOperationalGroup({ status: "scheduled", scheduled_date: "2027-06-10", planned_window_start: "2027-06-08", planned_window_end: "2027-06-14" }, "2026-11-04")).toBe("future");
     expect(meetingOperationalGroup({ status: "draft", planned_window_start: "2026-11-04", planned_window_end: "2026-11-10" }, "2026-11-04")).toBe("drafts");
   });
 
