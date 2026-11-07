@@ -137,7 +137,9 @@ begin
       'scheduled_date',m.scheduled_date,'planned_window_start',m.planned_window_start,
       'planned_window_end',m.planned_window_end,'schedule_date_confirmed',m.schedule_date_confirmed,
       'start_time',m.start_time,'end_time',m.end_time,'governance_unit_id',m.governance_unit_id,
-      'unit_name_ar',u.name_ar,'governance_unit_status',u.status,
+      'unit_name_ar',u.name_ar,'session_sequence_no',m.session_sequence_no,
+      'academic_year_start',m.academic_year_start,'title_is_custom',m.title_is_custom,
+      'governance_unit_status',u.status,
       'agenda_item_count',(select count(*) from qarar_meetings.agenda_items ai where ai.meeting_id=m.id)
     ) order by coalesce(m.planned_window_start,m.scheduled_date),m.start_time nulls last)
     from qarar_meetings.meetings m

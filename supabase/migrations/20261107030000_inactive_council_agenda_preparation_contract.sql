@@ -163,6 +163,34 @@ begin
 end;
 $$;
 
+-- The grouped meeting search (v2) feeds the meetings list; it carries the same
+-- council status so the list can mark an inactive council beside its name.
+alter function qarar_meetings.search_meetings_v2(text,text,uuid,date,date,integer,integer)
+  rename to search_meetings_v2_before_unit_status;
+
+create function qarar_meetings.search_meetings_v2(
+  p_query text,p_stage text,p_unit_id uuid,p_from_date date,p_to_date date,p_limit integer,p_offset integer
+) returns jsonb language plpgsql stable security definer set search_path=pg_catalog as $$
+declare result jsonb;
+begin
+  result:=qarar_meetings.search_meetings_v2_before_unit_status(
+    p_query,p_stage,p_unit_id,p_from_date,p_to_date,p_limit,p_offset
+  );
+  return jsonb_set(result,'{items}',coalesce((
+    select jsonb_agg(item||jsonb_build_object('governance_unit_status',unit.status))
+    from jsonb_array_elements(result->'items') item
+    left join qarar_core.governance_units unit
+      on unit.id=(item->>'governance_unit_id')::uuid
+      and unit.organization_id=qarar_iam.current_organization_id()
+  ),'[]'::jsonb),true);
+end;
+$$;
+
+alter function qarar_meetings.search_meetings_v2(text,text,uuid,date,date,integer,integer) owner to qarar_meetings_executor;
+revoke all on function qarar_meetings.search_meetings_v2(text,text,uuid,date,date,integer,integer)
+  from public,anon,authenticated,service_role;
+grant execute on function qarar_meetings.search_meetings_v2(text,text,uuid,date,date,integer,integer) to qarar_api_executor;
+
 alter function qarar_governance.list_effective_topic_types_route_v2(uuid,date) owner to qarar_governance_executor;
 alter function qarar_governance.prepare_typed_topic_v2(uuid,uuid) owner to qarar_governance_executor;
 alter function qarar_meetings.search_meetings(text,text,uuid,date,date,integer,integer) owner to qarar_meetings_executor;
@@ -178,7 +206,8 @@ update qarar_architecture.function_registry registry
 set function_name=procedure.proname
 from pg_proc procedure
 where procedure.oid=registry.function_oid
-  and procedure.proname in('search_meetings_before_unit_status','get_meeting_detail_before_unit_status');
+  and procedure.proname in('search_meetings_before_unit_status','get_meeting_detail_before_unit_status',
+    'search_meetings_v2_before_unit_status');
 
 insert into qarar_architecture.function_registry(
   function_oid,function_name,identity_arguments,module_code,owning_schema,is_rls_predicate
@@ -186,7 +215,9 @@ insert into qarar_architecture.function_registry(
   ('qarar_meetings.search_meetings(text,text,uuid,date,date,integer,integer)'::regprocedure,
    'search_meetings','p_query text, p_status text, p_unit_id uuid, p_from_date date, p_to_date date, p_limit integer, p_offset integer','meetings','qarar_meetings',false),
   ('qarar_meetings.get_meeting_detail(uuid)'::regprocedure,
-   'get_meeting_detail','p_meeting_id uuid','meetings','qarar_meetings',false)
+   'get_meeting_detail','p_meeting_id uuid','meetings','qarar_meetings',false),
+  ('qarar_meetings.search_meetings_v2(text,text,uuid,date,date,integer,integer)'::regprocedure,
+   'search_meetings_v2','p_query text, p_stage text, p_unit_id uuid, p_from_date date, p_to_date date, p_limit integer, p_offset integer','meetings','qarar_meetings',false)
 on conflict(function_name,identity_arguments) do update
 set function_oid=excluded.function_oid,
     module_code=excluded.module_code,
