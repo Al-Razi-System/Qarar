@@ -29,13 +29,15 @@ describe("chairActions", () => {
     expect(kinds(item({ agenda_status: "discussed" }), s, [approved]).actions.map((a) => a.kind)).toEqual(["decision"]);
     const done = kinds(item({ agenda_status: "discussed" }), s, [approved], [decision]);
     expect(done.actions).toEqual([]);
-    expect(done.note).toBe("ق-1 · تم إنشاء القرار.");
+    expect(done.note).toMatch(/^ق-1 · تم إنشاء القرار\./);
+    expect(done.note).toMatch(/إضافة تكليف/);
+    expect(done.note).toMatch(/البند التالي/);
   });
 
   it("offers to edit a saved decision only when the server allows it", () => {
     const editable = kinds(item({ agenda_status: "discussed" }), session(), [approved], [{ ...decision, can_edit_text: true }]);
     expect(editable.actions).toEqual([{ kind: "edit_decision", label: "تعديل القرار" }]);
-    expect(editable.note).toBe("ق-1 · تم إنشاء القرار.");
+    expect(editable.note).toMatch(/^ق-1 · تم إنشاء القرار\./);
     expect(kinds(item({ agenda_status: "discussed" }), session(), [approved], [{ ...decision, can_edit_text: false }]).actions).toEqual([]);
   });
 
@@ -76,13 +78,14 @@ describe("chairActions", () => {
 
   it("explains that a tie leaves the topic where it was", () => {
     expect(kinds(item({ agenda_status: "discussed" }), session(), [{ ...approved, result: "tied" }]).note)
-      .toBe("تعادلت الأصوات، فبقي الموضوع في مرحلته من مساره.");
+      .toMatch(/^تعادلت الأصوات، فبقي الموضوع في مرحلته من مساره\./);
   });
 
   it("offers no decision for a rejected result", () => {
     const rejected = kinds(item({ agenda_status: "discussed" }), session(), [{ ...approved, result: "rejected" }]);
     expect(rejected.actions).toEqual([]);
-    expect(rejected.note).toBe("تم توثيق نتيجة التصويت لهذا البند.");
+    expect(rejected.note).toMatch(/^تم توثيق نتيجة التصويت لهذا البند\./);
+    expect(rejected.note).toMatch(/البند التالي/);
   });
 });
 

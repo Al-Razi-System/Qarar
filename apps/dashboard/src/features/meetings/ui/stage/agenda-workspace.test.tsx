@@ -74,6 +74,15 @@ describe("AgendaWorkspace", () => {
     expect(handlers.onUpdateDiscussion).toHaveBeenCalledTimes(1);
   });
 
+  it("lets the guidance be folded away and shown again, so a long item does not lengthen the screen", async () => {
+    setup("member", { agenda: [{ ...first, discussion_instructions: "ابدأ بعرض مبررات البرنامج" }, second] });
+    const user = userEvent.setup();
+    expect(screen.getByRole("region", { name: "تعليمات المناقشة" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "طي المواد" }));
+    expect(screen.queryByRole("region", { name: "تعليمات المناقشة" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "عرض المواد" }));
+    expect(screen.getByRole("region", { name: "تعليمات المناقشة" })).toBeInTheDocument();
+  });
   it("starts the discussion of the item the chair opened, not of another one", async () => {
     const { handlers } = setup("chair", { agenda: [{ ...first, agenda_status: "discussed", requires_voting: false, discussion_notes: "ملخص كافٍ" }, second] });
     await userEvent.click(screen.getByRole("button", { name: "بدء المناقشة" }));

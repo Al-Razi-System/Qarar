@@ -139,9 +139,9 @@ export function chairActions(
     actions.push({ kind: "decision", label: "صياغة القرار المعتمد" });
   } else if (flow.decision) {
     if (flow.decision.can_edit_text) actions.push({ kind: "edit_decision", label: "تعديل القرار" });
-    note = `${flow.decision.decision_no} · تم إنشاء القرار.`;
+    note = `${flow.decision.decision_no} · تم إنشاء القرار. ${nextStepAfterResult(item, flow.closed)} يمكنك إضافة تكليف من «إضافة تكليف».`;
   } else if (flow.closed) {
-    note = flow.closed.result === "tied" ? "تعادلت الأصوات، فبقي الموضوع في مرحلته من مساره." : "تم توثيق نتيجة التصويت لهذا البند.";
+    note = `${flow.closed.result === "tied" ? "تعادلت الأصوات، فبقي الموضوع في مرحلته من مساره." : "تم توثيق نتيجة التصويت لهذا البند."} ${nextStepAfterResult(item, flow.closed)}`;
   } else if (status === "discussed" && flow.hasVoting) {
     // Every item is decided by the members' vote once its discussion ends. When the
     // topic's route cannot take a vote, the server says why and the chair may postpone.
@@ -162,6 +162,13 @@ export function chairActions(
   }
 
   return { actions, note };
+}
+
+/** What remains before the council moves on, so the chair is never left without a next step. */
+function nextStepAfterResult(item: AgendaDiscussionItem, closed: VotingRound | null | undefined) {
+  return finalSummaryReady(item, closed)
+    ? "اكتملت خطوات البند، وينتقل المجلس تلقائيًا إلى البند التالي."
+    : "احفظ ملخص النتائج والتوصيات (من المقرر أو الرئيس) لينتقل المجلس تلقائيًا إلى البند التالي.";
 }
 
 /** Everything that still stops the chair from ending the session, in agenda order. */

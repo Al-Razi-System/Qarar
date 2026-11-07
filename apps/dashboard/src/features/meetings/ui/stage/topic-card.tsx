@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Expand, Info, Timer } from "lucide-react";
+import { ChevronDown, ChevronUp, Expand, Info, Timer } from "lucide-react";
 import { OverflowMenu } from "@/shared/ui/overflow-menu";
 import { PlannedMinutesSelect, type PlannedMinutesControl } from "./item-timer";
 import { InstructionContent } from "@/shared/content/instruction-content";
@@ -72,6 +72,8 @@ type Props = {
 export function TopicCard({ item, total, flow, state, session, attachments, history, busy, presenting, summaryDraft, onSummaryDraftChange, onUpdateDiscussion, onEditDecision, ballot, className, panel, onPanelChange, panelLockedReason, document, onDocumentChange, controllerName, downloads, timer, assignments, durationPlan }: Props) {
   const [chosenTab, setChosenTab] = useState<ReferenceTab | null>(null);
   const [expanded, setExpanded] = useState(false);
+  // Folds the guidance, files and history away so a long item does not lengthen the screen.
+  const [folded, setFolded] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
   const [durationOpen, setDurationOpen] = useState(false);
   const [localDocument, setLocalDocument] = useState<{ attachmentId: string | null; page: number } | null>(null);
@@ -177,13 +179,18 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
               </div>
             )}
             {tab && (
+              <button type="button" onClick={() => setFolded(!folded)} aria-expanded={!folded} aria-label={folded ? "عرض المواد" : "طي المواد"} className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-q-control border border-q-border bg-q-surface px-3 font-sans text-q-ui font-bold text-q-link hover:bg-q-surface-2">
+                {folded ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronUp size={16} aria-hidden="true" />}{folded ? "عرض" : "طي"}
+              </button>
+            )}
+            {tab && !folded && (
               <button type="button" onClick={() => setExpanded(true)} aria-label={expandLabel} title={expandLabel} className={cn("inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-q-control border border-q-border bg-q-surface px-3 font-sans text-q-caption font-bold text-q-link hover:bg-q-surface-2", tabs.length === 1 && "ms-auto")}>
                 <Expand size={16} aria-hidden="true" />تكبير
               </button>
             )}
           </div>
           {locked && <p className="m-0 text-q-caption text-q-text-2">{panelLockedReason}</p>}
-          {!expanded && materials}
+          {!expanded && !folded && materials}
           {expanded && <Dialog size="full" title={`${tab === "instructions" ? "تعليمات المناقشة" : tab === "attachments" ? "مرفقات الموضوع" : "القرارات السابقة"} — ${item.topic?.title_ar ?? "بند جدول الأعمال"}`} onClose={() => setExpanded(false)}
             footer={<Button variant="secondary" onClick={() => setExpanded(false)}>إغلاق العرض الموسع</Button>}>
             {locked && <p className="m-0 text-q-caption text-q-text-2">{panelLockedReason}</p>}
