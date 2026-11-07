@@ -279,13 +279,21 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
   async function perform(action: () => Promise<unknown>, success: string) {
     setBusy(true);
     setNotice(null);
+    let done = false;
     try {
       await action();
+      done = true;
       setNotice({ kind: "success", text: success });
       await load(true, true);
       return true;
     } catch (error) {
-      setNotice({ kind: "error", text: messageOf(error, "تعذر تنفيذ العملية.") });
+      // The action may have reached the server even when the answer or the refresh did not
+      // come back, so the screen is always re-read, and the notice says which part failed.
+      if (done) { setNotice({ kind: "error", text: `${success} لكن تعذر تحديث الشاشة؛ حدّث الصفحة للتأكد من الحالة.` }); return true; }
+      const message = messageOf(error, "تعذر تنفيذ العملية.");
+      const alreadyDone = /مفتوحة في هذا الاجتماع|مفتوح على هذا البند/.test(message);
+      setNotice({ kind: alreadyDone ? "success" : "error", text: alreadyDone ? "التصويت مفتوح فعلاً؛ حُدّثت الشاشة لإظهاره." : message });
+      void load(true, true).catch(() => undefined);
       return false;
     }
     finally { setBusy(false); }
