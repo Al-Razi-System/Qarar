@@ -51,6 +51,8 @@
 .settingsSection summary small { margin-inline-start:8px; font-weight:400; color:var(--qarar-text-secondary); }
 .control small { font-weight:400; color:var(--qarar-text-secondary); font-size:12px; }
 .controlGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.seasonItem { display:grid; gap:12px; padding-block:12px; }
+.seasonItem + .seasonItem { border-top:1px solid var(--q-border); }
 .selectionList { min-width:0; border:1px solid #dce5ee; border-radius:12px; padding:12px; margin:20px 0 0; }
 .selectionList legend { font-size:13px; padding:0 6px; }
 .selectionList legend>span { margin-inline-start:12px; color:var(--qarar-primary); }

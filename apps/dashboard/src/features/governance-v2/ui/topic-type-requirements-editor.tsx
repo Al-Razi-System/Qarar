@@ -51,14 +51,16 @@ export function TopicTypeRequirementsEditor({ value, onChange, sourceItems, load
       {value.scheduleKind === "fixed_date" && <label className={styles.control}>تاريخ مناقشة الموضوع<input type="date" value={value.date} onChange={event => update("date", event.target.value)}/></label>}
       {value.scheduleKind === "monthly_week" && <label className={styles.control}>الأسبوع الشهري<select aria-label="الأسبوع الشهري" value={value.week} onChange={event => update("week", Number(event.target.value))}>{["الأول · من 1 إلى 7", "الثاني · من 8 إلى 14", "الثالث · من 15 إلى 21", "الرابع · من 22 إلى نهاية الشهر"].map((name, index) => <option key={name} value={index + 1}>{name}</option>)}</select></label>}
       {value.scheduleKind === "seasonal" && <div>
-        {value.seasonalDates.map((item, index) => <div className={styles.controlGrid} key={index}>
+        {value.seasonalDates.map((item, index) => <div className={styles.seasonItem} key={index}>
+          <div className={styles.controlGrid}>
           <label className={styles.control}>شهر الموعد {index + 1}<input aria-label={`شهر الموعد الموسمي ${index + 1}`} type="number" min={1} max={12} value={item.month} onChange={event => updateSeasonalDate(index, "month", Number(event.target.value))}/></label>
           <label className={styles.control}>يوم الموعد {index + 1}<input aria-label={`يوم الموعد الموسمي ${index + 1}`} type="number" min={1} max={31} value={item.day} onChange={event => updateSeasonalDate(index, "day", Number(event.target.value))}/></label>
+          </div>
           <label className={styles.toggle}><input type="checkbox" checked={item.toMonth != null} onChange={event => setSeasonEnd(index, event.target.checked)}/><span><strong>فترة وليست يومًا واحدًا</strong><small>يبقى الموضوع مستحقًا حتى نهاية الفترة ولا يتأخر قبلها.</small></span></label>
-          {item.toMonth != null && <>
+          {item.toMonth != null && <div className={styles.controlGrid}>
             <label className={styles.control}>شهر نهاية الفترة {index + 1}<input aria-label={`شهر نهاية الفترة الموسمية ${index + 1}`} type="number" min={1} max={12} value={item.toMonth} onChange={event => updateSeasonalDate(index, "toMonth", Number(event.target.value))}/></label>
             <label className={styles.control}>يوم نهاية الفترة {index + 1}<input aria-label={`يوم نهاية الفترة الموسمية ${index + 1}`} type="number" min={1} max={31} value={item.toDay} onChange={event => updateSeasonalDate(index, "toDay", Number(event.target.value))}/></label>
-          </>}
+          </div>}
           {value.seasonalDates.length > 1 && <button type="button" className={styles.secondary} onClick={() => update("seasonalDates", value.seasonalDates.filter((_, itemIndex) => itemIndex !== index))}>حذف الموعد</button>}
         </div>)}
         {value.seasonalDates.length < 24 && <button type="button" className={styles.secondary} onClick={() => update("seasonalDates", [...value.seasonalDates, { month: 1, day: 1 }])}>إضافة موعد موسمي</button>}
