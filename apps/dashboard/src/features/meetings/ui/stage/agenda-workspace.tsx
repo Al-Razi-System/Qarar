@@ -174,7 +174,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
   const assignmentNeedsDecision = !flow.decision && manager && !presenting && Boolean(assignments?.data && (assignments.data.viewer.can_issue || assignments.data.viewer.can_propose));
   const decisionTools = assignmentNeedsDecision ? <div className="flex flex-wrap items-center gap-2">
     <Button variant="secondary" disabled>{assignments?.data?.viewer.can_issue ? "إضافة تكليف" : "اقتراح تكليف"}</Button>
-    <span className="text-q-caption text-q-text-2">يرتبط التكليف بقرار البند؛ يُتاح بعد حفظ قرار معتمد له.</span>
+    <span className="text-q-caption text-q-text-2">{flow.hasVoting ? "يرتبط التكليف بقرار البند؛ يُتاح بعد حفظ قرار معتمد له." : "هذا البند للمناقشة فقط بلا تصويت، فلا يصدر له قرار ولا يُبنى عليه تكليف. أضف الموضوع بخيار «يتطلب تصويت المجلس» إن أردت قراراً وتكليفاً."}</span>
   </div> : flow.decision && !presenting && assignments ? <div className="flex flex-wrap items-center gap-2">
     {assignments.error ? <><span className="text-q-caption text-q-danger">{assignments.error}</span><Button variant="secondary" onClick={assignments.onRetry}>إعادة تحميل التكليفات</Button></> : assignments.data && (assignments.data.viewer.can_issue || assignments.data.viewer.can_propose) && assignments.data.options && <Button variant="secondary" disabled={busy} onClick={() => setAssignmentEditorItemId(selected.id)}>{assignments.data.viewer.can_issue ? "إضافة تكليف" : "اقتراح تكليف"}</Button>}
   </div> : null;

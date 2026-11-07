@@ -236,7 +236,9 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
 
       {canWrite && options && open && <Dialog title={viewer.can_issue ? "إضافة تكليف" : "اقتراح تكليف"} description="يرتبط بالقرار الحالي؛ حدد المطلوب والمكلَّف ومن يتابع التنفيذ." size="lg" scrollContent closeDisabled={busy} onClose={() => changeOpen(false)}>
         <form onSubmit={(event) => void submit(event)} aria-label="تكليف جديد" className="flex flex-col gap-3 rounded-q-control bg-q-surface-2 p-3">
-          <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
+          <section className="flex flex-col gap-3 rounded-q-control border border-q-border bg-q-surface p-4">
+            <header><h3 className="m-0 flex items-center gap-2 text-q-ui font-bold text-q-text"><span aria-hidden="true" className="grid h-6 w-6 place-items-center rounded-full bg-q-primary text-q-caption text-q-on-primary">١</span>ما المطلوب؟</h3><p className="m-0 mt-1 text-q-caption text-q-text-2">اكتب المطلوب عمله بجملة واضحة.</p></header>
+          <label className="flex flex-col gap-1 text-q-ui font-bold text-q-text">
             عنوان التكليف
             <input
               value={title}
@@ -246,8 +248,10 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
               className="h-11 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-normal text-q-text"
             />
           </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <AssignmentPersonPicker
+          </section>
+          <section className="flex flex-col gap-3 rounded-q-control border border-q-border bg-q-surface p-4">
+            <header><h3 className="m-0 flex items-center gap-2 text-q-ui font-bold text-q-text"><span aria-hidden="true" className="grid h-6 w-6 place-items-center rounded-full bg-q-primary text-q-caption text-q-on-primary">٢</span>من المكلَّف؟</h3><p className="m-0 mt-1 text-q-caption text-q-text-2">اختر شخصاً أو جهة، أو استهدف نوع جهة بالكامل. يمكن الجمع بين أكثر من مكلَّف.</p></header>
+          <AssignmentPersonPicker
               key={`target-${targets.length}`}
               label="إضافة شخص أو جهة"
               value=""
@@ -267,24 +271,13 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
                 return users.map((user) => user);
               }}
             />
-            <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
-              موعد الإنجاز (اختياري)
-              <input
-                type="date"
-                value={dueDate}
-                min={today()}
-                disabled={busy}
-                onChange={(event) => setDueDate(event.target.value)}
-                className="h-11 rounded-q-control border border-q-border bg-q-surface px-2 text-q-ui font-normal text-q-text"
-              />
-            </label>
-            <AssignmentPersonPicker label="المتابع" value={followUp} initial={options.users} disabled={busy} onChange={setFollowUp} onSearch={searchUsers} />
-            <label className="flex min-h-11 items-center gap-2 self-end text-q-ui text-q-text">
-              <input type="checkbox" checked={requiresEvidence} disabled={busy} onChange={(event) => setRequiresEvidence(event.target.checked)} className="h-5 w-5 accent-q-primary" />
-              يتطلب أدلة إنجاز
-            </label>
-          </div>
-          <div className="grid gap-3 rounded-q-control border border-q-border bg-q-surface p-3 sm:grid-cols-3">
+          {targets.length > 0 && <div aria-label="المستهدفون المختارون" className="flex flex-wrap gap-2">
+            {targets.map((target) => {
+              const key = `${target.kind}:${target.id}:${target.scopeUnitId ?? ""}`;
+              return <button key={key} type="button" disabled={busy} onClick={() => setTargets((current) => current.filter((item) => `${item.kind}:${item.id}:${item.scopeUnitId ?? ""}` !== key))} className="rounded-q-pill border border-q-primary bg-q-primary-soft px-3 py-2 text-q-caption font-bold text-q-primary">{target.label} ×</button>;
+            })}
+          </div>}
+          <div className="grid gap-3 rounded-q-control bg-q-surface-2 p-3 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
               أو استهدف نوع جهة بالكامل
               <select value={targetType} disabled={busy} onChange={(event) => setTargetType(event.target.value)} className="h-11 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-normal text-q-text">
@@ -305,12 +298,28 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
               if (type) addTarget({ kind: "unit_type", id: type.id, scopeUnitId: targetScope || null, label: scope ? `${type.name_ar} ضمن ${scope.name_ar}` : `كل ${type.name_ar}` });
             }}>إضافة النوع</Button>
           </div>
-          {targets.length > 0 && <div aria-label="المستهدفون المختارون" className="flex flex-wrap gap-2">
-            {targets.map((target) => {
-              const key = `${target.kind}:${target.id}:${target.scopeUnitId ?? ""}`;
-              return <button key={key} type="button" disabled={busy} onClick={() => setTargets((current) => current.filter((item) => `${item.kind}:${item.id}:${item.scopeUnitId ?? ""}` !== key))} className="rounded-q-pill border border-q-primary bg-q-primary-soft px-3 py-2 text-q-caption font-bold text-q-primary">{target.label} ×</button>;
-            })}
-          </div>}
+          </section>
+          <section className="flex flex-col gap-3 rounded-q-control border border-q-border bg-q-surface p-4">
+            <header><h3 className="m-0 flex items-center gap-2 text-q-ui font-bold text-q-text"><span aria-hidden="true" className="grid h-6 w-6 place-items-center rounded-full bg-q-primary text-q-caption text-q-on-primary">٣</span>من يتابع وبأي شروط؟</h3><p className="m-0 mt-1 text-q-caption text-q-text-2">المتابع هو من يتحقق من الإنجاز.</p></header>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <AssignmentPersonPicker label="المتابع" value={followUp} initial={options.users} disabled={busy} onChange={setFollowUp} onSearch={searchUsers} />
+            <label className="flex min-h-11 items-center gap-2 self-end text-q-ui text-q-text">
+              <input type="checkbox" checked={requiresEvidence} disabled={busy} onChange={(event) => setRequiresEvidence(event.target.checked)} className="h-5 w-5 accent-q-primary" />
+              يتطلب أدلة إنجاز
+            </label>
+            <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
+              موعد الإنجاز (اختياري)
+              <input
+                type="date"
+                value={dueDate}
+                min={today()}
+                disabled={busy}
+                onChange={(event) => setDueDate(event.target.value)}
+                className="h-11 rounded-q-control border border-q-border bg-q-surface px-2 text-q-ui font-normal text-q-text"
+              />
+            </label>
+          </div>
+          </section>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="submit" disabled={Boolean(missing)} pending={activity.key === NEW_ASSIGNMENT_KEY} pendingLabel="جارٍ الحفظ…">
               {viewer.can_issue ? "إصدار التكليف" : "اقتراح التكليف"}
