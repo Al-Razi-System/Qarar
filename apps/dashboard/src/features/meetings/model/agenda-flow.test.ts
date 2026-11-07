@@ -111,6 +111,19 @@ describe("agenda state and focus", () => {
   });
 });
 
+describe("moving on after an item's discussion", () => {
+  it("does not return to an earlier item that only lacks its summary", () => {
+    const first = item({ agenda_status: "discussed", requires_voting: false, discussion_notes: undefined });
+    const second = item({ id: "a2", agenda_order: 2, agenda_status: "under_discussion", requires_voting: false });
+    const third = item({ id: "a3", agenda_order: 3, requires_voting: false });
+    expect(activeAgendaItemId(session(), [first, second, third], [], [])).toBe("a2");
+    const secondDone = { ...second, agenda_status: "discussed", discussion_notes: "ملخص كافٍ" };
+    expect(activeAgendaItemId(session(), [first, secondDone, third], [], [])).toBe("a3");
+    const thirdDone = { ...third, agenda_status: "discussed", discussion_notes: "ملخص كافٍ" };
+    expect(activeAgendaItemId(session(), [first, secondDone, thirdDone], [], [])).toBe("a1");
+  });
+});
+
 describe("postponed items", () => {
   it("need no vote: they neither hold the focus nor block the end of the session", () => {
     const postponed = item({ agenda_status: "postponed", discussion_notes: "سبب التأجيل" });

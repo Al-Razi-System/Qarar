@@ -166,7 +166,15 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
           {canEditDecision && <p className="m-0 text-q-caption text-q-text-2">هذا النص الرسمي للقرار؛ يعدّله الرئيس والمقرر إلى اعتماد المحضر. ملخص المناقشة مستقل عنه.</p>}
         </section>
       )}
-      {decision && assignments}
+      {decision && assignments && (
+        <details open className="group rounded-q-control border border-q-border bg-q-surface">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 text-q-ui font-bold text-q-text">
+            <span>التكليفات والمهام</span>
+            <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="flex flex-col gap-3 border-t border-q-border p-4">{assignments}</div>
+        </details>
+      )}
 
       {tabs.length === 0 ? (
         <p className="m-0 rounded-q-control bg-q-surface-2 p-3 text-q-ui text-q-text-2">لا تعليمات ولا مرفقات ولا قرارات سابقة مسجلة لهذا الموضوع.</p>

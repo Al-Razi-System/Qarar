@@ -476,11 +476,11 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
     } finally { setDetailLoading(false); }
   }
 
-  async function addDirectAgendaTopic(input: { requestId: string; title: string; description: string; priority: "low" | "medium" | "high" | "urgent"; requiresVoting: boolean }) {
+  async function addDirectAgendaTopic(input: { requestId: string; title: string; description: string; priority: "low" | "medium" | "high" | "urgent"; requiresVoting: boolean; files?: File[] }) {
     if (!selected) return;
     setDirectTopicPending(true); setDirectTopicError(null);
     try {
-      await rpc("create_direct_agenda_topic_v2", {
+      const created = await rpc<{ topic_id?: string }>("create_direct_agenda_topic_v2", {
         p_meeting_id: selected.id,
         p_title_ar: input.title,
         p_description: input.description || null,
@@ -489,8 +489,19 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
         p_client_request_id: input.requestId,
       });
       setDirectTopicModal(false);
+      // The topic exists from here on; a file that fails is reported, never lost silently.
+      const failed: string[] = [];
+      for (const file of input.files ?? []) {
+        const body = new FormData(); body.set("topicId", created?.topic_id ?? ""); body.set("file", file);
+        try {
+          const response = await fetch("/api/admin/topics/upload", { method: "POST", body });
+          const result = await response.json().catch(() => null);
+          if (!response.ok || !result?.data?.attachment) failed.push(`${file.name}: ${result?.error?.message ?? "تعذر تأكيد الرفع"}`);
+        } catch { failed.push(`${file.name}: انقطع الاتصال`); }
+      }
       await openDetail(selected.id);
       await loadMeetings({ background: true });
+      if (failed.length) { setNotice({ kind: "error", text: `أُضيف الموضوع، لكن تعذر رفع ${failed.length} من مرفقاته: ${failed.join("؛ ")}. أعد رفعها من تفاصيل الموضوع.` }); return; }
       setNotice({ kind: "success", text: input.requiresVoting ? "أُضيف الموضوع المباشر مع التصويت إلى جدول الأعمال." : "أُضيف موضوع المناقشة المباشر إلى جدول الأعمال." });
     } catch (err) {
       setDirectTopicError(meetingErrorMessage(err, "تعذر إضافة الموضوع المباشر."));

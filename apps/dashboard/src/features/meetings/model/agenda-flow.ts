@@ -60,13 +60,24 @@ export function activeAgendaItemId(session: LiveMeetingSession, ordered: AgendaD
     || rounds.some((round) => round.agenda_item_id === item.id && round.status === "open")
     || session.open_voting_rounds.some((round) => round.agenda_item_id === item.id));
   if (inProgress) return inProgress.id;
-  const blocked = ordered.find((item) => {
+  // Work still to run (a discussion, a vote) comes before paperwork left behind on
+  // an earlier item (its summary or decision text), so ending an item's discussion
+  // moves the council forward instead of back to an earlier item.
+  const runs = (item: AgendaDiscussionItem) => {
     const closed = latestClosedRound(rounds, item.id);
     return !["discussed", "postponed"].includes(item.agenda_status ?? "pending")
-      || !finalSummaryReady(item, closed)
-      || (item.requires_voting && item.agenda_status !== "postponed" && !closed && !isReferred(item, referrals))
+      || (item.requires_voting && item.agenda_status !== "postponed" && !closed && !isReferred(item, referrals));
+  };
+  const paperwork = (item: AgendaDiscussionItem) => {
+    const closed = latestClosedRound(rounds, item.id);
+    return !finalSummaryReady(item, closed)
       || (closed?.result === "approved" && !decisions.some((decision) => decision.agenda_item_id === item.id));
-  });
+  };
+  // Paperwork of the item the council has just worked on keeps the focus (its summary,
+  // its decision and assignments); paperwork left on an item before it does not pull
+  // the council back, and only comes up again when nothing else is left.
+  const furthest = ordered.reduce((last, item, index) => (item.agenda_status ?? "pending") !== "pending" ? index : last, -1);
+  const blocked = ordered.find((item, index) => runs(item) || (index >= furthest && paperwork(item))) ?? ordered.find(paperwork);
   return blocked?.id ?? null;
 }
 
