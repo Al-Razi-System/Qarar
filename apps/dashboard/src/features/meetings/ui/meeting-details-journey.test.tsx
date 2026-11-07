@@ -159,6 +159,40 @@ it("lets an authorised chair reactivate the same cancelled meeting without creat
   expect(detailReads).toBe(2);
 });
 
+it("lets the chair resume a postponed meeting with a reason, in place and by its own contract", async () => {
+  let detailReads = 0;
+  const postponed = { ...meeting, status: "postponed", capabilities: { can_resume_postponed: true, resume_postponed_block: null } };
+  mocks.rpc.mockImplementation((contract: string, params: Record<string, unknown>) => {
+    if (contract === "get_meeting_detail") {
+      detailReads += 1;
+      return Promise.resolve(detailReads === 1 ? postponed : { ...postponed, status: "in_progress", updated_at: "2026-10-30T08:01:00Z" });
+    }
+    if (contract === "resume_postponed_meeting_v2") return Promise.resolve({ id: meeting.id, status: "in_progress" });
+    if (contract === "get_meeting_readiness") return Promise.resolve({ ready: true, checks: [] });
+    return Promise.reject(new Error(`unexpected contract: ${contract} ${JSON.stringify(params)}`));
+  });
+  render(<MeetingDetailsJourney meetingId={meeting.id}/>);
+  expect(await screen.findByText("مؤجلة")).toBeVisible();
+  fireEvent.click(await screen.findByRole("button", { name: "إعادة استكمال الاجتماع" }));
+  fireEvent.click(screen.getByRole("button", { name: "إعادة الاستكمال" }));
+  expect(await screen.findByText("اكتب سبب إعادة استكمال الاجتماع (5 أحرف على الأقل).")).toBeVisible();
+  expect(mocks.rpc).not.toHaveBeenCalledWith("resume_postponed_meeting_v2", expect.anything());
+  fireEvent.change(screen.getByLabelText("سبب إعادة الاستكمال"), { target: { value: "التأجيل كان بالخطأ" } });
+  fireEvent.click(screen.getByRole("button", { name: "إعادة الاستكمال" }));
+  await waitFor(() => expect(mocks.rpc).toHaveBeenCalledWith("resume_postponed_meeting_v2", {
+    p_meeting_id: meeting.id, p_reason: "التأجيل كان بالخطأ", p_expected_updated_at: meeting.updated_at,
+  }));
+  expect(await screen.findByText(/أُعيد استكمال الاجتماع من خطوة ما قبل التأجيل/)).toBeVisible();
+});
+
+it("explains beside a disabled resume action why a postponed meeting cannot be resumed", async () => {
+  const postponed = { ...meeting, status: "postponed", capabilities: { can_resume_postponed: false, resume_postponed_block: "بدأت دورة الاجتماع التالية في 8 نوفمبر 2026؛ لم يعد هذا الاجتماع قابلًا للاستكمال." } };
+  mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail" ? Promise.resolve(postponed) : Promise.resolve({ ready: true, checks: [] }));
+  render(<MeetingDetailsJourney meetingId={meeting.id}/>);
+  expect(await screen.findByRole("button", { name: "إعادة استكمال الاجتماع" })).toBeDisabled();
+  expect(screen.getByText(/بدأت دورة الاجتماع التالية/)).toBeVisible();
+});
+
 it("confirms an off-schedule start before opening the live room", async () => {
   const readyMeeting = {
     ...meeting,

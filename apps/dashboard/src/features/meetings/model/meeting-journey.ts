@@ -19,6 +19,7 @@ const stageByStatus: Record<string, MeetingJourneyKey> = {
   closed: "follow_up",
   archived: "follow_up",
   cancelled: "setup",
+  postponed: "session",
   not_held: "setup",
 };
 

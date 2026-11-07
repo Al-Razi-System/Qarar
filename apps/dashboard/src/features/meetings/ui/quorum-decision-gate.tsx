@@ -16,6 +16,7 @@ export function QuorumDecisionGate({ session, busy, onChoose }: {
   const [dismissed, setDismissed] = useState(false);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [confirmingPostpone, setConfirmingPostpone] = useState(false);
   const sending = useRef(false);
   const canChoose = session.viewer.can_decide_quorum === true;
   async function choose(action: "continue" | "postpone") {
@@ -35,9 +36,12 @@ export function QuorumDecisionGate({ session, busy, onChoose }: {
       {canChoose && <Button variant="secondary" disabled={busy} onClick={() => setDismissed(false)}>تحديد مصير الاجتماع</Button>}
     </InlineMessage>
     {canChoose && !dismissed && <Dialog title="النصاب غير مكتمل" description={`الحضور المعتمد ${session.quorum?.present_members ?? 0} من ${session.quorum?.eligible_members ?? 0}. اختر تأجيل الاجتماع أو المتابعة على مسؤولية القرار الموثق؛ لا يتغير النصاب أو سجل الحضور.`} onClose={() => { if (!busy) setDismissed(true); }}
-      footer={<div className="flex flex-wrap gap-3"><Button disabled={busy || reason.trim().length < 5} onClick={() => void choose("postpone")}>تأجيل الاجتماع</Button><Button variant="secondary" disabled={busy || reason.trim().length < 5} onClick={() => void choose("continue")}>{busy ? "جارٍ حفظ القرار…" : "المتابعة بنصاب غير مكتمل"}</Button></div>}>
+      footer={confirmingPostpone
+        ? <div className="flex flex-wrap gap-3"><Button variant="danger" disabled={busy || reason.trim().length < 5} onClick={() => void choose("postpone")}>{busy ? "جارٍ حفظ القرار…" : "تأكيد تأجيل الاجتماع"}</Button><Button variant="secondary" disabled={busy} onClick={() => setConfirmingPostpone(false)}>رجوع</Button></div>
+        : <div className="flex flex-wrap gap-3"><Button disabled={busy || reason.trim().length < 5} onClick={() => void choose("continue")}>{busy ? "جارٍ حفظ القرار…" : "المتابعة بنصاب غير مكتمل"}</Button><Button variant="secondary" disabled={busy || reason.trim().length < 5} onClick={() => setConfirmingPostpone(true)}>تأجيل الاجتماع…</Button></div>}>
       <div className="flex flex-col gap-3"><TextArea label="سبب القرار" value={reason} maxLength={2000} disabled={busy} onChange={event => setReason(event.target.value)} />
         <p className="m-0 text-q-caption text-q-text-2">اكتب السبب بخمسة أحرف على الأقل. عند المتابعة يظهر تنبيه نقص النصاب في الاجتماع وقراراته ومحضره.</p>
+        {confirmingPostpone && <InlineMessage tone="warning">تأجيل الاجتماع ينهي جلسته الجارية ويخرجه من قائمة المنعقدة. يستطيع رئيس المجلس أو من يدير اجتماعاته إعادة استكماله لاحقًا بسبب مكتوب، ما دامت دورته لم تنتهِ.</InlineMessage>}
         {error && <InlineMessage tone="error">{error}</InlineMessage>}
       </div>
     </Dialog>}

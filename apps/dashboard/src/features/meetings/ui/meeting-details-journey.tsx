@@ -71,19 +71,20 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
   async function reactivateCancelledMeeting() {
     if (!meeting?.updated_at || busy) return;
     const reason = reactivationReason.trim();
-    if (reason.length < 5) { setReactivationError("اكتب سبب إعادة تفعيل الاجتماع (5 أحرف على الأقل)."); return; }
+    if (reason.length < 5) { setReactivationError(meeting.status === "postponed" ? "اكتب سبب إعادة استكمال الاجتماع (5 أحرف على الأقل)." : "اكتب سبب إعادة تفعيل الاجتماع (5 أحرف على الأقل)."); return; }
     setBusy(true); setReactivationError(null); setError(null); setSuccess(null);
     try {
-      await meetingRpc("reactivate_cancelled_meeting_with_reason_v2", {
+      const resuming = meeting.status === "postponed";
+      await meetingRpc(resuming ? "resume_postponed_meeting_v2" : "reactivate_cancelled_meeting_with_reason_v2", {
         p_meeting_id: meeting.id,
         p_reason: reason,
         p_expected_updated_at: meeting.updated_at,
       });
       setReactivationOpen(false); setReactivationReason("");
       await load();
-      setSuccess("تمت إعادة تفعيل الاجتماع نفسه، ولم يُنشأ اجتماع بديل.");
+      setSuccess(resuming ? "أُعيد استكمال الاجتماع من خطوة ما قبل التأجيل؛ قرار النصاب ينتظر رئيس المجلس." : "تمت إعادة تفعيل الاجتماع نفسه، ولم يُنشأ اجتماع بديل.");
     } catch (cause) {
-      setReactivationError(cause instanceof Error ? cause.message : "تعذر إعادة تفعيل الاجتماع.");
+      setReactivationError(cause instanceof Error ? cause.message : meeting.status === "postponed" ? "تعذر إعادة استكمال الاجتماع." : "تعذر إعادة تفعيل الاجتماع.");
     } finally { setBusy(false); }
   }
 
@@ -123,6 +124,9 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
   );
 
   const primary = (() => {
+    if (meeting.status === "postponed") return meeting.capabilities?.can_resume_postponed
+      ? <Button onClick={() => { setReactivationError(null); setReactivationOpen(true); }}><Play size={18}/>إعادة استكمال الاجتماع</Button>
+      : meeting.capabilities?.resume_postponed_block ? <span className="flex flex-col gap-1"><Button disabled><Play size={18}/>إعادة استكمال الاجتماع</Button><small className="text-q-caption text-q-text-2">{meeting.capabilities.resume_postponed_block}</small></span> : null;
     if (meeting.status === "cancelled" && meeting.capabilities?.can_manage) return <Button onClick={() => { setReactivationError(null); setReactivationOpen(true); }}><RefreshCw size={18}/>إعادة تفعيل الاجتماع</Button>;
     // Before its cycle opens a plan meeting is for viewing only; the reason sits beside the action.
     if (meeting.cycle_available === false && ["draft", "scheduled"].includes(meeting.status)) return <span className="flex flex-col gap-1"><Button disabled><ListChecks size={18}/>استكمال الإعداد وجدول الأعمال</Button><span className="text-q-caption text-q-text-2">{meeting.cycle_unavailable_reason}</span></span>;
@@ -167,13 +171,13 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
     </div>
     {invitationOpen && meeting.updated_at && <InvitationTimingDialog meetingId={meeting.id} expectedUpdatedAt={meeting.updated_at} startTime={meeting.start_time} endTime={meeting.end_time} invitationSummary={meeting.invitation_summary} onClose={() => setInvitationOpen(false)} onSent={() => void load()}/>}
     {startTiming && <MeetingStartConfirmationDialog timing={startTiming} pending={busy} error={error} onClose={() => setStartTiming(null)} onConfirm={() => void startSession(true)}/>}
-    {reactivationOpen && <Dialog title="إعادة تفعيل الاجتماع" description="يعود الاجتماع الملغى نفسه دون إنشاء اجتماع بديل، ويُحفظ السبب في سجله وسجل التدقيق." onClose={() => { if (!busy) setReactivationOpen(false); }} closeDisabled={busy}
+    {reactivationOpen && <Dialog title={meeting.status === "postponed" ? "إعادة استكمال الاجتماع" : "إعادة تفعيل الاجتماع"} description={meeting.status === "postponed" ? "يعود الاجتماع المؤجل نفسه إلى الجلسة الجارية بحضوره ونصابه، ويبقى قرار النصاب بانتظار رئيس المجلس. يُحفظ السبب في سجله وسجل التدقيق." : "يعود الاجتماع الملغى نفسه دون إنشاء اجتماع بديل، ويُحفظ السبب في سجله وسجل التدقيق."} onClose={() => { if (!busy) setReactivationOpen(false); }} closeDisabled={busy}
       footer={<>
         {reactivationError && <InlineMessage tone="error" className="w-full">{reactivationError}</InlineMessage>}
         <Button variant="secondary" disabled={busy} onClick={() => setReactivationOpen(false)}>إلغاء</Button>
-        <Button pending={busy} pendingLabel="جارٍ إعادة التفعيل…" onClick={() => void reactivateCancelledMeeting()}>إعادة التفعيل</Button>
+        <Button pending={busy} pendingLabel={meeting.status === "postponed" ? "جارٍ إعادة الاستكمال…" : "جارٍ إعادة التفعيل…"} onClick={() => void reactivateCancelledMeeting()}>{meeting.status === "postponed" ? "إعادة الاستكمال" : "إعادة التفعيل"}</Button>
       </>}>
-      <TextArea label="سبب إعادة التفعيل" value={reactivationReason} onChange={(event) => { setReactivationReason(event.target.value); setReactivationError(null); }} maxLength={1000} rows={3}/>
+      <TextArea label={meeting.status === "postponed" ? "سبب إعادة الاستكمال" : "سبب إعادة التفعيل"} value={reactivationReason} onChange={(event) => { setReactivationReason(event.target.value); setReactivationError(null); }} maxLength={1000} rows={3}/>
     </Dialog>}
     {preparationConfirmationOpen && <MeetingPreparationConfirmationDialog pending={busy} error={error} onClose={() => { if (!busy) { setPreparationConfirmationOpen(false); setError(null); } }} onConfirm={() => void (async () => { if (await transition("ready_to_start")) setPreparationConfirmationOpen(false); })()}/>}
   </div>;

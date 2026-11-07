@@ -28,8 +28,21 @@ describe("quorum choice at the preparation boundary", () => {
   it("keeps the choice open with an in-place failure instead of losing the reason", async () => {
     render(<QuorumDecisionGate session={session} busy={false} onChoose={vi.fn().mockResolvedValue(false)} />);
     fireEvent.change(screen.getByLabelText("سبب القرار"), { target: { value: "سبب تأجيل الاجتماع" } });
-    fireEvent.click(screen.getByRole("button", { name: "تأجيل الاجتماع" }));
+    fireEvent.click(screen.getByRole("button", { name: "تأجيل الاجتماع…" }));
+    fireEvent.click(screen.getByRole("button", { name: "تأكيد تأجيل الاجتماع" }));
     expect(await screen.findByText(/تعذر حفظ القرار/)).toBeInTheDocument();
     expect(screen.getByLabelText("سبب القرار")).toHaveValue("سبب تأجيل الاجتماع");
+  });
+  it("makes continuing the main choice and never postpones without a second, explicit confirmation", () => {
+    const choose = vi.fn().mockResolvedValue(true);
+    render(<QuorumDecisionGate session={session} busy={false} onChoose={choose} />);
+    fireEvent.change(screen.getByLabelText("سبب القرار"), { target: { value: "سبب تأجيل الاجتماع" } });
+    expect(screen.getByRole("button", { name: "المتابعة بنصاب غير مكتمل" }).className).toMatch(/bg-q-primary/);
+    fireEvent.click(screen.getByRole("button", { name: "تأجيل الاجتماع…" }));
+    expect(choose).not.toHaveBeenCalled();
+    expect(screen.getByText(/يستطيع رئيس المجلس أو من يدير اجتماعاته إعادة استكماله/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "رجوع" }));
+    expect(screen.getByRole("button", { name: "المتابعة بنصاب غير مكتمل" })).toBeInTheDocument();
+    expect(choose).not.toHaveBeenCalled();
   });
 });
