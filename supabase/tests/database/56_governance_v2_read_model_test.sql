@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(41);
+select plan(45);
 
 insert into qarar_core.organizations(id,code,name_ar)
 values('56000000-0000-0000-0000-000000000001','governance-v2-read-ci','منظمة اختبار قراءة الحوكمة');
