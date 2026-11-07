@@ -13,10 +13,10 @@ export type VoteValue = "approve" | "reject" | "abstain";
 
 const NOTE_LIMIT = 2000;
 
-type Props = { vote: MyVote; busy: boolean; unavailableReason?: string | null; /** The viewer's screen is the one shown to the room. */ onScreen?: boolean; onCast: (roundId: string, value: VoteValue, note: string | null) => Promise<boolean> | void };
+type Props = { vote: MyVote; busy: boolean; unavailableReason?: string | null; onCast: (roundId: string, value: VoteValue, note: string | null) => Promise<boolean> | void };
 
 /** The member's ballot for one open round: three large choices and an optional note. */
-export function MemberVoteCard({ vote, busy, unavailableReason, onScreen = false, onCast }: Props) {
+export function MemberVoteCard({ vote, busy, unavailableReason, onCast }: Props) {
   const [note, setNote] = useState("");
   const [open, setOpen] = useState(true);
   const [choice, setChoice] = useState<VoteValue | null>(null);
@@ -64,7 +64,6 @@ export function MemberVoteCard({ vote, busy, unavailableReason, onScreen = false
       <div role="radiogroup" aria-label="اختيار التصويت" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {([ ["approve", "موافق"], ["reject", "غير موافق"], ["abstain", "ممتنع"] ] as const).map(([value, label]) => <Button key={value} role="radio" aria-checked={choice === value} size="lg" variant={choice === value ? "primary" : "secondary"} block disabled={busy || pending} onClick={() => setChoice(value)}>{label}</Button>)}
       </div>
-      {onScreen && <InlineMessage tone="warning">شاشتك معروضة الآن على القاعة؛ سيرى الحاضرون اختيارك وملاحظتك في هذه النافذة. أنهِ وضع العرض أولًا إن أردت صوتًا سريًا.</InlineMessage>}
       <p className="m-0 text-q-caption text-q-text-2">يظهر للحاضرين أنك أكملت التصويت فقط؛ لا يُكشف اختيارك أو ملاحظتك لهم.</p>
       <Button variant="ghost" disabled={busy || pending} onClick={() => setShowNote(!showNote)}>{showNote ? "إخفاء الملاحظة" : "إضافة ملاحظة اختيارية"}</Button>
       {showNote && <TextArea

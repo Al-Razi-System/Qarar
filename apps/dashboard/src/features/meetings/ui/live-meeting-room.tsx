@@ -497,7 +497,7 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
     { value: "agenda", label: "جدول الأعمال والتصويت", count: pendingVotes.length },
   ];
 
-  const ballots = pendingVotes.slice(0, 1).map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} onScreen={presenting} busy={busy || Boolean(activeVotingError)} unavailableReason={activeVotingError} onCast={castVote} />);
+  const ballots = pendingVotes.slice(0, 1).map((vote) => <MemberVoteCard key={vote.voting_round_id} vote={vote} busy={busy || Boolean(activeVotingError)} unavailableReason={activeVotingError} onCast={castVote} />);
   const steering = session.viewer.mode !== "member" || session.viewer.can_manage_voting;
   const stageProps = { session, agenda, rounds, decisions, referrals: referrals?.referrals, profiles, profilesError };
 

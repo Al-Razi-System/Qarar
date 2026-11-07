@@ -43,7 +43,8 @@ describe("private voting dialog", () => {
   });
 });
 
-it("warns the voter when their screen is the one shown to the room", () => {
-  render(<MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "بند", has_voted: false } as never} busy={false} onScreen onCast={vi.fn()} />);
-  expect(screen.getByText(/شاشتك معروضة الآن على القاعة/)).toBeInTheDocument();
+it("is the viewer's own dialog: nothing on it depends on presentation mode", () => {
+  render(<MemberVoteCard vote={{ voting_round_id: "r1", title_ar: "بند", has_voted: false } as never} busy={false} onCast={vi.fn()} />);
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  expect(screen.queryByText(/معروضة/)).not.toBeInTheDocument();
 });
