@@ -3,7 +3,7 @@
 import { ChevronLeft, Clock, Hash, ListChecks, MapPin, Users } from "lucide-react";
 import type { Meeting } from "../model/meeting";
 import { meetingStatusLabels, meetingStatusTone } from "../model/meeting";
-import { meetingOperationalGroup } from "../model/meeting-operational-state";
+import { isFromPreviousCycle, meetingOperationalGroup } from "../model/meeting-operational-state";
 import { meetingLocationLabel, meetingTimeLabel, sessionNumberLabel } from "../model/meeting-schedule";
 import { Badge } from "@/shared/ui/badge";
 import { cn } from "@/shared/lib/utils";
@@ -52,7 +52,8 @@ export function MeetingRow({ meeting, today, onOpen }: { meeting: Meeting; today
     <DateTile meeting={meeting} missed={missed}/>
     <span className="flex min-w-0 flex-1 flex-col gap-1">
       <span className="text-q-ui font-bold text-q-text">{meeting.title_ar}</span>
-      {meeting.schedule_exception_reason && <span className="text-q-caption font-bold text-q-warning">منعقد خارج موعد الدورة</span>}
+      {isFromPreviousCycle(meeting, today) && <span className="text-q-caption font-bold text-q-warning">من دورة سابقة · لم تنتهِ جلستها</span>}
+      {meeting.schedule_exception_reason && !isFromPreviousCycle(meeting, today) && <span className="text-q-caption font-bold text-q-warning">منعقد خارج موعد الدورة</span>}
       <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-q-caption text-q-text-2">
         {council && <span className="inline-flex flex-wrap items-center gap-1"><Users size={14} aria-hidden="true"/>{council}{meeting.governance_unit_status === "inactive" && <Badge tone="warning">المجلس غير مفعّل</Badge>}</span>}
         {session && <span className="inline-flex items-center gap-1"><Hash size={14} aria-hidden="true"/>{session}</span>}

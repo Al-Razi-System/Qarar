@@ -20,6 +20,12 @@ export function meetingOperationalGroup(meeting: MeetingStateInput, today: strin
   return null;
 }
 
+/** A session still running or being completed after the window of its cycle has ended. */
+export function isFromPreviousCycle(meeting: { status: string; planned_window_end?: string | null }, today: string) {
+  return ["in_progress", "waiting_for_minutes", "waiting_for_approval"].includes(meeting.status)
+    && Boolean(meeting.planned_window_end) && (meeting.planned_window_end as string) < today;
+}
+
 export function localDateKey(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

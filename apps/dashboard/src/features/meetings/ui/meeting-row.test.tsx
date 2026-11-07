@@ -44,3 +44,8 @@ it("distinguishes a late draft from a cycle finally classified as not held", () 
   expect(screen.getByRole("button")).toHaveTextContent("لم يُنفذ");
   expect(screen.getByRole("button")).not.toHaveTextContent("تحتاج إجراء");
 });
+
+it("marks a session of an earlier cycle that is still running", () => {
+  render(<MeetingRow today="2026-11-08" onOpen={vi.fn()} meeting={{ id: "m2", title_ar: "الاجتماع الأول — أكتوبر 2026", status: "in_progress", scheduled_date: "2026-11-07", planned_window_start: "2026-10-08", planned_window_end: "2026-10-14", schedule_date_confirmed: true, unit_name_ar: "مجلس كلية" }}/>);
+  expect(screen.getByText(/من دورة سابقة/)).toBeInTheDocument();
+});
