@@ -52,3 +52,8 @@
  .status { margin-inline-start: 35px; }
  .councilArrow { margin-inline-start: auto; }
 }
+
+.facts { display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 4px; }
+.fact { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; line-height: 1.6; color: #62768a; }
+.warn { color: #9b660e; font-weight: 700; }
+.live { color: #0b7a53; font-weight: 700; }

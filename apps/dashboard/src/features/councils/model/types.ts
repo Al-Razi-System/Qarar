@@ -5,6 +5,12 @@ export type CouncilHierarchyUnit = {
   status: CouncilStatus; type_name_ar: string;
 };
 export type CouncilHierarchyCouncil = CouncilSummary & { scope_unit_id: string | null };
+/** What the list shows on each council row, from one read for all of them. */
+export type CouncilOverviewEntry = {
+  chair_name_ar: string | null; member_count: number; has_plan: boolean; meetings_total: number;
+  next_meeting: { id: string; meeting_no?: string | null; status: string; date?: string | null; date_confirmed?: boolean } | null;
+};
+export type CouncilOverviewMap = Record<string, CouncilOverviewEntry>;
 export type CouncilHierarchyData = { units: CouncilHierarchyUnit[]; councils: CouncilHierarchyCouncil[] };
 
 export type ReferenceOption = {

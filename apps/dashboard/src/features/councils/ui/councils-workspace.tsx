@@ -7,21 +7,23 @@ import { Button } from "@/shared/ui/button";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { councilRpc } from "../api/councils-client";
 import { buildOrganizationalCouncilTree } from "../model/organizational-council-tree";
-import type { CouncilDetail, CouncilFormOptions, CouncilFormValues, CouncilMembership, CouncilMembershipResult, CouncilReadiness, CouncilSearchResult, CouncilSummary, CouncilHierarchyData, RoleOption, UserOption } from "../model/types";
+import type { CouncilDetail, CouncilFormOptions, CouncilFormValues, CouncilMembership, CouncilMembershipResult, CouncilReadiness, CouncilSearchResult, CouncilSummary, CouncilHierarchyData, CouncilOverviewMap, RoleOption, UserOption } from "../model/types";
 import { CouncilFormDialog } from "./council-form-dialog";
 import { EditMembershipDialog, EndMembershipDialog, LeadershipDialog, MemberDialog, ReasonDialog } from "./council-operation-dialogs";
 import { CouncilStatusBadge } from "./council-status-badge";
 import { OrganizationalCouncilTree } from "./organizational-council-tree";
+import { CouncilMeetingsPanel } from "./council-meetings-panel";
 import treeStyles from "./organizational-council-tree.module.css";
 
 type Props = { initialHierarchy: CouncilHierarchyData; options: CouncilFormOptions; roles: RoleOption[]; users: UserOption[] };
-type Tab = "overview" | "members" | "readiness";
+type Tab = "overview" | "members" | "meetings" | "readiness";
 type Notice = { kind: "success" | "error"; message: string } | null;
 type LifecycleDialog = "activate" | "deactivate" | "archive" | null;
 
 export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: Props) {
   const [result, setResult] = useState<CouncilSearchResult>({ items: initialHierarchy.councils, total: initialHierarchy.councils.length, limit: initialHierarchy.councils.length, offset: 0 });
   const [tree, setTree] = useState(initialHierarchy);
+  const [overview, setOverview] = useState<CouncilOverviewMap>({});
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [status, setStatus] = useState("");
@@ -60,6 +62,16 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
   const visibleSelectedId = selectedId && visibleTree.some((item) => item.id === selectedId) ? selectedId : undefined;
 
 
+  // The overview only adds facts to the rows; the list works without it if it cannot be read.
+  const loadOverview = useCallback(async () => {
+    try { setOverview(await councilRpc<CouncilOverviewMap>("get_council_overview_v2")); } catch { /* rows keep their names and status */ }
+  }, []);
+  useEffect(() => {
+    let current = true;
+    councilRpc<CouncilOverviewMap>("get_council_overview_v2").then((value) => { if (current) setOverview(value); }).catch(() => undefined);
+    return () => { current = false; };
+  }, []);
+
   async function loadList() {
     const request = ++hierarchyRequest.current;
     setLoadingList(true);
@@ -68,6 +80,7 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
       const [nextResult, nextTree] = await fetchCouncilState();
       if (request !== hierarchyRequest.current) return;
       startTransition(() => { setResult(nextResult); setTree(nextTree); });
+      void loadOverview();
     } catch (error) {
       if (request === hierarchyRequest.current) setHierarchyError(error instanceof Error ? error.message : "تعذر تحديث الهيكل. حاول مجددًا.");
     } finally {
@@ -188,7 +201,7 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
     <section className="mb-5 grid gap-3 sm:grid-cols-3">{metrics.map(({ label, value, icon: Icon, tone }) => <article key={label} className="flex items-center gap-4 rounded-2xl border border-[#dce7f1] bg-white p-4 shadow-[0_8px_24px_rgba(15,42,72,.04)]"><span className={`grid h-11 w-11 place-items-center rounded-2xl ${tone}`}><Icon size={20} /></span><div><strong className="block text-2xl font-black text-[#0a1830]">{value}</strong><span className="text-[10px] font-bold text-[#76889d]">{label}</span></div></article>)}</section>
     <section className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[#dce7f1] bg-white p-3 shadow-sm"><label className="relative min-w-[240px] flex-1"><Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#91a0b1]" /><input value={query} onChange={(e) => setQuery(e.target.value)} aria-label="البحث في الهيكل" placeholder="ابحث عن وحدة أو مجلس..." className="h-11 w-full rounded-xl border border-[#e0e8f0] bg-[#f8fafc] pr-10 pl-3 text-xs outline-none focus:border-[#8fc3ee] focus:bg-white" /></label><select value={status} onChange={(e) => setStatus(e.target.value)} className="h-11 min-w-40 rounded-xl border border-[#e0e8f0] bg-white px-3 text-xs font-bold text-[#52647a]"><option value="">كل الحالات</option><option value="active">نشط</option><option value="inactive">غير نشط</option><option value="archived">مؤرشف</option></select><button type="button" onClick={() => void loadList()} className="grid h-11 w-11 place-items-center rounded-xl border border-[#dce7f1] text-[#61758d] hover:bg-[#f2f7fb]" aria-label="تحديث"><RefreshCw size={16} className={loadingList ? "animate-spin" : ""} /></button></section>
     <div className={treeStyles.workspaceGrid}>
-      <section className={treeStyles.panel}><div className={treeStyles.panelHeader}><div><div className="flex items-center gap-2"><h2 className="text-sm font-black text-[#172a42]">الهيكل التنظيمي والمجالس</h2><span className="rounded-full bg-[#eaf4ff] px-2 py-0.5 text-[9px] font-black text-[#0872df]">{visibleTree.length}</span></div><p className="mt-1 text-[10px] text-[#8393a6]">التبعية من الوحدات؛ اختر مجلسًا لعرض تفاصيله.</p></div>{loadingList ? <LoaderCircle size={19} className="animate-spin text-[#0872df]" /> : <GitBranch size={19} className="text-[#0872df]" />}</div>{hierarchyError && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">{hierarchyError}<button type="button" disabled={loadingList} onClick={() => void loadList()} className="mt-2 block font-bold underline">إعادة تحميل الهيكل</button></div>}<OrganizationalCouncilTree data={tree} query={deferredQuery} status={status} selectedId={visibleSelectedId} onSelect={(id) => { if (id === selectedId) return; setDetail(null); setMembers([]); setReadiness(null); setLoadingDetail(true); setSelectedId(id); setTab("overview"); }} /></section>
+      <section className={treeStyles.panel}><div className={treeStyles.panelHeader}><div><div className="flex items-center gap-2"><h2 className="text-sm font-black text-[#172a42]">الهيكل التنظيمي والمجالس</h2><span className="rounded-full bg-[#eaf4ff] px-2 py-0.5 text-[9px] font-black text-[#0872df]">{visibleTree.length}</span></div><p className="mt-1 text-[10px] text-[#8393a6]">التبعية من الوحدات؛ اختر مجلسًا لعرض تفاصيله.</p></div>{loadingList ? <LoaderCircle size={19} className="animate-spin text-[#0872df]" /> : <GitBranch size={19} className="text-[#0872df]" />}</div>{hierarchyError && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">{hierarchyError}<button type="button" disabled={loadingList} onClick={() => void loadList()} className="mt-2 block font-bold underline">إعادة تحميل الهيكل</button></div>}<OrganizationalCouncilTree overview={overview} data={tree} query={deferredQuery} status={status} selectedId={visibleSelectedId} onSelect={(id) => { if (id === selectedId) return; setDetail(null); setMembers([]); setReadiness(null); setLoadingDetail(true); setSelectedId(id); setTab("overview"); }} /></section>
       <CouncilDetailPanel error={detailError} onRetry={() => { if (visibleSelectedId) void loadSelected(visibleSelectedId); }} detail={visibleSelectedId && detail?.id === visibleSelectedId ? detail : null} fallback={visibleSelectedId ? result.items.find((item) => item.id === visibleSelectedId) : undefined} members={visibleSelectedId ? members : []} readiness={visibleSelectedId ? readiness : null} tab={tab} loading={Boolean(visibleSelectedId && loadingDetail)} onTab={setTab} onEdit={() => setEditing(true)} onAddMember={() => setAddingMember(true)} onLeadership={() => setLeadership(true)} onEditMember={setEditingMember} onEndMember={setEndingMember} onLifecycle={setLifecycle} />
     </div>
     {creating && <CouncilFormDialog options={councilOptions} onClose={() => setCreating(false)} onSubmit={createCouncil} />}
@@ -216,10 +229,11 @@ function CouncilDetailPanel({ detail, fallback, members, readiness, tab, loading
   return <section className="relative overflow-hidden rounded-3xl border border-[#dce7f1] bg-white shadow-[0_12px_32px_rgba(15,42,72,.05)]">
     {loading && <div className="absolute inset-x-0 top-0 z-20 h-1 overflow-hidden bg-[#dbeeff]"><div className="h-full w-1/3 animate-pulse bg-[#0872df]" /></div>}
     <div className="relative overflow-hidden bg-[linear-gradient(125deg,#071b39_0%,#0b4f8d_58%,#0872df_100%)] p-6 text-white"><div className="absolute -left-16 -top-20 h-52 w-52 rounded-full border border-white/15" /><div className="relative flex flex-wrap items-start gap-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/14 ring-1 ring-white/20"><Building2 size={26} /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-black">{council.name_ar}</h2><CouncilStatusBadge value={council.status} /></div><p dir="ltr" className="mt-1 w-fit text-[11px] font-bold text-white/60">{council.code}</p><p className="mt-3 max-w-2xl text-xs leading-6 text-white/75">{council.description || "لم يضف وصف لاختصاص المجلس بعد."}</p></div>{detail && !detail.meeting_plan_unavailable && !archived && <div className="flex gap-2"><ActionButton icon={Pencil} label="تعديل" onClick={onEdit} /></div>}</div></div>
-    <div className="flex gap-2 overflow-x-auto border-b border-[#e4ecf3] bg-[#fbfdff] px-5 pt-3">{([{ id: "overview", label: "نظرة عامة", icon: Building2 }, { id: "members", label: `الأعضاء (${activePeople})`, icon: UsersRound }, { id: "readiness", label: "الجاهزية والتشغيل", icon: ShieldCheck }] as const).map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => onTab(id)} className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-xs font-black transition ${tab === id ? "border-[#0872df] text-[#0872df]" : "border-transparent text-[#718399] hover:text-[#29445f]"}`}><Icon size={15} />{label}</button>)}</div>
+    <div className="flex gap-2 overflow-x-auto border-b border-[#e4ecf3] bg-[#fbfdff] px-5 pt-3">{([{ id: "overview", label: "نظرة عامة", icon: Building2 }, { id: "members", label: `الأعضاء (${activePeople})`, icon: UsersRound }, { id: "meetings", label: "الاجتماعات", icon: CalendarDays }, { id: "readiness", label: "الجاهزية والتشغيل", icon: ShieldCheck }] as const).map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => onTab(id)} className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-xs font-black transition ${tab === id ? "border-[#0872df] text-[#0872df]" : "border-transparent text-[#718399] hover:text-[#29445f]"}`}><Icon size={15} />{label}</button>)}</div>
     {detail?.meeting_plan_unavailable && <div className="p-5"><InlineMessage>تعديل بيانات المجلس وخطة اجتماعاته غير متاح مؤقتاً. بيانات المجلس وأعضاؤه محفوظة، ويمكن إدارة العضويات من تبويب الأعضاء.</InlineMessage></div>}
     {tab === "overview" && <Overview detail={detail} council={council} />}
     {tab === "members" && <MembersPanel members={members} archived={archived} onAdd={onAddMember} onLeadership={onLeadership} onEdit={onEditMember} onEnd={onEndMember} />}
+    {tab === "meetings" && <CouncilMeetingsPanel council={council} detail={detail} archived={archived} onEditPlan={onEdit} />}
     {tab === "readiness" && <ReadinessPanel council={council} readiness={readiness} onLifecycle={onLifecycle} />}
   </section>;
 }

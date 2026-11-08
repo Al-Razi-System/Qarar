@@ -105,7 +105,7 @@ function agendaLockMessage(status: string) {
   return "بدأ الاجتماع، لذلك أصبح جدول الأعمال مقفلًا ولا يمكن إضافة أو إزالة موضوعات.";
 }
 
-export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: string }) {
+export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { initialMeetingId?: string; initialCouncilId?: string }) {
   const router = useRouter();
   const focused = Boolean(initialMeetingId);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -152,7 +152,7 @@ export function MeetingsWorkspace({ initialMeetingId }: { initialMeetingId?: str
   const [calendarCursor, setCalendarCursor] = useState(() => new Date());
   const [calendarItems, setCalendarItems] = useState<Meeting[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
-  const [unitFilter, setUnitFilter] = useState("");
+  const [unitFilter, setUnitFilter] = useState(initialCouncilId ?? "");
   const [stageCounts, setStageCounts] = useState<Record<string, number>>({});
   const [councils, setCouncils] = useState<Array<{ id: string; name_ar: string }>>([]);
   const [loadingMore, setLoadingMore] = useState(false);

@@ -8,6 +8,7 @@ import { logEvent } from "@/shared/observability/logger";
 
 const contracts = new Set([
   "admin_get_council_organizational_tree_v2",
+  "get_council_overview_v2",
   "get_council_form_options",
   "admin_search_councils",
   "admin_get_council_detail",
