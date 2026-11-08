@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { CircleCheck, ListChecks } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { OverflowMenu } from "@/shared/ui/overflow-menu";
@@ -24,6 +25,11 @@ type Props = {
   progress?: { done: number; total: number };
 };
 
+/** «البند 1 «العنوان»: حفظ الملخص.» becomes «البند 1: حفظ الملخص.»; the full text stays in the list and the tooltip. */
+function shortBlocker(text: string) {
+  return text.replace(/^(البند \d+) «[^»]*»:/, "$1:");
+}
+
 /**
  * The chair's control dock under the council table. Its main button is always
  * the next step of the item on screen; a step the server would reject is
@@ -36,7 +42,7 @@ export function ControlDock({ item, actions, note, busy, blockers, onAction, onC
   const primary = actions[0];
   const status = busy ? <span role="status" className="font-bold text-q-text-2">جارٍ التنفيذ…</span>
     : reason ? <span className="font-bold text-q-warning">{reason}</span>
-    : note ? <span className="text-q-text-2">{note}</span> : null;
+    : note ? <span className="inline-flex items-start gap-1.5 text-q-text-2"><CircleCheck size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-q-success" /><span>{note}</span></span> : null;
   return (
     <section
       aria-label="شريط تحكم رئيس المجلس"
@@ -64,7 +70,7 @@ export function ControlDock({ item, actions, note, busy, blockers, onAction, onC
           )}
           {decisionTools}
         </div>
-        {status && <p className="m-0 text-q-caption">{status}</p>}
+        {status && <p className="m-0 max-w-prose text-q-caption leading-6">{status}</p>}
       </div>
       <div className="flex min-w-0 flex-row flex-wrap items-center gap-x-4 gap-y-2 border-t border-q-border pt-3 @2xl:w-64 @2xl:shrink-0 @2xl:flex-col @2xl:flex-nowrap @2xl:items-stretch @2xl:justify-center @2xl:border-s @2xl:border-t-0 @2xl:ps-4 @2xl:pt-0">
         {progress && progress.total > 0 && (
@@ -82,8 +88,13 @@ export function ControlDock({ item, actions, note, busy, blockers, onAction, onC
           ? <Button className="max-w-full whitespace-normal" variant="secondary" disabled={busy} onClick={onComplete}>إنهاء الجلسة والانتقال إلى إعداد المحضر</Button>
           : (
             <>
-              {(actions.length === 0 || actions[0]?.kind === "edit_decision") && <p className="m-0 text-q-caption text-q-warning">الخطوة المتبقية: {blockers[0]}{blockers[0].includes("ملخص") && " يحفظه مقرر المجلس من بطاقة البند."}</p>}
-              <Button variant="ghost" className="justify-start px-0" onClick={() => setShowBlockers(true)}>ما بقي قبل الإنهاء ({blockers.length})</Button>
+              {(actions.length === 0 || actions[0]?.kind === "edit_decision") && (
+                <p title={blockers[0]} className="m-0 flex items-start gap-2 rounded-q-control bg-q-warning-soft px-3 py-2 text-q-caption text-q-warning">
+                  <ListChecks size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
+                  <span className="line-clamp-2 min-w-0"><strong>الخطوة المتبقية:</strong> {shortBlocker(blockers[0])}</span>
+                </p>
+              )}
+              <Button variant="secondary" size="md" className="justify-between" onClick={() => setShowBlockers(true)}><span>ما بقي قبل الإنهاء</span><span className="grid h-6 min-w-6 place-items-center rounded-full bg-q-warning-soft px-1.5 text-q-caption font-bold text-q-warning">{blockers.length}</span></Button>
             </>
           )}
       </div>

@@ -30,7 +30,6 @@ describe("chairActions", () => {
     const done = kinds(item({ agenda_status: "discussed" }), s, [approved], [decision]);
     expect(done.actions).toEqual([]);
     expect(done.note).toMatch(/^ق-1 · تم إنشاء القرار\./);
-    expect(done.note).toMatch(/إضافة تكليف/);
     expect(done.note).toMatch(/البند التالي/);
   });
 

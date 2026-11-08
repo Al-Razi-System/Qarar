@@ -94,6 +94,15 @@ export function StageCenter({ phase, compact = false }: { phase: StagePhase; com
     );
   }
 
+  if (phase.kind === "settled") {
+    return (
+      <div className="flex flex-col items-center gap-2 text-center">
+        <span className="text-q-ui font-bold">اكتملت مناقشة البند</span>
+        <span title={titleOf(phase) ?? undefined} className={compact ? "line-clamp-3 text-q-caption font-bold" : "line-clamp-4 text-q-h3 font-bold"}>{titleOf(phase) ?? "بند جدول الأعمال"}</span>
+      </div>
+    );
+  }
+
   if (phase.kind === "result") {
     return (
       <div className="flex flex-col items-center gap-3 text-center">

@@ -134,4 +134,15 @@ describe("deriveMeetingStage scene", () => {
     const phase = deriveMeetingStage(sessionOf(), [first, second], [closed], [], undefined, []).phase;
     expect(phase).toMatchObject({ kind: "idle", item: { id: "a2" } });
   });
+  it("shows the item the screen is on, not only the one the council is on", () => {
+    const first: AgendaDiscussionItem = { id: "a1", agenda_order: 1, agenda_status: "discussed", requires_voting: true, topic: { id: "t1", title_ar: "الأول" } };
+    const second: AgendaDiscussionItem = { id: "a2", agenda_order: 2, agenda_status: "discussed", requires_voting: true, topic: { id: "t2", title_ar: "الثاني" } };
+    const third: AgendaDiscussionItem = { id: "a3", agenda_order: 3, agenda_status: "under_discussion", requires_voting: false, topic: { id: "t3", title_ar: "الثالث" } };
+    const r1: VotingRound = { id: "r1", agenda_item_id: "a1", status: "closed", result: "approved", closed_at: "2026-10-10T09:00:00Z" };
+    const r2: VotingRound = { id: "r2", agenda_item_id: "a2", status: "closed", result: "rejected", closed_at: "2026-10-10T09:10:00Z" };
+    const stage = (focus: string) => deriveMeetingStage(sessionOf(), [first, second, third], [r1, r2], [], undefined, [], focus).phase;
+    expect(stage("a1")).toMatchObject({ kind: "result", item: { id: "a1" }, round: { id: "r1" } });
+    expect(stage("a2")).toMatchObject({ kind: "result", item: { id: "a2" }, round: { id: "r2" } });
+    expect(stage("a3")).toMatchObject({ kind: "discussion", item: { id: "a3" } });
+  });
 });

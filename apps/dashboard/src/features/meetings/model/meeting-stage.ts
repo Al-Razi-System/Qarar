@@ -29,6 +29,8 @@ export type StagePhase =
   /** `cast` and `eligible` are null when the server did not return them to this viewer. */
   | { kind: "voting"; item: AgendaDiscussionItem | null; cast: number | null; eligible: number | null }
   | { kind: "result"; item: AgendaDiscussionItem; round: VotingRound }
+  /** An item shown after its discussion with no vote to show. */
+  | { kind: "settled"; item: AgendaDiscussionItem }
   | { kind: "finished" };
 
 export type MeetingStage = { seats: StageSeat[]; phase: StagePhase };
@@ -60,9 +62,13 @@ export function deriveMeetingStage(
   profiles: MemberProfile[] = [],
   /** Items the chair referred to another unit: they need no vote. */
   referredItemIds: string[] = [],
+  /** The item the screen is on (the broadcast item); the table shows that item, not only the one the council is on. */
+  focusItemId: string | null = null,
 ): MeetingStage {
   const ordered = [...agenda].sort((a, b) => a.agenda_order - b.agenda_order);
-  const openRound = rounds.find((round) => round.status === "open") ?? session.open_voting_rounds[0] ?? null;
+  const anyOpen = rounds.find((round) => round.status === "open") ?? session.open_voting_rounds[0] ?? null;
+  // With a focus the table shows what happens on that item alone.
+  const openRound = focusItemId && anyOpen && anyOpen.agenda_item_id !== focusItemId ? null : anyOpen;
   const participation = new Map((openRound?.participation ?? []).map((person) => [person.user_id, person.has_voted]));
 
   const byUser = new Map(profiles.map((profile) => [profile.user_id, profile]));
@@ -86,7 +92,7 @@ export function deriveMeetingStage(
     };
   });
 
-  return { seats, phase: derivePhase(session, ordered, rounds, decisions, openRound, seats, referredItemIds) };
+  return { seats, phase: derivePhase(session, ordered, rounds, decisions, openRound, seats, referredItemIds, focusItemId) };
 }
 
 function derivePhase(
@@ -97,6 +103,7 @@ function derivePhase(
   openRound: VotingRound | null,
   seats: StageSeat[],
   referredItemIds: string[],
+  focusItemId: string | null,
 ): StagePhase {
   if (!session.meeting.attendance_locked) {
     const present = seats.filter((seat) => seat.status === "present").length;
@@ -110,6 +117,15 @@ function derivePhase(
       cast: openRound.votes_cast_count ?? null,
       eligible: openRound.eligible_voter_count ?? null,
     };
+  }
+
+  const focus = focusItemId ? ordered.find((item) => item.id === focusItemId) ?? null : null;
+  if (focus) {
+    const closedFocus = latestClosedRound(rounds, focus.id);
+    if (closedFocus) return { kind: "result", item: focus, round: closedFocus };
+    if (focus.agenda_status === "under_discussion") return { kind: "discussion", item: focus };
+    if (["discussed", "postponed"].includes(focus.agenda_status ?? "pending")) return { kind: "settled", item: focus };
+    return { kind: "idle", item: focus };
   }
 
   const discussing = ordered.find((item) => item.agenda_status === "under_discussion");

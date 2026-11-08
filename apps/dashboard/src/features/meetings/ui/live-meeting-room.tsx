@@ -578,8 +578,8 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
         />
       ) : (
         <div className={cn("min-h-0 flex-1", (presenting || fullscreen) && "overflow-y-auto")}><AgendaWorkspace
-          stage={<RoomStage {...stageProps} />}
-          compactStage={<RoomStage {...stageProps} compact />}
+          stage={(focusItemId) => <RoomStage {...stageProps} focusItemId={focusItemId} />}
+          compactStage={(focusItemId) => <RoomStage {...stageProps} compact focusItemId={focusItemId} />}
           ballot={ballots.length ? <div className="flex flex-col gap-3">{ballots}</div> : undefined}
           session={session}
           agenda={agenda}

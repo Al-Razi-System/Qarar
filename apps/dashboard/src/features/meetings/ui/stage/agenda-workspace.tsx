@@ -27,9 +27,9 @@ type Props = {
   /** Presentation mode: the shared view only, with every control hidden. */
   presenting: boolean;
   /** The council table at the centre of the chair's room. */
-  stage?: ReactNode;
+  stage?: ReactNode | ((focusItemId: string) => ReactNode);
   /** The small table beside a member's topic. */
-  compactStage?: ReactNode;
+  compactStage?: ReactNode | ((focusItemId: string) => ReactNode);
   /** The viewer's open ballot, placed under the topic's title. */
   ballot?: ReactNode;
   /** The broadcast of the council's screens; null when it is not available. */
@@ -236,7 +236,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
             {compactStage && (
               <Card className="flex flex-col gap-2 p-3">
                 <h3 className="m-0 px-1 text-q-ui font-bold">طاولة المجلس</h3>
-                {compactStage}
+                {typeof compactStage === "function" ? compactStage(selected.id) : compactStage}
               </Card>
             )}
             {timeline}
@@ -260,7 +260,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
         <div className="order-3 min-w-0 @3xl/room:order-none @3xl/room:min-h-0 @3xl/room:overflow-y-auto">{timeline}</div>
         <div className="@container order-1 flex min-w-0 flex-col gap-3 @3xl/room:order-none @3xl/room:min-h-0">
           {bar}
-          {stage && <div className="min-h-0 @3xl/room:flex-1">{stage}</div>}
+          {stage && <div className="min-h-0 @3xl/room:flex-1">{typeof stage === "function" ? stage(selected.id) : stage}</div>}
           {manager && <ControlDock pinned={presenting} item={selected} actions={actions} note={note} busy={busy} blockers={blockers} onAction={run} onComplete={onComplete} decisionTools={decisionTools} progress={{ done: settled, total: ordered.length }} />}
         </div>
         <div className="order-2 min-w-0 @3xl/room:order-none @3xl/room:min-h-0 @3xl/room:overflow-y-auto">{topic}</div>

@@ -20,6 +20,7 @@ describe("visible next step after voting", () => {
   });
   it("shows the remaining requirement without opening a separate dialog", () => {
     render(<ControlDock item={item} actions={[]} note={null} busy={false} blockers={["البند 1: حفظ ملخص النتائج والتوصيات."]} onAction={vi.fn()} onComplete={vi.fn()} />);
-    expect(screen.getByText(/الخطوة المتبقية: البند 1: حفظ ملخص النتائج والتوصيات/)).toBeInTheDocument();
+    expect(screen.getByText("الخطوة المتبقية:")).toBeInTheDocument();
+    expect(screen.getByText(/البند 1: حفظ ملخص النتائج والتوصيات/)).toBeInTheDocument();
   });
 });

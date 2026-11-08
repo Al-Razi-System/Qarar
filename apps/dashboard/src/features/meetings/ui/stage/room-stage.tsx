@@ -8,6 +8,8 @@ import { CouncilTable } from "./council-table";
 import { StageCenter } from "./stage-center";
 
 type Props = {
+  /** The item on screen; the table shows what is happening on it. */
+  focusItemId?: string | null;
   session: LiveMeetingSession;
   agenda: AgendaDiscussionItem[];
   rounds: VotingRound[];
@@ -61,9 +63,9 @@ function cardDetails(meetingId: string, profile: MemberProfile): MemberCardDetai
  * council is doing right now. It is derived on every refresh from the data the
  * room already loads; a seat opens that member's card.
  */
-export function RoomStage({ session, agenda, rounds, decisions, referrals = [], profiles = null, profilesError = null, compact = false }: Props) {
+export function RoomStage({ session, agenda, rounds, decisions, referrals = [], profiles = null, profilesError = null, compact = false, focusItemId = null }: Props) {
   const [openSeat, setOpenSeat] = useState<StageSeat | null>(null);
-  const { seats, phase } = deriveMeetingStage(session, agenda, rounds, decisions, profiles?.members, referrals.map((row) => row.agenda_item_id));
+  const { seats, phase } = deriveMeetingStage(session, agenda, rounds, decisions, profiles?.members, referrals.map((row) => row.agenda_item_id), focusItemId);
   const profile = openSeat ? profiles?.members.find((member) => member.user_id === openSeat.userId) : undefined;
   return (
     <section aria-label="مشهد الاجتماع" className={compact ? "font-sans text-q-text" : "@container h-full font-sans text-q-text"}>
