@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
-import type { AssignmentTargetSelection, AssignmentUserOption, MeetingAssignment, MeetingAssignments, NewAssignment } from "../../model/live-meeting";
+import type { AssignmentPreview, AssignmentPreviewRow, AssignmentTargetSelection, AssignmentUserOption, MeetingAssignment, MeetingAssignments, NewAssignment } from "../../model/live-meeting";
 
 /** What is running now, so its button shows pending and the others wait. */
 export type AssignmentActivity = { key: string | null; errorKey: string | null; error: string | null };
@@ -18,6 +18,8 @@ type Props = {
   /** Resolves true when the assignment was saved; the form then clears. */
   onCreate: (input: NewAssignment) => Promise<boolean>;
   onSearchUsers?: (query: string) => Promise<AssignmentUserOption[]>;
+  /** Who the chosen targets resolve to, so each person can be seen and removed before issuing. */
+  onPreview?: (targets: AssignmentTargetSelection[]) => Promise<AssignmentPreview>;
   onConfirm: (assignment: MeetingAssignment) => void;
   onWithdraw: (assignment: MeetingAssignment) => void;
   editorOpen?: boolean;
@@ -45,6 +47,17 @@ function AssignmentPersonPicker({ label, value, initial, disabled, onChange, onS
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const request = useRef(0);
+  const root = useRef<HTMLDivElement>(null);
+
+  // A list left open would cover the fields below it; a press anywhere else closes it.
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
+    const closeOnKey = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", closeOnKey);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", closeOnKey); };
+  }, [open]);
 
   useEffect(() => {
     const text = query.trim();
@@ -67,7 +80,7 @@ function AssignmentPersonPicker({ label, value, initial, disabled, onChange, onS
   }, [initial, onSearch, query]);
 
   return (
-    <div className="relative flex flex-col gap-1 text-q-caption font-bold text-q-text">
+    <div ref={root} className="relative flex flex-col gap-1 text-q-caption font-bold text-q-text">
       <label>
         {label}
         <input
@@ -144,7 +157,7 @@ function stateOf(assignment: MeetingAssignment): { label: string; tone: "warning
  * The decision's assignments. The chair's become execution tasks at once;
  * the rapporteur's wait for the chair. Everyone in the room reads them.
  */
-export function ItemAssignments({ assignments, viewer, options, activity, onCreate, onSearchUsers, onConfirm, onWithdraw, editorOpen, onEditorChange, addFromDock = false }: Props) {
+export function ItemAssignments({ assignments, viewer, options, activity, onCreate, onSearchUsers, onPreview, onConfirm, onWithdraw, editorOpen, onEditorChange, addFromDock = false }: Props) {
   const [localOpen, setLocalOpen] = useState(false);
   const open = editorOpen ?? localOpen;
   function changeOpen(next: boolean) { if (onEditorChange) onEditorChange(next); else setLocalOpen(next); }
@@ -156,6 +169,25 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
   const [followUp, setFollowUp] = useState("");
   const [requiresEvidence, setRequiresEvidence] = useState(false);
   const [clientRequestId, setClientRequestId] = useState(() => crypto.randomUUID());
+  const [preview, setPreview] = useState<{ state: "idle" | "loading" | "error" | "ready"; data: AssignmentPreview | null; forTargets: AssignmentTargetSelection[] | null }>({ state: "idle", data: null, forTargets: null });
+  // People taken out of the list before issuing, by who they are (a person or a unit's responsible).
+  const [removed, setRemoved] = useState<string[]>([]);
+  const rowKey = (row: AssignmentPreviewRow) => row.target_kind === "user" ? `u:${row.target_user_id}` : `g:${row.target_unit_id}`;
+  useEffect(() => {
+    if (!onPreview || targets.length === 0) return;
+    let current = true;
+    const timer = window.setTimeout(() => {
+      setPreview((last) => ({ state: "loading", data: last.data, forTargets: null }));
+      onPreview(targets).then((data) => { if (current) setPreview({ state: "ready", data, forTargets: targets }); })
+        .catch(() => { if (current) setPreview({ state: "error", data: null, forTargets: null }); });
+    }, 250);
+    return () => { current = false; window.clearTimeout(timer); };
+  }, [onPreview, targets]);
+  const live = Boolean(onPreview) && targets.length > 0;
+  const fresh = live && preview.state === "ready" && preview.forTargets === targets;
+  const previewRows = fresh && preview.data ? preview.data.targets : [];
+  const blockerOf = (row: AssignmentPreviewRow) => preview.data?.blockers.find((blocker) => row.target_kind === "unit" && blocker.target_unit_id === row.target_unit_id)?.reason ?? null;
+  const keptRows = previewRows.filter((row) => !removed.includes(rowKey(row)));
   // Withdrawing cancels a task, so it asks once more beside the button.
   const [confirmingWithdraw, setConfirmingWithdraw] = useState<string | null>(null);
   const busy = activity.key !== null;
@@ -167,17 +199,26 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
   }
   const missing = title.trim().length < 5 ? "اكتب عنوان التكليف بخمسة أحرف على الأقل."
     : targets.length === 0 ? "اختر مكلَّفاً واحداً على الأقل."
-    : !followUp ? "اختر متابع التكليف؛ هو من يتحقق من إنجازه."
+    : live && (preview.state === "loading" || (preview.state === "ready" && !fresh)) ? "جارٍ تحديد المكلَّفين…"
+    : live && preview.state === "error" ? "تعذرت معاينة المكلَّفين؛ عدّل الاختيار أو أعد المحاولة."
+    : fresh && keptRows.length === 0 ? "أُزيل كل المكلَّفين؛ اختر مكلَّفاً واحداً على الأقل."
+    : keptRows.some((row) => blockerOf(row)) ? "بعض الجهات بلا مسؤول محدد؛ أزلها من القائمة أو عيّن لها مسؤولاً."
     : null;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (missing || busy) return;
+    // What was shown and kept is exactly what is sent, one entry per person or unit.
+    const finalTargets: AssignmentTargetSelection[] = fresh
+      ? keptRows.map((row) => row.target_kind === "user"
+        ? { kind: "user" as const, id: row.target_user_id as string, label: row.resolved_user_name_ar ?? "" }
+        : { kind: "unit" as const, id: row.target_unit_id as string, label: row.resolved_unit_name_ar ?? "" })
+      : targets;
     const saved = await onCreate({
-      title: title.trim(), targets,
-      dueDate: dueDate || null, followUpId: followUp, requiresEvidence, clientRequestId,
+      title: title.trim(), targets: finalTargets,
+      dueDate: dueDate || null, followUpId: followUp || null, requiresEvidence, clientRequestId,
     });
-    if (saved) { setTitle(""); setTargets([]); setTargetType(""); setTargetScope(""); setDueDate(""); setFollowUp(""); setRequiresEvidence(false); setClientRequestId(crypto.randomUUID()); }
+    if (saved) { setRemoved([]); setTitle(""); setTargets([]); setTargetType(""); setTargetScope(""); setDueDate(""); setFollowUp(""); setRequiresEvidence(false); setClientRequestId(crypto.randomUUID()); }
   }
 
   if (assignments.length === 0 && !canWrite) return null;
@@ -277,6 +318,28 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
               return <button key={key} type="button" disabled={busy} onClick={() => setTargets((current) => current.filter((item) => `${item.kind}:${item.id}:${item.scopeUnitId ?? ""}` !== key))} className="rounded-q-pill border border-q-primary bg-q-primary-soft px-3 py-2 text-q-caption font-bold text-q-primary">{target.label} ×</button>;
             })}
           </div>}
+          {live && (
+            <div aria-label="المكلَّفون" className="flex flex-col gap-2 rounded-q-control border border-q-border bg-q-surface-2 p-3">
+              <p className="m-0 text-q-caption font-bold text-q-text">
+                {preview.state === "loading" ? "جارٍ تحديد المكلَّفين…" : preview.state === "error" ? "تعذرت معاينة المكلَّفين." : `سيُكلَّف ${keptRows.length} ${keptRows.length === 1 ? "شخص" : "أشخاص"} — أزل من لا تريده قبل الإصدار`}
+              </p>
+              {fresh && <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-y-auto p-0">
+                {previewRows.map((row) => {
+                  const key = rowKey(row);
+                  const blocker = blockerOf(row);
+                  const gone = removed.includes(key);
+                  return <li key={key} className={`flex items-center justify-between gap-2 rounded-q-control border px-3 py-2 ${gone ? "border-q-border bg-q-surface text-q-text-3 line-through" : blocker ? "border-q-danger bg-q-danger-soft" : "border-q-border bg-q-surface"}`}>
+                    <span className="min-w-0 text-q-ui text-q-text">
+                      <strong>{row.resolved_user_name_ar ?? row.resolved_unit_name_ar ?? "غير محدد"}</strong>
+                      {row.target_kind === "unit" && row.resolved_unit_name_ar && row.resolved_user_name_ar && <span className="text-q-caption text-q-text-2"> · {row.resolved_unit_name_ar}</span>}
+                      {blocker && <span className="block text-q-caption font-bold text-q-danger">{blocker}</span>}
+                    </span>
+                    <Button type="button" variant="ghost" disabled={busy} aria-label={`${gone ? "إعادة" : "إزالة"} ${row.resolved_user_name_ar ?? row.resolved_unit_name_ar ?? ""}`} onClick={() => setRemoved((current) => gone ? current.filter((item) => item !== key) : [...current, key])}>{gone ? "إعادة" : "إزالة"}</Button>
+                  </li>;
+                })}
+              </ul>}
+            </div>
+          )}
           <div className="grid gap-3 rounded-q-control bg-q-surface-2 p-3 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-q-caption font-bold text-q-text">
               أو استهدف نوع جهة بالكامل
@@ -302,7 +365,7 @@ export function ItemAssignments({ assignments, viewer, options, activity, onCrea
           <section className="flex flex-col gap-3 rounded-q-control border border-q-border bg-q-surface p-4">
             <header><h3 className="m-0 flex items-center gap-2 text-q-ui font-bold text-q-text"><span aria-hidden="true" className="grid h-6 w-6 place-items-center rounded-full bg-q-primary text-q-caption text-q-on-primary">٣</span>من يتابع وبأي شروط؟</h3><p className="m-0 mt-1 text-q-caption text-q-text-2">المتابع هو من يتحقق من الإنجاز.</p></header>
           <div className="grid gap-3 sm:grid-cols-2">
-            <AssignmentPersonPicker label="المتابع" value={followUp} initial={options.users} disabled={busy} onChange={setFollowUp} onSearch={searchUsers} />
+            <AssignmentPersonPicker label="المتابع (اختياري)" value={followUp} initial={options.users} disabled={busy} onChange={setFollowUp} onSearch={searchUsers} />
             <label className="flex min-h-11 items-center gap-2 self-end text-q-ui text-q-text">
               <input type="checkbox" checked={requiresEvidence} disabled={busy} onChange={(event) => setRequiresEvidence(event.target.checked)} className="h-5 w-5 accent-q-primary" />
               يتطلب أدلة إنجاز

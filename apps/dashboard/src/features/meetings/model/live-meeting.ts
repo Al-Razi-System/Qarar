@@ -122,11 +122,23 @@ export type AssignmentTargetSelection = {
   label: string;
 };
 
+/** Who a selection resolves to: one row per person who will be assigned. */
+export type AssignmentPreviewRow = {
+  target_kind: "user" | "unit";
+  target_user_id?: string | null;
+  target_unit_id?: string | null;
+  resolved_user_id?: string | null;
+  resolved_user_name_ar?: string | null;
+  resolved_unit_name_ar?: string | null;
+};
+export type AssignmentPreview = { count: number; targets: AssignmentPreviewRow[]; blockers: Array<{ target_unit_id?: string | null; unit_name_ar?: string | null; reason: string }> };
+
 export type NewAssignment = {
   title: string;
   targets: AssignmentTargetSelection[];
   dueDate: string | null;
-  followUpId: string;
+  /** Empty: the council's chair follows the assignment (the server's default). */
+  followUpId: string | null;
   requiresEvidence: boolean;
   clientRequestId: string;
 };

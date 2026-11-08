@@ -41,9 +41,8 @@ describe("ItemAssignments", () => {
     expect(screen.getByText("اختر مكلَّفاً واحداً على الأقل.")).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("البحث عن إضافة شخص أو جهة"), "عمادة");
     await userEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: "عمادة القبول" }));
-    expect(screen.getByText("اختر متابع التكليف؛ هو من يتحقق من إنجازه.")).toBeInTheDocument();
-    expect(issue).toBeDisabled();
-    await userEvent.type(screen.getByLabelText("البحث عن المتابع"), "هدى");
+    expect(issue).toBeEnabled();
+    await userEvent.type(screen.getByLabelText("البحث عن المتابع (اختياري)"), "هدى");
     await userEvent.click(screen.getByRole("option", { name: "د. هدى" }));
     await userEvent.click(screen.getByLabelText("يتطلب أدلة إنجاز"));
     expect(screen.getByText("يصبح التكليف مهمة تنفيذ فور إصداره، قبل اعتماد القرار.")).toBeInTheDocument();
@@ -58,7 +57,7 @@ describe("ItemAssignments", () => {
     await userEvent.type(screen.getByLabelText("البحث عن إضافة شخص أو جهة"), "منى");
     await waitFor(() => expect(handlers.onSearchUsers).toHaveBeenCalledWith("منى"));
     await userEvent.click(await screen.findByRole("option", { name: /منى عبدالله.*مديرة التخطيط/ }));
-    await userEvent.type(screen.getByLabelText("البحث عن المتابع"), "منى");
+    await userEvent.type(screen.getByLabelText("البحث عن المتابع (اختياري)"), "منى");
     await waitFor(() => expect(handlers.onSearchUsers).toHaveBeenCalledTimes(2));
     await userEvent.click((await screen.findAllByRole("option", { name: /منى عبدالله/ }))[0]);
     await userEvent.type(screen.getByLabelText("عنوان التكليف"), "إعداد التقرير التنفيذي");
@@ -72,7 +71,7 @@ describe("ItemAssignments", () => {
     await userEvent.type(screen.getByLabelText("عنوان التكليف"), "إبلاغ الأقسام");
     await userEvent.type(screen.getByLabelText("البحث عن إضافة شخص أو جهة"), "خالد");
     await userEvent.click(screen.getByRole("option", { name: "د. خالد" }));
-    await userEvent.type(screen.getByLabelText("البحث عن المتابع"), "هدى");
+    await userEvent.type(screen.getByLabelText("البحث عن المتابع (اختياري)"), "هدى");
     await userEvent.click(screen.getByRole("option", { name: "د. هدى" }));
     await userEvent.click(screen.getByRole("button", { name: "اقتراح التكليف" }));
     view.rerender(<ItemAssignments {...props} onCreate={onCreate} activity={{ key: null, errorKey: NEW_ASSIGNMENT_KEY, error: "صغ قرار البند أولاً، ثم أضف تكليفاته." }} />);
@@ -128,5 +127,52 @@ describe("ItemAssignments", () => {
   it("shows nothing to a member when the decision has no assignment", () => {
     const { view } = setup({ can_issue: false, can_propose: false });
     expect(view.container).toBeEmptyDOMElement();
+  });
+
+  it("issues without a follow-up, leaving the chair to follow by default", async () => {
+    const { handlers } = setup({ can_issue: true, can_propose: false });
+    await userEvent.type(screen.getByLabelText("عنوان التكليف"), "إبلاغ عمادة القبول");
+    await userEvent.type(screen.getByLabelText("البحث عن إضافة شخص أو جهة"), "عمادة");
+    await userEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: "عمادة القبول" }));
+    await userEvent.click(screen.getByRole("button", { name: "إصدار التكليف" }));
+    expect(handlers.onCreate).toHaveBeenCalledWith(expect.objectContaining({ followUpId: null }));
+  });
+
+  it("closes an open people list when the user presses anywhere else", async () => {
+    setup({ can_issue: true, can_propose: false });
+    await userEvent.click(screen.getByLabelText("البحث عن إضافة شخص أو جهة"));
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText("عنوان التكليف"));
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("shows who a unit type resolves to and sends only the people kept", async () => {
+    const onPreview = vi.fn(async () => ({ count: 2, blockers: [], targets: [
+      { target_kind: "unit" as const, target_unit_id: "d1", resolved_user_id: "p1", resolved_user_name_ar: "د. أحمد", resolved_unit_name_ar: "قسم الحاسوب" },
+      { target_kind: "unit" as const, target_unit_id: "d2", resolved_user_id: "p2", resolved_user_name_ar: "د. منى", resolved_unit_name_ar: "قسم الشبكات" },
+    ] }));
+    const { handlers } = setup({ can_issue: true, can_propose: false }, [], { onPreview });
+    await userEvent.type(screen.getByLabelText("عنوان التكليف"), "تحديث الخطط الدراسية");
+    await userEvent.selectOptions(screen.getByLabelText("أو استهدف نوع جهة بالكامل"), "ut1");
+    await userEvent.click(screen.getByRole("button", { name: "إضافة النوع" }));
+    expect(await screen.findByText("د. أحمد")).toBeInTheDocument();
+    expect(screen.getByText("د. منى")).toBeInTheDocument();
+    expect(screen.getByText(/سيُكلَّف 2 أشخاص/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "إزالة د. منى" }));
+    expect(screen.getByText(/سيُكلَّف 1 شخص/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "إصدار التكليف" }));
+    expect(handlers.onCreate).toHaveBeenCalledWith(expect.objectContaining({ targets: [{ kind: "unit", id: "d1", label: "قسم الحاسوب" }] }));
+  });
+
+  it("will not issue while a unit without a responsible is still listed", async () => {
+    const onPreview = vi.fn(async () => ({ count: 0, targets: [{ target_kind: "unit" as const, target_unit_id: "d3", resolved_user_id: null, resolved_user_name_ar: null, resolved_unit_name_ar: "قسم المكتبات" }], blockers: [{ target_unit_id: "d3", unit_name_ar: "قسم المكتبات", reason: "لا يوجد مسؤول محدد لهذه الوحدة." }] }));
+    setup({ can_issue: true, can_propose: false }, [], { onPreview });
+    await userEvent.type(screen.getByLabelText("عنوان التكليف"), "تحديث الخطط الدراسية");
+    await userEvent.type(screen.getByLabelText("البحث عن إضافة شخص أو جهة"), "عمادة");
+    await userEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: "عمادة القبول" }));
+    expect(await screen.findByText("لا يوجد مسؤول محدد لهذه الوحدة.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إصدار التكليف" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "إزالة قسم المكتبات" }));
+    expect(screen.getByText("أُزيل كل المكلَّفين؛ اختر مكلَّفاً واحداً على الأقل.")).toBeInTheDocument();
   });
 });

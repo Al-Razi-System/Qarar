@@ -530,7 +530,7 @@ describe("AgendaWorkspace assignments", () => {
     await userEvent.type(within(section).getByLabelText("عنوان التكليف"), "إبلاغ عمادة القبول");
     await userEvent.type(within(section).getByLabelText("البحث عن إضافة شخص أو جهة"), "عمادة");
     await userEvent.click(within(screen.getByRole("listbox")).getByRole("option", { name: "عمادة القبول" }));
-    await userEvent.type(within(section).getByLabelText("البحث عن المتابع"), "هدى");
+    await userEvent.type(within(section).getByLabelText("البحث عن المتابع (اختياري)"), "هدى");
     await userEvent.click(screen.getByRole("option", { name: "د. هدى" }));
     await userEvent.click(within(section).getByRole("button", { name: "إصدار التكليف" }));
     expect(onCreate).toHaveBeenCalledWith("a1", {

@@ -9,7 +9,7 @@ import { Button } from "@/shared/ui/button";
 import { Dialog } from "@/shared/ui/dialog";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { cn } from "@/shared/lib/utils";
-import type { AgendaDiscussionItem, AssignmentUserOption, Attendance, Decision, LiveMeetingSession, MeetingAssignment, MeetingAssignments, MeetingItemTimers, MeetingReferrals, NewAssignment, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound } from "../model/live-meeting";
+import type { AgendaDiscussionItem, AssignmentUserOption, Attendance, Decision, LiveMeetingSession, MeetingAssignment, MeetingAssignments, MeetingItemTimers, MeetingReferrals, NewAssignment, MemberProfiles, MyVote, Notice, PriorRouteRequest, TopicGovernanceHistory, TopicMeetingHistory, VotingRound, AssignmentPreview, AssignmentTargetSelection } from "../model/live-meeting";
 import type { MeetingTopicAttachment } from "../model/meeting";
 import { AttendanceQrDialog } from "./attendance-qr-dialog";
 import { ChairAttendanceConsole } from "./chair-attendance-console";
@@ -426,6 +426,9 @@ export function LiveMeetingRoom({ meetingId, publicCheckInOrigin }: { meetingId:
       const result = await roomRpc<{ users: AssignmentUserOption[] }>("search_meeting_assignment_options_v2", { p_meeting_id: meetingId, p_query: query, p_limit: 20 });
       return result.users;
     },
+    onPreview: (agendaItemId: string, targets: AssignmentTargetSelection[]) => roomRpc<AssignmentPreview>("preview_meeting_assignment_targets_v2", {
+      p_agenda_item_id: agendaItemId, p_selections: targets.map((target) => ({ kind: target.kind, id: target.id, scope_unit_id: target.scopeUnitId ?? null })),
+    }),
     onCreate: (agendaItemId: string, input: NewAssignment) => runAssignment(NEW_ASSIGNMENT_KEY, async () => {
       const selections = input.targets.map((target) => ({ kind: target.kind, id: target.id, scope_unit_id: target.scopeUnitId ?? null }));
       const preview = await roomRpc<{ blockers: Array<{ unit_name_ar?: string | null; reason: string }> }>("preview_meeting_assignment_targets_v2", { p_agenda_item_id: agendaItemId, p_selections: selections });
