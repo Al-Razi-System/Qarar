@@ -4,7 +4,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { qararRpc } from "@/shared/api/qarar-server";
 import { safeAdminError } from "@/shared/security/admin-error";
 import type { MeetingDetail, MeetingMinutes } from "@/features/meetings/model/meeting";
-import { MeetingMinutesDocument } from "@/features/meetings/pdf/meeting-minutes-document";
+import { MeetingMinutesDocument, type MinutesAttendanceRow, type MinutesQuorum } from "@/features/meetings/pdf/meeting-minutes-document";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,8 +23,12 @@ export async function GET(_request: Request, context: { params: Promise<{ meetin
     if ((minutes.approvals ?? []).some((approval) => approval.approval_status !== "approved" || !approval.signature_strokes?.length)) {
       return Response.json({ error: { message: "بيانات التواقيع المعتمدة غير مكتملة." } }, { status: 409 });
     }
+    // The roster and quorum make the record complete; without the attendance permission the minutes still print from their signatures.
+    const session = await qararRpc<{ attendance?: Array<{ full_name_ar: string; status: string }>; quorum?: { present_members?: number; eligible_members?: number; actual_percentage?: number; quorum_status?: string } | null }>("get_meeting_session_detail", { p_meeting_id: meetingId }).catch(() => null);
+    const attendance: MinutesAttendanceRow[] | undefined = session?.attendance?.map((row) => ({ name: row.full_name_ar, status: row.status }));
+    const quorum: MinutesQuorum | null = session?.quorum ? { present: session.quorum.present_members, eligible: session.quorum.eligible_members, percentage: session.quorum.actual_percentage, met: session.quorum.quorum_status === "met" } : null;
     const logo = `data:image/jpeg;base64,${logoBuffer.toString("base64")}`;
-    const document = MeetingMinutesDocument({ meeting, minutes, logo });
+    const document = MeetingMinutesDocument({ meeting, minutes, logo, attendance, quorum });
     const pdf = await renderToBuffer(document as Parameters<typeof renderToBuffer>[0]);
     const safeNumber = (meeting.meeting_no ?? meeting.id).replace(/[^A-Za-z0-9_-]/g, "-");
     return new Response(new Uint8Array(pdf), {

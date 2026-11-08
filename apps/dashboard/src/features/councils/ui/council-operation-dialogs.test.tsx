@@ -1,7 +1,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LeadershipDialog, MemberDialog } from "./council-operation-dialogs";
+import { LeadershipDialog, MemberDialog, ReasonDialog } from "./council-operation-dialogs";
 import type { CouncilMembership } from "../model/types";
 
 const roles = [{
@@ -87,8 +87,22 @@ describe("MemberDialog", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("query=%D8%B7%D8%A7%D8%B1%D9%82");
-    expect(await screen.findByRole("option", { name: "طارق النهمي - tariq@example.test" })).toBeVisible();
-    expect(screen.queryByRole("option", { name: /عضو حالي/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("checkbox", { name: /طارق النهمي/ })).toBeVisible();
+    expect(screen.queryByRole("checkbox", { name: /عضو حالي/ })).not.toBeInTheDocument();
+  });
+
+  it("يضيف عدة أعضاء دفعة واحدة بالدور والفترة نفسيهما", async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(<MemberDialog
+      users={[{ id: "u1", full_name_ar: "أحمد", email: "a@example.test" }, { id: "u2", full_name_ar: "منى", email: "m@example.test" }, { id: "u3", full_name_ar: "خالد", email: "k@example.test" }]}
+      excludedUserIds={[]} roles={roles} onClose={vi.fn()} onConfirm={onConfirm}
+    />);
+    await user.click(screen.getByRole("checkbox", { name: /أحمد/ }));
+    await user.click(screen.getByRole("checkbox", { name: /خالد/ }));
+    await user.selectOptions(screen.getByRole("combobox"), roles[0].id);
+    await user.click(screen.getByRole("button", { name: "إضافة 2 أعضاء" }));
+    expect(onConfirm).toHaveBeenCalledWith(expect.objectContaining({ userIds: ["u1", "u3"], roleId: roles[0].id }));
   });
 
   it("يعرض فشل البحث داخل نافذة إضافة العضو", async () => {
@@ -110,5 +124,18 @@ describe("MemberDialog", () => {
     await vi.advanceTimersByTimeAsync(400);
 
     expect(await screen.findByText("تعذر تحميل المستخدمين حالياً.")).toBeVisible();
+  });
+});
+
+describe("ReasonDialog", () => {
+  it("لا يطلب سبباً عند التفعيل ويطلبه عند التعطيل", async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(<ReasonDialog title="تفعيل المجلس" description="x" confirmLabel="تفعيل المجلس" reasonRequired={false} onClose={vi.fn()} onConfirm={onConfirm} />);
+    expect(screen.queryByLabelText(/سبب الإجراء/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "تفعيل المجلس" }));
+    expect(onConfirm).toHaveBeenCalledWith("");
+    rerender(<ReasonDialog title="تعطيل المجلس" description="x" confirmLabel="تعطيل المجلس" danger onClose={vi.fn()} onConfirm={onConfirm} />);
+    expect(screen.getByText("سبب الإجراء *")).toBeInTheDocument();
   });
 });

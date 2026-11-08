@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(19);
+select plan(21);
 select is((select count(*)::integer from qarar_architecture.api_contract_registry where contract_name in(
  'admin_validate_council_administrative_readiness','admin_activate_council',
  'admin_deactivate_council','admin_archive_council')),4,'all lifecycle contracts are registered');
@@ -75,11 +75,16 @@ select is((api_v1.admin_validate_council_administrative_readiness(
 update qarar_iam.roles set is_active=true
 where organization_id='59000000-0000-0000-0000-000000000001' and code='council_rapporteur';
 select lives_ok($$select api_v1.admin_activate_council(
- '59000000-0000-0000-0000-000000000041','اكتمل التشكيل',
+ '59000000-0000-0000-0000-000000000041',null,
  (select updated_at from qarar_core.governance_units where id='59000000-0000-0000-0000-000000000041'))$$,
  'ready council activates');
 select is((select status from qarar_core.governance_units where id='59000000-0000-0000-0000-000000000041'),
  'active','activation persists the active state');
+select is((select h.reason from qarar_core.governance_unit_status_history h where h.governance_unit_id='59000000-0000-0000-0000-000000000041' and h.to_status='active' order by h.changed_at desc limit 1),'تفعيل المجلس','an activation without a reason is recorded with the standard one');
+select throws_ok($$select api_v1.admin_deactivate_council(
+ '59000000-0000-0000-0000-000000000041',null,
+ (select updated_at from qarar_core.governance_units where id='59000000-0000-0000-0000-000000000041'))$$,
+ '22023',null,'a deactivation still needs its reason');
 select throws_ok($$select api_v1.admin_activate_council(
  '59000000-0000-0000-0000-000000000041','تكرار التفعيل',
  (select updated_at from qarar_core.governance_units where id='59000000-0000-0000-0000-000000000041'))$$,

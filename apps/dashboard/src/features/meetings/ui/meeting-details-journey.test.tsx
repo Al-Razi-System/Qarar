@@ -193,6 +193,14 @@ it("explains beside a disabled resume action why a postponed meeting cannot be r
   expect(screen.getByText(/بدأت دورة الاجتماع التالية/)).toBeVisible();
 });
 
+it("offers the approved minutes, to read and to download, inside a completed meeting", async () => {
+  const closed = { ...meeting, status: "closed", capabilities: {} };
+  mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail" ? Promise.resolve(closed) : Promise.resolve({ ready: true, checks: [] }));
+  render(<MeetingDetailsJourney meetingId={meeting.id}/>);
+  expect(await screen.findByRole("link", { name: "عرض المحضر المعتمد" })).toHaveAttribute("href", `/admin/meetings/${meeting.id}/minutes`);
+  expect(screen.getByRole("button", { name: /تنزيل محضر/ })).toBeVisible();
+});
+
 it("confirms an off-schedule start before opening the live room", async () => {
   const readyMeeting = {
     ...meeting,

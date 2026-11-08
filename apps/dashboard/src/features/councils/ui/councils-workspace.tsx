@@ -138,10 +138,18 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
     await refreshCouncil(values.createMeetingPlan ? "تم حفظ المجلس وخطته وإنشاء أول اجتماع كمسودة." : "تم حفظ بيانات المجلس بنجاح.");
   }
 
-  async function addMember(value: { userId: string; roleId: string; title: string; start: string; end: string | null }) {
+  async function addMember(value: { userIds: string[]; roleId: string; title: string; start: string; end: string | null }) {
     if (!detail) return;
-    await councilRpc("admin_add_council_member", { p_council_id: detail.id, p_user_id: value.userId, p_role_id: value.roleId, p_membership_title: value.title, p_start_date: value.start, p_end_date: value.end });
-    await refreshCouncil("تمت إضافة العضو وتحديث فحص الجاهزية.");
+    // One contract call per person; whoever failed is named, and those added stay added.
+    const failed: string[] = []; let added = 0;
+    for (const userId of value.userIds) {
+      try {
+        await councilRpc("admin_add_council_member", { p_council_id: detail.id, p_user_id: userId, p_role_id: value.roleId, p_membership_title: value.title, p_start_date: value.start, p_end_date: value.end });
+        added += 1;
+      } catch (cause) { failed.push(`${users.find((user) => user.id === userId)?.full_name_ar ?? "مستخدم"}: ${cause instanceof Error ? cause.message : "تعذر الإضافة"}`); }
+    }
+    if (added > 0) await refreshCouncil(added === 1 ? "تمت إضافة العضو وتحديث فحص الجاهزية." : `تمت إضافة ${added} أعضاء وتحديث فحص الجاهزية.`);
+    if (failed.length) throw new Error(`${added > 0 ? `أُضيف ${added}، لكن ` : ""}تعذرت إضافة ${failed.length}: ${failed.join("؛ ")}`);
   }
 
   async function updateMembership(membership: CouncilMembership, value: { title: string; start: string; end: string | null }) {
@@ -163,7 +171,7 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
   async function changeLifecycle(action: Exclude<LifecycleDialog, null>, reason: string) {
     if (!detail) return;
     const contract = action === "activate" ? "admin_activate_council" : action === "deactivate" ? "admin_deactivate_council" : "admin_archive_council";
-    await councilRpc(contract, { p_council_id: detail.id, p_reason: reason, p_expected_updated_at: detail.updated_at });
+    await councilRpc(contract, { p_council_id: detail.id, p_reason: reason.trim() || null, p_expected_updated_at: detail.updated_at });
     const message = action === "activate" ? "تم تفعيل المجلس وأصبح جاهزاً للتشغيل." : action === "deactivate" ? "تم تعطيل المجلس وتسجيل السبب." : "تمت أرشفة المجلس نهائياً.";
     await refreshCouncil(message);
   }
@@ -189,7 +197,7 @@ export function CouncilsWorkspace({ initialHierarchy, options, roles, users }: P
     {leadership && <LeadershipDialog users={users} members={members} onClose={() => setLeadership(false)} onConfirm={assignLeadership} />}
     {editingMember && <EditMembershipDialog membership={editingMember} onClose={() => setEditingMember(null)} onConfirm={(value) => updateMembership(editingMember, value)} />}
     {endingMember && <EndMembershipDialog membership={endingMember} onClose={() => setEndingMember(null)} onConfirm={(date, reason) => endMembership(endingMember, date, reason)} />}
-    {lifecycle && <ReasonDialog title={lifecycleTitle(lifecycle)} description={lifecycleDescription(lifecycle)} confirmLabel={lifecycle === "activate" ? "تفعيل المجلس" : lifecycle === "deactivate" ? "تعطيل المجلس" : "أرشفة نهائية"} danger={lifecycle !== "activate"} onClose={() => setLifecycle(null)} onConfirm={(reason) => changeLifecycle(lifecycle, reason)} />}
+    {lifecycle && <ReasonDialog title={lifecycleTitle(lifecycle)} description={lifecycleDescription(lifecycle)} confirmLabel={lifecycle === "activate" ? "تفعيل المجلس" : lifecycle === "deactivate" ? "تعطيل المجلس" : "أرشفة نهائية"} danger={lifecycle !== "activate"} reasonRequired={lifecycle !== "activate"} onClose={() => setLifecycle(null)} onConfirm={(reason) => changeLifecycle(lifecycle, reason)} />}
   </div>;
 }
 

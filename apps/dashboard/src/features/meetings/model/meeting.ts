@@ -31,6 +31,8 @@ export type Meeting = {
   planned_date?: string | null;
   /** Why the meeting is held off its planned day, when it is. */
   schedule_exception_reason?: string | null;
+  /** Set when the chair held the meeting without a full quorum, with the reason. */
+  quorum_continuation?: { reason: string; authorized_at?: string | null } | null;
   /** False when the meeting's council is not active; its session cannot be opened. */
   council_active?: boolean;
   schedule_date_confirmed?: boolean;
@@ -58,6 +60,7 @@ export type AgendaItem = {
   id: string;
   agenda_order: number;
   agenda_status?: string;
+  voting_result?: string | null;
   discussion_notes?: string | null;
   discussion_instructions?: string | null;
   updated_at?: string;
