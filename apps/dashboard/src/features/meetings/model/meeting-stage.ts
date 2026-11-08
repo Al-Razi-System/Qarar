@@ -1,6 +1,6 @@
 import type { SeatStatus } from "@/shared/ui/member-seat";
-import { finalSummaryReady } from "./agenda-flow";
-import type { AgendaDiscussionItem, Attendance, Decision, LiveMeetingSession, MemberProfile, VotingRound } from "./live-meeting";
+import { activeAgendaItemId } from "./agenda-flow";
+import type { AgendaDiscussionItem, Attendance, Decision, ItemReferral, LiveMeetingSession, MemberProfile, VotingRound } from "./live-meeting";
 
 export type StageSeat = {
   id: string;
@@ -33,7 +33,6 @@ export type StagePhase =
 
 export type MeetingStage = { seats: StageSeat[]; phase: StagePhase };
 
-const FINISHED_AGENDA_STATES = ["discussed", "postponed"];
 
 function latestClosedRound(rounds: VotingRound[], agendaItemId: string) {
   return [...rounds].reverse().find((round) => round.agenda_item_id === agendaItemId && round.status === "closed");
@@ -45,14 +44,6 @@ function attendanceSeatStatus(record: Attendance): SeatStatus {
   const attended = record.status === "present" || record.status === "late";
   const verified = record.verification_status === undefined || record.verification_status === "verified";
   return attended && verified ? "present" : "pending";
-}
-
-function isUnfinished(item: AgendaDiscussionItem, rounds: VotingRound[], decisions: Decision[], referredItemIds: string[]) {
-  const closed = latestClosedRound(rounds, item.id);
-  return !FINISHED_AGENDA_STATES.includes(item.agenda_status ?? "pending")
-    || !finalSummaryReady(item, closed)
-    || (item.requires_voting === true && item.agenda_status !== "postponed" && !closed && !referredItemIds.includes(item.id))
-    || (closed?.result === "approved" && !decisions.some((decision) => decision.agenda_item_id === item.id));
 }
 
 /**
@@ -122,7 +113,10 @@ function derivePhase(
   }
 
   const discussing = ordered.find((item) => item.agenda_status === "under_discussion");
-  const current = discussing ?? ordered.find((item) => isUnfinished(item, rounds, decisions, referredItemIds));
+  // The table shows the item the council is on, by the same rule as the agenda and the
+  // control dock, so it never lingers on the result of an earlier item.
+  const currentId = activeAgendaItemId(session, ordered, rounds, decisions, referredItemIds.map((id) => ({ agenda_item_id: id }) as ItemReferral));
+  const current = discussing ?? ordered.find((item) => item.id === currentId);
   if (!current) return ordered.length === 0 ? { kind: "idle", item: null } : { kind: "finished" };
 
   const closed = latestClosedRound(rounds, current.id);

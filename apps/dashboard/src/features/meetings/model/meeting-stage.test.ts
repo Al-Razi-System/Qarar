@@ -125,3 +125,13 @@ describe("deriveMeetingStage phase", () => {
     expect(deriveMeetingStage(sessionOf(), [item("a1", 1, { agenda_status: "discussed" })], [], []).phase).toEqual({ kind: "finished" });
   });
 });
+
+describe("deriveMeetingStage scene", () => {
+  it("leaves the result of an earlier item once the council is on a later one", () => {
+    const first: AgendaDiscussionItem = { id: "a1", agenda_order: 1, agenda_status: "discussed", requires_voting: true, discussion_notes: undefined, topic: { id: "t1", title_ar: "الأول" } };
+    const second: AgendaDiscussionItem = { id: "a2", agenda_order: 2, agenda_status: "discussed", requires_voting: true, topic: { id: "t2", title_ar: "الثاني" } };
+    const closed: VotingRound = { id: "r1", agenda_item_id: "a1", status: "closed", result: "approved", closed_at: "2026-10-10T09:00:00Z" };
+    const phase = deriveMeetingStage(sessionOf(), [first, second], [closed], [], undefined, []).phase;
+    expect(phase).toMatchObject({ kind: "idle", item: { id: "a2" } });
+  });
+});
