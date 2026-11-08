@@ -123,6 +123,18 @@ describe("moving on after an item's discussion", () => {
   });
 });
 
+describe("staying on a decided item", () => {
+  it("holds the council on the item with a decision until the next item starts, and offers to move on", () => {
+    const first = item({ agenda_status: "discussed", discussion_notes: undefined });
+    const second = item({ id: "a2", agenda_order: 2, requires_voting: false });
+    expect(activeAgendaItemId(session(), [first, second], [approved], [decision])).toBe("a1");
+    const flow = itemFlow(first, session(), [approved], [decision]);
+    expect(chairActions(first, session(), flow, { nextItemId: "a2" }).actions.map((action) => action.kind)).toEqual(["next_item"]);
+    const started = { ...second, agenda_status: "under_discussion" };
+    expect(activeAgendaItemId(session(), [first, started], [approved], [decision])).toBe("a2");
+  });
+});
+
 describe("postponed items", () => {
   it("need no vote: they neither hold the focus nor block the end of the session", () => {
     const postponed = item({ agenda_status: "postponed", discussion_notes: "سبب التأجيل" });
@@ -141,7 +153,20 @@ describe("completionBlockers", () => {
 
   it("asks for the final summary again when it is older than the vote result", () => {
     const stale = item({ agenda_status: "discussed", discussion_notes: "ملاحظات أولية", updated_at: "2026-10-10T08:30:00Z" });
-    expect(completionBlockers(session(), [stale], [approved], [decision])).toEqual(["البند 1 «الخطة»: تحديث الملخص النهائي بعد احتساب نتيجة التصويت."]);
+    const rejected: VotingRound = { ...approved, result: "rejected" };
+    expect(completionBlockers(session(), [stale], [rejected], [])).toEqual(["البند 1 «الخطة»: تحديث الملخص النهائي بعد احتساب نتيجة التصويت."]);
+  });
+
+  it("does not ask for a summary of an item that has a written decision or went to another unit", () => {
+    const noSummary = item({ agenda_status: "discussed", discussion_notes: undefined });
+    expect(completionBlockers(session(), [noSummary], [approved], [decision])).toEqual([]);
+    const referral: ItemReferral = { agenda_item_id: "a1", referral_id: "f1", to_unit_id: "u9", to_unit_name_ar: "لجنة الخطط", reason: "يحتاج دراسة اللجنة", status: "pending", referred_at: "2026-10-10T09:00:00Z" };
+    expect(completionBlockers(session(), [noSummary], [], [], [referral]).some((blocker) => blocker.includes("ملخص"))).toBe(false);
+  });
+
+  it("still asks for it when the vote gave no decision", () => {
+    const noSummary = item({ agenda_status: "discussed", discussion_notes: undefined });
+    expect(completionBlockers(session(), [noSummary], [{ ...approved, result: "tied" }], [])).toEqual(["البند 1 «الخطة»: حفظ ملخص النتائج والتوصيات."]);
   });
 });
 

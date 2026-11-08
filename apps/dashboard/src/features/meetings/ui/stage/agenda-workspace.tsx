@@ -122,7 +122,8 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
   const blockers = manager ? completionBlockers(session, ordered, rounds, decisions, referred) : [];
   // Only the council's chair decides on downloads and referrals; the broadcast tells the room who that is.
   const viewerIsChair = Boolean(live && (live.can_hand_over || live.can_take_back));
-  const { actions, note } = chairActions(selected, session, flow, { canRefer: viewerIsChair && Boolean(referrals && onRequestReferral) });
+  const nextItem = ordered.find((item) => item.agenda_order > selected.agenda_order && !["discussed", "postponed"].includes(item.agenda_status ?? "pending"));
+  const { actions, note } = chairActions(selected, session, flow, { canRefer: viewerIsChair && Boolean(referrals && onRequestReferral), nextItemId: nextItem?.id ?? null });
 
   function run(action: ChairAction) {
     if (action.kind === "start") void onUpdateDiscussion(selected, "under_discussion", selected.discussion_notes ?? null);
@@ -132,6 +133,7 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
     else if (action.kind === "open_round") onOpenRound(selected);
     else if (action.kind === "close_round" && flow.open) onCloseRound(flow.open);
     else if (action.kind === "decision" && flow.closed) onCreateDecision(flow.closed, selected);
+    else if (action.kind === "next_item" && nextItem) { if (controls && onBroadcast) onBroadcast(nextItem.id, "instructions"); else setPicked({ whileCurrent: currentId, itemId: nextItem.id }); }
     else if (action.kind === "edit_decision" && flow.decision) onEditDecision(flow.decision, selected, flow.closed);
   }
 

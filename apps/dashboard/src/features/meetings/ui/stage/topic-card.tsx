@@ -218,7 +218,7 @@ export function TopicCard({ item, total, flow, state, session, attachments, hist
         </section>
       )}
 
-      <DiscussionSummary key={item.id} item={item} votingFinished={Boolean(flow.closed)} finalNeedsConfirmation={!finalSummaryReady(item, flow.closed)} role={role} busy={busy} draft={summaryDraft} onDraftChange={onSummaryDraftChange} onUpdate={onUpdateDiscussion} />
+      <DiscussionSummary key={item.id} item={item} votingFinished={Boolean(flow.closed)} finalNeedsConfirmation={!finalSummaryReady(item, flow.closed, Boolean(flow.decision) || Boolean(flow.referral))} role={role} busy={busy} draft={summaryDraft} onDraftChange={onSummaryDraftChange} onUpdate={onUpdateDiscussion} />
     </Card>
   );
 }

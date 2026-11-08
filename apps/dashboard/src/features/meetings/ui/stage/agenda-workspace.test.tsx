@@ -472,7 +472,7 @@ describe("AgendaWorkspace referral", () => {
   });
 
   it("shows every screen where the item went, and no vote on it", () => {
-    setup("chair", { agenda: [{ ...first, agenda_status: "discussed", voting_available_now: true }, second], referrals: referrals([{}]), onRequestReferral: vi.fn(), broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
+    setup("chair", { agenda: [{ ...first, agenda_status: "discussed", voting_available_now: true }], referrals: referrals([{}]), onRequestReferral: vi.fn(), broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true }), onBroadcast: vi.fn(), onHandOver: vi.fn() });
     const dock = screen.getByRole("region", { name: "شريط تحكم رئيس المجلس" });
     expect(within(dock).queryByRole("button", { name: "فتح التصويت للأعضاء" })).not.toBeInTheDocument();
     expect(within(dock).getByText("أُحيل البند إلى لجنة الخطط، بانتظار قبولها.")).toBeInTheDocument();

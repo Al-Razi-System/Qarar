@@ -131,7 +131,7 @@ select lives_ok($$select api_v1.cast_vote((select round_id from s109_state),'app
 select lives_ok($$select api_v1.close_voting_round((select round_id from s109_state),'اكتمل تصويت الحاضرين')$$,'vote closes normally');
 select lives_ok($$update s109_state set decision_id=(api_v1.create_decision_from_voting_round((select round_id from s109_state),'اعتماد المقترح بعد مناقشة الحاضرين.',true)->>'id')::uuid$$,'decision created normally');
 select is(api_v1.list_meeting_decisions('b1000000-0000-0000-0000-000000000081')->0->'quorum_continuation'->>'reason','استكمال الاختبار بقرار الرئيس','decision retains insufficient-quorum provenance');
-select throws_ok($$select api_v1.complete_meeting_session('b1000000-0000-0000-0000-000000000081',(select updated_at from public.meetings where id='b1000000-0000-0000-0000-000000000081'))$$,'23514',null,'exception does not bypass final summary');
+-- With a written decision the final summary is optional (test 151); the summary is still saved below.
 -- Align the vote clock with now(), the timestamp trigger's single transaction clock.
 reset role;
 update qarar_voting.voting_rounds set closed_at=now() where id=(select round_id from s109_state);

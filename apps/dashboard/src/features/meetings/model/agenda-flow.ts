@@ -14,7 +14,7 @@ export type AgendaItemFlow = {
 export type AgendaStateTone = "neutral" | "live" | "info" | "success" | "warning" | "danger";
 export type AgendaItemState = { label: string; tone: AgendaStateTone };
 
-export type ChairActionKind = "start" | "end" | "postpone" | "open_round" | "close_round" | "decision" | "edit_decision" | "refer";
+export type ChairActionKind = "start" | "end" | "postpone" | "open_round" | "close_round" | "decision" | "edit_decision" | "refer" | "next_item";
 export type ChairAction = {
   kind: ChairActionKind;
   label: string;
@@ -36,7 +36,10 @@ export function latestClosedRound(rounds: VotingRound[], agendaItemId: string) {
 }
 
 /** Same readiness used by the finish guard: preliminary text must be saved after the result. */
-export function finalSummaryReady(item: AgendaDiscussionItem, closed?: VotingRound | null) {
+export function finalSummaryReady(item: AgendaDiscussionItem, closed?: VotingRound | null, exempt = false) {
+  // An item with a written decision (or one that went to another unit) carries its outcome
+  // in that record; its summary is welcome but not required (decision of 9 November 2026).
+  if (exempt) return true;
   if ((item.discussion_notes ?? "").trim().length < 5) return false;
   return !(closed?.closed_at && item.updated_at && Date.parse(item.updated_at) < Date.parse(closed.closed_at));
 }
@@ -68,10 +71,16 @@ export function activeAgendaItemId(session: LiveMeetingSession, ordered: AgendaD
     return !["discussed", "postponed"].includes(item.agenda_status ?? "pending")
       || (item.requires_voting && item.agenda_status !== "postponed" && !closed && !isReferred(item, referrals));
   };
+  // The council stays on an item with a decision until a later item starts, so the chair can
+  // add its assignments; its summary is optional and never holds the council back.
+  const laterStarted = (item: AgendaDiscussionItem) => ordered.some((other) => other.agenda_order > item.agenda_order
+    && ((other.agenda_status ?? "pending") !== "pending" || rounds.some((round) => round.agenda_item_id === other.id)));
   const paperwork = (item: AgendaDiscussionItem) => {
     const closed = latestClosedRound(rounds, item.id);
-    return !finalSummaryReady(item, closed)
-      || (closed?.result === "approved" && !decisions.some((decision) => decision.agenda_item_id === item.id));
+    const hasDecision = decisions.some((decision) => decision.agenda_item_id === item.id);
+    return !finalSummaryReady(item, closed, hasDecision || isReferred(item, referrals))
+      || (closed?.result === "approved" && !hasDecision)
+      || (hasDecision && !laterStarted(item));
   };
   // Paperwork of the item the council has just worked on keeps the focus (its summary,
   // its decision and assignments); paperwork left on an item before it does not pull
@@ -121,7 +130,7 @@ export function chairActions(
   session: LiveMeetingSession,
   flow: AgendaItemFlow,
   /** Only the council's chair refers an item; nobody else is offered it. */
-  options: { canRefer?: boolean } = {},
+  options: { canRefer?: boolean; /** The item to move on to once this one has its decision. */ nextItemId?: string | null } = {},
 ): { actions: ChairAction[]; note: string | null } {
   const status = item.agenda_status ?? "pending";
   const actions: ChairAction[] = [];
@@ -149,10 +158,11 @@ export function chairActions(
   } else if (flow.closed?.result === "approved" && !flow.decision) {
     actions.push({ kind: "decision", label: "صياغة القرار المعتمد" });
   } else if (flow.decision) {
+    if (options.nextItemId) actions.push({ kind: "next_item", label: "الانتقال إلى البند التالي" });
     if (flow.decision.can_edit_text) actions.push({ kind: "edit_decision", label: "تعديل القرار" });
-    note = `${flow.decision.decision_no} · تم إنشاء القرار. ${nextStepAfterResult(item, flow.closed)}`;
+    note = `${flow.decision.decision_no} · تم إنشاء القرار. ${nextStepAfterResult(item, flow.closed, true)}`;
   } else if (flow.closed) {
-    note = `${flow.closed.result === "tied" ? "تعادلت الأصوات، فبقي الموضوع في مرحلته من مساره." : "تم توثيق نتيجة التصويت لهذا البند."} ${nextStepAfterResult(item, flow.closed)}`;
+    note = `${flow.closed.result === "tied" ? "تعادلت الأصوات، فبقي الموضوع في مرحلته من مساره." : "تم توثيق نتيجة التصويت لهذا البند."} ${nextStepAfterResult(item, flow.closed, false)}`;
   } else if (status === "discussed" && flow.hasVoting) {
     // Every item is decided by the members' vote once its discussion ends. When the
     // topic's route cannot take a vote, the server says why and the chair may postpone.
@@ -176,8 +186,9 @@ export function chairActions(
 }
 
 /** What remains before the council moves on, so the chair is never left without a next step. */
-function nextStepAfterResult(item: AgendaDiscussionItem, closed: VotingRound | null | undefined) {
-  return finalSummaryReady(item, closed)
+function nextStepAfterResult(item: AgendaDiscussionItem, closed: VotingRound | null | undefined, hasDecision: boolean) {
+  return hasDecision ? "أضف تكليفاً إن لزم، ثم انتقل إلى البند التالي."
+    : finalSummaryReady(item, closed, false)
     ? "اكتمل البند؛ ينتقل المجلس إلى البند التالي."
     : "احفظ ملخص النتائج لينتقل المجلس إلى البند التالي.";
 }
@@ -194,7 +205,9 @@ export function completionBlockers(session: LiveMeetingSession, ordered: AgendaD
       || session.open_voting_rounds.some((round) => round.agenda_item_id === item.id);
     const closed = latestClosedRound(rounds, item.id);
     if (!["discussed", "postponed"].includes(item.agenda_status ?? "pending")) blockers.push(`${label}: إنهاء المناقشة أو تأجيل البند بسبب موثق.`);
-    if ((item.discussion_notes ?? "").trim().length < 5) blockers.push(`${label}: حفظ ملخص النتائج والتوصيات.`);
+    const summaryExempt = decisions.some((decision) => decision.agenda_item_id === item.id) || isReferred(item, referrals);
+    if (summaryExempt) { /* the decision or the referral records the outcome */ }
+    else if ((item.discussion_notes ?? "").trim().length < 5) blockers.push(`${label}: حفظ ملخص النتائج والتوصيات.`);
     else if (closed?.closed_at && item.updated_at && new Date(item.updated_at).getTime() < new Date(closed.closed_at).getTime()) blockers.push(`${label}: تحديث الملخص النهائي بعد احتساب نتيجة التصويت.`);
     if (item.requires_voting && open) blockers.push(`${label}: إغلاق جولة التصويت المفتوحة واحتساب النتيجة.`);
     else if (item.requires_voting && item.agenda_status !== "postponed" && !closed && !isReferred(item, referrals)) blockers.push(`${label}: إجراء التصويت وإغلاق الجولة.`);

@@ -111,7 +111,10 @@ describe("deriveMeetingStage phase", () => {
     const pending = deriveMeetingStage(sessionOf(), agenda, [first, second], []).phase;
     expect(pending).toMatchObject({ kind: "result", round: { id: "r2" } });
     const decided = deriveMeetingStage(sessionOf(), agenda, [first, second], [{ id: "d1", decision_no: "DEC-1", agenda_item_id: "a1", decision_status: "draft", decision_text: "نص" }]).phase;
-    expect(decided).toEqual({ kind: "idle", item: expect.objectContaining({ id: "a2" }) });
+    // The council stays on a decided item so its assignments can be added; it moves on once the next item starts.
+    expect(decided).toMatchObject({ kind: "result", item: { id: "a1" } });
+    const moved = deriveMeetingStage(sessionOf(), [agenda[0], item("a2", 2, { agenda_status: "under_discussion" })], [first, second], [{ id: "d1", decision_no: "DEC-1", agenda_item_id: "a1", decision_status: "draft", decision_text: "نص" }]).phase;
+    expect(moved).toMatchObject({ kind: "discussion", item: { id: "a2" } });
   });
 
   it("moves past a referred item: it needs no vote", () => {
