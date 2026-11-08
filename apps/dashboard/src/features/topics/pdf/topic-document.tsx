@@ -1,4 +1,5 @@
 import path from "node:path";
+import { executedHistory } from "../model/topic-history";
 import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 Font.register({
@@ -24,7 +25,7 @@ export type TopicPdfData = {
   workflow: { status?: string; steps?: Array<{ id: string; sequence_no?: number; status?: string; outcome_code?: string | null; snapshot?: { name_ar?: string } }> } | null;
   referrals: Array<{ id: string; from_unit_name_ar?: string; to_unit_name_ar?: string; status?: string; referral_reason?: string }>;
   meetings: Array<{
-    agenda_item_id: string; discussion_notes?: string | null;
+    agenda_item_id: string; agenda_status?: string; discussion_notes?: string | null;
     meeting: { meeting_no?: string; title: string; scheduled_date?: string; unit_name?: string };
     voting_rounds?: Array<{ id: string; status?: string; result?: string | null; approve_count?: number; reject_count?: number; abstain_count?: number }>;
     decisions?: Array<{ id: string; decision_no: string; decision_text: string; decision_status?: string }>;
@@ -77,13 +78,18 @@ const styles = StyleSheet.create({
 
 const statusLabels: Record<string, string> = { draft: "مسودة", new: "بانتظار المراجعة", under_review: "قيد المراجعة", approved: "معتمد للمسار", returned: "مطلوب استكمال", rejected: "مرفوض", active: "المرحلة الحالية", pending: "بانتظار دورها", completed: "مكتملة", fulfilled: "مستوفى", waived: "مستثنى" };
 const priorityLabels: Record<string, string> = { low: "منخفضة", medium: "متوسطة", high: "عالية", urgent: "عاجلة" };
-const outcomeLabels: Record<string, string> = { approved: "موافقة", recommended: "توصية بالموافقة", rejected: "رفض", returned: "إعادة للاستكمال", deferred: "تأجيل", completed: "مكتملة", tied: "تعادل" };
 
 export function TopicDocument(data: TopicPdfData) {
   const { topic } = data;
   const snapshot = topic.typed_creation_request?.snapshot;
   const typeName = snapshot?.topic_type_name_ar ?? topic.category?.name_ar ?? "موضوع عام";
   const classification = snapshot?.classification_name_ar ?? topic.category?.name_ar ?? "غير محدد";
+  const steps = [...(data.workflow?.steps ?? [])].sort((a, b) => (a.sequence_no ?? 0) - (b.sequence_no ?? 0));
+  const current = steps.find((step) => step.status === "active");
+  const done = steps.filter((step) => step.status === "completed").length;
+  const previous = executedHistory(data.meetings);
+  const basis = snapshot?.authorities?.length ? snapshot.authorities.map((authority) => ({ title: [authority.source_document_name, authority.article_number ? `المادة ${authority.article_number}` : ""].filter(Boolean).join(" · ") || "سند تنظيمي", text: plainText(authority.authority_text) }))
+    : data.references.map((reference) => ({ title: reference.label ?? reference.item_title ?? reference.policy_name ?? "مرجع تنظيمي", text: reference.is_primary ? "المرجع الحاكم" : "" }));
   return <Document title={`ملف ${topic.title_ar}`} author="جامعة الرازي - نظام قرار" subject="ملف موضوع رسمي" language="ar">
     <Page size="A4" style={styles.page}>
       <View style={styles.topRule} fixed /><View style={styles.orangeRule} fixed />
@@ -93,44 +99,28 @@ export function TopicDocument(data: TopicPdfData) {
           <Image src={data.logo} style={styles.logo} />
           <View><Text style={styles.university}>جامعة الرازي</Text><Text style={styles.universityEn}>AL-RAZI UNIVERSITY</Text></View>
         </View>
-        <View style={styles.badge}><Text style={styles.badgeText}>ملف موضوع رسمي</Text></View>
+        <View style={styles.badge}><Text style={styles.badgeText}>ملف موضوع</Text></View>
       </View>
-      <View style={styles.titleBlock}><Text style={styles.eyebrow}>سجل الحوكمة المتكامل</Text><Text style={styles.title}>{topic.title_ar}</Text><Text style={styles.subtitle}>{topic.topic_no ?? "موضوع مسجل"} · {topic.governance_unit?.name_ar ?? "الجهة المختصة"}</Text></View>
+      <View style={styles.titleBlock}><Text style={styles.eyebrow}>{topic.topic_no ?? "موضوع مسجل"}</Text><Text style={styles.title}>{topic.title_ar}</Text></View>
       <View style={styles.metaGrid}>
-        <Meta label="نوع الطلب" value={typeName} /><Meta label="تصنيف الموضوع" value={classification} />
+        <Meta label="نوع الطلب" value={typeName} /><Meta label="التصنيف" value={classification} />
         <Meta label="مقدم الموضوع" value={topic.submitted_by?.full_name_ar ?? "غير متاح"} /><Meta label="تاريخ التقديم" value={formatDate(topic.submitted_at ?? topic.created_at)} />
-        <Meta label="الحالة" value={statusLabels[topic.status ?? ""] ?? "حالة محفوظة في النظام"} /><Meta label="الأولوية" value={priorityLabels[topic.priority ?? ""] ?? "غير محددة"} />
+        <Meta label="الجهة الحالية" value={topic.governance_unit?.name_ar ?? "الجهة المختصة"} /><Meta label="الحالة" value={`${statusLabels[topic.status ?? ""] ?? "قيد المعالجة"}${topic.priority ? ` · أولوية ${priorityLabels[topic.priority] ?? ""}` : ""}`} />
       </View>
 
       <Section title="وصف الموضوع"><Text style={styles.text}>{plainText(topic.description) || "لم يسجل وصف إضافي للموضوع."}</Text></Section>
-      <Section title="السند والمراجع التنظيمية">
-        {snapshot?.authorities?.length ? snapshot.authorities.map((authority, index) => <Row key={`${authority.article_number}-${index}`} title={[authority.source_document_name, authority.article_number].filter(Boolean).join(" · ") || "سند تنظيمي"} meta={plainText(authority.authority_text) || "لم يسجل نص السند."} />)
-          : data.references.length ? data.references.map((reference) => <Row key={reference.id} title={reference.label ?? reference.item_title ?? reference.policy_name ?? "مرجع تنظيمي"} meta={[reference.is_primary ? "المرجع الحاكم" : "مرجع مساند", reference.item_code].filter(Boolean).join(" · ")} />)
-            : <Empty>لا توجد مراجع تنظيمية مسجلة.</Empty>}
-      </Section>
-      <Section title="المتطلبات والمرفقات">
-        {data.requirements?.items?.length ? data.requirements.items.map((item) => <Row key={item.code} title={item.name} meta={`${item.mandatory ? "إلزامي" : "اختياري"} · ${statusLabels[item.status ?? ""] ?? "بانتظار الاستيفاء"}${item.note ? ` · ${item.note}` : ""}`} />) : <Empty>لا توجد متطلبات تنفيذية إضافية.</Empty>}
-        <View style={{ marginTop: 7 }}>{data.attachments.length ? data.attachments.map((file) => <Row key={file.id} title={file.file_name} meta={file.description ?? "مرفق بالموضوع"} />) : <Empty>لا توجد مرفقات مرتبطة بالموضوع.</Empty>}</View>
-      </Section>
-      <Section title="مراحل المسار">
-        {data.workflow?.steps?.length ? [...data.workflow.steps].sort((a, b) => (a.sequence_no ?? 0) - (b.sequence_no ?? 0)).map((step) => <Row key={step.id} title={`${step.sequence_no ?? "•"}. ${step.snapshot?.name_ar ?? "مرحلة في المسار"}`} meta={`${statusLabels[step.status ?? ""] ?? "حالة محفوظة"}${step.outcome_code ? ` · النتيجة: ${outcomeLabels[step.outcome_code] ?? "نتيجة موثقة"}` : ""}`} />) : <Empty>لم تبدأ مراحل المسار بعد.</Empty>}
-      </Section>
-      <Section title="الإحالات">
-        {data.referrals.length ? data.referrals.map((referral) => <Row key={referral.id} title={`${referral.from_unit_name_ar ?? "جهة سابقة"} ← ${referral.to_unit_name_ar ?? "جهة محال إليها"}`} meta={referral.referral_reason ?? "دون ملاحظة إحالة"} />) : <Empty>لا توجد إحالات مسجلة.</Empty>}
-      </Section>
-      <Section title="المجالس والقرارات السابقة">
-        {data.meetings.length ? data.meetings.map((entry) => <View key={entry.agenda_item_id} style={styles.row} wrap={false}>
+      {basis.length > 0 && <Section title="السند النظامي">{basis.map((item, index) => <Row key={index} title={item.title} meta={item.text} />)}</Section>}
+      {steps.length > 0 && <Section title="موقع الموضوع في المسار"><Text style={styles.text}>{current ? `المرحلة الحالية: ${current.snapshot?.name_ar ?? "مرحلة في المسار"}` : "لا توجد مرحلة نشطة حاليًا"} · أُنجزت {done} من {steps.length} مراحل.</Text></Section>}
+      {data.attachments.length > 0 && <Section title={`المرفقات (${data.attachments.length})`}>{data.attachments.map((file) => <Row key={file.id} title={file.file_name} meta={file.description ?? undefined} />)}</Section>}
+      {previous.length > 0 && <Section title="ما سبق اتخاذه بشأن الموضوع">
+        {previous.map((entry) => <View key={entry.agenda_item_id} style={styles.row} wrap={false}>
           <Text style={styles.rowTitle}>{entry.meeting.title}</Text><Text style={styles.rowMeta}>{[entry.meeting.unit_name, entry.meeting.meeting_no, formatDate(entry.meeting.scheduled_date)].filter(Boolean).join(" · ")}</Text>
           {entry.discussion_notes && <Text style={styles.rowMeta}>خلاصة المناقشة: {plainText(entry.discussion_notes)}</Text>}
           {(entry.voting_rounds ?? []).filter((round) => round.status === "closed").map((round) => <Text key={round.id} style={styles.rowMeta}>التصويت: {round.approve_count ?? 0} موافق · {round.reject_count ?? 0} غير موافق · {round.abstain_count ?? 0} ممتنع</Text>)}
           {(entry.decisions ?? []).map((decision) => <View key={decision.id} style={styles.decision}><Text style={styles.decisionNo}>{decision.decision_no}</Text><Text style={styles.decisionText}>{plainText(decision.decision_text)}</Text></View>)}
-        </View>) : <Empty>لا توجد اجتماعات أو قرارات سابقة لهذا الموضوع.</Empty>}
-      </Section>
-      <Section title="سجل الرحلة المختصر">
-        {data.activity.length ? data.activity.slice(-20).map((item) => <Row key={item.id} title={item.summary ?? actionLabel(item.action)} meta={`${item.actor_name_ar ?? "النظام"} · ${formatDateTime(item.occurred_at)}`} />) : <Empty>لا توجد أحداث إضافية في سجل الرحلة.</Empty>}
-      </Section>
-      <View style={styles.printReceipt} wrap={false}><Text style={styles.printTitle}>بيانات إصدار النسخة</Text><Text style={styles.printText}>طبع بواسطة: {data.printedBy} · {formatDateTime(data.printedAt)}</Text></View>
-      <View style={styles.footer} fixed><Text style={styles.footerText}>نظام قرار - جامعة الرازي</Text><Text style={styles.footerText} render={({ pageNumber, totalPages }) => `صفحة ${pageNumber} من ${totalPages}`} /></View>
+        </View>)}
+      </Section>}
+      <View style={styles.footer} fixed><Text style={styles.footerText}>طبع بواسطة {data.printedBy} · {formatDateTime(data.printedAt)}</Text><Text style={styles.footerText} render={({ pageNumber, totalPages }) => `نظام قرار - جامعة الرازي · صفحة ${pageNumber} من ${totalPages}`} /></View>
     </Page>
   </Document>;
 }
@@ -138,8 +128,6 @@ export function TopicDocument(data: TopicPdfData) {
 function Meta({ label, value }: { label: string; value: string }) { return <View style={styles.meta}><Text style={styles.metaLabel}>{label}</Text><Text style={styles.metaValue}>{value}</Text></View>; }
 function Section({ title, children }: { title: string; children: React.ReactNode }) { return <View style={styles.section}><View style={styles.sectionHeader} wrap={false}><View style={styles.marker} /><Text style={styles.sectionTitle}>{title}</Text></View><View style={styles.box}>{children}</View></View>; }
 function Row({ title, meta }: { title: string; meta?: string }) { return <View style={styles.row} wrap={false}><Text style={styles.rowTitle}>{title}</Text>{meta && <Text style={styles.rowMeta}>{meta}</Text>}</View>; }
-function Empty({ children }: { children: React.ReactNode }) { return <Text style={styles.empty}>{children}</Text>; }
 function plainText(value?: string | null) { return (value ?? "").replace(/<[^>]*>/g, " ").replace(/[`*_#>~-]+/g, " ").replace(/\s+/g, " ").trim(); }
 function formatDate(value?: string | null) { if (!value) return "غير محدد"; const date = new Date(value.length === 10 ? `${value}T00:00:00` : value); return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { dateStyle: "long" }).format(date); }
 function formatDateTime(value?: string | null) { if (!value) return "غير محدد"; const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh" }).format(date); }
-function actionLabel(value?: string) { return ({ "topics.create": "إنشاء الموضوع", "agenda.item.add": "إدراج الموضوع في جدول أعمال", "meetings.agenda.discussion.complete": "اكتمال مناقشة الموضوع", "voting.close": "إغلاق التصويت وتثبيت النتيجة", "decision.create_from_vote": "إنشاء القرار", "topics.pdf.export": "طباعة ملف الموضوع" } as Record<string, string>)[value ?? ""] ?? "إجراء محفوظ على الموضوع"; }

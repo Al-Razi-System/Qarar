@@ -68,6 +68,8 @@ it("shows the complete decision context before offering insertion", async () => 
   expect(screen.getByRole("dialog", { name: "تفاصيل الموضوع" })).toHaveClass("max-w-5xl");
   expect(screen.getByRole("dialog", { name: "تفاصيل الموضوع" })).not.toHaveClass("h-dvh");
   expect(screen.getByText("قرار سابق · DEC-2026-000002", { selector: "span" })).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "محاور القرار" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /تعليمات المناقشة الموروثة/ }));
   expect(screen.getByRole("heading", { name: "محاور القرار" })).toBeInTheDocument();
   expect(screen.getByText("تحقق من استيفاء الخطة.")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("radio", { name: "المرفقات" }));
@@ -75,6 +77,7 @@ it("shows the complete decision context before offering insertion", async () => 
   fireEvent.click(screen.getByRole("radio", { name: "السجل السابق" }));
   expect(screen.getAllByText("DEC-2026-000002").length).toBeGreaterThan(0);
   expect(screen.getByText("8 موافق")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /محضر المجلس السابق/ }));
   expect(screen.getByText("النص الرسمي لمحضر المجلس السابق")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "تنزيل محضر اجتماع مجلس القسم" })).toBeEnabled();
   expect(rpc.mock.calls.map((call) => call[0])).toEqual(expect.arrayContaining(["get_topic_detail", "get_topic_workflow", "list_topic_attachments", "get_topic_route_history", "get_topic_meeting_history"]));
@@ -108,4 +111,19 @@ it("blocks insertion when the core topic record cannot be loaded and retries in 
 
   expect(await screen.findByText("عاد الملف بعد المحاولة.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "مراجعة التعليمات والإدراج" })).toBeEnabled();
+});
+
+it("does not present a meeting that only has the topic on its agenda as a previous council", async () => {
+  rpc.mockImplementation(async (contract: string) => {
+    if (contract === "get_topic_detail") return { ...candidate, description: "وصف", status: "new" };
+    if (contract === "get_topic_workflow") return { status: "active", steps: [] };
+    if (contract === "get_topic_meeting_history") return [{ agenda_item_id: "ai2", agenda_status: "pending", meeting: { id: "m2", meeting_no: "MTG-2026-000002", title: "اجتماع مجلس الكلية الثاني", status: "scheduled", unit_name: "مجلس الكلية" }, voting_rounds: [], decisions: [] }];
+    return [];
+  });
+  render(<AgendaCandidateDetailsDialog candidate={{ ...candidate, source_decision_no: undefined, source_meeting_title_ar: undefined, source_unit_name_ar: undefined, source_decision_text: undefined }} busy={false} onClose={() => {}} onReview={() => {}} />);
+  await screen.findByText("وصف");
+  expect(screen.queryByText("اجتماع مجلس الكلية الثاني")).toBeNull();
+  fireEvent.click(screen.getByRole("radio", { name: "السجل السابق" }));
+  expect(screen.getByText("لم يناقش الموضوع في اجتماع سابق")).toBeInTheDocument();
+  expect(screen.queryByText("اجتماع مجلس الكلية الثاني")).toBeNull();
 });

@@ -39,7 +39,7 @@ function data(): TopicPdfData {
     workflow: { status: "active", steps: [{ id: "step-1", sequence_no: 1, status: "completed", outcome_code: "approved", snapshot: { name_ar: "مجلس القسم" } }] },
     referrals: [{ id: "referral-1", from_unit_name_ar: "مجلس القسم", to_unit_name_ar: "مجلس الكلية", referral_reason: "استكمال المسار" }],
     meetings: [{
-      agenda_item_id: "agenda-1",
+      agenda_item_id: "agenda-1", agenda_status: "discussed",
       discussion_notes: "خلاصة المناقشة",
       meeting: { title: "اجتماع مجلس القسم", meeting_no: "MTG-2026-000010", unit_name: "مجلس القسم" },
       voting_rounds: [{ id: "vote-1", status: "closed", approve_count: 5, reject_count: 0, abstain_count: 1 }],
@@ -52,33 +52,30 @@ function data(): TopicPdfData {
   };
 }
 
-it("contains every required official topic section and print receipt", () => {
+it("contains the important topic details and the print line", () => {
   const html = renderToStaticMarkup(TopicDocument(data()));
-
   for (const expected of [
-    "اعتماد الخطة الأكاديمية", "وصف الموضوع الرسمي", "السند والمراجع التنظيمية",
-    "لائحة الجامعة", "إفادة القسم", "الخطة.pdf", "مجلس القسم", "النتيجة: موافقة", "الإحالات",
-    "DEC-2026-000010", "الموافقة على الخطة", "سجل الرحلة المختصر",
-    "مدير النظام", "نظام قرار - جامعة الرازي",
+    "اعتماد الخطة الأكاديمية", "وصف الموضوع الرسمي", "السند النظامي", "لائحة الجامعة", "الخطة.pdf",
+    "موقع الموضوع في المسار", "ما سبق اتخاذه بشأن الموضوع", "DEC-2026-000010", "الموافقة على الخطة", "مدير النظام", "نظام قرار - جامعة الرازي",
   ]) expect(html).toContain(expected);
 });
 
-it("writes explicit empty states instead of omitting official sections", () => {
-  const empty = data();
-  empty.attachments = [];
-  empty.requirements = null;
-  empty.references = [];
-  empty.topic.typed_creation_request = null;
-  empty.workflow = null;
-  empty.referrals = [];
-  empty.meetings = [];
-  empty.activity = [];
+it("leaves out the audit trail, requirements checklist and referrals", () => {
+  const html = renderToStaticMarkup(TopicDocument(data()));
+  for (const unwanted of ["سجل الرحلة", "إدراج الموضوع في جدول", "طباعة ملف الموضوع", "إفادة القسم", "الإحالات"]) expect(html).not.toContain(unwanted);
+});
 
+it("does not list a meeting where the topic was only added to the agenda", () => {
+  const scheduled = data();
+  scheduled.meetings = [{ agenda_item_id: "agenda-2", agenda_status: "pending", meeting: { title: "اجتماع مجلس الكلية الثاني" }, voting_rounds: [], decisions: [] }];
+  const html = renderToStaticMarkup(TopicDocument(scheduled));
+  expect(html).not.toContain("اجتماع مجلس الكلية الثاني");
+  expect(html).not.toContain("ما سبق اتخاذه");
+});
+
+it("omits sections that have nothing to say", () => {
+  const empty = data();
+  empty.attachments = []; empty.references = []; empty.topic.typed_creation_request = null; empty.workflow = null; empty.meetings = [];
   const html = renderToStaticMarkup(TopicDocument(empty));
-  for (const expected of [
-    "لا توجد مراجع تنظيمية مسجلة", "لا توجد متطلبات تنفيذية إضافية",
-    "لا توجد مرفقات مرتبطة بالموضوع", "لم تبدأ مراحل المسار بعد",
-    "لا توجد إحالات مسجلة", "لا توجد اجتماعات أو قرارات سابقة",
-    "لا توجد أحداث إضافية في سجل الرحلة",
-  ]) expect(html).toContain(expected);
+  for (const absent of ["السند النظامي", "المرفقات", "موقع الموضوع في المسار", "ما سبق اتخاذه"]) expect(html).not.toContain(absent);
 });
