@@ -10,10 +10,10 @@ export default function SessionsPage() {
         <p className="mb-1.5 text-[11px] font-bold text-[#ff7a00]">
           إدارة الهوية والوصول
         </p>
-        <h1 className="text-2xl font-black text-[#0a1330]">
+        <h1 className="text-2xl font-black text-[var(--q-text)]">
           جلساتي والأجهزة المرتبطة
         </h1>
-        <p className="mt-2 text-xs leading-6 text-[#718196]">
+        <p className="mt-2 text-xs leading-6 text-[var(--q-text-3)]">
           راجع جلسات حسابك الفعلية وأبطل أي جهاز مشبوه أو مفقود فوراً.
         </p>
       </div>

@@ -65,7 +65,7 @@ const presets: Array<{
   },
 ];
 const input =
-  "h-10 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-[10px] outline-none focus:border-[#0066cc]";
+  "h-10 w-full rounded-xl border border-[var(--q-border)] bg-white px-3 text-[10px] outline-none focus:border-[var(--q-primary)]";
 
 async function rpc(contract: string, params: Record<string, unknown>) {
   const response = await fetch("/api/admin/regulations", {
@@ -328,7 +328,7 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
   }
   return (
     <section className="overflow-hidden rounded-2xl border border-[#d8e4ef] bg-white shadow-sm">
-      <header className="border-b border-[#e7edf4] bg-gradient-to-l from-[#082451] to-[#0066cc] p-5 text-white">
+      <header className="border-b border-[#e7edf4] bg-gradient-to-l from-[#082451] to-[var(--q-primary)] p-5 text-white">
         <p className="text-[9px] font-black text-orange-200">
           قواعد مستخرجة من نصوص اللائحة
         </p>
@@ -374,7 +374,7 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
             active={Boolean(item)}
           />
         </div>
-        <section className="rounded-2xl border border-[#dfe8f1] p-4">
+        <section className="rounded-2xl border border-[var(--q-border)] p-4">
           <h3 className="text-[10px] font-black text-[#223c56]">
             1. المادة القانونية التي تفرض القاعدة
           </h3>
@@ -420,7 +420,7 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
             </p>
           )}
         </section>
-        <section className="rounded-2xl border border-[#dfe8f1] p-4">
+        <section className="rounded-2xl border border-[var(--q-border)] p-4">
           <h3 className="text-[10px] font-black text-[#223c56]">
             2. السلوك المطلوب من النظام
           </h3>
@@ -432,7 +432,7 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
                 aria-pressed={preset === entry.id}
                 key={entry.id}
                 onClick={() => setPreset(entry.id)}
-                className={`rounded-xl border p-3 text-right transition ${preset === entry.id ? "border-[#69adf0] bg-[#edf6ff] text-[#0066cc] shadow-sm" : "border-[#e1e9f1] text-[#40546b] hover:border-[#b9d7ee]"}`}
+                className={`rounded-xl border p-3 text-right transition ${preset === entry.id ? "border-[#69adf0] bg-[var(--q-surface-2)] text-[var(--q-primary)] shadow-sm" : "border-[#e1e9f1] text-[#40546b] hover:border-[#b9d7ee]"}`}
               >
                 <span className="mb-2 grid h-8 w-8 place-items-center rounded-lg bg-white shadow-sm">
                   {entry.icon}
@@ -445,7 +445,7 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
             ))}
           </div>
         </section>
-        <section className="rounded-2xl border border-[#dfe8f1] p-4">
+        <section className="rounded-2xl border border-[var(--q-border)] p-4">
           <h3 className="text-[10px] font-black text-[#223c56]">
             3. القيمة والنتيجة المتوقعة
           </h3>
@@ -509,7 +509,7 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
             title="إنشاء القاعدة وربطها بالمادة المختارة"
             disabled={busy || !item}
             onClick={() => void save()}
-            className="h-10 rounded-xl bg-[#0066cc] px-5 text-[10px] font-black text-white disabled:opacity-50"
+            className="h-10 rounded-xl bg-[var(--q-primary)] px-5 text-[10px] font-black text-white disabled:opacity-50"
           >
             {busy ? "جارٍ إنشاء القاعدة..." : "إنشاء القاعدة وربطها بالمادة"}
           </button>
@@ -535,7 +535,7 @@ function Step({
       className={`flex items-start gap-2 rounded-xl border p-3 ${active ? "border-[#acd3f5] bg-[#f1f8ff]" : "border-[#e2e9f0] bg-white"}`}
     >
       <span
-        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[8px] font-black ${active ? "bg-[#0872df] text-white" : "bg-[#edf2f6] text-[#65798e]"}`}
+        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[8px] font-black ${active ? "bg-[var(--q-primary)] text-white" : "bg-[#edf2f6] text-[#65798e]"}`}
       >
         {number}
       </span>

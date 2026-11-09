@@ -35,9 +35,9 @@ type Notice = { kind: "success" | "error"; text: string } | null;
 type LegislativeModel = PolicyVersion & { items: PolicyItem[] };
 
 const input =
-  "h-10 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-[11px] text-[#263950] outline-none transition focus:border-[#0872df] focus:ring-2 focus:ring-[#0872df]/10";
+  "h-10 w-full rounded-xl border border-[var(--q-border)] bg-white px-3 text-[11px] text-[#263950] outline-none transition focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
 const textarea =
-  "min-h-24 w-full rounded-xl border border-[#dbe5ef] bg-white p-3 text-[11px] leading-6 text-[#263950] outline-none transition focus:border-[#0872df] focus:ring-2 focus:ring-[#0872df]/10";
+  "min-h-24 w-full rounded-xl border border-[var(--q-border)] bg-white p-3 text-[11px] leading-6 text-[#263950] outline-none transition focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
 const tabLabels: Record<Tab, string> = {
   structure: "1. المادة المختارة",
   rules: "2. ماذا تنفذ المادة؟",
@@ -180,7 +180,7 @@ function Field({
       </span>
       {children}
       {hint && (
-        <span className="mt-1 block text-[8px] leading-4 text-[#8190a3]">
+        <span className="mt-1 block text-[8px] leading-4 text-[var(--q-text-3)]">
           {hint}
         </span>
       )}
@@ -607,12 +607,12 @@ export function LegislativeModelWorkspace({
                   setComparison(null);
                 }}
               >
-                <option className="text-[#0a1330]" value="">
+                <option className="text-[var(--q-text)]" value="">
                   اختر إصدارًا
                 </option>
                 {policy.versions.map((version) => (
                   <option
-                    className="text-[#0a1330]"
+                    className="text-[var(--q-text)]"
                     key={version.id}
                     value={version.id}
                   >
@@ -635,7 +635,7 @@ export function LegislativeModelWorkspace({
           <nav
             aria-label="خطوات تحويل النص النظامي إلى قواعد"
             role="tablist"
-            className="flex gap-1 overflow-x-auto border-b border-[#e6edf4] bg-[#f8fafc] p-2"
+            className="flex gap-1 overflow-x-auto border-b border-[#e6edf4] bg-[var(--q-bg)] p-2"
           >
             {(Object.keys(tabLabels) as Tab[]).map((value) => (
               <button
@@ -645,7 +645,7 @@ export function LegislativeModelWorkspace({
                 role="tab"
                 aria-selected={tab === value}
                 title={tabGuides[value].description}
-                className={`whitespace-nowrap rounded-xl px-3 py-2 text-[9px] font-black transition ${tab === value ? "bg-[#0066cc] text-white shadow" : "text-[#607287] hover:bg-white"}`}
+                className={`whitespace-nowrap rounded-xl px-3 py-2 text-[9px] font-black transition ${tab === value ? "bg-[var(--q-primary)] text-white shadow" : "text-[#607287] hover:bg-white"}`}
               >
                 {tabLabels[value]}
               </button>
@@ -677,7 +677,7 @@ export function LegislativeModelWorkspace({
           </div>
         )}
         {!model ? (
-          <div className="grid min-h-72 place-items-center text-[10px] text-[#8190a3]">
+          <div className="grid min-h-72 place-items-center text-[10px] text-[var(--q-text-3)]">
             <RefreshCw className="mb-2 animate-spin" />
             جاري تحميل النموذج التشريعي...
           </div>
@@ -685,12 +685,12 @@ export function LegislativeModelWorkspace({
           <div className="p-4">
             {tab === "structure" && (
               <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-                <aside className="rounded-xl border border-[#e0e8f0] bg-[#fbfdff]">
+                <aside className="rounded-xl border border-[var(--q-border)] bg-[var(--q-bg)]">
                   <div className="border-b border-[#e8eef4] p-3">
                     <h3 className="text-[11px] font-black text-[#21354d]">
                       هيكل الوثيقة
                     </h3>
-                    <p className="mt-1 text-[8px] text-[#8190a3]">
+                    <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
                       باب ← فصل ← مادة ← فقرة ← إجراء
                     </p>
                   </div>
@@ -702,7 +702,7 @@ export function LegislativeModelWorkspace({
                         style={{
                           paddingRight: `${12 + (item.parent_item_id ? 18 : 0)}px`,
                         }}
-                        className={`mb-1 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-right transition ${selectedItem?.id === item.id ? "bg-[#eaf4ff] text-[#0066cc]" : "text-[#40546b] hover:bg-white"}`}
+                        className={`mb-1 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-right transition ${selectedItem?.id === item.id ? "bg-[var(--q-surface-2)] text-[var(--q-primary)]" : "text-[#40546b] hover:bg-white"}`}
                       >
                         <span>
                           <strong className="block text-[9px]">
@@ -722,13 +722,13 @@ export function LegislativeModelWorkspace({
                 </aside>
                 <div className="space-y-4">
                   {selectedItem ? (
-                    <section className="rounded-xl border border-[#e0e8f0] p-4">
+                    <section className="rounded-xl border border-[var(--q-border)] p-4">
                       <div className="mb-4 flex items-center justify-between">
                         <div>
-                          <h3 className="text-[12px] font-black text-[#20344d]">
+                          <h3 className="text-[12px] font-black text-[var(--q-text)]">
                             {selectedItem.title_ar}
                           </h3>
-                          <p className="mt-1 text-[8px] text-[#8190a3]">
+                          <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
                             النص الرسمي محفوظ دون استبداله بالتفسير التنفيذي.
                           </p>
                         </div>
@@ -849,7 +849,7 @@ export function LegislativeModelWorkspace({
                             }
                           />
                         </Field>
-                        <label className="flex h-10 items-center gap-2 self-end rounded-xl border border-[#dbe5ef] px-3 text-[9px] font-bold text-[#40546b]">
+                        <label className="flex h-10 items-center gap-2 self-end rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[#40546b]">
                           <input
                             disabled={!editable}
                             type="checkbox"
@@ -895,7 +895,7 @@ export function LegislativeModelWorkspace({
                               "تم حفظ النص والبيانات القانونية للمادة.",
                             )
                           }
-                          className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[#0066cc] px-4 text-[9px] font-black text-white disabled:opacity-50"
+                          className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--q-primary)] px-4 text-[9px] font-black text-white disabled:opacity-50"
                         >
                           <Save size={13} />
                           حفظ بيانات المادة
@@ -903,22 +903,22 @@ export function LegislativeModelWorkspace({
                       )}
                     </section>
                   ) : (
-                    <section className="grid min-h-56 place-items-center rounded-xl border border-dashed border-[#cbd9e7] bg-[#fbfdff] p-8 text-center">
+                    <section className="grid min-h-56 place-items-center rounded-xl border border-dashed border-[#cbd9e7] bg-[var(--q-bg)] p-8 text-center">
                       <div>
                         <FileText
                           className="mx-auto mb-3 text-[#7da8cf]"
                           size={30}
                         />
-                        <h3 className="text-[12px] font-black text-[#20344d]">
+                        <h3 className="text-[12px] font-black text-[var(--q-text)]">
                           لم يُضف محتوى تشريعي بعد
                         </h3>
-                        <p className="mx-auto mt-2 max-w-md text-[9px] leading-5 text-[#718399]">
+                        <p className="mx-auto mt-2 max-w-md text-[9px] leading-5 text-[var(--q-text-3)]">
                           ابدأ بإضافة الفصل الأول من قسم إدارة الإصدار، ثم أضف
                           المواد واختر الفصل من حقل البند الأب.
                         </p>
                         <a
                           href="#policy-management"
-                          className="mt-4 inline-flex h-10 items-center rounded-xl bg-[#0066cc] px-4 text-[9px] font-black text-white"
+                          className="mt-4 inline-flex h-10 items-center rounded-xl bg-[var(--q-primary)] px-4 text-[9px] font-black text-white"
                         >
                           الانتقال إلى إضافة أول بند
                         </a>
@@ -927,8 +927,8 @@ export function LegislativeModelWorkspace({
                   )}
                   {model
                     ? false && (
-                        <section className="rounded-xl border border-[#e0e8f0] p-4">
-                          <h3 className="mb-4 text-[11px] font-black text-[#20344d]">
+                        <section className="rounded-xl border border-[var(--q-border)] p-4">
+                          <h3 className="mb-4 text-[11px] font-black text-[var(--q-text)]">
                             بيانات الإصدار القانونية
                           </h3>
                           <div className="grid gap-3 md:grid-cols-3">
@@ -1081,7 +1081,7 @@ export function LegislativeModelWorkspace({
                                   "تم حفظ بيانات الإصدار القانونية.",
                                 )
                               }
-                              className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[#0a1330] px-4 text-[9px] font-black text-white"
+                              className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--q-text)] px-4 text-[9px] font-black text-white"
                             >
                               <Save size={13} />
                               حفظ بيانات الإصدار
@@ -1115,17 +1115,17 @@ export function LegislativeModelWorkspace({
                   <aside className="min-w-0 rounded-2xl border border-[#dbe6f0] bg-white p-4 shadow-[0_10px_28px_rgba(25,67,110,.05)]">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
-                        <h3 className="text-[11px] font-black text-[#20344d]">
+                        <h3 className="text-[11px] font-black text-[var(--q-text)]">
                           قواعد المادة
                         </h3>
-                        <p className="mt-1 text-[8px] text-[#8190a3]">
+                        <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
                           {selectedItem.title_ar}
                         </p>
                       </div>
                       {editable && selectedItemCanHaveRules && (
                         <button
                           onClick={() => setRuleForm(emptyRule(selectedItem))}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#0066cc] px-3 text-[9px] font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.18)]"
+                          className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--q-primary)] px-3 text-[9px] font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.18)]"
                           aria-label="إضافة قاعدة"
                         >
                           <Plus size={14} />
@@ -1134,7 +1134,7 @@ export function LegislativeModelWorkspace({
                       )}
                     </div>
                     {selectedItemCanHaveRules && (
-                      <div className="mb-3 rounded-xl bg-[#edf6ff] px-3 py-2 text-[8px] font-bold text-[#295f8e]">
+                      <div className="mb-3 rounded-xl bg-[var(--q-surface-2)] px-3 py-2 text-[8px] font-bold text-[#295f8e]">
                         هذه المادة تدعم أكثر من قاعدة تنفيذية. القواعد الحالية:{" "}
                         {selectedItem.rules?.length ?? 0}.
                       </div>
@@ -1146,11 +1146,11 @@ export function LegislativeModelWorkspace({
                         مباشرة.
                       </div>
                     )}
-                    <div className="mb-3 border-t border-[#edf1f5] pt-3">
+                    <div className="mb-3 border-t border-[var(--q-surface-2)] pt-3">
                       <p className="mb-2 text-[8px] font-black text-[#607287]">
                         البنود القابلة للتنفيذ
                       </p>
-                      <div className="max-h-40 space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-[#e8eef4] bg-[#fbfdff] p-2">
+                      <div className="max-h-40 space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-[#e8eef4] bg-[var(--q-bg)] p-2">
                         {model.items.map((item) => (
                           <button
                             key={item.id}
@@ -1158,7 +1158,7 @@ export function LegislativeModelWorkspace({
                             style={{
                               paddingRight: `${10 + (itemDepthById.get(item.id) ?? 0) * 18}px`,
                             }}
-                            className={`w-full min-w-0 border-r-2 rounded-lg py-2.5 pl-2 text-right text-[9px] transition ${item.id === selectedItem.id ? "border-[#0066cc] bg-[#eaf4ff] font-black text-[#0066cc]" : executableItemTypes.has(item.item_type) ? "border-[#c9deef] text-[#52647a] hover:bg-[#f7fafc]" : "border-transparent text-[#718399] hover:bg-[#f7fafc]"}`}
+                            className={`w-full min-w-0 border-r-2 rounded-lg py-2.5 pl-2 text-right text-[9px] transition ${item.id === selectedItem.id ? "border-[var(--q-primary)] bg-[var(--q-surface-2)] font-black text-[var(--q-primary)]" : executableItemTypes.has(item.item_type) ? "border-[#c9deef] text-[var(--q-text-2)] hover:bg-[#f7fafc]" : "border-transparent text-[var(--q-text-3)] hover:bg-[#f7fafc]"}`}
                           >
                             {item.item_code} · {item.title_ar}
                           </button>
@@ -1170,19 +1170,19 @@ export function LegislativeModelWorkspace({
                         <button
                           key={rule.id}
                           onClick={() => editRule(rule)}
-                          className={`w-full rounded-xl border p-3 text-right ${ruleForm?.id === rule.id ? "border-[#7ab8f5] bg-[#edf6ff]" : "border-[#e2e9f1]"}`}
+                          className={`w-full rounded-xl border p-3 text-right ${ruleForm?.id === rule.id ? "border-[#7ab8f5] bg-[var(--q-surface-2)]" : "border-[var(--q-border)]"}`}
                         >
                           <strong className="text-[9px] text-[#263950]">
                             {rule.name_ar}
                           </strong>
-                          <span className="mt-1 block text-[7px] text-[#8190a3]">
+                          <span className="mt-1 block text-[7px] text-[var(--q-text-3)]">
                             {rule.rule_code} ·{" "}
                             {ruleTypeLabels[rule.rule_type] ?? rule.rule_type}
                           </span>
                         </button>
                       ))}
                       {!selectedItem.rules?.length && (
-                        <div className="rounded-xl border border-dashed border-[#cfdae5] p-6 text-center text-[8px] text-[#8190a3]">
+                        <div className="rounded-xl border border-dashed border-[#cfdae5] p-6 text-center text-[8px] text-[var(--q-text-3)]">
                           <Gavel className="mx-auto mb-2" size={20} />
                           لا توجد قواعد تنفيذية لهذه المادة.
                         </div>
@@ -1195,11 +1195,11 @@ export function LegislativeModelWorkspace({
                     selectedItemCanHaveRules &&
                     !ruleForm &&
                     editable && (
-                      <div className="mb-4 flex justify-center rounded-2xl border border-[#dbe7f2] bg-[#f8fbff] p-6">
+                      <div className="mb-4 flex justify-center rounded-2xl border border-[#dbe7f2] bg-[var(--q-bg)] p-6">
                         <button
                           type="button"
                           onClick={() => setRuleForm(emptyRule(selectedItem))}
-                          className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#0066cc] px-5 text-[10px] font-black text-white shadow-[0_10px_22px_rgba(0,102,204,.2)]"
+                          className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--q-primary)] px-5 text-[10px] font-black text-white shadow-[0_10px_22px_rgba(0,102,204,.2)]"
                         >
                           <Plus size={15} />
                           إنشاء قاعدة جديدة للمادة
@@ -1207,7 +1207,7 @@ export function LegislativeModelWorkspace({
                       </div>
                     )}
                   {!selectedItemCanHaveRules ? (
-                    <div className="grid min-h-96 place-items-center rounded-xl border border-dashed border-[#cfdae5] bg-[#fbfdff] p-8 text-center text-[9px] text-[#8190a3]">
+                    <div className="grid min-h-96 place-items-center rounded-xl border border-dashed border-[#cfdae5] bg-[var(--q-bg)] p-8 text-center text-[9px] text-[var(--q-text-3)]">
                       <div>
                         <Gavel
                           className="mx-auto mb-3 text-[#7da8cf]"
@@ -1223,7 +1223,7 @@ export function LegislativeModelWorkspace({
                       </div>
                     </div>
                   ) : !ruleForm && !rulesOnly ? (
-                    <div className="grid min-h-96 place-items-center rounded-xl border border-dashed border-[#cfdae5] text-center text-[9px] text-[#8190a3]">
+                    <div className="grid min-h-96 place-items-center rounded-xl border border-dashed border-[#cfdae5] text-center text-[9px] text-[var(--q-text-3)]">
                       <div>
                         <ListChecks className="mx-auto mb-3" size={30} />
                         <strong className="block text-[11px] text-[#40546b]">
@@ -1285,8 +1285,8 @@ export function LegislativeModelWorkspace({
                   التبويب.
                 </div>
                 <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-                  <section className="rounded-xl border border-[#e0e8f0] p-4">
-                    <h3 className="text-[11px] font-black text-[#20344d]">
+                  <section className="rounded-xl border border-[var(--q-border)] p-4">
+                    <h3 className="text-[11px] font-black text-[var(--q-text)]">
                       الإحالات القانونية للمادة
                     </h3>
                     <div className="mt-3 space-y-2">
@@ -1296,7 +1296,7 @@ export function LegislativeModelWorkspace({
                           className="flex items-start justify-between rounded-xl border border-[#e4ebf2] p-3"
                         >
                           <div>
-                            <span className="rounded-full bg-[#edf6ff] px-2 py-1 text-[7px] font-black text-[#0066cc]">
+                            <span className="rounded-full bg-[var(--q-surface-2)] px-2 py-1 text-[7px] font-black text-[var(--q-primary)]">
                               {referenceLabels[reference.reference_type] ??
                                 reference.reference_type}
                             </span>
@@ -1305,7 +1305,7 @@ export function LegislativeModelWorkspace({
                                 reference.external_reference ||
                                 "إحالة داخلية"}
                             </strong>
-                            <p className="mt-1 text-[8px] text-[#8190a3]">
+                            <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
                               {reference.notes}
                             </p>
                           </div>
@@ -1329,14 +1329,14 @@ export function LegislativeModelWorkspace({
                         </article>
                       ))}
                       {!selectedItem.references?.length && (
-                        <p className="rounded-xl border border-dashed p-6 text-center text-[8px] text-[#8190a3]">
+                        <p className="rounded-xl border border-dashed p-6 text-center text-[8px] text-[var(--q-text-3)]">
                           لا توجد إحالات مسجلة.
                         </p>
                       )}
                     </div>
                   </section>
-                  <section className="rounded-xl border border-[#e0e8f0] p-4">
-                    <h3 className="text-[11px] font-black text-[#20344d]">
+                  <section className="rounded-xl border border-[var(--q-border)] p-4">
+                    <h3 className="text-[11px] font-black text-[var(--q-text)]">
                       إضافة إحالة
                     </h3>
                     <div className="mt-4 space-y-3">
@@ -1444,7 +1444,7 @@ export function LegislativeModelWorkspace({
                               }),
                             )
                           }
-                          className="h-10 w-full rounded-xl bg-[#0066cc] text-[9px] font-black text-white disabled:opacity-50"
+                          className="h-10 w-full rounded-xl bg-[var(--q-primary)] text-[9px] font-black text-white disabled:opacity-50"
                         >
                           <Link2 className="ml-1 inline" size={13} />
                           حفظ الإحالة
@@ -1471,7 +1471,7 @@ export function LegislativeModelWorkspace({
             )}
 
             {tab === "readiness" && (
-              <section className="rounded-xl border border-[#e0e8f0] p-4">
+              <section className="rounded-xl border border-[var(--q-border)] p-4">
                 <div className="mb-4 grid gap-2 sm:grid-cols-3">
                   <ReadinessStep
                     number="1"
@@ -1491,11 +1491,11 @@ export function LegislativeModelWorkspace({
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h3 className="flex items-center gap-2 text-[12px] font-black text-[#20344d]">
+                    <h3 className="flex items-center gap-2 text-[12px] font-black text-[var(--q-text)]">
                       <ShieldCheck size={17} className="text-emerald-600" />
                       فحص اكتمال الإصدار
                     </h3>
-                    <p className="mt-1 text-[8px] text-[#8190a3]">
+                    <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
                       يتحقق من النصوص والنطاقات والقواعد والصلاحيات والمسارات
                       والمصدر.
                     </p>
@@ -1503,7 +1503,7 @@ export function LegislativeModelWorkspace({
                   <button
                     disabled={busy}
                     onClick={() => void runReadiness()}
-                    className="h-10 rounded-xl bg-[#0066cc] px-4 text-[9px] font-black text-white"
+                    className="h-10 rounded-xl bg-[var(--q-primary)] px-4 text-[9px] font-black text-white"
                   >
                     {busy ? "جارٍ الفحص..." : "تشغيل الفحص"}
                   </button>
@@ -1584,7 +1584,7 @@ export function LegislativeModelWorkspace({
                       }
                       ready={Boolean(model.source_document_hash)}
                     />
-                    <div className="md:col-span-3 rounded-xl border border-dashed border-[#b9cee0] bg-[#f8fbfe] p-6 text-center">
+                    <div className="md:col-span-3 rounded-xl border border-dashed border-[#b9cee0] bg-[var(--q-bg)] p-6 text-center">
                       <ShieldCheck
                         className="mx-auto text-[#6d9bc3]"
                         size={28}
@@ -1592,7 +1592,7 @@ export function LegislativeModelWorkspace({
                       <strong className="mt-3 block text-[11px] text-[#29425f]">
                         الفحص متاح ولا توجد نتيجة محفوظة بعد
                       </strong>
-                      <p className="mt-2 text-[9px] text-[#718399]">
+                      <p className="mt-2 text-[9px] text-[var(--q-text-3)]">
                         اضغط «تشغيل الفحص» للحصول على قائمة دقيقة بالأخطاء
                         والتحذيرات والمتطلبات الناقصة.
                       </p>
@@ -1603,7 +1603,7 @@ export function LegislativeModelWorkspace({
             )}
 
             {tab === "compare" && (policy.versions?.length ?? 0) > 1 && (
-              <section className="rounded-xl border border-[#e0e8f0] p-4">
+              <section className="rounded-xl border border-[var(--q-border)] p-4">
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="min-w-[260px] flex-1">
                     <Field label="قارن الإصدار الحالي مع">
@@ -1627,7 +1627,7 @@ export function LegislativeModelWorkspace({
                   <button
                     disabled={!compareVersionId || busy}
                     onClick={() => void runComparison()}
-                    className="h-10 rounded-xl bg-[#0066cc] px-4 text-[9px] font-black text-white disabled:opacity-50"
+                    className="h-10 rounded-xl bg-[var(--q-primary)] px-4 text-[9px] font-black text-white disabled:opacity-50"
                   >
                     <FileDiff className="ml-1 inline" size={14} />
                     تشغيل المقارنة
@@ -1658,7 +1658,7 @@ export function LegislativeModelWorkspace({
                     />
                   </div>
                 ) : (
-                  <p className="mt-5 rounded-xl border border-dashed p-8 text-center text-[9px] text-[#718399]">
+                  <p className="mt-5 rounded-xl border border-dashed p-8 text-center text-[9px] text-[var(--q-text-3)]">
                     اختر إصدارًا سابقًا ثم شغّل المقارنة لعرض المواد المضافة
                     والمعدلة والملغاة.
                   </p>
@@ -1693,7 +1693,7 @@ export function LegislativeModelWorkspace({
             className="ml-auto flex h-full w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl"
             dir="rtl"
           >
-            <header className="flex items-start justify-between gap-4 border-b border-[#e5edf4] bg-[linear-gradient(135deg,#0a1330,#0066cc)] px-5 py-5 text-white">
+            <header className="flex items-start justify-between gap-4 border-b border-[#e5edf4] bg-[linear-gradient(135deg,var(--q-text),var(--q-primary))] px-5 py-5 text-white">
               <div>
                 <p className="text-[10px] font-black text-[#ffb46c]">
                   إدارة تشريعية
@@ -1715,9 +1715,9 @@ export function LegislativeModelWorkspace({
               </button>
             </header>
             <div className="flex-1 overflow-y-auto p-5">
-              <div className="mb-4 flex items-center justify-between rounded-2xl border border-[#dce9f5] bg-[#f8fbff] p-4">
+              <div className="mb-4 flex items-center justify-between rounded-2xl border border-[#dce9f5] bg-[var(--q-bg)] p-4">
                 <div>
-                  <p className="text-[10px] font-black text-[#0066cc]">
+                  <p className="text-[10px] font-black text-[var(--q-primary)]">
                     {selectedItem.item_code}
                   </p>
                   <p className="mt-1 text-xs font-bold text-[#203952]">
@@ -1731,7 +1731,7 @@ export function LegislativeModelWorkspace({
                       setTab("rules");
                       setRuleDrawerOpen(false);
                     }}
-                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#0066cc] px-4 text-[10px] font-black text-white"
+                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--q-primary)] px-4 text-[10px] font-black text-white"
                   >
                     <Plus size={15} /> إنشاء قاعدة
                   </button>
@@ -1748,7 +1748,7 @@ export function LegislativeModelWorkspace({
                         <h4 className="text-xs font-black text-[#1e3854]">
                           {rule.name_ar}
                         </h4>
-                        <p className="mt-1 text-[10px] text-[#718399]">
+                        <p className="mt-1 text-[10px] text-[var(--q-text-3)]">
                           {ruleTypeLabels[rule.rule_type] ?? rule.rule_type} ·
                           أولوية {rule.priority}
                         </p>
@@ -1765,7 +1765,7 @@ export function LegislativeModelWorkspace({
                             setTab("rules");
                             setRuleDrawerOpen(false);
                           }}
-                          className="shrink-0 rounded-lg border border-[#c9def1] px-3 py-2 text-[10px] font-black text-[#0066cc]"
+                          className="shrink-0 rounded-lg border border-[#c9def1] px-3 py-2 text-[10px] font-black text-[var(--q-primary)]"
                         >
                           تحرير
                         </button>
@@ -1774,12 +1774,12 @@ export function LegislativeModelWorkspace({
                   </article>
                 ))}
                 {!selectedItem.rules?.length && (
-                  <div className="rounded-2xl border border-dashed border-[#bdd5e8] bg-[#fbfdff] p-8 text-center">
+                  <div className="rounded-2xl border border-dashed border-[#bdd5e8] bg-[var(--q-bg)] p-8 text-center">
                     <Gavel className="mx-auto text-[#83a5c5]" size={28} />
                     <h4 className="mt-3 text-xs font-black text-[#29435e]">
                       لا توجد قواعد لهذه المادة بعد
                     </h4>
-                    <p className="mt-2 text-[11px] leading-6 text-[#718399]">
+                    <p className="mt-2 text-[11px] leading-6 text-[var(--q-text-3)]">
                       أنشئ القاعدة الأولى لتحديد الشروط والمتطلبات والجهات
                       المخولة والقرارات والمسار.
                     </p>
@@ -1787,7 +1787,7 @@ export function LegislativeModelWorkspace({
                 )}
               </div>
             </div>
-            <footer className="border-t border-[#e5edf4] bg-[#fbfdff] p-4">
+            <footer className="border-t border-[#e5edf4] bg-[var(--q-bg)] p-4">
               <button
                 onClick={() => {
                   setTab("rules");
@@ -1857,7 +1857,7 @@ function ReadinessPreview({
         {ready ? "مكتمل" : "يحتاج استكمال"}
       </span>
       <strong className="mt-2 block text-[10px] text-[#29425f]">{label}</strong>
-      <p className="mt-1 text-[8px] text-[#718399]">{value}</p>
+      <p className="mt-1 text-[8px] text-[var(--q-text-3)]">{value}</p>
     </div>
   );
 }
@@ -1881,7 +1881,7 @@ function WorkspaceEmptyState({
     <section className="overflow-hidden rounded-2xl border border-[#dbe6f0] bg-white">
       <div className="grid gap-6 p-6 lg:grid-cols-[1fr_340px] lg:items-center">
         <div className="flex items-start gap-4">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#eaf4ff] text-[#0066cc]">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
             <Icon size={22} />
           </span>
           <div>
@@ -1896,13 +1896,13 @@ function WorkspaceEmptyState({
             </p>
             <a
               href={actionHref}
-              className="mt-4 inline-flex h-10 items-center rounded-xl bg-[#0066cc] px-4 text-[9px] font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.16)]"
+              className="mt-4 inline-flex h-10 items-center rounded-xl bg-[var(--q-primary)] px-4 text-[9px] font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.16)]"
             >
               {actionLabel}
             </a>
           </div>
         </div>
-        <div className="rounded-xl border border-[#e0e9f2] bg-[#f8fbfe] p-4">
+        <div className="rounded-xl border border-[#e0e9f2] bg-[var(--q-bg)] p-4">
           <strong className="text-[9px] text-[#29425f]">
             ما الذي يجب فعله؟
           </strong>
@@ -1912,7 +1912,7 @@ function WorkspaceEmptyState({
                 key={step}
                 className="flex gap-2 text-[8px] leading-5 text-[#66798f]"
               >
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white font-black text-[#0066cc] shadow-sm">
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white font-black text-[var(--q-primary)] shadow-sm">
                   {index + 1}
                 </span>
                 {step}
@@ -2068,14 +2068,14 @@ function RuleEditor({
     return `تطبّق القاعدة عندما يكون ${subject} ${operator} ${value}؛ وإذا لم يتحقق الشرط: ${failure}.`;
   }
   return (
-    <section className="space-y-4 rounded-xl border border-[#e0e8f0] p-4">
+    <section className="space-y-4 rounded-xl border border-[var(--q-border)] p-4">
       {!form.id && form.code.endsWith("-rule") && (
-        <div className="rounded-2xl border border-[#d8e8f8] bg-[#f8fbff] p-4">
+        <div className="rounded-2xl border border-[#d8e8f8] bg-[var(--q-bg)] p-4">
           <div className="mb-3">
-            <strong className="text-[11px] text-[#20344d]">
+            <strong className="text-[11px] text-[var(--q-text)]">
               ابدأ بقالب قاعدة
             </strong>
-            <p className="mt-1 text-[8px] text-[#718399]">
+            <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
               اختر النمط الأقرب ثم عدّل الحقول؛ لا تحتاج إلى كتابة إعدادات تقنية
               من البداية.
             </p>
@@ -2087,12 +2087,12 @@ function RuleEditor({
                 type="button"
                 disabled={!editable}
                 onClick={() => applyTemplate(template)}
-                className={`rounded-xl border p-3 text-right transition ${form.rule_type === template.ruleType ? "border-[#79b8f5] bg-[#eaf4ff]" : "border-[#e0e8f0] bg-white hover:border-[#9bc9f6]"}`}
+                className={`rounded-xl border p-3 text-right transition ${form.rule_type === template.ruleType ? "border-[#79b8f5] bg-[var(--q-surface-2)]" : "border-[var(--q-border)] bg-white hover:border-[#9bc9f6]"}`}
               >
                 <strong className="block text-[9px] text-[#24405e]">
                   {template.title}
                 </strong>
-                <span className="mt-1 block text-[8px] leading-4 text-[#718399]">
+                <span className="mt-1 block text-[8px] leading-4 text-[var(--q-text-3)]">
                   {template.description}
                 </span>
               </button>
@@ -2185,7 +2185,7 @@ function RuleEditor({
           />
         </Field>
       </div>
-      <label className="flex items-center gap-2 rounded-xl bg-[#edf6ff] p-3 text-[9px] font-bold text-[#295f8e]">
+      <label className="flex items-center gap-2 rounded-xl bg-[var(--q-surface-2)] p-3 text-[9px] font-bold text-[#295f8e]">
         <input
           disabled={!editable}
           type="checkbox"
@@ -2194,7 +2194,7 @@ function RuleEditor({
         />
         تحتاج هذه القاعدة إلى مسار اعتماد
       </label>
-      <section className="grid gap-3 rounded-2xl border border-[#d8e8f8] bg-[#f8fbff] p-4 md:grid-cols-2">
+      <section className="grid gap-3 rounded-2xl border border-[#d8e8f8] bg-[var(--q-bg)] p-4 md:grid-cols-2">
         <Field
           label="متى تعمل القاعدة؟"
           hint="هذا إعداد عام؛ أما الحالات التفصيلية فتُضاف في قسم الشروط."
@@ -2232,29 +2232,29 @@ function RuleEditor({
           </select>
         </Field>
       </section>
-      <section className="rounded-2xl border border-[#d8e8f8] bg-[#f8fbff] p-4">
-        <h4 className="text-[11px] font-black text-[#20344d]">
+      <section className="rounded-2xl border border-[#d8e8f8] bg-[var(--q-bg)] p-4">
+        <h4 className="text-[11px] font-black text-[var(--q-text)]">
           كيف تُبنى القاعدة؟
         </h4>
         <div className="mt-3 grid gap-2 md:grid-cols-4">
           <div className="rounded-xl bg-white p-3 text-[8px] leading-5 text-[#607287]">
-            <strong className="block text-[#0066cc]">1. الشرط</strong>متى تُطبق
+            <strong className="block text-[var(--q-primary)]">1. الشرط</strong>متى تُطبق
             القاعدة؟ مثال: عندما يكون الطلب جديدًا.
           </div>
           <div className="rounded-xl bg-white p-3 text-[8px] leading-5 text-[#607287]">
-            <strong className="block text-[#0066cc]">2. المتطلب</strong>ما الذي
+            <strong className="block text-[var(--q-primary)]">2. المتطلب</strong>ما الذي
             يجب تقديمه؟ مثال: محضر اجتماع أو مستند إثبات.
           </div>
           <div className="rounded-xl bg-white p-3 text-[8px] leading-5 text-[#607287]">
-            <strong className="block text-[#0066cc]">3. الجهة</strong>من يراجع
+            <strong className="block text-[var(--q-primary)]">3. الجهة</strong>من يراجع
             أو يعتمد أو ينفذ؟ اختر المجلس أو الوحدة المختصة.
           </div>
           <div className="rounded-xl bg-white p-3 text-[8px] leading-5 text-[#607287]">
-            <strong className="block text-[#0066cc]">4. القرار</strong>ما
+            <strong className="block text-[var(--q-primary)]">4. القرار</strong>ما
             النتيجة المتاحة؟ موافقة، رفض، إعادة للاستكمال أو إحالة.
           </div>
         </div>
-        <p className="mt-3 text-[8px] text-[#718399]">
+        <p className="mt-3 text-[8px] text-[var(--q-text-3)]">
           أضف فقط ما تحتاجه القاعدة؛ ليست كل القواعد بحاجة إلى جميع الأقسام.
         </p>
       </section>
@@ -2278,11 +2278,11 @@ function RuleEditor({
             : undefined
         }
       >
-        <div className="rounded-xl border border-[#d8e8f8] bg-[#f8fbff] p-3">
+        <div className="rounded-xl border border-[#d8e8f8] bg-[var(--q-bg)] p-3">
           <p className="text-[9px] font-black text-[#29425f]">
             متى نطبّق هذه القاعدة؟
           </p>
-          <p className="mt-1 text-[8px] leading-5 text-[#718399]">
+          <p className="mt-1 text-[8px] leading-5 text-[var(--q-text-3)]">
             اختر حالة جاهزة أو أضف شرطًا مخصصًا. الشرط اختياري؛ أضفه فقط عندما
             تعتمد القاعدة على حالة محددة.
           </p>
@@ -2298,7 +2298,7 @@ function RuleEditor({
                   failure_action: "return_for_completion",
                 })
               }
-              className="rounded-lg border border-[#cfe2f5] bg-white px-3 py-2 text-[8px] font-bold text-[#0066cc]"
+              className="rounded-lg border border-[#cfe2f5] bg-white px-3 py-2 text-[8px] font-bold text-[var(--q-primary)]"
             >
               يتطلب محضر اجتماع
             </button>
@@ -2313,7 +2313,7 @@ function RuleEditor({
                   failure_action: "block",
                 })
               }
-              className="rounded-lg border border-[#cfe2f5] bg-white px-3 py-2 text-[8px] font-bold text-[#0066cc]"
+              className="rounded-lg border border-[#cfe2f5] bg-white px-3 py-2 text-[8px] font-bold text-[var(--q-primary)]"
             >
               يتحقق النصاب
             </button>
@@ -2328,7 +2328,7 @@ function RuleEditor({
                   failure_action: "return_for_completion",
                 })
               }
-              className="rounded-lg border border-[#cfe2f5] bg-white px-3 py-2 text-[8px] font-bold text-[#0066cc]"
+              className="rounded-lg border border-[#cfe2f5] bg-white px-3 py-2 text-[8px] font-bold text-[var(--q-primary)]"
             >
               حضور لا يقل عن 67%
             </button>
@@ -2346,7 +2346,7 @@ function RuleEditor({
         {form.conditions.map((row, index) => (
           <div
             key={index}
-            className="grid gap-2 rounded-xl bg-[#f8fafc] p-3 md:grid-cols-6"
+            className="grid gap-2 rounded-xl bg-[var(--q-bg)] p-3 md:grid-cols-6"
           >
             <p className="col-span-full rounded-lg bg-white px-3 py-2 text-[9px] leading-5 text-[#40546b]">
               {conditionSummary(row)}
@@ -2482,7 +2482,7 @@ function RuleEditor({
         {form.requirements.map((row, index) => (
           <div
             key={index}
-            className="grid gap-2 rounded-xl bg-[#f8fafc] p-3 md:grid-cols-6"
+            className="grid gap-2 rounded-xl bg-[var(--q-bg)] p-3 md:grid-cols-6"
           >
             <input
               disabled={!editable}
@@ -2594,7 +2594,7 @@ function RuleEditor({
         {form.authorities.map((row, index) => (
           <div
             key={index}
-            className="grid gap-2 rounded-xl bg-[#f8fafc] p-3 md:grid-cols-6"
+            className="grid gap-2 rounded-xl bg-[var(--q-bg)] p-3 md:grid-cols-6"
           >
             <select
               disabled={!editable}
@@ -2742,7 +2742,7 @@ function RuleEditor({
         {form.actions.map((row, index) => (
           <div
             key={index}
-            className="grid gap-2 rounded-xl bg-[#f8fafc] p-3 md:grid-cols-6"
+            className="grid gap-2 rounded-xl bg-[var(--q-bg)] p-3 md:grid-cols-6"
           >
             <input
               disabled={!editable}
@@ -2839,7 +2839,7 @@ function RuleEditor({
           {form.workflow_bindings.map((row, index) => (
             <div
               key={index}
-              className="grid gap-2 rounded-xl bg-[#f8fafc] p-3 md:grid-cols-4"
+              className="grid gap-2 rounded-xl bg-[var(--q-bg)] p-3 md:grid-cols-4"
             >
               <select
                 disabled={!editable}
@@ -2901,7 +2901,7 @@ function RuleEditor({
           <button
             disabled={busy || !form.name_ar || !form.code}
             onClick={onSave}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#0066cc] px-5 text-[9px] font-black text-white disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--q-primary)] px-5 text-[9px] font-black text-white disabled:opacity-50"
           >
             <Save size={13} />
             حفظ القاعدة كاملة
@@ -2924,7 +2924,7 @@ function RuleEditor({
 
 function RowLegend({ labels }: { labels: string[] }) {
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-1 px-2 text-[8px] font-black text-[#718399] md:grid-cols-5">
+    <div className="grid grid-cols-2 gap-x-3 gap-y-1 px-2 text-[8px] font-black text-[var(--q-text-3)] md:grid-cols-5">
       {labels
         .filter((label) => !label.includes("رمز"))
         .map((label) => (
@@ -2944,8 +2944,8 @@ function ReadinessStep({
   text: string;
 }) {
   return (
-    <div className="flex items-start gap-2 rounded-xl border border-[#dce8f2] bg-[#f8fbff] p-3">
-      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#0872df] text-[8px] font-black text-white">
+    <div className="flex items-start gap-2 rounded-xl border border-[#dce8f2] bg-[var(--q-bg)] p-3">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--q-primary)] text-[8px] font-black text-white">
         {number}
       </span>
       <div>
@@ -2970,8 +2970,8 @@ function RuleRows({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-[#e2e9f1]">
-      <header className="flex items-center justify-between border-b border-[#e8eef4] bg-[#fbfdff] px-3 py-2.5">
+    <section className="rounded-xl border border-[var(--q-border)]">
+      <header className="flex items-center justify-between border-b border-[#e8eef4] bg-[var(--q-bg)] px-3 py-2.5">
         <h4 className="flex items-center gap-2 text-[9px] font-black text-[#30445c]">
           {icon}
           {title}
@@ -2979,7 +2979,7 @@ function RuleRows({
         {onAdd && (
           <button
             onClick={onAdd}
-            className="inline-flex items-center gap-1 rounded-lg bg-[#edf6ff] px-2 py-1.5 text-[8px] font-black text-[#0066cc]"
+            className="inline-flex items-center gap-1 rounded-lg bg-[var(--q-surface-2)] px-2 py-1.5 text-[8px] font-black text-[var(--q-primary)]"
           >
             <Plus size={11} />
             إضافة

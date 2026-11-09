@@ -22,7 +22,7 @@ export function ForgotPasswordForm() {
   return <form onSubmit={submit} className="mt-8 space-y-5">
     <FormField label="البريد الإلكتروني" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
     {message && <p role="status" className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">{message}</p>}
-    <button disabled={busy} className="h-12 w-full rounded-xl bg-[#0066cc] font-bold text-white disabled:opacity-60">{busy ? "جارٍ الإرسال..." : "إرسال رابط الاستعادة"}</button>
-    <Link href="/login" className="block text-center text-sm font-bold text-[#0066cc]">العودة لتسجيل الدخول</Link>
+    <button disabled={busy} className="h-12 w-full rounded-xl bg-[var(--q-primary)] font-bold text-white disabled:opacity-60">{busy ? "جارٍ الإرسال..." : "إرسال رابط الاستعادة"}</button>
+    <Link href="/login" className="block text-center text-sm font-bold text-[var(--q-primary)]">العودة لتسجيل الدخول</Link>
   </form>;
 }

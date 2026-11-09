@@ -103,32 +103,32 @@ export function SessionsWorkspace() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-[#e2e9f1] bg-white p-6 shadow-[0_3px_16px_rgba(24,48,80,.035)]">
-        <h2 className="text-base font-black text-[#0a1330]">
+      <div className="rounded-2xl border border-[var(--q-border)] bg-white p-6 shadow-[0_3px_16px_rgba(24,48,80,.035)]">
+        <h2 className="text-base font-black text-[var(--q-text)]">
           مراقبة وتأمين الجلسات والأجهزة النشطة
         </h2>
-        <p className="mt-1 text-xs text-[#718196]">
+        <p className="mt-1 text-xs text-[var(--q-text-3)]">
           تعرض هذه الصفحة جلسات حسابك الفعلية فقط. إبطال جلسة يلغي سلسلة رموز التحديث المرتبطة بها.
         </p>
         <button
           type="button"
           onClick={() => void loadSessions()}
           disabled={isLoading}
-          className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[#dfe7ef] bg-white px-3 py-2 text-xs font-bold text-[#234] hover:bg-[#f7faff] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[var(--q-border)] bg-white px-3 py-2 text-xs font-bold text-[#234] hover:bg-[#f7faff] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} /> تحديث القائمة
         </button>
       </div>
 
-      <div className="rounded-2xl border border-[#e2e9f1] bg-white p-6 shadow-[0_3px_16px_rgba(24,48,80,.035)]">
+      <div className="rounded-2xl border border-[var(--q-border)] bg-white p-6 shadow-[0_3px_16px_rgba(24,48,80,.035)]">
         <h3 className="mb-4 text-sm font-black text-[#1c2b42]">
           الجلسات المكتشفة
         </h3>
 
         {isLoading ? (
-          <p className="text-xs text-[#718196]">يجري تحميل الجلسات الفعلية…</p>
+          <p className="text-xs text-[var(--q-text-3)]">يجري تحميل الجلسات الفعلية…</p>
         ) : sessions.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-[#dfe7ef] p-4 text-xs text-[#718196]">
+          <p className="rounded-xl border border-dashed border-[var(--q-border)] p-4 text-xs text-[var(--q-text-3)]">
             لا توجد جلسات تطبيق مسجلة لهذا الحساب بعد.
           </p>
         ) : (
@@ -137,9 +137,9 @@ export function SessionsWorkspace() {
               const isRevoked = Boolean(session.revoked_at);
               const isRevoking = revokingSessionId === session.id;
               return (
-                <div key={session.id} className="flex items-center justify-between gap-4 rounded-xl border border-[#eef2f6] bg-[#fbfdff] p-4 text-xs">
+                <div key={session.id} className="flex items-center justify-between gap-4 rounded-xl border border-[#eef2f6] bg-[var(--q-bg)] p-4 text-xs">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e7f2ff] text-[#0066cc]">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e7f2ff] text-[var(--q-primary)]">
                       <Laptop size={20} />
                     </span>
                     <div className="min-w-0">

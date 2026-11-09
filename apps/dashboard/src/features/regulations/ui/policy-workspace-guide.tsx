@@ -94,7 +94,7 @@ export function PolicyWorkspaceGuide() {
     <details className="group overflow-hidden rounded-2xl border border-[#cfe0ef] bg-white shadow-sm">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-[#f4f9fe] px-4 py-3 text-[#234762]">
         <span className="flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#0872df] text-white">
+          <span className="grid h-8 w-8 place-items-center rounded-xl bg-[var(--q-primary)] text-white">
             <CircleHelp size={16} />
           </span>
           <span>
@@ -108,19 +108,19 @@ export function PolicyWorkspaceGuide() {
         </span>
         <ChevronDown size={16} className="transition group-open:rotate-180" />
       </summary>
-      <div className="space-y-5 border-t border-[#dce7f1] p-4">
+      <div className="space-y-5 border-t border-[var(--q-border)] p-4">
         <section>
           <h3 className="flex items-center gap-2 text-[11px] font-black text-[#1d3851]">
-            <BookOpenCheck size={15} className="text-[#0872df]" />
+            <BookOpenCheck size={15} className="text-[var(--q-primary)]" />
             التبويبات الرئيسية
           </h3>
           <div className="mt-3 grid gap-3 lg:grid-cols-5">
             {areas.map(({ icon: Icon, title, purpose, details, result }) => (
               <article
                 key={title}
-                className="rounded-2xl border border-[#dfe8f1] bg-[#fbfdff] p-3"
+                className="rounded-2xl border border-[var(--q-border)] bg-[var(--q-bg)] p-3"
               >
-                <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#eaf4ff] text-[#0872df]">
+                <span className="grid h-8 w-8 place-items-center rounded-xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
                   <Icon size={15} />
                 </span>
                 <h4 className="mt-2 text-[10px] font-black text-[#213b55]">
@@ -155,7 +155,7 @@ export function PolicyWorkspaceGuide() {
 
 function GuideTable({ title, rows }: { title: string; rows: string[][] }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#dfe8f1]">
+    <section className="overflow-hidden rounded-2xl border border-[var(--q-border)]">
       <h3 className="bg-[#f5f9fc] px-4 py-3 text-[10px] font-black text-[#294761]">
         {title}
       </h3>
@@ -165,7 +165,7 @@ function GuideTable({ title, rows }: { title: string; rows: string[][] }) {
             key={term}
             className="grid gap-1 px-4 py-2.5 sm:grid-cols-[130px_1fr]"
           >
-            <dt className="text-[9px] font-black text-[#0872df]">{term}</dt>
+            <dt className="text-[9px] font-black text-[var(--q-primary)]">{term}</dt>
             <dd className="text-[8px] leading-5 text-[#667c90]">
               {description}
             </dd>

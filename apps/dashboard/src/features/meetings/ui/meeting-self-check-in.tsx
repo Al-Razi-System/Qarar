@@ -44,13 +44,13 @@ export function MeetingSelfCheckIn() {
     } finally { setBusy(false); }
   }
 
-  return <form onSubmit={submit} className="mx-auto max-w-lg rounded-3xl border border-[#dfe8f1] bg-white p-6 shadow-sm">
-    <div className="mb-5 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-[#0066cc]"><Fingerprint size={22} /></span><div><h2 className="text-base font-black text-[#0a1330]">تسجيل الحضور الذاتي</h2><p className="text-[11px] text-[#718196]">يجب تسجيل الدخول بالحساب المدعو إلى الاجتماع.</p></div></div>
+  return <form onSubmit={submit} className="mx-auto max-w-lg rounded-3xl border border-[var(--q-border)] bg-white p-6 shadow-sm">
+    <div className="mb-5 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-[var(--q-primary)]"><Fingerprint size={22} /></span><div><h2 className="text-base font-black text-[var(--q-text)]">تسجيل الحضور الذاتي</h2><p className="text-[11px] text-[var(--q-text-3)]">يجب تسجيل الدخول بالحساب المدعو إلى الاجتماع.</p></div></div>
     <div className="space-y-4">
-      <label className="block"><span className="mb-1 block text-xs font-bold">معرف الاجتماع</span><input required value={meetingId} onChange={(event) => setMeetingId(event.target.value)} className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs" /></label>
-      <label className="block"><span className="mb-1 block text-xs font-bold">رمز الحضور</span><input required value={token} onChange={(event) => setToken(event.target.value)} autoComplete="one-time-code" className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-xs tracking-widest" /></label>
+      <label className="block"><span className="mb-1 block text-xs font-bold">معرف الاجتماع</span><input required value={meetingId} onChange={(event) => setMeetingId(event.target.value)} className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-xs" /></label>
+      <label className="block"><span className="mb-1 block text-xs font-bold">رمز الحضور</span><input required value={token} onChange={(event) => setToken(event.target.value)} autoComplete="one-time-code" className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-xs tracking-widest" /></label>
       {message && <div className={`rounded-xl border p-3 text-xs font-bold ${message.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>{message.text}</div>}
-      <button disabled={busy} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0066cc] text-xs font-black text-white disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={16} /> : <CheckCircle2 size={16} />} تسجيل الحضور</button>
+      <button disabled={busy} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--q-primary)] text-xs font-black text-white disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={16} /> : <CheckCircle2 size={16} />} تسجيل الحضور</button>
     </div>
   </form>;
 }

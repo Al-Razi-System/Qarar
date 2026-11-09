@@ -39,8 +39,8 @@ export function UsersWorkspace({
           <p className="mb-1.5 text-[11px] font-bold text-[#ff7a00]">
             إدارة الهوية والوصول
           </p>
-          <h1 className="text-2xl font-black text-[#0a1330]">المستخدمون</h1>
-          <p className="mt-2 text-xs leading-6 text-[#718196]">
+          <h1 className="text-2xl font-black text-[var(--q-text)]">المستخدمون</h1>
+          <p className="mt-2 text-xs leading-6 text-[var(--q-text-3)]">
             إدارة الحسابات والعضويات وحالات الوصول ضمن نطاق المنظمة.
           </p>
         </div>
@@ -49,7 +49,7 @@ export function UsersWorkspace({
           disabled={!ready}
           title={!ready ? "جارٍ تجهيز إنشاء الحساب…" : undefined}
           onClick={() => setIsOpen(true)}
-          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#0066cc] px-5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(0,102,204,.18)] transition hover:bg-[#005bb7] disabled:cursor-wait disabled:opacity-60 sm:mr-auto"
+          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--q-primary)] px-5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(0,102,204,.18)] transition hover:bg-[#005bb7] disabled:cursor-wait disabled:opacity-60 sm:mr-auto"
         >
           <Plus size={17} />
           إنشاء حساب جديد
@@ -75,14 +75,14 @@ export function UsersWorkspace({
                   <Users size={16} />
                   <span className="text-[11px] font-bold">إدارة الهوية والوصول</span>
                 </div>
-                <h2 id="create-user-title" className="text-xl font-black text-[#0a1330]">
+                <h2 id="create-user-title" className="text-xl font-black text-[var(--q-text)]">
                   إنشاء حساب جديد
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="grid h-10 w-10 place-items-center rounded-xl border border-[#dfe7ef] bg-white text-[#65768b] transition hover:bg-[#edf4fb] hover:text-[#0066cc]"
+                className="grid h-10 w-10 place-items-center rounded-xl border border-[var(--q-border)] bg-white text-[#65768b] transition hover:bg-[#edf4fb] hover:text-[var(--q-primary)]"
                 aria-label="إغلاق نافذة إنشاء الحساب"
               >
                 <X size={19} />

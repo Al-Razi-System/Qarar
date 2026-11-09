@@ -22,16 +22,16 @@ export function TopicCreationProgress({ currentStep }: { currentStep: number }) 
               done
                 ? "bg-emerald-50 text-emerald-800"
                 : active
-                  ? "bg-[#edf6ff] text-[#0066cc] ring-1 ring-[#b8d9f5]"
-                  : "bg-[#f8fafc] text-[#74849a]"
+                  ? "bg-[var(--q-surface-2)] text-[var(--q-primary)] ring-1 ring-[#b8d9f5]"
+                  : "bg-[var(--q-bg)] text-[#74849a]"
             }`}
           >
             <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl text-[11px] font-black ${
               done
                 ? "bg-emerald-600 text-white"
                 : active
-                  ? "bg-[#0066cc] text-white"
-                  : "bg-[#e9eef4] text-[#7b8ba0]"
+                  ? "bg-[var(--q-primary)] text-white"
+                  : "bg-[#e9eef4] text-[var(--q-text-3)]"
             }`}>
               {done ? <Check size={14} /> : stepNumber}
             </span>

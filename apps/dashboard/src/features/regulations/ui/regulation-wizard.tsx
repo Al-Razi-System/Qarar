@@ -28,9 +28,9 @@ export function RegulationWizard({ steps, onSelect }: Props) {
               aria-current={active ? "step" : undefined}
               aria-label={`${index + 1}. ${step.label}${step.done ? "، مكتملة" : "، غير مكتملة"}`}
               onClick={() => onSelect(index)}
-              className={`group min-h-16 w-full rounded-lg border p-2 text-right transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0066cc] ${step.done ? "border-emerald-200 bg-emerald-50 text-emerald-800" : active ? "border-[#0066cc] bg-[#edf6ff] text-[#0066cc]" : "border-[#dce7f2] bg-[#fbfdff] text-[#52647a] hover:border-[#0066cc] hover:bg-white"}`}
+              className={`group min-h-16 w-full rounded-lg border p-2 text-right transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--q-primary)] ${step.done ? "border-emerald-200 bg-emerald-50 text-emerald-800" : active ? "border-[var(--q-primary)] bg-[var(--q-surface-2)] text-[var(--q-primary)]" : "border-[#dce7f2] bg-[var(--q-bg)] text-[var(--q-text-2)] hover:border-[var(--q-primary)] hover:bg-white"}`}
             >
-              <span className={`mb-1 grid h-5 w-5 place-items-center rounded-full text-[8px] font-black ${step.done ? "bg-emerald-600 text-white" : active ? "bg-[#0066cc] text-white" : "bg-[#eaf4ff] text-[#0066cc]"}`}>
+              <span className={`mb-1 grid h-5 w-5 place-items-center rounded-full text-[8px] font-black ${step.done ? "bg-emerald-600 text-white" : active ? "bg-[var(--q-primary)] text-white" : "bg-[var(--q-surface-2)] text-[var(--q-primary)]"}`}>
                 {step.done ? <Check aria-hidden="true" size={10} /> : index + 1}
               </span>
               <strong className="block text-[8px] leading-4">{step.label}</strong>

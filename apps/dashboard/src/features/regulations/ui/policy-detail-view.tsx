@@ -248,7 +248,7 @@ export function PolicyDetailView({
         <Link
           href="/admin/regulations"
           title="العودة إلى قائمة جميع اللوائح"
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#dce6ef] bg-white px-2.5 text-[9px] font-bold text-[#52647a] hover:text-[#0066cc]"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#dce6ef] bg-white px-2.5 text-[9px] font-bold text-[var(--q-text-2)] hover:text-[var(--q-primary)]"
         >
           <ArrowRight size={14} />
           العودة إلى دليل اللوائح
@@ -257,7 +257,7 @@ export function PolicyDetailView({
           type="button"
           title="عرض مراحل الجاهزية والمراجعة والاعتماد والنفاذ"
           onClick={() => selectTab("journey")}
-          className="inline-flex h-8 items-center rounded-lg bg-[#edf6ff] px-2.5 text-[9px] font-black text-[#0066cc]"
+          className="inline-flex h-8 items-center rounded-lg bg-[var(--q-surface-2)] px-2.5 text-[9px] font-black text-[var(--q-primary)]"
         >
           عرض دليل التنفيذ
         </button>
@@ -266,14 +266,14 @@ export function PolicyDetailView({
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#eaf4ff] text-[#0066cc]">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--q-surface-2)] text-[var(--q-primary)]">
                 <BookOpenCheck size={16} />
               </span>
               <div>
                 <p className="text-[9px] font-black text-[#f17822]">
                   سجل لائحة نظامية
                 </p>
-                <h1 className="mt-0.5 text-lg font-black text-[#0a1330]">
+                <h1 className="mt-0.5 text-lg font-black text-[var(--q-text)]">
                   {policy.name_ar}
                 </h1>
               </div>
@@ -287,20 +287,20 @@ export function PolicyDetailView({
           </div>
           <div className="flex gap-2 text-center">
             <div className="rounded-lg bg-[#f3f7fb] px-3 py-1.5">
-              <strong className="block text-sm text-[#0a1330]">
+              <strong className="block text-sm text-[var(--q-text)]">
                 {policy.versions?.length ?? 0}
               </strong>
               <span className="text-[9px] text-[#7b8da1]">إصدار</span>
             </div>
-            <div className="rounded-lg bg-[#edf6ff] px-3 py-1.5">
-              <strong className="block text-sm text-[#0066cc]">
+            <div className="rounded-lg bg-[var(--q-surface-2)] px-3 py-1.5">
+              <strong className="block text-sm text-[var(--q-primary)]">
                 {readinessPercent}%
               </strong>
               <span className="text-[9px] text-[#6f8296]">جاهزية</span>
             </div>
           </div>
         </div>
-        <div className="grid gap-2 border-t border-[#e9eef4] bg-[#fbfdff] px-4 py-3 text-[9px] text-[#617389] sm:grid-cols-3 sm:px-6">
+        <div className="grid gap-2 border-t border-[#e9eef4] bg-[var(--q-bg)] px-4 py-3 text-[9px] text-[#617389] sm:grid-cols-3 sm:px-6">
           <span>
             <strong className="text-[#263950]">الرمز:</strong> {policy.code}
           </span>
@@ -318,7 +318,7 @@ export function PolicyDetailView({
       </header>
       <PolicyWorkspaceGuide />
       <section className="overflow-hidden rounded-2xl border border-[#dbe6f1] bg-white shadow-[0_8px_24px_rgba(15,42,72,.05)]">
-        <div className="border-b border-[#e8eef4] bg-[#fbfdff] px-4 py-3 sm:px-5">
+        <div className="border-b border-[#e8eef4] bg-[var(--q-bg)] px-4 py-3 sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-[10px] font-black text-[#f17822]">
@@ -350,10 +350,10 @@ export function PolicyDetailView({
                 onClick={() => selectTab(tab.id)}
                 aria-selected={selected}
                 role="tab"
-                className={`relative flex min-w-52 items-center gap-3 rounded-xl border px-3 py-3 text-right transition ${selected ? "border-[#0872df] bg-[#0872df] text-white shadow-[0_7px_16px_rgba(0,102,204,.18)]" : "border-[#e1eaf2] bg-white text-[#465a72] hover:border-[#9bc9f2] hover:bg-[#f7fbff]"}`}
+                className={`relative flex min-w-52 items-center gap-3 rounded-xl border px-3 py-3 text-right transition ${selected ? "border-[var(--q-primary)] bg-[var(--q-primary)] text-white shadow-[0_7px_16px_rgba(0,102,204,.18)]" : "border-[#e1eaf2] bg-white text-[#465a72] hover:border-[#9bc9f2] hover:bg-[#f7fbff]"}`}
               >
                 <span
-                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${selected ? "bg-white/15" : "bg-[#eaf4ff] text-[#0066cc]"}`}
+                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${selected ? "bg-white/15" : "bg-[var(--q-surface-2)] text-[var(--q-primary)]"}`}
                 >
                   <Icon size={17} />
                 </span>
@@ -369,7 +369,7 @@ export function PolicyDetailView({
                 </span>
                 {tab.badge && (
                   <span
-                    className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-black ${selected ? "bg-white/15 text-white" : "bg-[#edf6ff] text-[#0066cc]"}`}
+                    className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-black ${selected ? "bg-white/15 text-white" : "bg-[var(--q-surface-2)] text-[var(--q-primary)]"}`}
                   >
                     {tab.badge}
                   </span>
@@ -480,9 +480,9 @@ function LifecyclePhase({
   result: string;
 }) {
   return (
-    <article className="rounded-2xl border border-[#dce7f0] bg-[#fbfdff] p-4">
+    <article className="rounded-2xl border border-[#dce7f0] bg-[var(--q-bg)] p-4">
       <div className="flex items-center gap-2">
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#eaf4ff] text-[#0872df]">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
           {icon}
         </span>
         <span className="text-[8px] font-black text-[#8192a4]">

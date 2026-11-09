@@ -60,8 +60,8 @@ export function CouncilMeetingsPanel({ council, detail, archived, onEditPlan }: 
   const finished = (meetings ?? []).filter((meeting) => FINISHED.includes(meeting.status)).sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
   const shownCurrent = current.slice(0, 6);
 
-  return <div className="grid gap-4 bg-[#f8fbfe] p-5">
-    <section aria-label="خطة الاجتماعات" className="rounded-2xl border border-[#dce7f1] bg-white p-4">
+  return <div className="grid gap-4 bg-[var(--q-bg)] p-5">
+    <section aria-label="خطة الاجتماعات" className="rounded-2xl border border-[var(--q-border)] bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="m-0 flex items-center gap-2 text-sm font-black text-[#1b314b]"><Settings2 size={16} aria-hidden="true" />خطة الاجتماعات</h3>
         {!archived && (plan || detail?.can_create_meeting_plan) && <Button variant="secondary" onClick={onEditPlan}>{plan ? "تعديل الخطة" : "إنشاء خطة اجتماعات"}</Button>}
@@ -74,10 +74,10 @@ export function CouncilMeetingsPanel({ council, detail, archived, onEditPlan }: 
       </dl> : <InlineMessage tone="warning" className="mt-3">لا توجد خطة اجتماعات لهذا المجلس، ولذلك لا تظهر له اجتماعات في قائمة الاجتماعات.{detail?.can_create_meeting_plan ? " أنشئ الخطة ليولّد النظام اجتماعاته." : ""}</InlineMessage>}
     </section>
 
-    <section aria-label="اجتماعات المجلس" className="rounded-2xl border border-[#dce7f1] bg-white p-4">
+    <section aria-label="اجتماعات المجلس" className="rounded-2xl border border-[var(--q-border)] bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="m-0 flex items-center gap-2 text-sm font-black text-[#1b314b]"><CalendarClock size={16} aria-hidden="true" />الاجتماعات {meetings ? `(${meetings.length})` : ""}</h3>
-        <Link href={`/admin/meetings?council=${encodeURIComponent(council.id)}`} className="inline-flex items-center gap-1 text-xs font-bold text-[#0872df]"><ExternalLink size={13} aria-hidden="true" />فتحها في صفحة الاجتماعات</Link>
+        <Link href={`/admin/meetings?council=${encodeURIComponent(council.id)}`} className="inline-flex items-center gap-1 text-xs font-bold text-[var(--q-primary)]"><ExternalLink size={13} aria-hidden="true" />فتحها في صفحة الاجتماعات</Link>
       </div>
       {error && <InlineMessage tone="error" className="mt-3">{error}<Button variant="secondary" onClick={load}>إعادة المحاولة</Button></InlineMessage>}
       {!error && meetings === null && <p role="status" className="m-0 mt-3 text-xs text-[#7c8da0]">جارٍ تحميل الاجتماعات…</p>}

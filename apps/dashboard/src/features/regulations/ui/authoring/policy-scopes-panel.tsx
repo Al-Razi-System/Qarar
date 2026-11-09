@@ -244,8 +244,8 @@ export function PolicyScopesPanel({
     );
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#dce7f1] bg-white shadow-sm">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e5edf4] bg-[#fbfdff] p-4 sm:p-5">
+    <section className="overflow-hidden rounded-2xl border border-[var(--q-border)] bg-white shadow-sm">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e5edf4] bg-[var(--q-bg)] p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff2e8] text-[#d96712]">
             <Route size={18} />
@@ -279,9 +279,9 @@ export function PolicyScopesPanel({
           {version.scopes.map((scope) => (
             <article
               key={scope.id}
-              className="flex items-start gap-3 rounded-2xl border border-[#dfe8f1] bg-white p-4 shadow-sm"
+              className="flex items-start gap-3 rounded-2xl border border-[var(--q-border)] bg-white p-4 shadow-sm"
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#eaf4ff] text-[#0872df]">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
                 {scope.scope_type === "organization" ? (
                   <Building2 size={17} />
                 ) : scope.scope_type === "governance_class" ||
@@ -347,7 +347,7 @@ export function PolicyScopesPanel({
                     type="button"
                     title="إضافة أول نطاق تطبيق"
                     onClick={() => setAdding(true)}
-                    className="rounded-xl bg-[#0872df] px-4 py-2.5 text-[10px] font-black text-white"
+                    className="rounded-xl bg-[var(--q-primary)] px-4 py-2.5 text-[10px] font-black text-white"
                   >
                     إضافة أول نطاق
                   </button>
@@ -401,7 +401,7 @@ export function PolicyScopesPanel({
               type="button"
               title="إلغاء الحذف"
               onClick={() => setDeleting(undefined)}
-              className="h-10 rounded-xl border border-[#dce5ee] px-4 text-[10px] font-black text-[#52677e]"
+              className="h-10 rounded-xl border border-[var(--q-border)] px-4 text-[10px] font-black text-[#52677e]"
             >
               إلغاء
             </button>
@@ -580,7 +580,7 @@ function ScopeDialog({
           />
         </AuthoringField>
         {form.type === "unit_subtree" && (
-          <label className="flex items-center gap-2 rounded-xl border border-[#dfe8f1] bg-white p-3 text-[9px] font-bold text-[#40566e]">
+          <label className="flex items-center gap-2 rounded-xl border border-[var(--q-border)] bg-white p-3 text-[9px] font-bold text-[#40566e]">
             <input
               type="checkbox"
               checked={form.includeDescendants}

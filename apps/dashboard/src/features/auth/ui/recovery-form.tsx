@@ -29,13 +29,13 @@ export function RecoveryForm() {
     } catch { setError("تعذر الاتصال بالخدمة مؤقتًا."); } finally { setBusy(false); }
   }
   if (tokens === undefined) return <p>جارٍ التحقق من الرابط...</p>;
-  if (done) return <div className="mt-8 text-center"><h1 className="text-2xl font-black">تم تغيير كلمة المرور</h1><p className="mt-3 text-sm text-slate-600">أُبطلت جلسات الاستعادة والجلسات القديمة. سجل الدخول مجددًا.</p><Link className="mt-6 inline-block font-bold text-[#0066cc]" href="/login">تسجيل الدخول</Link></div>;
-  if (!tokens) return <div className="mt-8 text-center"><h1 className="text-2xl font-black">رابط غير صالح</h1><Link className="mt-6 inline-block font-bold text-[#0066cc]" href="/forgot-password">طلب رابط جديد</Link></div>;
+  if (done) return <div className="mt-8 text-center"><h1 className="text-2xl font-black">تم تغيير كلمة المرور</h1><p className="mt-3 text-sm text-slate-600">أُبطلت جلسات الاستعادة والجلسات القديمة. سجل الدخول مجددًا.</p><Link className="mt-6 inline-block font-bold text-[var(--q-primary)]" href="/login">تسجيل الدخول</Link></div>;
+  if (!tokens) return <div className="mt-8 text-center"><h1 className="text-2xl font-black">رابط غير صالح</h1><Link className="mt-6 inline-block font-bold text-[var(--q-primary)]" href="/forgot-password">طلب رابط جديد</Link></div>;
   return <form onSubmit={submit} className="mt-8 space-y-5">
     <FormField label="كلمة المرور الجديدة" name="password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
     <FormField label="تأكيد كلمة المرور" name="confirmation" type="password" autoComplete="new-password" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} required />
     <p className="text-xs text-slate-500">12 حرفًا على الأقل، وتتضمن حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.</p>
     {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-    <button disabled={busy} className="h-12 w-full rounded-xl bg-[#0066cc] font-bold text-white disabled:opacity-60">{busy ? "جارٍ الحفظ..." : "تعيين كلمة المرور"}</button>
+    <button disabled={busy} className="h-12 w-full rounded-xl bg-[var(--q-primary)] font-bold text-white disabled:opacity-60">{busy ? "جارٍ الحفظ..." : "تعيين كلمة المرور"}</button>
   </form>;
 }

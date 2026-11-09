@@ -49,7 +49,7 @@ export function InlineUnitTypeEditor({ onCreated, onBusyChange, onClose }: Props
       <p className="text-xs leading-6 text-slate-500">نوع عام مثل «كلية»، وليس اسم جهة مثل «كلية الحاسوب».</p>
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={saving} onClick={() => void save()} className="min-h-10 rounded-lg bg-[#0872df] px-4 text-sm font-bold text-white disabled:opacity-50">{saving ? "جارٍ حفظ النوع…" : "حفظ النوع"}</button>
+        <button type="button" disabled={saving} onClick={() => void save()} className="min-h-10 rounded-lg bg-[var(--q-primary)] px-4 text-sm font-bold text-white disabled:opacity-50">{saving ? "جارٍ حفظ النوع…" : "حفظ النوع"}</button>
         <button type="button" disabled={saving} onClick={onClose} className="min-h-10 rounded-lg border bg-white px-4 text-sm">إلغاء إضافة النوع</button>
       </div>
   </div>;

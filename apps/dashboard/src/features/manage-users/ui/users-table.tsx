@@ -66,13 +66,13 @@ const actionCopy: Record<
     label: "إعادة إرسال الدعوة",
     description: "سيُرسل رابط دعوة جديد إلى البريد المسجل.",
     icon: Mail,
-    tone: "text-[#0066cc]",
+    tone: "text-[var(--q-primary)]",
   },
   send_password_reset: {
     label: "إرسال رابط إعادة التعيين",
     description: "سيُرسل رابط آمن لإعادة ضبط كلمة المرور إلى البريد المسجل.",
     icon: KeyRound,
-    tone: "text-[#0066cc]",
+    tone: "text-[var(--q-primary)]",
   },
 };
 
@@ -276,8 +276,8 @@ export function UsersTable({
           {message.text}
         </div>
       )}
-      <div className="rounded-2xl border border-[#e2e9f1] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
-        <div className="flex flex-col gap-3 border-b border-[#edf1f5] p-4 sm:flex-row sm:items-center">
+      <div className="rounded-2xl border border-[var(--q-border)] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
+        <div className="flex flex-col gap-3 border-b border-[var(--q-surface-2)] p-4 sm:flex-row sm:items-center">
           <div className="relative w-full max-w-[380px]">
             <Search
               size={16}
@@ -287,19 +287,19 @@ export function UsersTable({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="ابحث بالاسم، البريد أو الرقم الوظيفي..."
-              className="h-11 w-full rounded-xl border border-[#dfe7ef] bg-[#fafcfe] pr-10 pl-4 text-xs outline-none focus:border-[#9bc9f2] focus:bg-white"
+              className="h-11 w-full rounded-xl border border-[var(--q-border)] bg-[#fafcfe] pr-10 pl-4 text-xs outline-none focus:border-[#9bc9f2] focus:bg-white"
             />
           </div>
           <p className="text-xs text-[#7a8b9e] sm:mr-auto">
             إجمالي المستخدمين:{" "}
-            <strong className="text-[#0a1330]">{displayedTotal}</strong>
+            <strong className="text-[var(--q-text)]">{displayedTotal}</strong>
           </p>
         </div>
-        {loadingPage && <div role="status" className="border-b border-[#edf1f5] bg-[#f7fbff] px-4 py-2 text-[11px] font-bold text-[#0066cc]">جارٍ تحميل المستخدمين…</div>}
+        {loadingPage && <div role="status" className="border-b border-[var(--q-surface-2)] bg-[#f7fbff] px-4 py-2 text-[11px] font-bold text-[var(--q-primary)]">جارٍ تحميل المستخدمين…</div>}
         {displayedUsers.length === 0 ? (
           <div className="grid min-h-[300px] place-items-center p-8 text-center">
             <div>
-              <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#edf5fd] text-[#0066cc]">
+              <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#edf5fd] text-[var(--q-primary)]">
                 <UsersRound size={24} />
               </span>
               <h2 className="mt-4 text-sm font-black text-[#1c2b42]">
@@ -314,7 +314,7 @@ export function UsersTable({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px] border-collapse text-right">
               <thead>
-                <tr className="bg-[#f8fafc] text-[11px] font-bold text-[#78899d]">
+                <tr className="bg-[var(--q-bg)] text-[11px] font-bold text-[#78899d]">
                   <th className="px-5 py-3.5">المستخدم</th>
                   <th className="px-3 py-3.5">الدور</th>
                   <th className="px-3 py-3.5">النطاق</th>
@@ -334,11 +334,11 @@ export function UsersTable({
                   return (
                     <tr
                       key={user.id}
-                      className="border-t border-[#eef2f6] text-xs hover:bg-[#fbfdff]"
+                      className="border-t border-[#eef2f6] text-xs hover:bg-[var(--q-bg)]"
                     >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e7f2ff] text-[11px] font-black text-[#0066cc]">
+                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e7f2ff] text-[11px] font-black text-[var(--q-primary)]">
                             {initials}
                           </span>
                           <span>
@@ -376,7 +376,7 @@ export function UsersTable({
                           onClick={(event) =>
                             openActions(user, event.currentTarget)
                           }
-                          className="grid h-8 w-8 place-items-center rounded-lg text-[#8493a6] hover:bg-[#edf4fb] hover:text-[#0066cc]"
+                          className="grid h-8 w-8 place-items-center rounded-lg text-[#8493a6] hover:bg-[#edf4fb] hover:text-[var(--q-primary)]"
                           aria-label={`عمليات ${user.full_name_ar}`}
                         >
                           <Ellipsis size={18} />
@@ -390,11 +390,11 @@ export function UsersTable({
           </div>
         )}
         {displayedTotal > usersPageSize && (
-          <nav aria-label="ترقيم صفحات المستخدمين" className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf1f5] px-4 py-3">
-            <p className="text-[11px] text-[#718196]">الصفحة <strong className="text-[#0a1330]">{page + 1}</strong> من {Math.max(1, Math.ceil(displayedTotal / usersPageSize))}</p>
+          <nav aria-label="ترقيم صفحات المستخدمين" className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--q-surface-2)] px-4 py-3">
+            <p className="text-[11px] text-[var(--q-text-3)]">الصفحة <strong className="text-[var(--q-text)]">{page + 1}</strong> من {Math.max(1, Math.ceil(displayedTotal / usersPageSize))}</p>
             <div className="flex gap-2">
-              <button type="button" aria-label="الصفحة السابقة" disabled={loadingPage || page === 0} onClick={() => void loadUsers(page - 1, query)} className="h-9 rounded-xl border border-[#dfe7ef] px-4 text-[11px] font-bold text-[#52647a] disabled:cursor-not-allowed disabled:opacity-40">السابق</button>
-              <button type="button" aria-label="الصفحة التالية" disabled={loadingPage || (page + 1) * usersPageSize >= displayedTotal} onClick={() => void loadUsers(page + 1, query)} className="h-9 rounded-xl bg-[#0066cc] px-4 text-[11px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#a8b8c9]">التالي</button>
+              <button type="button" aria-label="الصفحة السابقة" disabled={loadingPage || page === 0} onClick={() => void loadUsers(page - 1, query)} className="h-9 rounded-xl border border-[var(--q-border)] px-4 text-[11px] font-bold text-[var(--q-text-2)] disabled:cursor-not-allowed disabled:opacity-40">السابق</button>
+              <button type="button" aria-label="الصفحة التالية" disabled={loadingPage || (page + 1) * usersPageSize >= displayedTotal} onClick={() => void loadUsers(page + 1, query)} className="h-9 rounded-xl bg-[var(--q-primary)] px-4 text-[11px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#a8b8c9]">التالي</button>
             </div>
           </nav>
         )}
@@ -408,10 +408,10 @@ export function UsersTable({
             className="fixed inset-0 z-30 cursor-default"
           />
           <div
-            className="fixed z-40 w-60 rounded-2xl border border-[#dfe7ef] bg-white p-2 shadow-[0_18px_45px_rgba(10,19,48,.2)]"
+            className="fixed z-40 w-60 rounded-2xl border border-[var(--q-border)] bg-white p-2 shadow-[0_18px_45px_rgba(10,19,48,.2)]"
             style={{ left: openMenu.x, top: openMenu.y }}
           >
-            <div className="border-b border-[#edf1f5] px-3 py-2">
+            <div className="border-b border-[var(--q-surface-2)] px-3 py-2">
               <p className="text-[10px] font-black text-[#64768b]">
                 إجراءات الحساب
               </p>
@@ -422,18 +422,18 @@ export function UsersTable({
             <button
               type="button"
               onClick={() => startEditing(openMenu.user)}
-              className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-[11px] font-bold text-[#0066cc] hover:bg-[#edf6ff]"
+              className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-[11px] font-bold text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
             >
               <Pencil size={16} />
               تعديل بيانات المستخدم
             </button>
             {canManageSubmissionScopes && <Link
               href={`/admin/users/${openMenu.user.id}/roles`}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-[11px] font-bold text-[#0066cc] hover:bg-[#edf6ff]"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-[11px] font-bold text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
             ><UsersRound size={16} />إدارة أدوار المستخدم</Link>}
             {canManageSubmissionScopes && <Link
               href={`/admin/users/${openMenu.user.id}/submission-scope`}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-[11px] font-bold text-[#0066cc] hover:bg-[#edf6ff]"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-[11px] font-bold text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
             ><UsersRound size={16} />جهة العمل وصلاحيات التقديم</Link>}
             {(
               (openMenu.user.status === "active"
@@ -457,7 +457,7 @@ export function UsersTable({
                 </button>
               );
             })}
-            <div className="my-1 border-t border-[#edf1f5]" />
+            <div className="my-1 border-t border-[var(--q-surface-2)]" />
             {(["resend_invitation", "send_password_reset"] as UserAction[]).map(
               (action) => {
                 const config = actionCopy[action];
@@ -483,7 +483,7 @@ export function UsersTable({
       )}
       {loadingEdit && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#081630]/55 p-4 backdrop-blur-sm">
-          <div className="rounded-2xl bg-white px-6 py-5 text-sm font-bold text-[#0a1330] shadow-2xl">
+          <div className="rounded-2xl bg-white px-6 py-5 text-sm font-bold text-[var(--q-text)] shadow-2xl">
             جارٍ تحميل بيانات المستخدم…
           </div>
         </div>
@@ -506,11 +506,11 @@ export function UsersTable({
                 </p>
                 <h2
                   id="edit-user-title"
-                  className="mt-1 text-lg font-black text-[#0a1330]"
+                  className="mt-1 text-lg font-black text-[var(--q-text)]"
                 >
                   تعديل بيانات المستخدم
                 </h2>
-                <p className="mt-1 text-xs text-[#718196]">
+                <p className="mt-1 text-xs text-[var(--q-text-3)]">
                   يتم حفظ التعديل في سجل الحوكمة.
                 </p>
               </div>
@@ -525,65 +525,65 @@ export function UsersTable({
             </div>
             <div className="grid gap-4 p-6 sm:grid-cols-2">
               <label className="sm:col-span-2">
-                <span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">
+                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
                   الاسم بالعربية *
                 </span>
                 <input
                   required
                   name="full_name_ar"
                   defaultValue={editing.full_name_ar}
-                  className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-sm outline-none focus:border-[#0066cc]"
+                  className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-sm outline-none focus:border-[var(--q-primary)]"
                 />
               </label>
               <label>
-                <span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">
+                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
                   الاسم بالإنجليزية
                 </span>
                 <input
                   name="full_name_en"
                   defaultValue={editing.full_name_en ?? ""}
-                  className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-sm outline-none focus:border-[#0066cc]"
+                  className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-sm outline-none focus:border-[var(--q-primary)]"
                 />
               </label>
               <label>
-                <span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">
+                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
                   الرقم الوظيفي
                 </span>
                 <input
                   name="employee_no"
                   defaultValue={editing.employee_no ?? ""}
-                  className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-sm outline-none focus:border-[#0066cc]"
+                  className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-sm outline-none focus:border-[var(--q-primary)]"
                 />
               </label>
               <label>
-                <span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">
+                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
                   رقم الجوال
                 </span>
                 <input
                   dir="ltr"
                   name="mobile"
                   defaultValue={editing.mobile ?? ""}
-                  className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-sm outline-none focus:border-[#0066cc]"
+                  className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-sm outline-none focus:border-[var(--q-primary)]"
                 />
               </label>
               <label>
-                <span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">
+                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
                   المسمى الوظيفي
                 </span>
                 <input
                   name="job_title"
                   defaultValue={editing.job_title ?? ""}
-                  className="h-11 w-full rounded-xl border border-[#dbe5ef] px-3 text-sm outline-none focus:border-[#0066cc]"
+                  className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-sm outline-none focus:border-[var(--q-primary)]"
                 />
               </label>
               <label className="sm:col-span-2">
-                <span className="mb-1.5 block text-xs font-bold text-[#3d4f66]">
+                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
                   البريد الإلكتروني
                 </span>
                 <input
                   disabled
                   value={editing.email}
-                  className="h-11 w-full cursor-not-allowed rounded-xl border border-[#e4e9ef] bg-[#f6f8fb] px-3 text-sm text-[#718196]"
+                  className="h-11 w-full cursor-not-allowed rounded-xl border border-[#e4e9ef] bg-[#f6f8fb] px-3 text-sm text-[var(--q-text-3)]"
                 />
                 <span className="mt-1 block text-[10px] text-[#8b99aa]">
                   يتم تغيير البريد من خلال إجراء هوية مستقل حفاظًا على أمان
@@ -596,13 +596,13 @@ export function UsersTable({
                 type="button"
                 onClick={() => setEditing(null)}
                 disabled={isSubmitting}
-                className="h-10 rounded-xl border border-[#dbe5ef] px-4 text-xs font-bold text-[#52647a]"
+                className="h-10 rounded-xl border border-[var(--q-border)] px-4 text-xs font-bold text-[var(--q-text-2)]"
               >
                 إلغاء
               </button>
               <button
                 disabled={isSubmitting}
-                className="h-10 rounded-xl bg-[#0066cc] px-5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(0,102,204,.18)] disabled:opacity-60"
+                className="h-10 rounded-xl bg-[var(--q-primary)] px-5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(0,102,204,.18)] disabled:opacity-60"
               >
                 {isSubmitting ? "جارٍ الحفظ…" : "حفظ التعديلات"}
               </button>
@@ -630,7 +630,7 @@ export function UsersTable({
                   <button
                     type="button"
                     onClick={() => setPending(null)}
-                    className="text-[#8493a6] hover:text-[#0a1330]"
+                    className="text-[#8493a6] hover:text-[var(--q-text)]"
                     aria-label="إلغاء"
                   >
                     <X size={20} />
@@ -639,7 +639,7 @@ export function UsersTable({
                 <h2 className="mt-5 text-base font-black text-[#15243b]">
                   {config.label}
                 </h2>
-                <p className="mt-2 text-xs leading-6 text-[#718196]">
+                <p className="mt-2 text-xs leading-6 text-[var(--q-text-3)]">
                   {config.description}
                 </p>
                 <p className="mt-3 rounded-lg bg-[#f6f9fc] px-3 py-2 text-[11px] font-bold text-[#44566d]">
@@ -651,7 +651,7 @@ export function UsersTable({
                     <select
                       value={offboardingSuccessor}
                       onChange={(event) => setOffboardingSuccessor(event.target.value)}
-                      className="mt-2 h-11 w-full rounded-xl border border-[#dfe7ef] bg-white px-3 text-xs"
+                      className="mt-2 h-11 w-full rounded-xl border border-[var(--q-border)] bg-white px-3 text-xs"
                     >
                       <option value="">لا يوجد — إذا لم توجد مهام مفتوحة</option>
                       {users
@@ -665,7 +665,7 @@ export function UsersTable({
                     type="button"
                     onClick={() => setPending(null)}
                     disabled={isSubmitting}
-                    className="h-10 rounded-xl border border-[#dfe7ef] px-4 text-xs font-bold text-[#52647a]"
+                    className="h-10 rounded-xl border border-[var(--q-border)] px-4 text-xs font-bold text-[var(--q-text-2)]"
                   >
                     إلغاء
                   </button>
@@ -673,7 +673,7 @@ export function UsersTable({
                     type="button"
                     onClick={runAction}
                     disabled={isSubmitting}
-                    className="h-10 rounded-xl bg-[#0066cc] px-4 text-xs font-bold text-white disabled:opacity-60"
+                    className="h-10 rounded-xl bg-[var(--q-primary)] px-4 text-xs font-bold text-white disabled:opacity-60"
                   >
                     {isSubmitting ? "جارٍ التنفيذ..." : "تأكيد العملية"}
                   </button>

@@ -88,7 +88,7 @@ function Metric({
   tone?: "blue" | "orange" | "green";
 }) {
   const toneClass = {
-    blue: "bg-[#eaf4ff] text-[#0872df]",
+    blue: "bg-[var(--q-surface-2)] text-[var(--q-primary)]",
     orange: "bg-[#fff2e8] text-[#d96712]",
     green: "bg-emerald-50 text-emerald-700",
   }[tone];
@@ -132,7 +132,7 @@ function TreeBranch({
       <div
         className={`group flex items-center gap-1.5 rounded-xl border px-2 py-1.5 transition ${
           selected
-            ? "border-[#8dc4f5] bg-[#eaf4ff] shadow-sm"
+            ? "border-[#8dc4f5] bg-[var(--q-surface-2)] shadow-sm"
             : "border-transparent hover:border-[#e0eaf3] hover:bg-white"
         }`}
         style={{ marginInlineStart: `${Math.min(depth, 6) * 12}px` }}
@@ -159,7 +159,7 @@ function TreeBranch({
             }
             className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${
               hasChildren
-                ? "text-[#0872df] hover:bg-[#dceeff]"
+                ? "text-[var(--q-primary)] hover:bg-[#dceeff]"
                 : "text-[#b2bfcc]"
             }`}
           >
@@ -182,7 +182,7 @@ function TreeBranch({
           <span
             className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${
               selected
-                ? "bg-[#0872df] text-white"
+                ? "bg-[var(--q-primary)] text-white"
                 : "bg-[#f0f5fa] text-[#65809d]"
             }`}
           >
@@ -240,12 +240,12 @@ function SearchResult({
       onClick={onSelect}
       className={`w-full rounded-xl border p-3 text-right transition ${
         selected
-          ? "border-[#8dc4f5] bg-[#eaf4ff]"
+          ? "border-[#8dc4f5] bg-[var(--q-surface-2)]"
           : "border-[#e5edf4] bg-white hover:border-[#a9d1f4]"
       }`}
     >
       <span className="flex items-center gap-2">
-        <span className="rounded-full bg-[#edf6ff] px-2 py-0.5 text-[8px] font-black text-[#0872df]">
+        <span className="rounded-full bg-[var(--q-surface-2)] px-2 py-0.5 text-[8px] font-black text-[var(--q-primary)]">
           {typeLabels[entry.item.item_type] ?? entry.item.item_type}
         </span>
         <strong className="truncate text-[10px] text-[#1c3049]">
@@ -353,9 +353,9 @@ export function PolicyContentExplorer({
 
   if (!selectedVersion) {
     return (
-      <section className="grid min-h-[420px] place-items-center rounded-3xl border border-dashed border-[#cbdbea] bg-[#f8fbfe] p-8 text-center">
+      <section className="grid min-h-[420px] place-items-center rounded-3xl border border-dashed border-[#cbdbea] bg-[var(--q-bg)] p-8 text-center">
         <div className="max-w-md">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#eaf4ff] text-[#0872df]">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
             <Layers3 size={25} />
           </span>
           <h2 className="mt-4 text-base font-black text-[#12263f]">لا يوجد إصدار للعرض</h2>
@@ -366,7 +366,7 @@ export function PolicyContentExplorer({
             type="button"
             title="الانتقال إلى أدوات إنشاء الإصدار"
             onClick={onEditContent}
-            className="mt-5 rounded-xl bg-[#0872df] px-5 py-2.5 text-[11px] font-black text-white shadow-lg shadow-blue-200"
+            className="mt-5 rounded-xl bg-[var(--q-primary)] px-5 py-2.5 text-[11px] font-black text-white shadow-lg shadow-blue-200"
           >
             إنشاء إصدار العمل
           </button>
@@ -378,7 +378,7 @@ export function PolicyContentExplorer({
   return (
     <section className="overflow-hidden rounded-3xl border border-[#d9e6f1] bg-white shadow-[0_16px_50px_rgba(20,54,92,.08)]">
       <header className="relative overflow-hidden border-b border-[#dbe8f3] bg-[linear-gradient(120deg,#f7fbff_0%,#eef7ff_55%,#fff7ef_100%)] px-4 py-4 sm:px-6">
-        <div className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full border-[34px] border-[#0872df]/5" />
+        <div className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full border-[34px] border-[var(--q-primary)]/5" />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 text-[10px] font-black text-[#d96712]">
@@ -410,7 +410,7 @@ export function PolicyContentExplorer({
                 title="اختر الإصدار الذي تريد قراءة محتواه"
                 value={selectedVersion.id}
                 onChange={(event) => selectVersion(event.target.value)}
-                className="h-10 w-full rounded-xl border border-[#d7e4ef] bg-white px-3 text-[10px] font-bold text-[#20344d] outline-none focus:border-[#6fb2ed]"
+                className="h-10 w-full rounded-xl border border-[#d7e4ef] bg-white px-3 text-[10px] font-bold text-[var(--q-text)] outline-none focus:border-[#6fb2ed]"
               >
                 {versions.map((version) => (
                   <option key={version.id} value={version.id}>
@@ -446,7 +446,7 @@ export function PolicyContentExplorer({
                   type="button"
                   aria-label="طي أو توسيع شجرة المحتوى"
                   onClick={toggleAll}
-                  className="grid h-10 w-10 place-items-center rounded-xl border border-[#d7e4ef] bg-white text-[#0872df] hover:bg-[#eaf4ff]"
+                  className="grid h-10 w-10 place-items-center rounded-xl border border-[#d7e4ef] bg-white text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
                 >
                   {collapsedIds.size ? <FolderOpen size={16} /> : <Folder size={16} />}
                 </button>
@@ -464,7 +464,7 @@ export function PolicyContentExplorer({
                 <FileText className="mx-auto text-[#98abc0]" size={24} />
                 <strong className="mt-3 block text-xs text-[#263b54]">الإصدار بلا محتوى</strong>
                 <p className="mt-1 text-[9px] leading-5 text-[#7b8da1]">أضف فصلاً أو مادة لبدء بناء هيكل اللائحة.</p>
-                <button type="button" title="فتح محرر هيكل اللائحة" onClick={onEditContent} className="mt-3 rounded-lg bg-[#0872df] px-3 py-2 text-[9px] font-black text-white">إضافة المحتوى</button>
+                <button type="button" title="فتح محرر هيكل اللائحة" onClick={onEditContent} className="mt-3 rounded-lg bg-[var(--q-primary)] px-3 py-2 text-[9px] font-black text-white">إضافة المحتوى</button>
               </div>
             ) : deferredQuery ? (
               <div className="space-y-2">
@@ -500,18 +500,18 @@ export function PolicyContentExplorer({
                 </nav>
                 <div className="flex items-center gap-1.5">
                   <ActionTooltip label={copyState === "copied" ? "تم نسخ الرابط" : copyState === "failed" ? "تعذر النسخ" : "نسخ رابط مباشر لهذا العنصر"}>
-                    <button type="button" aria-label="نسخ رابط مباشر للعنصر" onClick={() => void copyDirectLink()} className="grid h-9 w-9 place-items-center rounded-xl border border-[#dce6ef] text-[#58718b] hover:border-[#9fc9ee] hover:bg-[#f2f8fd] hover:text-[#0872df]">
+                    <button type="button" aria-label="نسخ رابط مباشر للعنصر" onClick={() => void copyDirectLink()} className="grid h-9 w-9 place-items-center rounded-xl border border-[#dce6ef] text-[#58718b] hover:border-[#9fc9ee] hover:bg-[#f2f8fd] hover:text-[var(--q-primary)]">
                       {copyState === "copied" ? <Check size={15} /> : <Link2 size={15} />}
                     </button>
                   </ActionTooltip>
-                  <button type="button" title="فتح أدوات تحرير هيكل ومحتوى الإصدار" onClick={onEditContent} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#b9d8f3] bg-[#f3f9ff] px-3 text-[9px] font-black text-[#0872df] hover:bg-[#e7f3ff]"><Pencil size={13} /> تحرير المحتوى</button>
-                  <button type="button" title="إدارة القواعد التنفيذية والمسارات المرتبطة" onClick={onManageRules} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#0872df] px-3 text-[9px] font-black text-white shadow-md shadow-blue-100 hover:bg-[#0066cc]"><Gavel size={13} /> القواعد والمسارات</button>
+                  <button type="button" title="فتح أدوات تحرير هيكل ومحتوى الإصدار" onClick={onEditContent} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#b9d8f3] bg-[#f3f9ff] px-3 text-[9px] font-black text-[var(--q-primary)] hover:bg-[#e7f3ff]"><Pencil size={13} /> تحرير المحتوى</button>
+                  <button type="button" title="إدارة القواعد التنفيذية والمسارات المرتبطة" onClick={onManageRules} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--q-primary)] px-3 text-[9px] font-black text-white shadow-md shadow-blue-100 hover:bg-[var(--q-primary)]"><Gavel size={13} /> القواعد والمسارات</button>
                 </div>
               </div>
 
               <header className="py-6">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eaf4ff] px-3 py-1 text-[9px] font-black text-[#0872df]"><ItemTypeIcon type={selectedItem.item_type} size={12} />{typeLabels[selectedItem.item_type] ?? selectedItem.item_type}</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--q-surface-2)] px-3 py-1 text-[9px] font-black text-[var(--q-primary)]"><ItemTypeIcon type={selectedItem.item_type} size={12} />{typeLabels[selectedItem.item_type] ?? selectedItem.item_type}</span>
                   <code dir="ltr" className="rounded-full bg-[#f2f5f8] px-3 py-1 text-[9px] font-bold text-[#526b84]">{selectedItem.item_code}</code>
                   <span className={`rounded-full px-3 py-1 text-[9px] font-black ${selectedItem.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{selectedItem.is_active ? "فعال" : "غير فعال"}</span>
                   {selectedItem.legal_status && <span className="rounded-full bg-[#fff4e9] px-3 py-1 text-[9px] font-black text-[#c85f13]">{legalStatusLabels[selectedItem.legal_status] ?? selectedItem.legal_status}</span>}
@@ -520,10 +520,10 @@ export function PolicyContentExplorer({
                 {selectedItem.title_en && <p dir="ltr" className="mt-1 text-left text-xs text-[#8594a5]">{selectedItem.title_en}</p>}
               </header>
 
-              <section aria-labelledby="official-text-title" className="relative overflow-hidden rounded-2xl border border-[#dce8f2] bg-[#fbfdff] p-5 sm:p-7">
-                <span className="absolute right-0 top-0 h-full w-1 bg-[linear-gradient(#0872df,#ff7a00)]" />
+              <section aria-labelledby="official-text-title" className="relative overflow-hidden rounded-2xl border border-[#dce8f2] bg-[var(--q-bg)] p-5 sm:p-7">
+                <span className="absolute right-0 top-0 h-full w-1 bg-[linear-gradient(var(--q-primary),#ff7a00)]" />
                 <div className="flex items-center gap-2">
-                  <Clipboard size={15} className="text-[#0872df]" />
+                  <Clipboard size={15} className="text-[var(--q-primary)]" />
                   <h3 id="official-text-title" className="text-xs font-black text-[#203650]">النص الرسمي</h3>
                 </div>
                 <p className="mt-4 whitespace-pre-wrap text-[13px] leading-9 text-[#263c55]">{selectedItem.official_text || selectedItem.body_text || "لم يُسجل نص رسمي لهذا العنصر بعد."}</p>

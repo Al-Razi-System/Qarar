@@ -31,7 +31,7 @@ export function UnitStatusDialog({ unit, target, onClose, onSaved }: {
       <p className="mt-3 text-sm leading-7 text-slate-500">{target === "archived" ? "تُزال الوحدة من القوائم والاستخدام الجديد، مع حفظ السجل والعلاقات السابقة. لا يمكن التراجع من هذه النافذة." : target === "inactive" ? "لن تظهر الوحدة للاختيار في ارتباطات جديدة. تبقى السجلات السابقة محفوظة ويمكن إعادة تفعيلها لاحقًا." : "تصبح الوحدة متاحة للاستخدام الجديد؛ يجب أن تكون الجهة التابعة لها نشطة."}</p>
       {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {saved && <p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">تم {label} بنجاح، مع حفظ السجل والعلاقات السابقة.</p>}
-      <footer className="mt-5 flex flex-wrap justify-end gap-3"><button type="button" disabled={saving} onClick={onClose} className="min-h-11 rounded-xl border px-4 text-sm">{saved ? "تم" : "إلغاء"}</button>{!saved && <button disabled={saving} className={`min-h-11 rounded-xl px-4 text-sm font-bold text-white disabled:opacity-50 ${target === "archived" ? "bg-red-600" : "bg-[#0872df]"}`}>{saving ? "جارٍ الحفظ…" : `تأكيد ${label}`}</button>}</footer>
+      <footer className="mt-5 flex flex-wrap justify-end gap-3"><button type="button" disabled={saving} onClick={onClose} className="min-h-11 rounded-xl border px-4 text-sm">{saved ? "تم" : "إلغاء"}</button>{!saved && <button disabled={saving} className={`min-h-11 rounded-xl px-4 text-sm font-bold text-white disabled:opacity-50 ${target === "archived" ? "bg-red-600" : "bg-[var(--q-primary)]"}`}>{saving ? "جارٍ الحفظ…" : `تأكيد ${label}`}</button>}</footer>
     </form>
   </div>;
 }

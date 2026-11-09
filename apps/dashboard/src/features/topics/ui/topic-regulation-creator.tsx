@@ -181,8 +181,8 @@ type GovernanceSummaryResponse = Omit<Partial<TopicSummary>, "topic"> & {
   governance_source?: string | null;
 };
 
-const input = "h-10 w-full rounded-xl border border-[#dce5ef] bg-white px-3 text-xs text-[#0a1330] outline-none transition focus:border-[#0066cc] focus:ring-2 focus:ring-[#0066cc]/10";
-const textarea = "min-h-24 w-full rounded-xl border border-[#dce5ef] bg-white p-3 text-xs leading-6 text-[#0a1330] outline-none transition focus:border-[#0066cc] focus:ring-2 focus:ring-[#0066cc]/10";
+const input = "h-10 w-full rounded-xl border border-[var(--q-border)] bg-white px-3 text-xs text-[var(--q-text)] outline-none transition focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
+const textarea = "min-h-24 w-full rounded-xl border border-[var(--q-border)] bg-white p-3 text-xs leading-6 text-[var(--q-text)] outline-none transition focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
 const invalidField = (className: string, invalid: boolean) => `${className} ${invalid ? "border-red-300 bg-red-50/30 focus:border-red-500 focus:ring-red-500/10" : ""}`;
 const priorityLabels: Record<string, string> = {
   low: "منخفضة",
@@ -267,7 +267,7 @@ function Field({ label, children, hint }: { label: string; children: React.React
 
 function SmallBadge({ children, tone = "blue" }: { children: React.ReactNode; tone?: "blue" | "green" | "amber" | "slate" }) {
   const classes = {
-    blue: "bg-[#edf6ff] text-[#0066cc]",
+    blue: "bg-[var(--q-surface-2)] text-[var(--q-primary)]",
     green: "bg-emerald-50 text-emerald-700",
     amber: "bg-amber-50 text-amber-800",
     slate: "bg-slate-100 text-slate-600",
@@ -1154,14 +1154,14 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
       )}
 
       <section className="overflow-hidden rounded-3xl border border-[#d9e4ef] bg-white shadow-[0_18px_55px_rgba(15,42,70,.08)]">
-        <div className="grid gap-4 border-b border-[#edf2f7] bg-[#fbfdff] p-5 xl:grid-cols-[1fr_auto] xl:items-end">
+        <div className="grid gap-4 border-b border-[#edf2f7] bg-[var(--q-bg)] p-5 xl:grid-cols-[1fr_auto] xl:items-end">
           <div>
             <p className="mb-1.5 text-[11px] font-black text-[#ff7a00]">إنشاء موضوع</p>
-            <h1 className="text-xl font-black text-[#0a1330]">{screen === "details" ? "أدخل بيانات الموضوع" : screen === "governance" ? "اختر طريقة المعالجة" : screen === "review" ? "راجع قبل الإرسال" : "تم إنشاء الموضوع"}</h1>
+            <h1 className="text-xl font-black text-[var(--q-text)]">{screen === "details" ? "أدخل بيانات الموضوع" : screen === "governance" ? "اختر طريقة المعالجة" : screen === "review" ? "راجع قبل الإرسال" : "تم إنشاء الموضوع"}</h1>
             <p className="mt-2 max-w-4xl text-xs leading-6 text-[#66778d]">{screen === "details" ? "الحقول الأساسية فقط، ثم سيقترح النظام المسار المناسب." : screen === "governance" ? "اختر المسار اللائحي أو صمّم مسارًا مخصصًا أو اطلب استثناءً." : screen === "review" ? "تأكد من البيانات والمسار قبل الإنشاء." : "يمكنك فتح الموضوع ومتابعة حالته."}</p>
           </div>
           <div className="flex items-center gap-2 rounded-xl border border-[#dbe8f5] bg-white px-3 py-2 text-[11px] font-bold text-[#53677f]">
-            {busy || loadingReferences ? <LoaderCircle className="animate-spin text-[#0066cc]" size={15} /> : <Sparkles className="text-[#ff7a00]" size={15} />}
+            {busy || loadingReferences ? <LoaderCircle className="animate-spin text-[var(--q-primary)]" size={15} /> : <Sparkles className="text-[#ff7a00]" size={15} />}
             {busy ? "جار تنفيذ العملية" : loadingReferences ? "تحميل المراجع" : "جاهز للإنشاء"}
           </div>
         </div>
@@ -1170,14 +1170,14 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
 
         <div className="p-5 sm:p-7">
           <div className={screen === "details" ? "mx-auto max-w-3xl space-y-4" : "hidden"}>
-            <div className="rounded-2xl border border-[#e2e9f1] bg-[#fbfdff] p-4">
+            <div className="rounded-2xl border border-[var(--q-border)] bg-[var(--q-bg)] p-4">
               <div className="mb-4 flex items-center gap-2">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#edf6ff] text-[#0066cc]">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
                   <FileCheck2 size={18} />
                 </span>
                 <div>
-                  <h2 className="text-sm font-black text-[#0a1330]">بيانات الموضوع</h2>
-                  <p className="text-[10px] text-[#7b8ba0]">هذه البيانات تُستخدم لاستخراج اللوائح المطابقة.</p>
+                  <h2 className="text-sm font-black text-[var(--q-text)]">بيانات الموضوع</h2>
+                  <p className="text-[10px] text-[var(--q-text-3)]">هذه البيانات تُستخدم لاستخراج اللوائح المطابقة.</p>
                 </div>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
@@ -1261,13 +1261,13 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                     }}
                   />
                 </Field>
-                <div className="md:col-span-2 rounded-xl border border-[#dce5ef] bg-white p-3">
+                <div className="md:col-span-2 rounded-xl border border-[var(--q-border)] bg-white p-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-black text-[#34465e]">مرفقات الموضوع</p>
                       <p className="mt-1 text-[10px] text-[#7d8da1]">PDF أو PNG أو JPEG أو DOCX، حتى 25 ميجابايت لكل ملف. تُرفع بعد إنشاء الموضوع مباشرة.</p>
                     </div>
-                    <label className="flex h-9 cursor-pointer items-center gap-2 rounded-xl border border-[#9cc7ef] bg-[#edf6ff] px-3 text-[10px] font-black text-[#0066cc] hover:bg-[#e2f1ff]">
+                    <label className="flex h-9 cursor-pointer items-center gap-2 rounded-xl border border-[#9cc7ef] bg-[var(--q-surface-2)] px-3 text-[10px] font-black text-[var(--q-primary)] hover:bg-[#e2f1ff]">
                       <Paperclip size={14} /> اختيار ملفات
                       <input
                         aria-label="اختيار مرفقات الموضوع"
@@ -1293,10 +1293,10 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                   {pendingAttachments.length > 0 && (
                     <div className="mt-3 space-y-2">
                       {pendingAttachments.map((attachment) => (
-                        <div key={attachment.id} className="grid gap-2 rounded-xl bg-[#f8fbff] p-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(180px,.8fr)_auto] sm:items-center">
+                        <div key={attachment.id} className="grid gap-2 rounded-xl bg-[var(--q-bg)] p-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(180px,.8fr)_auto] sm:items-center">
                           <div className="min-w-0">
                             <p className="truncate text-[10px] font-black text-[#24364e]">{attachment.file.name}</p>
-                            <p className="mt-0.5 text-[9px] text-[#7b8ba0]">{Math.max(1, Math.ceil(attachment.file.size / 1024))} KB</p>
+                            <p className="mt-0.5 text-[9px] text-[var(--q-text-3)]">{Math.max(1, Math.ceil(attachment.file.size / 1024))} KB</p>
                           </div>
                           <input
                             aria-label={`وصف ${attachment.file.name}`}
@@ -1324,21 +1324,21 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                     </div>
                   )}
                 </div>
-                <div className={`rounded-xl border p-3 ${canMoveToRegulation ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-[#dce5ef] bg-white text-[#617287]"}`}>
+                <div className={`rounded-xl border p-3 ${canMoveToRegulation ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-[var(--q-border)] bg-white text-[var(--q-text-3)]"}`}>
                   <p className="text-[10px] font-black">جاهزية المرحلة الأولى</p>
                   <p className="mt-1 text-[11px] leading-5">{canMoveToRegulation ? "اكتملت البيانات؛ يمكنك الانتقال لاختيار اللائحة المنطبقة." : nextBlockedReason}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <button disabled={!canMoveToRegulation} onClick={findRegulations} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0066cc] px-4 text-xs font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.18)] disabled:cursor-not-allowed disabled:bg-[#a8b8c9]">
+                  <button disabled={!canMoveToRegulation} onClick={findRegulations} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--q-primary)] px-4 text-xs font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.18)] disabled:cursor-not-allowed disabled:bg-[#a8b8c9]">
                     {busy ? <LoaderCircle className="animate-spin" size={15} /> : <Search size={15} />} التالي: عرض اللائحة المنطبقة
                   </button>
-                  {!canMoveToRegulation && <p className="mt-2 text-center text-[10px] font-bold text-[#7b8ba0]">زر «التالي» معطل: {nextBlockedReason}</p>}
+                  {!canMoveToRegulation && <p className="mt-2 text-center text-[10px] font-bold text-[var(--q-text-3)]">زر «التالي» معطل: {nextBlockedReason}</p>}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#e2e9f1] bg-white p-4">
-              <h3 className="text-xs font-black text-[#0a1330]">قواعد هذه المرحلة</h3>
+            <div className="rounded-2xl border border-[var(--q-border)] bg-white p-4">
+              <h3 className="text-xs font-black text-[var(--q-text)]">قواعد هذه المرحلة</h3>
               <div className="mt-3 space-y-2 text-[11px] leading-5 text-[#64758a]">
                 <p>لا يتم إنشاء الموضوع قبل اختيار لائحة مطابقة صالحة.</p>
                 <p>النظام يعيد التحقق من اللائحة عند التأكيد حتى لا تُستخدم لائحة لم تعد نافذة.</p>
@@ -1350,14 +1350,14 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
           <div className={screen !== "details" ? "space-y-4" : "hidden"}>
             {screen === "governance" && (
               <>
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dce7f1] bg-[#f8fbff] px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--q-border)] bg-[var(--q-bg)] px-4 py-3">
                   <div>
-                    <p className="text-sm font-black text-[#0a1330]">{form.title}</p>
+                    <p className="text-sm font-black text-[var(--q-text)]">{form.title}</p>
                     <p className="mt-1 text-xs text-[#66778d]">
                       {selectedUnit?.name_ar} · {selectedCategory?.name_ar}
                     </p>
                   </div>
-                  <button type="button" onClick={() => resetOptions(form)} className="h-10 rounded-xl border border-[#cddbea] bg-white px-4 text-xs font-black text-[#52647a] hover:border-[#0877df] hover:text-[#0877df]">
+                  <button type="button" onClick={() => resetOptions(form)} className="h-10 rounded-xl border border-[#cddbea] bg-white px-4 text-xs font-black text-[var(--q-text-2)] hover:border-[var(--q-primary)] hover:text-[var(--q-primary)]">
                     تعديل البيانات
                   </button>
                 </div>
@@ -1376,11 +1376,11 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
             )}
 
             {screen === "governance" && governanceMethod === "regulation" && (
-              <section className="rounded-2xl border border-[#e2e9f1] bg-white p-5">
+              <section className="rounded-2xl border border-[var(--q-border)] bg-white p-5">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h2 className="text-sm font-black text-[#0a1330]">{hasTestedRegulations ? `تم العثور على ${regulationTrees.length} لائحة و${options.length} مادة أو بند مطابق` : "اختبار اللوائح المنطبقة"}</h2>
-                    <p className="mt-1 text-[10px] text-[#7b8ba0]">{hasTestedRegulations ? "اختر اللائحة التي تحكم هذا الموضوع." : "سيختبر النظام اللوائح تلقائيًا بعد اكتمال بيانات الموضوع."}</p>
+                    <h2 className="text-sm font-black text-[var(--q-text)]">{hasTestedRegulations ? `تم العثور على ${regulationTrees.length} لائحة و${options.length} مادة أو بند مطابق` : "اختبار اللوائح المنطبقة"}</h2>
+                    <p className="mt-1 text-[10px] text-[var(--q-text-3)]">{hasTestedRegulations ? "اختر اللائحة التي تحكم هذا الموضوع." : "سيختبر النظام اللوائح تلقائيًا بعد اكتمال بيانات الموضوع."}</p>
                   </div>
                   {hasTestedRegulations && (
                     <div className="flex gap-2">
@@ -1404,15 +1404,15 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <SmallBadge tone={selectedOption.can_start_workflow ? "green" : "amber"}>{selectedOption.can_start_workflow ? "المسار المقترح" : "يتطلب معالجة"}</SmallBadge>
-                            <h3 className="mt-3 text-base font-black text-[#0a1330]">{selectedOption.policy.name_ar}</h3>
-                            <p className="mt-1 text-xs leading-6 text-[#52647a]">{selectedOption.item.title_ar}</p>
+                            <h3 className="mt-3 text-base font-black text-[var(--q-text)]">{selectedOption.policy.name_ar}</h3>
+                            <p className="mt-1 text-xs leading-6 text-[var(--q-text-2)]">{selectedOption.item.title_ar}</p>
                           </div>
-                          <BookOpen className="text-[#0877df]" size={26} />
+                          <BookOpen className="text-[var(--q-primary)]" size={26} />
                         </div>
                       </div>
                     )}
-                    <details className="mt-3 rounded-xl border border-[#e2e9f1] bg-[#fbfdff] p-3">
-                      <summary className="cursor-pointer text-xs font-black text-[#52647a]">عرض النتائج الأخرى والتفاصيل القانونية ({options.length})</summary>
+                    <details className="mt-3 rounded-xl border border-[var(--q-border)] bg-[var(--q-bg)] p-3">
+                      <summary className="cursor-pointer text-xs font-black text-[var(--q-text-2)]">عرض النتائج الأخرى والتفاصيل القانونية ({options.length})</summary>
                       <div className="mt-3 grid gap-3">
                         {options.map((option) => {
                           const key = selectionKey(option);
@@ -1421,20 +1421,20 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                           const expanded = expandedKey === key;
                           const preview = regulationPreviews[key];
                           return (
-                            <article key={key} className={`rounded-2xl border p-4 text-right transition ${selected ? "border-[#0066cc] bg-[#edf6ff] shadow-[0_10px_24px_rgba(0,102,204,.12)]" : "border-[#e2e9f1] bg-[#fbfdff] hover:border-[#9cc7ef] hover:bg-white"}`}>
+                            <article key={key} className={`rounded-2xl border p-4 text-right transition ${selected ? "border-[var(--q-primary)] bg-[var(--q-surface-2)] shadow-[0_10px_24px_rgba(0,102,204,.12)]" : "border-[var(--q-border)] bg-[var(--q-bg)] hover:border-[#9cc7ef] hover:bg-white"}`}>
                               <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <div className="mb-2 flex flex-wrap gap-1.5">
                                     <SmallBadge tone={routeState.tone}>حالة المسار: {routeState.label}</SmallBadge>
                                   </div>
-                                  <h3 className="text-sm font-black text-[#0a1330]">{option.policy.name_ar}</h3>
-                                  <p className="mt-1 text-[10px] text-[#7b8ba0]">الإصدار النافذ: {option.version.label || `الإصدار ${option.version.number}`}</p>
+                                  <h3 className="text-sm font-black text-[var(--q-text)]">{option.policy.name_ar}</h3>
+                                  <p className="mt-1 text-[10px] text-[var(--q-text-3)]">الإصدار النافذ: {option.version.label || `الإصدار ${option.version.number}`}</p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
                                   <button type="button" onClick={() => void openRegulationPreview(option)} aria-expanded={expanded} className="flex h-8 items-center gap-1 rounded-xl border border-[#cfe0f0] bg-white px-2 text-[10px] font-black text-[#526f8c]">
                                     <ArrowLeft size={14} /> التفاصيل
                                   </button>
-                                  <button type="button" onClick={() => chooseAndPreviewRegulation(option)} className={`flex h-8 items-center gap-1 rounded-xl px-3 text-[10px] font-black ${selected ? "bg-emerald-600 text-white" : "bg-[#0066cc] text-white"}`}>
+                                  <button type="button" onClick={() => chooseAndPreviewRegulation(option)} className={`flex h-8 items-center gap-1 rounded-xl px-3 text-[10px] font-black ${selected ? "bg-emerald-600 text-white" : "bg-[var(--q-primary)] text-white"}`}>
                                     {selected ? <Check size={14} /> : <ShieldCheck size={14} />} {selected ? "تم اختيارها" : "اختيار اللائحة والمادة"}
                                   </button>
                                 </div>
@@ -1442,16 +1442,16 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                               <div className="mt-3 grid gap-3 rounded-xl bg-white/80 p-3 sm:grid-cols-2">
                                 <div>
                                   <p className="text-[10px] font-black text-[#34465e]">المادة المنطبقة</p>
-                                  <p className="mt-1 text-xs font-bold text-[#0a1330]">{option.item.title_ar}</p>
-                                  <p className="mt-1 text-[10px] text-[#7b8ba0]">{routeState.detail}</p>
+                                  <p className="mt-1 text-xs font-bold text-[var(--q-text)]">{option.item.title_ar}</p>
+                                  <p className="mt-1 text-[10px] text-[var(--q-text-3)]">{routeState.detail}</p>
                                 </div>
                                 <div>
                                   <p className="text-[10px] font-black text-[#34465e]">سبب الانطباق</p>
-                                  <p className="mt-1 text-[10px] leading-5 text-[#52647a]">{regulationMatchingReason(option, selectedUnit, selectedCategory)}</p>
+                                  <p className="mt-1 text-[10px] leading-5 text-[var(--q-text-2)]">{regulationMatchingReason(option, selectedUnit, selectedCategory)}</p>
                                 </div>
                                 <div className="sm:col-span-2">
                                   <p className="text-[10px] font-black text-[#34465e]">نطاق التطبيق</p>
-                                  <p className="mt-1 text-[10px] text-[#52647a]">{scopeLabels[option.scope.type] ?? "النطاق المحدد في اللائحة"}</p>
+                                  <p className="mt-1 text-[10px] text-[var(--q-text-2)]">{scopeLabels[option.scope.type] ?? "النطاق المحدد في اللائحة"}</p>
                                 </div>
                               </div>
                               {expanded && <RegulationPreviewCard preview={preview} loading={loadingPreviewKey === key} selected={selected} canStartWorkflow={option.can_start_workflow} onChoose={() => chooseRegulation(option)} />}
@@ -1463,7 +1463,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                   </>
                 )}
                 {selectedOption?.can_start_workflow && (
-                  <button type="button" disabled={busy || loadingRoutePreview} onClick={() => void continueRegulationToReview()} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0877df] text-sm font-black text-white shadow-[0_10px_22px_rgba(8,119,223,.18)] disabled:bg-[#a8b8c9]">
+                  <button type="button" disabled={busy || loadingRoutePreview} onClick={() => void continueRegulationToReview()} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--q-primary)] text-sm font-black text-white shadow-[0_10px_22px_rgba(8,119,223,.18)] disabled:bg-[#a8b8c9]">
                     <ArrowLeft size={17} />
                     {loadingRoutePreview ? "جارٍ تجهيز المسار…" : "متابعة إلى المراجعة"}
                   </button>
@@ -1478,8 +1478,8 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
             )}
             {screen === "governance" && governanceMethod === "prior" && !summary && <TopicPriorRouteDesigner steps={priorRouteSteps} loading={loadingPriorRouteSteps} busy={busy} onSubmit={createPriorRouteRequest} />}
             {screen === "review" && (
-              <section className="mt-4 overflow-hidden rounded-2xl border border-[#0a1330]/10 bg-white shadow-[0_16px_36px_rgba(10,19,48,.12)]">
-                <div className="bg-[#0a1330] px-5 py-4 text-white">
+              <section className="mt-4 overflow-hidden rounded-2xl border border-[var(--q-text)]/10 bg-white shadow-[0_16px_36px_rgba(10,19,48,.12)]">
+                <div className="bg-[var(--q-text)] px-5 py-4 text-white">
                   <p className="text-[10px] font-black text-[#8fc7ff]">المرحلة 5 · المراجعة والإنشاء</p>
                   <h2 className="mt-1 text-base font-black">راجِع ملخص الموضوع قبل بدء المسار</h2>
                   <p className="mt-1 text-[11px] leading-5 text-slate-200">سيعيد الخادم التحقق من اللائحة والمسار عند الإنشاء؛ لا يبدأ أي مسار إذا تغيرت الحوكمة أو لم تعد البيانات مؤهلة.</p>
@@ -1495,9 +1495,9 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                   <ReviewItem title="المسار الذي سيبدأ" value={routePreview?.workflow_name || selectedPreview?.workflow.name || "مسار الاعتماد"} hint={routePreview?.message || "سيتم تشغيل المسار تلقائيًا بعد الإنشاء."} />
                   <ReviewItem title="المجلس الأول المستلم" value={firstRouteStep?.responsible_entity || "ستحدد عند بدء المسار"} hint={firstRouteStep?.responsible_unit_id && firstRouteStep.responsible_unit_id !== form.unit ? "سيتم تحويل المسؤولية إليه تلقائياً عند الإنشاء." : firstRouteStep?.responsible_role || "—"} />
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf1f5] bg-[#fbfdff] px-4 py-4">
-                  <p className="text-[11px] leading-5 text-[#617287]">{canCreateFromReview ? "كل عناصر الحوكمة اللازمة لبدء المسار متاحة. لا تنشئ الصفحة موضوعًا ثانيًا عند النقر المتكرر." : "لا يمكن الإنشاء حتى تكتمل معاينة المسار وتصبح اللائحة جاهزة للتشغيل."}</p>
-                  <button disabled={busy || !canCreateFromReview} onClick={createTopic} className="flex h-11 min-w-60 items-center justify-center gap-2 rounded-xl bg-[#0066cc] px-5 text-xs font-black text-white shadow-[0_10px_24px_rgba(0,102,204,.22)] hover:bg-[#0058b3] disabled:cursor-not-allowed disabled:bg-[#a8b8c9]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--q-surface-2)] bg-[var(--q-bg)] px-4 py-4">
+                  <p className="text-[11px] leading-5 text-[var(--q-text-3)]">{canCreateFromReview ? "كل عناصر الحوكمة اللازمة لبدء المسار متاحة. لا تنشئ الصفحة موضوعًا ثانيًا عند النقر المتكرر." : "لا يمكن الإنشاء حتى تكتمل معاينة المسار وتصبح اللائحة جاهزة للتشغيل."}</p>
+                  <button disabled={busy || !canCreateFromReview} onClick={createTopic} className="flex h-11 min-w-60 items-center justify-center gap-2 rounded-xl bg-[var(--q-primary)] px-5 text-xs font-black text-white shadow-[0_10px_24px_rgba(0,102,204,.22)] hover:bg-[#0058b3] disabled:cursor-not-allowed disabled:bg-[#a8b8c9]">
                     {busy ? <LoaderCircle className="animate-spin" size={16} /> : <ShieldCheck size={16} />} {busy ? "جارٍ إنشاء الموضوع وبدء المسار…" : "إنشاء الموضوع وبدء المسار"}
                   </button>
                 </div>
@@ -1508,7 +1508,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-black text-[#d56700]">طلب استثناء</p>
-                    <h2 className="mt-1 text-base font-black text-[#0a1330]">استخدم مسارًا بديلًا لمدة محددة</h2>
+                    <h2 className="mt-1 text-base font-black text-[var(--q-text)]">استخدم مسارًا بديلًا لمدة محددة</h2>
                     <p className="mt-1 max-w-2xl text-xs leading-6 text-[#6d7c90]">وثّق سبب تجاوز المسار المقترح واختر البديل. لن يبدأ قبل موافقة مراجع مستقل.</p>
                   </div>
                   <SmallBadge tone={summary?.exception?.status === "approved" ? "green" : summary?.exception?.status === "rejected" || summary?.exception?.status === "expired" ? "amber" : "blue"}>{exceptionStatusLabels[summary?.exception?.status ?? String(exceptionResult?.status ?? "pending")] ?? "بانتظار الاعتماد"}</SmallBadge>
@@ -1522,8 +1522,8 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                 </div>
 
                 {!exceptionWorkflowsLoaded && (
-                  <div className="rounded-xl border border-[#d9e8f6] bg-white px-4 py-4 text-center text-[11px] font-bold text-[#52647a]">
-                    <LoaderCircle className="mx-auto mb-2 animate-spin text-[#0066cc]" size={17} />
+                  <div className="rounded-xl border border-[#d9e8f6] bg-white px-4 py-4 text-center text-[11px] font-bold text-[var(--q-text-2)]">
+                    <LoaderCircle className="mx-auto mb-2 animate-spin text-[var(--q-primary)]" size={17} />
                     جارٍ تجهيز المسارات المؤقتة المسموح بها لك…
                   </div>
                 )}
@@ -1609,7 +1609,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                     {busy ? <LoaderCircle className="animate-spin" size={16} /> : <ShieldCheck size={16} />} {hasPendingException ? "الطلب بانتظار الاعتماد" : "إرسال طلب الاستثناء"}
                   </button>
                   {(summary?.exception || exceptionResult) && (
-                    <button disabled={busy} onClick={refreshExceptionStatus} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-[#cddbea] bg-white px-4 text-xs font-black text-[#0a1330] disabled:cursor-not-allowed disabled:opacity-60">
+                    <button disabled={busy} onClick={refreshExceptionStatus} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-[#cddbea] bg-white px-4 text-xs font-black text-[var(--q-text)] disabled:cursor-not-allowed disabled:opacity-60">
                       تحديث حالة الاستثناء
                     </button>
                   )}
@@ -1622,7 +1622,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[10px] font-black text-emerald-700">تم الإنشاء بنجاح</p>
-                    <h2 className="mt-1 text-base font-black text-[#0a1330]">{summary.topic.title_ar}</h2>
+                    <h2 className="mt-1 text-base font-black text-[var(--q-text)]">{summary.topic.title_ar}</h2>
                     <p className="mt-1 text-[10px] text-[#63758a]">
                       {summary.topic.topic_no || summary.topic.id} · {summary.topic.routing_status}
                     </p>
@@ -1638,14 +1638,14 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
                   <SummaryTile title="الخطوة الحالية" value={summary.current_step?.name_ar || "—"} hint={summary.current_step?.status || undefined} />
                   <SummaryTile title="الجهة المسؤولة" value={summary.current_step?.assigned_unit_name_ar || "—"} hint={summary.current_step?.responsibility || undefined} />
                   <div className="rounded-xl border border-emerald-200 bg-white p-3">
-                    <p className="text-[10px] font-black text-[#617287]">النتائج المتاحة</p>
+                    <p className="text-[10px] font-black text-[var(--q-text-3)]">النتائج المتاحة</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {(summary.current_step?.allowed_outcomes ?? []).map((outcome) => (
                         <SmallBadge key={outcome} tone="blue">
                           {outcomeLabels[outcome] ?? outcome}
                         </SmallBadge>
                       ))}
-                      {!summary.current_step?.allowed_outcomes?.length && <span className="text-xs font-bold text-[#0a1330]">—</span>}
+                      {!summary.current_step?.allowed_outcomes?.length && <span className="text-xs font-bold text-[var(--q-text)]">—</span>}
                     </div>
                   </div>
                 </div>
@@ -1666,8 +1666,8 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
 function RegulationPreviewCard({ preview, loading, selected, canStartWorkflow, onChoose }: { preview?: RegulationPreview; loading: boolean; selected: boolean; canStartWorkflow: boolean; onChoose: () => void }) {
   if (loading) {
     return (
-      <div className="mt-3 flex items-center gap-2 rounded-xl border border-[#d9e8f6] bg-white p-4 text-xs font-bold text-[#52647a]">
-        <LoaderCircle className="animate-spin text-[#0066cc]" size={16} /> جارٍ تحميل النص والمتطلبات ومسار الاعتماد…
+      <div className="mt-3 flex items-center gap-2 rounded-xl border border-[#d9e8f6] bg-white p-4 text-xs font-bold text-[var(--q-text-2)]">
+        <LoaderCircle className="animate-spin text-[var(--q-primary)]" size={16} /> جارٍ تحميل النص والمتطلبات ومسار الاعتماد…
       </div>
     );
   }
@@ -1683,16 +1683,16 @@ function RegulationPreviewCard({ preview, loading, selected, canStartWorkflow, o
       </div>
 
       {preview.article.interpretation && (
-        <div className="rounded-xl bg-[#f8fbff] px-3 py-2 text-[11px] leading-6 text-[#52647a]">
-          <strong className="text-[#0a1330]">تفسير تنفيذي:</strong> {preview.article.interpretation}
+        <div className="rounded-xl bg-[var(--q-bg)] px-3 py-2 text-[11px] leading-6 text-[var(--q-text-2)]">
+          <strong className="text-[var(--q-text)]">تفسير تنفيذي:</strong> {preview.article.interpretation}
         </div>
       )}
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <div className="rounded-xl border border-[#e2e9f1] p-3">
+        <div className="rounded-xl border border-[var(--q-border)] p-3">
           <p className="text-[10px] font-black text-[#34465e]">المرفقات أو المتطلبات اللازمة</p>
           {preview.requirements.length || preview.attachments.length ? (
-            <ul className="mt-2 space-y-1.5 text-[11px] leading-5 text-[#52647a]">
+            <ul className="mt-2 space-y-1.5 text-[11px] leading-5 text-[var(--q-text-2)]">
               {preview.requirements.map((requirement) => (
                 <li key={`${requirement.name}-${requirement.timing}`}>
                   • {requirement.name} {requirement.mandatory ? "(مطلوب)" : "(اختياري)"}
@@ -1706,19 +1706,19 @@ function RegulationPreviewCard({ preview, loading, selected, canStartWorkflow, o
               ))}
             </ul>
           ) : (
-            <p className="mt-2 text-[11px] text-[#7b8ba0]">لا توجد مرفقات أو متطلبات إضافية لهذه المادة.</p>
+            <p className="mt-2 text-[11px] text-[var(--q-text-3)]">لا توجد مرفقات أو متطلبات إضافية لهذه المادة.</p>
           )}
         </div>
-        <div className="rounded-xl border border-[#e2e9f1] p-3">
+        <div className="rounded-xl border border-[var(--q-border)] p-3">
           <p className="text-[10px] font-black text-[#34465e]">أثر الاختيار على الموافقة والتصويت</p>
-          <p className="mt-2 text-[11px] leading-5 text-[#52647a]">{preview.approval_effect}</p>
-          <p className="mt-2 text-[11px] leading-5 text-[#52647a]">{preview.voting_effect}</p>
+          <p className="mt-2 text-[11px] leading-5 text-[var(--q-text-2)]">{preview.approval_effect}</p>
+          <p className="mt-2 text-[11px] leading-5 text-[var(--q-text-2)]">{preview.voting_effect}</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf1f5] pt-3">
-        <span className="text-[10px] font-bold text-[#617287]">{selected ? "هذه اللائحة مختارة حاليًا ويمكنك تغييرها من البطاقات الأخرى." : "راجع التفاصيل ثم أكد اختيار اللائحة لهذه المعاملة."}</span>
-        <button type="button" onClick={onChoose} className={`flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black shadow-sm ${selected ? "border border-[#9cc7ef] bg-white text-[#0066cc]" : "bg-[#0066cc] text-white shadow-[0_8px_18px_rgba(0,102,204,.18)]"}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--q-surface-2)] pt-3">
+        <span className="text-[10px] font-bold text-[var(--q-text-3)]">{selected ? "هذه اللائحة مختارة حاليًا ويمكنك تغييرها من البطاقات الأخرى." : "راجع التفاصيل ثم أكد اختيار اللائحة لهذه المعاملة."}</span>
+        <button type="button" onClick={onChoose} className={`flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-xs font-black shadow-sm ${selected ? "border border-[#9cc7ef] bg-white text-[var(--q-primary)]" : "bg-[var(--q-primary)] text-white shadow-[0_8px_18px_rgba(0,102,204,.18)]"}`}>
           {selected ? <Check size={15} /> : <ShieldCheck size={15} />} اختيار هذه اللائحة والمادة
         </button>
       </div>
@@ -1729,9 +1729,9 @@ function RegulationPreviewCard({ preview, loading, selected, canStartWorkflow, o
 
 function PreviewDetail({ title, value, wide = false }: { title: string; value: string; wide?: boolean }) {
   return (
-    <div className={`rounded-xl border border-[#e2e9f1] p-3 ${wide ? "lg:col-span-2" : ""}`}>
+    <div className={`rounded-xl border border-[var(--q-border)] p-3 ${wide ? "lg:col-span-2" : ""}`}>
       <p className="text-[10px] font-black text-[#34465e]">{title}</p>
-      <p className="mt-1 whitespace-pre-line text-[11px] leading-6 text-[#52647a]">{value}</p>
+      <p className="mt-1 whitespace-pre-line text-[11px] leading-6 text-[var(--q-text-2)]">{value}</p>
     </div>
   );
 }
@@ -1771,24 +1771,24 @@ function regulationMatchingReason(option: RegulationOption, unit?: ReferenceOpti
 function SummaryTile({ title, value, hint }: { title: string; value: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-emerald-200 bg-white p-3">
-      <p className="text-[10px] font-black text-[#617287]">{title}</p>
-      <strong className="mt-1 block text-xs text-[#0a1330]">{value}</strong>
-      {hint && <span className="mt-1 block text-[10px] text-[#7b8ba0]">{hint}</span>}
+      <p className="text-[10px] font-black text-[var(--q-text-3)]">{title}</p>
+      <strong className="mt-1 block text-xs text-[var(--q-text)]">{value}</strong>
+      {hint && <span className="mt-1 block text-[10px] text-[var(--q-text-3)]">{hint}</span>}
     </div>
   );
 }
 
 function ReviewItem({ title, value, hint, tone = "blue" }: { title: string; value: string; hint?: string; tone?: "blue" | "green" | "amber" }) {
   const colors = {
-    blue: "border-[#d9e8f6] bg-[#fbfdff]",
+    blue: "border-[#d9e8f6] bg-[var(--q-bg)]",
     green: "border-emerald-200 bg-emerald-50/50",
     amber: "border-amber-200 bg-amber-50/50",
   };
   return (
     <article className={`rounded-xl border p-3 ${colors[tone]}`}>
-      <p className="text-[10px] font-black text-[#617287]">{title}</p>
-      <strong className="mt-1 block text-xs leading-5 text-[#0a1330]">{value}</strong>
-      {hint && <p className="mt-1 text-[10px] leading-5 text-[#617287]">{hint}</p>}
+      <p className="text-[10px] font-black text-[var(--q-text-3)]">{title}</p>
+      <strong className="mt-1 block text-xs leading-5 text-[var(--q-text)]">{value}</strong>
+      {hint && <p className="mt-1 text-[10px] leading-5 text-[var(--q-text-3)]">{hint}</p>}
     </article>
   );
 }

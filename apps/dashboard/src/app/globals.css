@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --qarar-primary: #1e5f8a;
-  --qarar-primary-light: #2b7bb0;
-  --qarar-accent: #ff7a00;
-  --qarar-navy: #0a2540;
-  --qarar-snow: #f0f7fb;
+  --qarar-primary: #0074b8;
+  --qarar-primary-light: #0080c6;
+  --qarar-accent: #f78a2c;
+  --qarar-navy: #0a1330;
+  --qarar-snow: #f2f9fc;
   --qarar-white: #ffffff;
-  --qarar-text-secondary: #3d5870;
-  --qarar-gradient-primary: linear-gradient(135deg, #1e5f8a 0%, #2b7bb0 100%);
-  --qarar-gradient-deep: linear-gradient(135deg, #0a2540 0%, #1e5f8a 100%);
+  --qarar-text-secondary: #52647a;
+  --qarar-gradient-primary: linear-gradient(135deg, #0066cc 0%, #1e88e5 100%);
+  --qarar-gradient-deep: linear-gradient(135deg, #0a1330 0%, #0066cc 100%);
   --qarar-gradient-background: linear-gradient(
     120deg,
-    #174b6f 0%,
-    #2b7bb0 65%,
-    #5aa0cc 100%
+    #0057c8 0%,
+    #1e88e5 65%,
+    #48a9f8 100%
   );
   --qarar-gradient-accent: linear-gradient(
     135deg,
@@ -32,34 +32,34 @@
    * written by hand inside a component. The legacy --qarar-* names above stay
    * until their last consumer is migrated.
    */
-  --q-blue-50: #f0f7fb;
-  --q-blue-100: #d4e8f5;
-  --q-blue-300: #87b9d9;
-  --q-blue-500: #2b7bb0;
-  --q-blue-600: #1e5f8a;
-  --q-blue-700: #174b6f;
-  --q-blue-800: #0e3552;
+  --q-blue-50: #f2f9fc;
+  --q-blue-100: #d6ecf6;
+  --q-blue-300: #7cc3e6;
+  --q-blue-500: #0080c6;
+  --q-blue-600: #0074b8;
+  --q-blue-700: #005f96;
+  --q-blue-800: #004a75;
 
-  --q-bg: #f0f7fb;
+  --q-bg: #f2f9fc;
   --q-surface: #ffffff;
-  --q-surface-2: #e3f0f9;
-  --q-border: #cfe1ee;
-  --q-border-strong: #7d95aa;
-  --q-text: #0e2d4a;
-  --q-text-2: #3d5870;
-  --q-text-3: #53697e;
+  --q-surface-2: #e4f2f8;
+  --q-border: #cfe5ee;
+  --q-border-strong: #7f9bad;
+  --q-text: #0a1d33;
+  --q-text-2: #3f566b;
+  --q-text-3: #55697c;
 
-  --q-primary: #1e5f8a;
-  --q-primary-hover: #174b6f;
+  --q-primary: #0074b8;
+  --q-primary-hover: #005f96;
   --q-on-primary: #ffffff;
-  --q-link: #174b6f;
+  --q-link: #005f96;
   --q-seat: #ffffff;
 
   /* Orange marks the one live thing on a screen; it is never a status colour. */
   --q-live: #c95f00;
   --q-live-soft: #fff0e0;
   /* The live colour where it sits on the navy header bar. */
-  --q-live-on-header: #ffa24d;
+  --q-live-on-header: #f78a2c;
 
   --q-success: #0f7a55;
   --q-success-soft: #e3f5ed;
@@ -69,21 +69,21 @@
   --q-danger: #b3261e;
   --q-danger-soft: #fde8e6;
   --q-on-danger: #ffffff;
-  --q-neutral-soft: #e6eef4;
+  --q-neutral-soft: #e9edf2;
 
-  --q-header: #0a2540;
+  --q-header: #0a2338;
   --q-on-header: #ffffff;
-  --q-stage-from: #2b7bb0;
-  --q-stage-to: #174b6f;
+  --q-stage-from: #0080c6;
+  --q-stage-to: #005d99;
   --q-on-stage: #ffffff;
-  --q-stage-glow: rgba(30, 95, 138, 0.3);
+  --q-stage-glow: rgba(0, 128, 198, 0.3);
   /* Vote result colours that stay legible on the blue table. */
   --q-stage-yes: #8ff2cb;
   --q-stage-no: #ffb8b2;
-  --q-stage-abstain: #c9dcec;
-  --q-focus: rgba(30, 95, 138, 0.35);
+  --q-stage-abstain: #cfe5ee;
+  --q-focus: rgba(0, 128, 198, 0.35);
   /* Backdrop behind dialogs. */
-  --q-scrim: rgba(10, 37, 64, 0.62);
+  --q-scrim: rgba(10, 29, 51, 0.62);
 
   --q-radius-control: 8px;
   --q-radius-card: 12px;
@@ -95,24 +95,24 @@
  * respond to it, so it must not be set on <html> until they are migrated.
  */
 [data-theme="dark"] {
-  --q-bg: #061a2e;
-  --q-surface: #0a2540;
-  --q-surface-2: #11365a;
-  --q-border: #1f4a73;
-  --q-border-strong: #5b86a8;
-  --q-text: #f1f7fb;
-  --q-text-2: #b3c8d8;
-  --q-text-3: #93abbf;
+  --q-bg: #060b1f;
+  --q-surface: #0f1936;
+  --q-surface-2: #18244a;
+  --q-border: #25315a;
+  --q-border-strong: #5a6a94;
+  --q-text: #f3f6fb;
+  --q-text-2: #aebbd0;
+  --q-text-3: #93a2bb;
 
-  --q-primary: #1e5f8a;
-  --q-primary-hover: #2b7bb0;
+  --q-primary: #0074b8;
+  --q-primary-hover: #0a8bd0;
   --q-on-primary: #ffffff;
-  --q-link: #7cc0e6;
-  --q-seat: #0f3354;
+  --q-link: #5cc0f0;
+  --q-seat: #132352;
 
-  --q-live: #ff8a1f;
+  --q-live: #f78a2c;
   --q-live-soft: #3a2410;
-  --q-live-on-header: #ff8a1f;
+  --q-live-on-header: #f78a2c;
 
   --q-success: #3ecf98;
   --q-success-soft: #0f2f27;
@@ -122,19 +122,19 @@
   --q-danger: #ff7b72;
   --q-danger-soft: #3a1614;
   --q-on-danger: #2a0705;
-  --q-neutral-soft: #14304d;
+  --q-neutral-soft: #1c274a;
 
-  --q-header: #061a2e;
-  --q-on-header: #f1f7fb;
-  --q-stage-from: #1d5a86;
-  --q-stage-to: #0a2540;
-  --q-on-stage: #f1f7fb;
-  --q-stage-glow: rgba(43, 123, 176, 0.45);
+  --q-header: #060b1f;
+  --q-on-header: #f3f6fb;
+  --q-stage-from: #0a5f94;
+  --q-stage-to: #0b1740;
+  --q-on-stage: #f3f6fb;
+  --q-stage-glow: rgba(0, 128, 198, 0.45);
   --q-stage-yes: #3ecf98;
   --q-stage-no: #ff7b72;
-  --q-stage-abstain: #8aa3b8;
-  --q-focus: rgba(124, 192, 230, 0.5);
-  --q-scrim: rgba(3, 12, 24, 0.74);
+  --q-stage-abstain: #7f8ea6;
+  --q-focus: rgba(92, 192, 240, 0.5);
+  --q-scrim: rgba(2, 5, 16, 0.74);
 
   color: var(--q-text);
 }

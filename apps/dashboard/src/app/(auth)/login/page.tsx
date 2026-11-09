@@ -20,7 +20,7 @@ export default async function LoginPage() {
 
   return (
     <>
-      <section className="relative hidden overflow-hidden bg-[#0066cc] lg:block">
+      <section className="relative hidden overflow-hidden bg-[var(--q-primary)] lg:block">
         <Image
           src="/brand/qarar-auth-cover.png"
           alt=""
@@ -61,7 +61,7 @@ export default async function LoginPage() {
           <FullLogo />
           <div className="mt-10">
             <p className="mb-2 text-xs font-bold text-[#ff7a00]">مرحبًا بعودتك</p>
-            <h2 className="text-3xl font-black tracking-tight text-[#0a1330]">
+            <h2 className="text-3xl font-black tracking-tight text-[var(--q-text)]">
               تسجيل الدخول إلى قرار
             </h2>
             <p className="mt-3 text-sm leading-6 text-[#6c7d91]">
@@ -72,7 +72,7 @@ export default async function LoginPage() {
           <div className="mt-8 flex items-center justify-center gap-2 text-xs text-[#7f8fa3]">
             <Headphones size={15} />
             تحتاج مساعدة؟{" "}
-            <a href="#" className="font-bold text-[#0066cc]">
+            <a href="#" className="font-bold text-[var(--q-primary)]">
               تواصل مع الدعم
             </a>
           </div>

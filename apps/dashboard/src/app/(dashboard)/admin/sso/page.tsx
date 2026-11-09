@@ -12,10 +12,10 @@ export default function SsoPage() {
         <p className="mb-1.5 text-[11px] font-bold text-[#ff7a00]">
           إدارة الهوية والوصول
         </p>
-        <h1 className="text-2xl font-black text-[#0a1330]">
+        <h1 className="text-2xl font-black text-[var(--q-text)]">
           إعدادات الدخول الموحد (SSO)
         </h1>
-        <p className="mt-2 text-xs leading-6 text-[#718196]">
+        <p className="mt-2 text-xs leading-6 text-[var(--q-text-3)]">
           تهيئة موفري الهوية الفيدرالية (Entra ID / SAML)، النطاقات المؤسسية، ومزامنة المجموعات الخارجية.
         </p>
       </div>

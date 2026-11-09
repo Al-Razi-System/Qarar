@@ -60,9 +60,9 @@ type References = {
 };
 
 const input =
-  "h-10 w-full rounded-xl border border-[#dbe5ef] bg-white px-3 text-[11px] outline-none focus:border-[#0872df] focus:ring-2 focus:ring-[#0872df]/10";
+  "h-10 w-full rounded-xl border border-[var(--q-border)] bg-white px-3 text-[11px] outline-none focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
 const textarea =
-  "min-h-24 w-full rounded-xl border border-[#dbe5ef] bg-white p-3 text-[11px] leading-5 outline-none focus:border-[#0872df] focus:ring-2 focus:ring-[#0872df]/10";
+  "min-h-24 w-full rounded-xl border border-[var(--q-border)] bg-white p-3 text-[11px] leading-5 outline-none focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
 const legalLabels: Record<string, string> = {
   draft: "مسودة",
   under_review: "قيد المراجعة",
@@ -172,7 +172,7 @@ function Modal({
             type="button"
             onClick={onClose}
             aria-label="إغلاق"
-            className="grid h-8 w-8 place-items-center rounded-lg bg-[#f1f5f9] text-[#617287]"
+            className="grid h-8 w-8 place-items-center rounded-lg bg-[#f1f5f9] text-[var(--q-text-3)]"
           >
             <X size={15} />
           </button>
@@ -790,7 +790,7 @@ export function PolicyManagementWorkspace({
           <span className="absolute -right-[13px] top-0 h-7 w-3 border-b border-r border-[#c9d9e8]" />
         )}
         <article
-          className={`group rounded-xl border transition ${depth === 0 ? "border-[#d7e5f1] bg-white shadow-sm" : "border-[#e5edf4] bg-[#fbfdff]"}`}
+          className={`group rounded-xl border transition ${depth === 0 ? "border-[#d7e5f1] bg-white shadow-sm" : "border-[#e5edf4] bg-[var(--q-bg)]"}`}
         >
           <div className="flex items-start gap-2 p-3">
             <button
@@ -804,7 +804,7 @@ export function PolicyManagementWorkspace({
               }
               disabled={!hasChildren}
               onClick={() => toggleItemChildren(item.id)}
-              className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg ${hasChildren ? "bg-[#edf6ff] text-[#0872df] hover:bg-[#dceeff]" : "bg-[#f3f6f9] text-[#a6b4c2]"}`}
+              className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg ${hasChildren ? "bg-[var(--q-surface-2)] text-[var(--q-primary)] hover:bg-[#dceeff]" : "bg-[#f3f6f9] text-[#a6b4c2]"}`}
             >
               {hasChildren ? (
                 <ChevronDown
@@ -821,10 +821,10 @@ export function PolicyManagementWorkspace({
             </button>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[#eaf4ff] px-2 py-0.5 text-[7px] font-black text-[#0872df]">
+                <span className="rounded-full bg-[var(--q-surface-2)] px-2 py-0.5 text-[7px] font-black text-[var(--q-primary)]">
                   {typeLabel[item.item_type] ?? item.item_type}
                 </span>
-                <strong className="text-[10px] text-[#20344d]">
+                <strong className="text-[10px] text-[var(--q-text)]">
                   {item.title_ar}
                 </strong>
               </div>
@@ -852,7 +852,7 @@ export function PolicyManagementWorkspace({
                     aria-label={`إدارة قواعد ${item.title_ar}`}
                     title="القواعد والتنفيذات"
                     onClick={() => openRules(item)}
-                    className="rounded-lg p-2 text-[#0066cc] hover:bg-[#eaf4ff]"
+                    className="rounded-lg p-2 text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
                   >
                     <Gavel size={13} />
                   </button>
@@ -862,14 +862,14 @@ export function PolicyManagementWorkspace({
                   aria-label={`إضافة عنصر فرعي إلى ${item.title_ar}`}
                   title="إضافة عنصر فرعي"
                   onClick={() => void addChildItem(item)}
-                  className="rounded-lg p-2 text-[#0872df] hover:bg-[#edf6ff]"
+                  className="rounded-lg p-2 text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
                 >
                   <Plus size={13} />
                 </button>
                 <button
                   aria-label={`تعديل ${item.title_ar}`}
                   onClick={() => editItem(item)}
-                  className="rounded-lg p-2 text-[#0872df] hover:bg-[#edf6ff]"
+                  className="rounded-lg p-2 text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
                 >
                   <Pencil size={13} />
                 </button>
@@ -918,7 +918,7 @@ export function PolicyManagementWorkspace({
       )}
 
       <div className="overflow-hidden rounded-2xl border border-[#d9e4ef] bg-white shadow-sm">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e8eef4] bg-[#fbfdff] p-4">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e8eef4] bg-[var(--q-bg)] p-4">
           <div>
             <p className="text-[9px] font-black text-[#f17822]">
               مساحة التنفيذ
@@ -926,7 +926,7 @@ export function PolicyManagementWorkspace({
             <h2 className="mt-1 text-sm font-black text-[#14233a]">
               إدارة الإصدار الحالي
             </h2>
-            <p className="mt-1 text-[9px] text-[#718196]">
+            <p className="mt-1 text-[9px] text-[var(--q-text-3)]">
               نفّذ البنود والنطاقات والإجراءات من هذه الصفحة دون العودة إلى دليل
               اللوائح.
             </p>
@@ -934,35 +934,35 @@ export function PolicyManagementWorkspace({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => openStage("attachment")}
-              className="h-9 rounded-xl border border-[#dbe5ef] px-3 text-[9px] font-bold text-[#52647a]"
+              className="h-9 rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[var(--q-text-2)]"
             >
               <Paperclip className="ml-1 inline" size={12} />
               المرفقات
             </button>
             <button
               onClick={() => openStage("policy")}
-              className="h-9 rounded-xl border border-[#dbe5ef] px-3 text-[9px] font-bold text-[#52647a]"
+              className="h-9 rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[var(--q-text-2)]"
             >
               <Pencil className="ml-1 inline" size={12} />
               تعديل البيانات
             </button>
             <button
               onClick={() => openStage("legal")}
-              className="h-9 rounded-xl border border-[#dbe5ef] px-3 text-[9px] font-bold text-[#52647a]"
+              className="h-9 rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[var(--q-text-2)]"
             >
               <FileText className="ml-1 inline" size={12} />
               بيانات الإصدار
             </button>
             <button
               onClick={() => openStage("scope")}
-              className="h-9 rounded-xl border border-[#dbe5ef] px-3 text-[9px] font-bold text-[#52647a]"
+              className="h-9 rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[var(--q-text-2)]"
             >
               <Route className="ml-1 inline" size={12} />
               نطاقات التطبيق
             </button>
             <button
               onClick={() => openStage("review")}
-              className="h-9 rounded-xl border border-[#dbe5ef] px-3 text-[9px] font-bold text-[#52647a]"
+              className="h-9 rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[var(--q-text-2)]"
             >
               <ShieldCheck className="ml-1 inline" size={12} />
               الجاهزية والاعتماد
@@ -980,14 +980,14 @@ export function PolicyManagementWorkspace({
             )}
             <button
               onClick={() => openStage("version")}
-              className="h-9 rounded-xl bg-[#0872df] px-3 text-[9px] font-black text-white"
+              className="h-9 rounded-xl bg-[var(--q-primary)] px-3 text-[9px] font-black text-white"
             >
               <Plus className="ml-1 inline" size={12} />
               إصدار جديد
             </button>
           </div>
         </header>
-        <div className="flex gap-2 overflow-x-auto border-b border-[#edf1f5] p-3">
+        <div className="flex gap-2 overflow-x-auto border-b border-[var(--q-surface-2)] p-3">
           {policy.versions?.map((version) => (
             <button
               key={version.id}
@@ -1029,19 +1029,19 @@ export function PolicyManagementWorkspace({
         )}
         {stage === "legal" && selectedVersion && (
           <Modal title="بيانات الإصدار القانونية" onClose={closeModal} wide>
-            <section className="bg-[#fbfdff] px-1 py-1">
+            <section className="bg-[var(--q-bg)] px-1 py-1">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="text-[9px] font-black text-[#ff7a00]">
                     بيانات قانونية للإصدار
                   </p>
-                  <h3 className="mt-1 text-[11px] font-black text-[#20344d]">
+                  <h3 className="mt-1 text-[11px] font-black text-[var(--q-text)]">
                     الإصدار{" "}
                     {selectedVersion.version_label ||
                       selectedVersion.version_no}
                   </h3>
                 </div>
-                <span className="rounded-full bg-[#eaf4ff] px-2.5 py-1 text-[8px] font-black text-[#0872df]">
+                <span className="rounded-full bg-[var(--q-surface-2)] px-2.5 py-1 text-[8px] font-black text-[var(--q-primary)]">
                   تخص الوثيقة كاملة وليست بندًا
                 </span>
               </div>
@@ -1182,7 +1182,7 @@ export function PolicyManagementWorkspace({
               </p>
               <button
                 onClick={() => openStage("version")}
-                className="mt-3 rounded-xl bg-[#0872df] px-4 py-2 text-[9px] font-black text-white"
+                className="mt-3 rounded-xl bg-[var(--q-primary)] px-4 py-2 text-[9px] font-black text-white"
               >
                 إنشاء الإصدار الأول
               </button>
@@ -1192,26 +1192,26 @@ export function PolicyManagementWorkspace({
           <div className="space-y-5 p-4">
             <div className="space-y-4">
               <section className="min-h-[560px] overflow-hidden rounded-2xl border border-[#d9e6f1] bg-white shadow-[0_12px_30px_rgba(36,74,112,0.07)]">
-                <div className="flex items-center justify-between bg-[#f8fafc] px-3 py-2.5">
+                <div className="flex items-center justify-between bg-[var(--q-bg)] px-3 py-2.5">
                   <div>
-                    <h3 className="text-[11px] font-black text-[#20344d]">
+                    <h3 className="text-[11px] font-black text-[var(--q-text)]">
                       بنود اللائحة
                     </h3>
-                    <p className="mt-0.5 text-[8px] text-[#8190a3]">
+                    <p className="mt-0.5 text-[8px] text-[var(--q-text-3)]">
                       المواد وشروط المطابقة والمسارات المرتبطة.
                     </p>
                   </div>
                   {selectedVersion.legal_status === "draft" && (
                     <button
                       onClick={() => openStage("item")}
-                      className="rounded-lg bg-[#0872df] px-3 py-2 text-[8px] font-black text-white"
+                      className="rounded-lg bg-[var(--q-primary)] px-3 py-2 text-[8px] font-black text-white"
                     >
                       <Plus className="ml-1 inline" size={11} />
                       إضافة بند
                     </button>
                   )}
                 </div>
-                <div className="min-h-[480px] space-y-2 bg-[#f8fafc] p-4">
+                <div className="min-h-[480px] space-y-2 bg-[var(--q-bg)] p-4">
                   {selectedVersion.items
                     .filter(
                       (item) =>
@@ -1254,7 +1254,7 @@ export function PolicyManagementWorkspace({
                           <button
                             aria-label={`تعديل ${item.title_ar}`}
                             onClick={() => editItem(item)}
-                            className="rounded-lg p-2 text-[#0872df] hover:bg-[#edf6ff]"
+                            className="rounded-lg p-2 text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
                           >
                             <Pencil size={13} />
                           </button>
@@ -1284,16 +1284,16 @@ export function PolicyManagementWorkspace({
               </section>
             </div>
             <aside className="hidden">
-              <section className="rounded-xl border border-[#e0e8f0] p-3">
+              <section className="rounded-xl border border-[var(--q-border)] p-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[10px] font-black text-[#20344d]">
-                    <Route className="ml-1 inline text-[#0872df]" size={14} />
+                  <h3 className="text-[10px] font-black text-[var(--q-text)]">
+                    <Route className="ml-1 inline text-[var(--q-primary)]" size={14} />
                     نطاقات التطبيق
                   </h3>
                   {selectedVersion.legal_status === "draft" && (
                     <button
                       onClick={() => openStage("scope")}
-                      className="rounded-lg border border-[#cfe0ef] px-2 py-1.5 text-[8px] font-black text-[#0872df]"
+                      className="rounded-lg border border-[#cfe0ef] px-2 py-1.5 text-[8px] font-black text-[var(--q-primary)]"
                     >
                       إضافة
                     </button>
@@ -1303,7 +1303,7 @@ export function PolicyManagementWorkspace({
                   {selectedVersion.scopes.map((scope) => (
                     <div
                       key={scope.id}
-                      className="flex items-center justify-between rounded-lg bg-[#f8fafc] p-2.5"
+                      className="flex items-center justify-between rounded-lg bg-[var(--q-bg)] p-2.5"
                     >
                       <div>
                         <strong className="text-[9px] text-[#30445c]">
@@ -1336,8 +1336,8 @@ export function PolicyManagementWorkspace({
                   )}
                 </div>
               </section>
-              <section className="rounded-xl border border-[#e0e8f0] p-3">
-                <h3 className="text-[10px] font-black text-[#20344d]">
+              <section className="rounded-xl border border-[var(--q-border)] p-3">
+                <h3 className="text-[10px] font-black text-[var(--q-text)]">
                   <ShieldCheck
                     className="ml-1 inline text-emerald-600"
                     size={14}
@@ -1364,7 +1364,7 @@ export function PolicyManagementWorkspace({
                     <button
                       disabled={!canSubmit}
                       onClick={() => openStage("review")}
-                      className="h-9 rounded-lg bg-[#0872df] text-[9px] font-black text-white disabled:cursor-not-allowed disabled:bg-[#aab8c7]"
+                      className="h-9 rounded-lg bg-[var(--q-primary)] text-[9px] font-black text-white disabled:cursor-not-allowed disabled:bg-[#aab8c7]"
                     >
                       <Send className="ml-1 inline" size={12} />
                       إرسال للمراجعة
@@ -1382,7 +1382,7 @@ export function PolicyManagementWorkspace({
                     <button
                       disabled={!canActivate}
                       onClick={() => openStage("activate")}
-                      className="h-9 rounded-lg bg-[#0872df] text-[9px] font-black text-white disabled:bg-[#aab8c7]"
+                      className="h-9 rounded-lg bg-[var(--q-primary)] text-[9px] font-black text-white disabled:bg-[#aab8c7]"
                     >
                       تحديد النفاذ والتفعيل
                     </button>
@@ -1397,7 +1397,7 @@ export function PolicyManagementWorkspace({
                   )}
                   <button
                     onClick={() => openStage("workflow")}
-                    className="h-9 rounded-lg border border-[#cfe0ef] text-[9px] font-black text-[#0872df]"
+                    className="h-9 rounded-lg border border-[#cfe0ef] text-[9px] font-black text-[var(--q-primary)]"
                   >
                     <Workflow className="ml-1 inline" size={12} />
                     إدارة مسارات الاعتماد
@@ -1567,21 +1567,21 @@ export function PolicyManagementWorkspace({
               />
             </div>
             <div>
-              <h3 className="mb-3 text-[11px] font-black text-[#20344d]">
+              <h3 className="mb-3 text-[11px] font-black text-[var(--q-text)]">
                 المرفقات الحالية
               </h3>
               <div className="space-y-2">
                 {visibleAttachments.map((attachment) => (
                   <div
                     key={attachment.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-[#e0e8f0] p-3"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-[var(--q-border)] p-3"
                   >
                     <div className="min-w-0">
                       <a
                         href={attachment.file_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-1 truncate text-[10px] font-black text-[#0872df]"
+                        className="flex items-center gap-1 truncate text-[10px] font-black text-[var(--q-primary)]"
                       >
                         {attachment.file_name}
                         <ExternalLink size={11} />
@@ -1836,7 +1836,7 @@ export function PolicyManagementWorkspace({
                 <h3 className="text-[11px] font-black text-[#21344d]">
                   متى ينطبق هذا البند؟
                 </h3>
-                <p className="mt-1 text-[9px] leading-5 text-[#718196]">
+                <p className="mt-1 text-[9px] leading-5 text-[var(--q-text-3)]">
                   اختر الصفة التي يراجعها النظام ثم اكتب القيمة المتوقعة. اتركها دون شرط ليطبق البند على الجميع.
                 </p>
               </div>
@@ -1889,13 +1889,13 @@ export function PolicyManagementWorkspace({
                   className={`h-10 rounded-xl border px-4 text-[10px] font-bold disabled:cursor-not-allowed disabled:opacity-40 ${
                     itemCriterion.inverted
                       ? "border-amber-300 bg-amber-50 text-amber-800"
-                      : "border-[#dbe5ef] bg-white text-[#52647a]"
+                      : "border-[var(--q-border)] bg-white text-[var(--q-text-2)]"
                   }`}
                 >
                   {itemCriterion.inverted ? "استثناء: لا يساوي" : "يساوي"}
                 </button>
               </div>
-              <p className="mt-3 rounded-xl bg-white px-3 py-2 text-[9px] leading-5 text-[#52647a]">
+              <p className="mt-3 rounded-xl bg-white px-3 py-2 text-[9px] leading-5 text-[var(--q-text-2)]">
                 {!itemCriterion.field
                   ? "سيطبق هذا البند على جميع الموضوعات ضمن الفئة والنطاق المحددين."
                   : `سيطبق البند عندما يكون ${
@@ -2149,7 +2149,7 @@ export function PolicyManagementWorkspace({
           </div>
           <Link
             href="/admin/regulations?section=workflows"
-            className="mt-4 flex h-10 items-center justify-between rounded-xl bg-[#0872df] px-4 text-[10px] font-black text-white"
+            className="mt-4 flex h-10 items-center justify-between rounded-xl bg-[var(--q-primary)] px-4 text-[10px] font-black text-white"
           >
             فتح مصمم المسارات <Workflow size={15} />
           </Link>
@@ -2321,7 +2321,7 @@ function Action({
         type="button"
         disabled={busy || disabled}
         onClick={onClick}
-        className={`flex h-10 items-center gap-2 rounded-xl px-4 text-[10px] font-black text-white disabled:cursor-not-allowed disabled:opacity-50 ${danger ? "bg-red-700" : "bg-[#0872df]"}`}
+        className={`flex h-10 items-center gap-2 rounded-xl px-4 text-[10px] font-black text-white disabled:cursor-not-allowed disabled:opacity-50 ${danger ? "bg-red-700" : "bg-[var(--q-primary)]"}`}
       >
         {busy && <LoaderCircle className="animate-spin" size={14} />} {label}
       </button>

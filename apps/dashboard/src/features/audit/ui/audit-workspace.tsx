@@ -108,13 +108,13 @@ export function AuditWorkspace() {
         </div>
       )}
 
-      <div className="flex items-center justify-between rounded-2xl border border-[#e2e9f1] bg-white p-4 shadow-[0_3px_16px_rgba(24,48,80,.035)]">
+      <div className="flex items-center justify-between rounded-2xl border border-[var(--q-border)] bg-white p-4 shadow-[0_3px_16px_rgba(24,48,80,.035)]">
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8796a9]" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && loadLogs()} placeholder="ابحث بالاسم أو المعرف..." className="h-10 w-64 rounded-xl border border-[#dfe7ef] bg-[#fafcfe] pr-9 pl-3 text-xs outline-none focus:border-[#9bc9f2]" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && loadLogs()} placeholder="ابحث بالاسم أو المعرف..." className="h-10 w-64 rounded-xl border border-[var(--q-border)] bg-[#fafcfe] pr-9 pl-3 text-xs outline-none focus:border-[#9bc9f2]" />
           </div>
-          <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="h-10 rounded-xl border border-[#dfe7ef] bg-white px-3 text-xs outline-none">
+          <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} className="h-10 rounded-xl border border-[var(--q-border)] bg-white px-3 text-xs outline-none">
             <option value="">كل الأحداث</option>
             <option value="create">إنشاء</option>
             <option value="update">تحديث</option>
@@ -123,21 +123,21 @@ export function AuditWorkspace() {
             <option value="reject">رفض</option>
             <option value="login">تسجيل دخول</option>
           </select>
-          <button onClick={loadLogs} className="h-10 rounded-xl border border-[#dfe7ef] px-4 text-xs font-bold text-[#52647a] hover:bg-[#f6f9fc]">بحث</button>
+          <button onClick={loadLogs} className="h-10 rounded-xl border border-[var(--q-border)] px-4 text-xs font-bold text-[var(--q-text-2)] hover:bg-[#f6f9fc]">بحث</button>
         </div>
-        <button onClick={exportLogs} disabled={exporting} className="flex items-center gap-2 rounded-xl border border-[#cbd9e8] px-4 py-2.5 text-xs font-bold text-[#3d4f66] hover:border-[#0066cc] hover:text-[#0066cc] disabled:opacity-50">
+        <button onClick={exportLogs} disabled={exporting} className="flex items-center gap-2 rounded-xl border border-[#cbd9e8] px-4 py-2.5 text-xs font-bold text-[var(--q-text-2)] hover:border-[var(--q-primary)] hover:text-[var(--q-primary)] disabled:opacity-50">
           <Download size={14} /> {exporting ? "جارٍ التصدير..." : "تصدير"}
         </button>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_minmax(380px,.55fr)]">
-        <div className="rounded-2xl border border-[#e2e9f1] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
-          <div className="flex items-center justify-between border-b border-[#edf1f5] px-5 py-3">
-            <h2 className="text-sm font-black text-[#0a1330]">سجل التدقيق</h2>
-            <span className="text-[10px] font-bold text-[#7a8b9e]">إجمالي: <strong className="text-[#0a1330]">{total}</strong></span>
+        <div className="rounded-2xl border border-[var(--q-border)] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
+          <div className="flex items-center justify-between border-b border-[var(--q-surface-2)] px-5 py-3">
+            <h2 className="text-sm font-black text-[var(--q-text)]">سجل التدقيق</h2>
+            <span className="text-[10px] font-bold text-[#7a8b9e]">إجمالي: <strong className="text-[var(--q-text)]">{total}</strong></span>
           </div>
           {loading ? (
-            <div className="grid min-h-[350px] place-items-center"><LoaderCircle className="animate-spin text-[#0066cc]" size={28} /></div>
+            <div className="grid min-h-[350px] place-items-center"><LoaderCircle className="animate-spin text-[var(--q-primary)]" size={28} /></div>
           ) : logs.length === 0 ? (
             <div className="grid min-h-[350px] place-items-center text-center p-8">
               <div><ShieldAlert className="mx-auto text-[#86a8c9]" size={34} /><h3 className="mt-3 text-sm font-black text-[#24364e]">لا توجد سجلات</h3></div>
@@ -145,13 +145,13 @@ export function AuditWorkspace() {
           ) : (
             <div className="divide-y divide-[#eef2f6]">
               {logs.map((log) => (
-                <button key={log.id} onClick={() => openDetail(log.id)} className={`flex w-full items-center gap-3 px-5 py-3 text-right transition hover:bg-[#fbfdff] ${selected?.id === log.id ? "bg-[#edf6ff]" : ""}`}>
-                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e7f2ff] text-[#0066cc]">
+                <button key={log.id} onClick={() => openDetail(log.id)} className={`flex w-full items-center gap-3 px-5 py-3 text-right transition hover:bg-[var(--q-bg)] ${selected?.id === log.id ? "bg-[var(--q-surface-2)]" : ""}`}>
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e7f2ff] text-[var(--q-primary)]">
                     <ClipboardList size={16} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-xs font-black text-[#0a1330]">{log.actor_name_ar}</h4>
-                    <p className="text-[10px] text-[#7b8ba0]">
+                    <h4 className="text-xs font-black text-[var(--q-text)]">{log.actor_name_ar}</h4>
+                    <p className="text-[10px] text-[var(--q-text-3)]">
                       {actionLabels[log.action] ?? log.action} · {log.entity_type} · {new Date(log.created_at).toLocaleString("ar-SA")}
                     </p>
                   </div>
@@ -161,27 +161,27 @@ export function AuditWorkspace() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-[#e2e9f1] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
+        <div className="rounded-2xl border border-[var(--q-border)] bg-white shadow-[0_3px_16px_rgba(24,48,80,.035)]">
           {detailLoading ? (
-            <div className="grid min-h-[300px] place-items-center"><LoaderCircle className="animate-spin text-[#0066cc]" size={28} /></div>
+            <div className="grid min-h-[300px] place-items-center"><LoaderCircle className="animate-spin text-[var(--q-primary)]" size={28} /></div>
           ) : !selected ? (
             <div className="grid min-h-[300px] place-items-center text-center p-8">
               <div><ClipboardList className="mx-auto text-[#86a8c9]" size={30} /><h3 className="mt-3 text-sm font-black text-[#24364e]">اختر سجلاً</h3></div>
             </div>
           ) : (
             <div className="p-5 space-y-4">
-              <h3 className="text-base font-black text-[#0a1330]">تفاصيل الحدث</h3>
+              <h3 className="text-base font-black text-[var(--q-text)]">تفاصيل الحدث</h3>
               <div className="grid grid-cols-2 gap-3 text-[11px]">
-                <div className="rounded-xl border border-[#edf2f7] bg-[#fbfdff] p-3"><p className="text-[10px] font-black text-[#617287]">العملية</p><strong className="mt-1 block text-[#0a1330]">{actionLabels[selected.action] ?? selected.action}</strong></div>
-                <div className="rounded-xl border border-[#edf2f7] bg-[#fbfdff] p-3"><p className="text-[10px] font-black text-[#617287]">الكيان</p><strong className="mt-1 block text-[#0a1330]">{selected.entity_type}</strong></div>
-                <div className="rounded-xl border border-[#edf2f7] bg-[#fbfdff] p-3"><p className="text-[10px] font-black text-[#617287]">المنفذ</p><strong className="mt-1 block text-[#0a1330]">{selected.actor_name_ar}</strong></div>
-                <div className="rounded-xl border border-[#edf2f7] bg-[#fbfdff] p-3"><p className="text-[10px] font-black text-[#617287]">الوقت</p><strong className="mt-1 block text-[#0a1330]">{new Date(selected.created_at).toLocaleString("ar-SA")}</strong></div>
-                {selected.ip_address && <div className="rounded-xl border border-[#edf2f7] bg-[#fbfdff] p-3"><p className="text-[10px] font-black text-[#617287]">IP</p><strong className="mt-1 block text-[#0a1330] font-mono">{selected.ip_address}</strong></div>}
+                <div className="rounded-xl border border-[#edf2f7] bg-[var(--q-bg)] p-3"><p className="text-[10px] font-black text-[var(--q-text-3)]">العملية</p><strong className="mt-1 block text-[var(--q-text)]">{actionLabels[selected.action] ?? selected.action}</strong></div>
+                <div className="rounded-xl border border-[#edf2f7] bg-[var(--q-bg)] p-3"><p className="text-[10px] font-black text-[var(--q-text-3)]">الكيان</p><strong className="mt-1 block text-[var(--q-text)]">{selected.entity_type}</strong></div>
+                <div className="rounded-xl border border-[#edf2f7] bg-[var(--q-bg)] p-3"><p className="text-[10px] font-black text-[var(--q-text-3)]">المنفذ</p><strong className="mt-1 block text-[var(--q-text)]">{selected.actor_name_ar}</strong></div>
+                <div className="rounded-xl border border-[#edf2f7] bg-[var(--q-bg)] p-3"><p className="text-[10px] font-black text-[var(--q-text-3)]">الوقت</p><strong className="mt-1 block text-[var(--q-text)]">{new Date(selected.created_at).toLocaleString("ar-SA")}</strong></div>
+                {selected.ip_address && <div className="rounded-xl border border-[#edf2f7] bg-[var(--q-bg)] p-3"><p className="text-[10px] font-black text-[var(--q-text-3)]">IP</p><strong className="mt-1 block text-[var(--q-text)] font-mono">{selected.ip_address}</strong></div>}
               </div>
               {selected.details && (
-                <div className="rounded-xl border border-[#edf2f7] bg-[#fbfdff] p-3 overflow-auto max-h-48">
-                  <p className="text-[10px] font-black text-[#617287] mb-2">البيانات</p>
-                  <pre className="text-[10px] text-[#3d4f66] font-mono whitespace-pre-wrap">{JSON.stringify(selected.details, null, 2)}</pre>
+                <div className="rounded-xl border border-[#edf2f7] bg-[var(--q-bg)] p-3 overflow-auto max-h-48">
+                  <p className="text-[10px] font-black text-[var(--q-text-3)] mb-2">البيانات</p>
+                  <pre className="text-[10px] text-[var(--q-text-2)] font-mono whitespace-pre-wrap">{JSON.stringify(selected.details, null, 2)}</pre>
                 </div>
               )}
             </div>

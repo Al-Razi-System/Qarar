@@ -63,9 +63,9 @@ export function PolicyIdentityPanel({
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
-      <section className="rounded-2xl border border-[#dce7f1] bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-2xl border border-[var(--q-border)] bg-white p-5 shadow-sm sm:p-6">
         <div className="mb-5 flex items-start gap-3 border-b border-[#ebf0f5] pb-4">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#eaf4ff] text-[#0872df]"><FileBadge size={18} /></span>
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--q-surface-2)] text-[var(--q-primary)]"><FileBadge size={18} /></span>
           <div><h3 className="text-sm font-black text-[#1b3049]">هوية اللائحة وملكيتها</h3><p className="mt-1 text-[9px] leading-5 text-[#718398]">هذه البيانات تعرّف السجل الرئيسي، ولا تغير نصوص الإصدارات المنشورة.</p></div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -91,5 +91,5 @@ export function PolicyIdentityPanel({
 }
 
 function InfoCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return <div className="rounded-2xl border border-[#dfe8f1] bg-white p-4 shadow-sm"><span className="flex items-center gap-2 text-[9px] font-black text-[#718399]">{icon}{label}</span><strong dir={label === "رمز اللائحة" ? "ltr" : undefined} className="mt-2 block break-words text-[11px] leading-5 text-[#223950]">{value}</strong></div>;
+  return <div className="rounded-2xl border border-[var(--q-border)] bg-white p-4 shadow-sm"><span className="flex items-center gap-2 text-[9px] font-black text-[var(--q-text-3)]">{icon}{label}</span><strong dir={label === "رمز اللائحة" ? "ltr" : undefined} className="mt-2 block break-words text-[11px] leading-5 text-[#223950]">{value}</strong></div>;
 }

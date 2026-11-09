@@ -36,7 +36,7 @@ export type TopicPdfData = {
   logo: string;
 };
 
-const palette = { navy: "#082d59", blue: "#0877d6", orange: "#f58220", ink: "#172a42", muted: "#63788e", line: "#d9e5ef", pale: "#f4f9fd", green: "#07865f" };
+const palette = { navy: "#082d59", blue: "#0074b8", orange: "#f78a2c", ink: "#172a42", muted: "#63788e", line: "#d9e5ef", pale: "#f4f9fd", green: "#07865f" };
 const styles = StyleSheet.create({
   page: { fontFamily: "QararArabic", fontSize: 9, color: palette.ink, backgroundColor: "#ffffff", paddingTop: 38, paddingBottom: 46, paddingHorizontal: 40, direction: "rtl" },
   topRule: { position: "absolute", top: 0, right: 0, left: 0, height: 8, backgroundColor: palette.blue },

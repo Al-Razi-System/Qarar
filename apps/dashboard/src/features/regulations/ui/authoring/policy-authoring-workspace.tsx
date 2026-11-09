@@ -181,7 +181,7 @@ export function PolicyAuthoringWorkspace({
   return (
     <section id="policy-authoring" className="space-y-4 scroll-mt-28">
       <header className="overflow-hidden rounded-3xl border border-[#d9e6f1] bg-white shadow-[0_14px_42px_rgba(20,54,92,.07)]">
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-[linear-gradient(120deg,#0a2c55,#0872df)] px-5 py-5 text-white sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-[linear-gradient(120deg,#0a2c55,var(--q-primary))] px-5 py-5 text-white sm:px-6">
           <div>
             <p className="text-[9px] font-black text-[#ffbd86]">
               مساحة التأليف النظامي
@@ -232,10 +232,10 @@ export function PolicyAuthoringWorkspace({
                 type="button"
                 title={item.hint}
                 onClick={() => selectSection(item.id)}
-                className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-right transition ${active ? "border-[#85c0f2] bg-[#edf7ff] text-[#0872df]" : "border-[#e2eaf2] bg-white text-[#526980] hover:border-[#b8d7ef]"}`}
+                className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-right transition ${active ? "border-[#85c0f2] bg-[#edf7ff] text-[var(--q-primary)]" : "border-[#e2eaf2] bg-white text-[#526980] hover:border-[#b8d7ef]"}`}
               >
                 <span
-                  className={`grid h-9 w-9 place-items-center rounded-xl ${active ? "bg-[#0872df] text-white" : "bg-[#f1f5f9]"}`}
+                  className={`grid h-9 w-9 place-items-center rounded-xl ${active ? "bg-[var(--q-primary)] text-white" : "bg-[#f1f5f9]"}`}
                 >
                   <Icon size={16} />
                 </span>
@@ -268,9 +268,9 @@ export function PolicyAuthoringWorkspace({
       {loadingReferences && (
         <div
           role="status"
-          className="flex items-center gap-2 rounded-xl border border-[#dce7f1] bg-white px-4 py-3 text-[9px] font-bold text-[#60758b]"
+          className="flex items-center gap-2 rounded-xl border border-[var(--q-border)] bg-white px-4 py-3 text-[9px] font-bold text-[#60758b]"
         >
-          <LoaderCircle size={14} className="animate-spin text-[#0872df]" />
+          <LoaderCircle size={14} className="animate-spin text-[var(--q-primary)]" />
           جارٍ تحميل المجالس والتصنيفات والخيارات المرجعية...
         </div>
       )}
