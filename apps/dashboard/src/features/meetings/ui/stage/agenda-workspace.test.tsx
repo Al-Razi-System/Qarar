@@ -331,7 +331,7 @@ describe("AgendaWorkspace documents", () => {
     const downloads = { pendingItemId: null, errorItemId: null, error: null, onChange };
     const { props, view } = setup("chair", { agenda: withMaterials, attachments: [withheld], broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true, agenda_item_id: "a2", panel: "attachments" }), onBroadcast: vi.fn(), onHandOver: vi.fn(), downloads });
     expect(screen.queryByRole("link", { name: "تنزيل قائمة اللجنة.pdf" })).not.toBeInTheDocument();
-    expect(screen.getByText("التنزيل غير متاح لهذا البند؛ يُعرض داخل الغرفة.")).toBeInTheDocument();
+    expect(screen.getByText("هذا المرفق للعرض داخل النظام فقط.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("checkbox", { name: "السماح للمشاركين بتنزيل مرفقات هذا البند" }));
     expect(onChange).toHaveBeenCalledWith("a2", true, 2);
     view.rerender(<AgendaWorkspace {...props} downloads={{ ...downloads, pendingItemId: "a2" }} />);

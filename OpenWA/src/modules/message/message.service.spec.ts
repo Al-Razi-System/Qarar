@@ -119,6 +119,33 @@ describe('MessageService', () => {
       );
     });
 
+    it('should return the WhatsApp receipt when local history fails after text delivery', async () => {
+      (repository.save as jest.Mock)
+        .mockResolvedValueOnce({ id: 'msg-uuid-1' })
+        .mockRejectedValueOnce(new Error('history unavailable'));
+
+      await expect(service.sendText('sess-1', {
+        chatId: '628123456789@c.us',
+        text: 'Hello',
+      })).resolves.toEqual({ messageId: 'wa-msg-1', timestamp: 1706868000 });
+      expect(mockEngine.sendTextMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return the WhatsApp receipt when the post-delivery hook fails', async () => {
+      (hookManager.execute as jest.Mock)
+        .mockResolvedValueOnce({
+          continue: true,
+          data: { sessionId: 'sess-1', input: { chatId: '628123456789@c.us', text: 'Hello' }, type: 'text' },
+        })
+        .mockRejectedValueOnce(new Error('post-delivery plugin unavailable'));
+
+      await expect(service.sendText('sess-1', {
+        chatId: '628123456789@c.us',
+        text: 'Hello',
+      })).resolves.toEqual({ messageId: 'wa-msg-1', timestamp: 1706868000 });
+      expect(mockEngine.sendTextMessage).toHaveBeenCalledTimes(1);
+    });
+
     it('should throw BadRequestException when plugin blocks sending', async () => {
       (hookManager.execute as jest.Mock).mockResolvedValueOnce({ continue: false, data: {} });
 
@@ -164,6 +191,19 @@ describe('MessageService', () => {
         '628123456789@c.us',
         expect.objectContaining({ data: 'iVBORw0KGgoAAAAN...', mimetype: 'image/png' }),
       );
+    });
+
+    it('should return the WhatsApp receipt even if persisting the sent status fails afterwards', async () => {
+      (repository.save as jest.Mock)
+        .mockResolvedValueOnce({ id: 'msg-uuid-1' })
+        .mockRejectedValueOnce(new Error('history unavailable'));
+
+      await expect(service.sendImage('sess-1', {
+        chatId: '628123456789@c.us',
+        base64: 'iVBORw0KGgoAAAAN...',
+        mimetype: 'image/png',
+      })).resolves.toEqual({ messageId: 'wa-msg-1', timestamp: 1706868000 });
+      expect(mockEngine.sendImageMessage).toHaveBeenCalledTimes(1);
     });
   });
 

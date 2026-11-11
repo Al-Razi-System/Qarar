@@ -3,7 +3,7 @@ const {rpc,session}=vi.hoisted(()=>({rpc:vi.fn(),session:vi.fn()}));
 vi.mock("@/shared/api/qarar-server",()=>({qararRpc:rpc,qararRpcV2:rpc,requireQararSession:session,getQararEnv:async()=>({SUPABASE_URL:"http://storage.test",SERVICE_ROLE_KEY:"private-key"})}));
 vi.mock("@/shared/security/upload-malware-scan",()=>({scanUploadForMalware:async()=>({state:"clean"})}));
 vi.mock("@/shared/security/upload-security",async importOriginal=>({...await importOriginal<typeof import("@/shared/security/upload-security")>(),inspectMultipartRequestSize:async()=>"ok"}));
-import {GET,POST} from "./route";
+import {DELETE,GET,POST} from "./route";
 afterEach(()=>{vi.clearAllMocks();vi.unstubAllGlobals();vi.unstubAllEnvs();});
 it("uses the chair's contextual server download permission independently of the participant policy",async()=>{
  rpc.mockResolvedValue([{id,file_url:`https://example.test/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}`,mime_type:"application/pdf",download_allowed:false,viewer_download_allowed:true}]);
@@ -21,8 +21,25 @@ it("replays a registered upload without a duplicate storage mutation",async()=>{
  const request=new Request("http://localhost/api/admin/typed-topics/files",{method:"POST",body:form});vi.spyOn(request,"formData").mockResolvedValue(form);
  const response=await POST(request);expect(response.status).toBe(200);expect((await response.json()).data.idempotent_replay).toBe(true);expect(fetchMock).not.toHaveBeenCalled();
 });
+it("passes the submitter's optional attachment title separately from the physical filename",async()=>{
+ rpc
+  .mockResolvedValueOnce({ok:true,data:{files:[]}})
+  .mockResolvedValueOnce({ok:true,data:{id}});
+ vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response(null,{status:200})));
+ const form=new FormData();form.set("file",new File(["%PDF-1.4 content"],"budget-proof.pdf",{type:"application/pdf"}));form.set("submissionId",id);form.set("fileId",id);form.set("input","{}");form.set("displayName","محضر اعتماد الميزانية");
+ const request=new Request("http://localhost/api/admin/typed-topics/files",{method:"POST",body:form});vi.spyOn(request,"formData").mockResolvedValue(form);
+ const response=await POST(request);
+ expect(response.status).toBe(200);
+ expect(rpc).toHaveBeenLastCalledWith("register_typed_submission_file_named_v2",expect.objectContaining({p_name:"budget-proof.pdf",p_display_name:"محضر اعتماد الميزانية"}));
+});
 it("rejects cross-origin file mutations before authentication or storage",async()=>{
  vi.stubEnv("APP_ORIGIN","https://devqarar.prideidea.com");const response=await POST(new Request("http://localhost/api/admin/typed-topics/files",{method:"POST",headers:{Origin:"https://attacker.test"}}));expect(response.status).toBe(403);expect(session).not.toHaveBeenCalled();
+});
+it("removes an owned draft attachment and cleans up its storage object",async()=>{
+ rpc.mockResolvedValue({ok:true,data:{id,path:`topic-preparations/${id}/${id}.pdf`},trace_id:"trace"});
+ const fetchMock=vi.fn().mockResolvedValue(new Response(null,{status:200}));vi.stubGlobal("fetch",fetchMock);
+ const response=await DELETE(new Request(`http://localhost/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}`,{method:"DELETE"}));
+ expect(response.status).toBe(200);expect(rpc).toHaveBeenCalledWith("delete_my_typed_submission_file_v2",{p_request_id:id,p_file_id:id});expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining(`qarar-evidence/topic-preparations/${id}/${id}.pdf`),expect.objectContaining({method:"DELETE"}));
 });
 it("denies a file absent from the authorized meeting agenda",async()=>{
  rpc.mockResolvedValue([]);const fetchMock=vi.fn();vi.stubGlobal("fetch",fetchMock);
@@ -38,7 +55,7 @@ it("downloads an agenda attachment after contextual meeting authorization",async
 });
 it("refuses a download through the meeting when the chair withheld it, and still shows the file inline",async()=>{
  rpc.mockResolvedValue([{id,file_url:`https://example.test/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}`,mime_type:"application/pdf",download_allowed:false}]);const fetchMock=vi.fn().mockResolvedValue(new Response("pdf"));vi.stubGlobal("fetch",fetchMock);
- const download=await GET(new Request(`http://localhost/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}&meetingId=${id}&disposition=attachment`));expect(download.status).toBe(403);expect((await download.json()).error.message).toContain("منع رئيس المجلس");expect(fetchMock).not.toHaveBeenCalled();
+ const download=await GET(new Request(`http://localhost/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}&meetingId=${id}&disposition=attachment`));expect(download.status).toBe(403);expect((await download.json()).error.message).toContain("متاح للعرض داخل النظام فقط");expect(fetchMock).not.toHaveBeenCalled();
  const shown=await GET(new Request(`http://localhost/api/admin/typed-topics/files?submissionId=${id}&fileId=${id}&meetingId=${id}&disposition=inline`));expect(shown.status).toBe(200);expect(shown.headers.get("Content-Disposition")).toBe("inline");
 });
 it("refuses an inline request that would fall back to a download when the chair withheld it",async()=>{

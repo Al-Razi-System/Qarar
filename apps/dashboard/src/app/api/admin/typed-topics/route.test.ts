@@ -45,6 +45,21 @@ it("rejects malformed periodic proposal identities before calling the database",
   expect(response.status).toBe(400);
   expect(rpc).not.toHaveBeenCalled();
 });
+it("saves and reloads an editable typed-topic draft for its owner", async () => {
+  rpc.mockResolvedValueOnce({ ok: true, data: { request_id: id, status: "draft", files: [] }, trace_id: "trace" });
+  const saved = await POST(new Request("http://localhost/api/admin/typed-topics", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "save_draft", title: "عنوان الموضوع", description: "وصف الموضوع الكامل", versionId: id, unitId: id, requestId: id }),
+  }));
+  expect(saved.status).toBe(200);
+  expect(rpc).toHaveBeenCalledWith("save_typed_submission_draft_v2", expect.objectContaining({ p_request_id: id }));
+
+  rpc.mockResolvedValueOnce({ ok: true, data: { request_id: id, status: "draft", files: [] }, trace_id: "trace" });
+  const loaded = await GET(new Request(`http://localhost/api/admin/typed-topics?draftId=${id}`));
+  expect(loaded.status).toBe(200);
+  expect(rpc).toHaveBeenLastCalledWith("get_my_typed_submission_draft_v2", { p_request_id: id });
+});
 it("does not accept cross-origin mutations", async () => {
   vi.stubEnv("APP_ORIGIN", "https://devqarar.prideidea.com");
   const response = await POST(new Request("http://localhost/api/admin/typed-topics", { method: "POST", headers: { Origin: "https://attacker.example", "Content-Type": "application/json" }, body: "{}" }));

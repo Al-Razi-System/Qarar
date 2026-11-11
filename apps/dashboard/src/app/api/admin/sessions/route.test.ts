@@ -1,38 +1,49 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { qararEdge, qararRpc } = vi.hoisted(() => ({
-  qararEdge: vi.fn(),
-  qararRpc: vi.fn(),
-}));
-
-vi.mock("@/shared/api/qarar-server", () => ({
-  qararEdge,
-  qararRpc,
-  QararApiError: class QararApiError extends Error {
-    constructor(message: string, readonly status: number) {
-      super(message);
-    }
-  },
-}));
-
-import { GET, POST } from "./route";
-
-afterEach(() => {
-  vi.unstubAllEnvs();
-  vi.clearAllMocks();
+const { qararRpc, qararEdge } = vi.hoisted(() => ({ qararRpc: vi.fn(), qararEdge: vi.fn() }));
+vi.mock("@/shared/api/qarar-server", async () => {
+  const actual = await vi.importActual<typeof import("@/shared/api/qarar-server")>("@/shared/api/qarar-server");
+  return { ...actual, qararRpc, qararEdge };
 });
 
-describe("/api/admin/sessions", () => {
-  it("يعرض جلسات المتصل عبر عقد IAM فقط", async () => {
-    qararRpc.mockResolvedValue([{ id: "session-1" }]);
+import { QararApiError } from "@/shared/api/qarar-server";
+import { GET, POST } from "./route";
 
-    const response = await GET();
+afterEach(() => vi.clearAllMocks());
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ sessions: [{ id: "session-1" }] });
+describe("GET /api/admin/sessions", () => {
+  it("lists the caller's own sessions by default", async () => {
+    qararRpc.mockResolvedValue([{ id: "s1" }]);
+    const response = await GET(new Request("http://localhost/api/admin/sessions"));
+    expect(await response.json()).toEqual({ sessions: [{ id: "s1" }] });
     expect(qararRpc).toHaveBeenCalledWith("list_my_sessions", {});
   });
 
+  it("lists the organisation's sessions through the monitoring contract", async () => {
+    qararRpc.mockResolvedValue({ items: [{ id: "s2" }], total: 1 });
+    const response = await GET(new Request("http://localhost/api/admin/sessions?scope=organization&status=all&q=%20عضو%20"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ items: [{ id: "s2" }], total: 1 });
+    expect(qararRpc).toHaveBeenCalledWith("admin_list_sessions", { p_status: "all", p_query: "عضو", p_limit: 100, p_offset: 0 });
+  });
+
+  it("rejects an unknown status before calling the database", async () => {
+    const response = await GET(new Request("http://localhost/api/admin/sessions?scope=organization&status=open"));
+    expect(response.status).toBe(400);
+    expect(qararRpc).not.toHaveBeenCalled();
+  });
+
+  it("answers a denied caller with safe Arabic copy", async () => {
+    qararRpc.mockRejectedValue(new QararApiError("permission denied: iam.sessions.manage", 403, "42501"));
+    const response = await GET(new Request("http://localhost/api/admin/sessions?scope=organization"));
+    expect(response.status).toBe(403);
+    const body = await response.json();
+    expect(body.message).toBe("لا تملك صلاحية مراقبة جلسات المؤسسة.");
+    expect(JSON.stringify(body)).not.toContain("iam.sessions.manage");
+  });
+});
+
+describe("POST /api/admin/sessions", () => {
   it("يرفض معرف الجلسة غير الصالح قبل استدعاء Edge", async () => {
     const response = await POST(new Request("http://localhost/api/admin/sessions", {
       method: "POST",

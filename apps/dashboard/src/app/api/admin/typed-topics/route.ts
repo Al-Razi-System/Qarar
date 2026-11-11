@@ -17,7 +17,11 @@ function failure(error: unknown) {
 export async function GET(request: Request) {
   try {
     await requireQararSession(); const query = new URL(request.url).searchParams;
-    const unit = query.get("unitId"), version = query.get("versionId");
+    const unit = query.get("unitId"), version = query.get("versionId"), draft = query.get("draftId");
+    if (draft !== null) {
+      if (!uuid(draft)) return NextResponse.json({ error: { message: "معرّف المسودة غير صالح." } }, { status: 400 });
+      return reply(await qararRpcV2<Envelope>("get_my_typed_submission_draft_v2", { p_request_id: draft }));
+    }
     if ((unit !== null && !uuid(unit)) || (version !== null && (!uuid(version) || !unit))) return NextResponse.json({ error: { message: "المجلس أو التصنيف غير صالح." } }, { status: 400 });
     if (!unit) return NextResponse.json({ data: await qararRpcV2("get_typed_topic_form_options_v2", {}) }, { headers: { "Cache-Control": "no-store" } });
     return reply(await qararRpcV2<Envelope>(version ? "prepare_typed_topic_v2" : "list_effective_topic_types_v2", version ? { p_version_id: version, p_unit_id: unit } : { p_origin_governance_unit_id: unit }));
@@ -43,7 +47,9 @@ export async function POST(request: Request) {
     }
     const { title, description, versionId, unitId, requestId } = parsed.value;
     if (!uuid(versionId) || !uuid(unitId) || !uuid(requestId) || typeof title !== "string" || title.trim().length < 5 || title.length > 300 || typeof description !== "string" || description.trim().length < 10 || description.length > 10000) return NextResponse.json({ error: { message: "أكمل المجلس والتصنيف وعنوان الموضوع ووصفه." } }, { status: 400 });
-    if (parsed.value.action === "prepare") return reply(await qararRpcV2<Envelope>("prepare_typed_submission_v2",{p_request_id:requestId,p_input:{title:title.trim(),description:description.trim(),versionId,unitId,evidence:parsed.value.evidence??[]}}));
+    const input={title:title.trim(),description:description.trim(),versionId,unitId,evidence:parsed.value.evidence??[]};
+    if (parsed.value.action === "save_draft") return reply(await qararRpcV2<Envelope>("save_typed_submission_draft_v2",{p_request_id:requestId,p_input:input}));
+    if (parsed.value.action === "prepare") return reply(await qararRpcV2<Envelope>("prepare_typed_submission_v2",{p_request_id:requestId,p_input:input}));
     return reply(await qararRpcV2<Envelope>("create_topic_from_type_v2", { p_title_ar: title.trim(), p_description: description.trim(), p_topic_type_version_id: versionId, p_current_unit_id: unitId, p_client_request_id: requestId }));
   } catch (error) { return failure(error); }
 }

@@ -24,6 +24,115 @@ it("shows one primary action for the current stage and keeps later stages locked
   expect(screen.queryByRole("link", { name: "فتح المحضر والمصادقات" })).not.toBeInTheDocument();
 });
 
+it("lets meeting leadership manage the agenda and instructions during the invitation stage", async () => {
+  mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail" ? Promise.resolve({
+    ...meeting,
+    capabilities: { ...meeting.capabilities, can_manage_agenda: true, can_edit_topic_instructions: true },
+  }) : Promise.resolve({ ready: true, checks: [] }));
+
+  render(<MeetingDetailsJourney meetingId="meeting-1"/>);
+
+  expect(await screen.findByRole("link", { name: "إدارة جدول الأعمال والتعليمات" })).toHaveAttribute(
+    "href",
+    "/admin/meetings?manage=meeting-1",
+  );
+});
+
+it("does not expose invitation delivery operations to an ordinary member", async () => {
+  mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail" ? Promise.resolve({
+    ...meeting,
+    capabilities: {},
+    invitation_summary: {
+      prepared: true,
+      requested_count: 10,
+      pending_count: 0,
+      accepted_count: 1,
+      delivered_count: 1,
+      failed_count: 9,
+    },
+  }) : Promise.resolve({ ready: true, checks: [] }));
+
+  render(<MeetingDetailsJourney meetingId="meeting-1"/>);
+
+  expect(await screen.findByRole("heading", { name: "اجتماع مجلس الجامعة" })).toBeVisible();
+  expect(screen.queryByText(/تعذر تسليم 9 دعوات/)).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "إدارة جدول الأعمال والتعليمات" })).not.toBeInTheDocument();
+});
+
+it("lets an invited member inspect agenda details and previous decisions without downloading attachments", async () => {
+  mocks.rpc.mockImplementation((contract: string) => {
+    if (contract === "get_meeting_detail") return Promise.resolve({
+      ...meeting,
+      capabilities: {},
+      agenda_items: [{
+        id: "item-1",
+        agenda_order: 1,
+        discussion_instructions: "راجع ملخص الخطة ومؤشرات الإنجاز قبل المناقشة.",
+        requires_voting: true,
+        topic: {
+          id: "topic-1",
+          topic_no: "TOP-2026-000001",
+          title_ar: "اعتماد الخطة",
+          category_name_ar: "التخطيط",
+          submitted_by_name_ar: "أمانة المجلس",
+          context: {
+            description: "تفاصيل الخطة السنوية ومؤشرات قياسها.",
+            route: [],
+            previous_decisions: [{
+              id: "decision-1",
+              decision_no: "DEC-2026-000010",
+              decision_text: "أوصى مجلس الكلية باستكمال الخطة ورفعها لمجلس الجامعة.",
+              meeting_title_ar: "اجتماع مجلس الكلية",
+              meeting_no: "MTG-2026-000010",
+              meeting_date: "2026-10-15",
+              unit_name_ar: "مجلس الكلية",
+            }],
+          },
+        },
+      }],
+    });
+    if (contract === "list_meeting_topic_attachments") return Promise.resolve([{
+      id: "attachment-1",
+      topic_id: "topic-1",
+      file_name: "الخطة السنوية.pdf",
+      file_url: "/storage/topic-1/plan.pdf",
+      mime_type: "application/pdf",
+      file_size_bytes: 2048,
+      viewer_download_allowed: false,
+    }]);
+    return Promise.resolve({ ready: true, checks: [] });
+  });
+
+  render(<MeetingDetailsJourney meetingId="meeting-1"/>);
+
+  expect(await screen.findByRole("heading", { name: "جدول الأعمال" })).toBeVisible();
+  expect(screen.getByText("راجع ملخص الخطة ومؤشرات الإنجاز قبل المناقشة.")).toBeInTheDocument();
+  expect(screen.getByText("الخطة السنوية.pdf")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "عرض الخطة السنوية.pdf" })).toBeVisible();
+  expect(screen.queryByRole("link", { name: "تنزيل الخطة السنوية.pdf" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "عرض تفاصيل الموضوع وقراراته السابقة" }));
+  expect(screen.getByRole("heading", { name: /تفاصيل الموضوع ومساره/ })).toBeVisible();
+  expect(screen.getByText("تفاصيل الخطة السنوية ومؤشرات قياسها.")).toBeVisible();
+  expect(screen.getByText("DEC-2026-000010")).toBeVisible();
+  expect(screen.getByText("أوصى مجلس الكلية باستكمال الخطة ورفعها لمجلس الجامعة.")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "إزالة من جدول الأعمال" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /موضوعات مقترحة/ })).not.toBeInTheDocument();
+});
+
+it("keeps the agenda readable and reports an attachment failure at the agenda", async () => {
+  mocks.rpc.mockImplementation((contract: string) => {
+    if (contract === "get_meeting_detail") return Promise.resolve({ ...meeting, capabilities: {} });
+    if (contract === "list_meeting_topic_attachments") return Promise.reject(new Error("انقطع الاتصال بمخزن الملفات"));
+    return Promise.resolve({ ready: true, checks: [] });
+  });
+
+  render(<MeetingDetailsJourney meetingId="meeting-1"/>);
+
+  expect(await screen.findByRole("heading", { name: "جدول الأعمال" })).toBeVisible();
+  expect(screen.getByText("اعتماد الخطة")).toBeVisible();
+  expect(screen.getByRole("alert")).toHaveTextContent("تعذر تحميل مرفقات جدول الأعمال");
+});
+
 it("keeps periodic proposals out of the journey and inside agenda management", async () => {
   mocks.rpc.mockImplementation((contract: string) => contract === "get_meeting_detail" ? Promise.resolve({
     ...meeting,
@@ -272,6 +381,7 @@ it("shows the persisted invitation outcome after reload and never offers the pre
   mocks.rpc.mockImplementation((contract: string) => {
     if (contract === "get_meeting_detail") return Promise.resolve({
       ...meeting,
+      capabilities: { ...meeting.capabilities, can_view_invitation_delivery: true },
       invitation_summary: {
         prepared: true,
         requested_count: 8,

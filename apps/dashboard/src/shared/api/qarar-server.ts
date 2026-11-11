@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { cache } from "react";
 import { readEdgeResponse } from "./edge-response";
+import { measure } from "@/shared/observability/logger";
 
 function parseEnv(source: string) {
   return Object.fromEntries(
@@ -65,6 +66,7 @@ export async function qararRpc<T>(
   body: Record<string, unknown>,
   options: { signal?: AbortSignal } = {},
 ): Promise<T> {
+  return measure(`rpc.v1.${name}`, async () => {
   const accessToken = await getQararAccessToken();
   if (options.signal) await assertSensitiveMfa(accessToken, options.signal);
   else await assertSensitiveMfaOnce(accessToken);
@@ -106,12 +108,14 @@ export async function qararRpc<T>(
   // PostgREST void commands commit successfully and return no JSON body.
   if (response.status === 204) return null as T;
   return response.json() as Promise<T>;
+  });
 }
 
 export async function qararRpcV2<T>(
   name: string,
   body: Record<string, unknown>,
 ): Promise<T> {
+  return measure(`rpc.v2.${name}`, async () => {
   const accessToken = await getQararAccessToken();
   await assertSensitiveMfaOnce(accessToken);
   const localEnv = await getQararEnv();
@@ -134,6 +138,7 @@ export async function qararRpcV2<T>(
   }
   if (response.status === 204) return null as T;
   return response.json() as Promise<T>;
+  });
 }
 
 export class QararApiError extends Error {
@@ -153,6 +158,7 @@ export async function qararEdge<T>(
   name: string,
   body: Record<string, unknown>,
 ): Promise<T> {
+  return measure(`edge.${name}`, async () => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("qarar_access_token")?.value;
 
@@ -177,9 +183,11 @@ export async function qararEdge<T>(
   );
 
   return readEdgeResponse<T>(response);
+  });
 }
 
 export async function qararTable<T>(table: string, query: string): Promise<T> {
+  return measure(`table.${table}`, async () => {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("qarar_access_token")?.value;
   if (!accessToken) throw new Error("UNAUTHENTICATED");
@@ -191,6 +199,7 @@ export async function qararTable<T>(table: string, query: string): Promise<T> {
   });
   if (!response.ok) throw new Error(response.status === 401 ? "UNAUTHENTICATED" : `QARAR_API_${response.status}`);
   return response.json() as Promise<T>;
+  });
 }
 
 type QararEnv = { SUPABASE_URL: string; ANON_KEY: string; SERVICE_ROLE_KEY: string };

@@ -52,16 +52,28 @@ select throws_ok($$select api_v1.send_meeting_invitations((select (payload->>'id
 insert into qarar_iam.roles(organization_id,code,name_ar,role_scope) values ('62000000-0000-0000-0000-000000000001','council_member','عضو','governance_unit');
 insert into qarar_iam.memberships(organization_id,user_id,governance_unit_id,role_id,start_date,membership_status)
 select '62000000-0000-0000-0000-000000000001','62000000-0000-0000-0000-000000000011',(select (payload->>'id')::uuid from council_created),id,current_date,'active' from qarar_iam.roles where organization_id='62000000-0000-0000-0000-000000000001' and code='council_member';
+insert into qarar_iam.role_permissions(organization_id,role_id,permission_id)
+select '62000000-0000-0000-0000-000000000001',r.id,p.id
+from qarar_iam.roles r
+join qarar_iam.permissions p on p.organization_id=r.organization_id and p.code='meetings.read'
+where r.organization_id='62000000-0000-0000-0000-000000000001' and r.code='council_member'
+on conflict do nothing;
 select is((api_v2.send_meeting_invitations_v2((select (payload->>'id')::uuid from meeting_created),'09:00','11:00',(select updated_at from qarar_meetings.meetings where id=(select (payload->>'id')::uuid from meeting_created)))->>'queued')::integer,1,'timing and invitation queued atomically for actual member');
 select is((select payload->>'end_time' from qarar_governance.notification_outbox where aggregate_id=(select (payload->>'id')::uuid from meeting_created)),'11:00:00','invitation contains the selected end time');
 select is((api_v1.get_meeting_detail((select (payload->>'id')::uuid from meeting_created))#>>'{invitation_summary,prepared}')::boolean,true,'meeting detail persists that invitations were prepared');
 select is((api_v1.get_meeting_detail((select (payload->>'id')::uuid from meeting_created))#>>'{invitation_summary,requested_count}')::integer,1,'meeting detail reports the prepared recipient count');
+update qarar_meetings.agenda_items
+set discussion_instructions_override='تعليمات محدثة بعد تجهيز الدعوة'
+where meeting_id=(select (payload->>'id')::uuid from meeting_created);
+select is((select count(*)::integer from qarar_governance.notification_outbox where aggregate_id=(select (payload->>'id')::uuid from meeting_created) and event_type='meeting.invitation.updated'),1,'changing discussion instructions after invitation preparation queues one invitee update');
 update qarar_governance.notification_outbox set status='processed',last_error='DISPATCH_FAILED',processed_at=clock_timestamp() where aggregate_id=(select (payload->>'id')::uuid from meeting_created);
 select is((api_v1.get_meeting_detail((select (payload->>'id')::uuid from meeting_created))#>>'{invitation_summary,failed_count}')::integer,1,'meeting detail reports a terminal invitation dispatch failure');
 select ok(not has_function_privilege('authenticated','qarar_governance.get_meeting_invitation_summary(uuid,uuid)','execute'),'private invitation summary reader is not client callable');
 select is((api_v2.send_meeting_invitations_v2((select (payload->>'id')::uuid from meeting_created),'09:00','11:00',(select updated_at from qarar_meetings.meetings where id=(select (payload->>'id')::uuid from meeting_created)))->>'queued')::integer,0,'retry does not duplicate invitations');
 select throws_ok($$select api_v2.send_meeting_invitations_v2((select (payload->>'id')::uuid from meeting_created),'10:00','12:00',(select updated_at from qarar_meetings.meetings where id=(select (payload->>'id')::uuid from meeting_created)))$$,'23514',null,'already queued invitation timing cannot silently change');
 select set_config('request.jwt.claim.sub','62000000-0000-0000-0000-000000000011',true);
+select ok(not (api_v1.get_meeting_detail((select (payload->>'id')::uuid from meeting_created)) ? 'invitation_summary'),'ordinary council member cannot read invitation delivery operations');
+select ok(not coalesce((api_v1.get_meeting_detail((select (payload->>'id')::uuid from meeting_created))#>>'{capabilities,can_view_invitation_delivery}')::boolean,false),'ordinary council member has no invitation delivery visibility capability');
 select throws_ok($$select api_v2.admin_update_organizational_unit_v2((select (payload->>'id')::uuid from unit_created),'كلية أخرى','62000000-0000-0000-0000-000000000020',null,'active',now())$$,'42501',null,'unauthorized actor cannot edit units');
 select throws_ok($$select api_v2.send_meeting_invitations_v2((select (payload->>'id')::uuid from meeting_created),'09:00','11:00',now())$$,'42501',null,'ordinary member cannot prepare invitations');
 select ok(not has_function_privilege('authenticated','qarar_core.admin_update_organizational_unit_v2(uuid,text,uuid,uuid,text,timestamptz)','execute'),'private unit command inaccessible');

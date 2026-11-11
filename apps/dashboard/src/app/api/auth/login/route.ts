@@ -8,6 +8,7 @@ import {
 } from "@/shared/security/login-rate-limit";
 import { incrementMetric, logEvent } from "@/shared/observability/logger";
 import { qararServiceRpc } from "@/shared/api/qarar-service";
+import { registerBrowserSession } from "@/shared/security/session-registration";
 
 const MAX_LOGIN_BODY_BYTES = 8 * 1024;
 
@@ -238,6 +239,10 @@ export async function POST(request: Request) {
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 60 * 24 * 30,
     path: "/",
+  });
+
+  await registerBrowserSession({
+    request, cookieStore, accessToken: session.access_token, apiUrl: runtimeConfig.apiUrl, anonKey: runtimeConfig.anonKey,
   });
 
   incrementMetric("login.succeeded");

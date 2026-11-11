@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronLeft, Clock, FileText, ListChecks, MapPin, Play, RefreshCw, Users } from "lucide-react";
 import { meetingRpc } from "../api/meetings-client";
 import { meetingJourney, type MeetingJourneyKey } from "../model/meeting-journey";
-import { meetingStatusLabels, meetingStatusTone, type MeetingDetail, type MeetingReadiness, type MeetingStartTiming } from "../model/meeting";
+import { meetingStatusLabels, meetingStatusTone, type MeetingDetail, type MeetingReadiness, type MeetingStartTiming, type MeetingTopicAttachment } from "../model/meeting";
 import { lateCycleMessage, meetingLocationLabel, meetingScheduleLabel, meetingTimeLabel } from "../model/meeting-schedule";
 import { localDateKey } from "../model/meeting-operational-state";
 import { InvitationStatus, InvitationTimingDialog } from "./invitation-timing-dialog";
 import { MeetingStartConfirmationDialog } from "./meeting-start-confirmation-dialog";
 import { MeetingPreparationConfirmationDialog } from "./meeting-preparation-confirmation-dialog";
+import { MeetingAgendaPanel } from "./meeting-agenda-panel";
 import { Badge } from "@/shared/ui/badge";
 import { MeetingMinutesDownloadButton } from "./meeting-minutes-download-button";
 import { Button } from "@/shared/ui/button";
@@ -25,6 +26,8 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
   const router = useRouter();
   const [meeting, setMeeting] = useState<MeetingDetail | null>(null);
   const [readiness, setReadiness] = useState<MeetingReadiness | null>(null);
+  const [attachments, setAttachments] = useState<MeetingTopicAttachment[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,15 +42,33 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
 
   async function load() {
     setLoading(true); setError(null);
+    setAttachmentError(null);
     try {
       const detail = await meetingRpc<MeetingDetail>("get_meeting_detail", { p_meeting_id: meetingId }, { timeoutMs: 12_000 });
       setMeeting(detail);
       setSelectedStageKey(meetingJourney(detail.status).find((step) => step.state === "current")?.key ?? "setup");
-      // A meeting ahead of its cycle cannot be prepared, so its readiness is not asked for.
-      if (["draft", "scheduled", "ready_to_start"].includes(detail.status) && detail.cycle_available !== false) {
-        try { setReadiness(await meetingRpc<MeetingReadiness>("get_meeting_readiness", { p_meeting_id: meetingId }, { timeoutMs: 12_000 })); }
-        catch (cause) { setReadiness(null); setError(cause instanceof Error ? `تعذر فحص جاهزية الاجتماع: ${cause.message}` : "تعذر فحص جاهزية الاجتماع."); }
-      } else setReadiness(null);
+      const shouldReadReadiness = ["draft", "scheduled", "ready_to_start"].includes(detail.status) && detail.cycle_available !== false;
+      const [attachmentResult, readinessResult] = await Promise.allSettled([
+        detail.agenda_items?.length
+          ? meetingRpc<MeetingTopicAttachment[]>("list_meeting_topic_attachments", { p_meeting_id: meetingId }, { timeoutMs: 12_000 })
+          : Promise.resolve([]),
+        // A meeting ahead of its cycle cannot be prepared, so its readiness is not asked for.
+        shouldReadReadiness
+          ? meetingRpc<MeetingReadiness>("get_meeting_readiness", { p_meeting_id: meetingId }, { timeoutMs: 12_000 })
+          : Promise.resolve(null),
+      ]);
+      if (attachmentResult.status === "fulfilled") {
+        setAttachments(Array.isArray(attachmentResult.value) ? attachmentResult.value : []);
+      } else {
+        setAttachments([]);
+        setAttachmentError("تعذر تحميل مرفقات جدول الأعمال. أعد تحميل الصفحة للمحاولة مرة أخرى.");
+      }
+      if (readinessResult.status === "fulfilled") setReadiness(readinessResult.value);
+      else {
+        setReadiness(null);
+        const cause = readinessResult.reason;
+        setError(cause instanceof Error ? `تعذر فحص جاهزية الاجتماع: ${cause.message}` : "تعذر فحص جاهزية الاجتماع.");
+      }
     } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تحميل تفاصيل الاجتماع."); }
     finally { setLoading(false); }
   }
@@ -116,11 +137,13 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
   const viewingCurrent = selected.key === current.key;
   const unmet = readiness?.checks.filter((check) => !check.complete) ?? [];
   const ready = readiness?.ready !== false;
-  const invitationPrepared = meeting.invitation_summary?.prepared === true;
+  const canViewInvitationDelivery = meeting.capabilities?.can_view_invitation_delivery === true;
+  const invitationPrepared = canViewInvitationDelivery && meeting.invitation_summary?.prepared === true;
   const hasSecondaryActions = Boolean(
     meeting.capabilities?.can_manage
       || meeting.capabilities?.can_cancel
       || meeting.capabilities?.can_archive
+      || meeting.capabilities?.can_manage_agenda
       || (meeting.status === "scheduled" && meeting.capabilities?.can_prepare_session),
   );
 
@@ -165,12 +188,25 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
         {meeting.schedule_exception_reason && <InlineMessage tone="warning" className="mt-4"><strong>منعقد خارج موعد الدورة.</strong> السبب: {meeting.schedule_exception_reason}</InlineMessage>}
         <div className="mt-5 grid gap-3 sm:grid-cols-2"><Fact icon={CalendarDays} label="الموعد" value={meetingScheduleLabel(meeting)}/><Fact icon={Clock} label="الوقت" value={meetingTimeLabel(meeting)}/><Fact icon={MapPin} label="المكان" value={meetingLocationLabel(meeting)}/><Fact icon={ListChecks} label="جدول الأعمال" value={`${meeting.agenda_items?.length ?? 0} بند`}/></div>
         <StageReadingSummary stage={selected.key} meeting={meeting} viewingCurrent={viewingCurrent}/>
-        {viewingCurrent && selected.key === "invitation" && meeting.invitation_summary?.prepared && <InvitationStatus summary={meeting.invitation_summary} className="mt-4"/>}
-        {viewingCurrent && <div className="mt-6 border-t border-q-border pt-5"><div className="flex flex-wrap items-center gap-3">{primary}{["closed", "archived"].includes(meeting.status) && <><Link href={`/admin/meetings/${meeting.id}/minutes`} className="inline-flex min-h-11 items-center gap-2 rounded-q-control border border-q-primary bg-q-surface px-5 text-q-ui font-bold text-q-link hover:bg-q-surface-2"><FileText size={18}/>عرض المحضر المعتمد</Link><MeetingMinutesDownloadButton meetingId={meeting.id} meetingTitle={meeting.title_ar}/></>}{hasSecondaryActions && <details><summary className="flex min-h-11 cursor-pointer items-center rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link">إجراءات أخرى</summary><div className="mt-2 grid gap-2 rounded-q-card border border-q-border bg-q-surface p-3">{meeting.status === "scheduled" && meeting.capabilities?.can_prepare_session && <Button variant="secondary" disabled={!ready || busy} onClick={() => setPreparationConfirmationOpen(true)}>اعتماد جدول الأعمال وتجهيز الاجتماع للبدء</Button>}{(meeting.capabilities?.can_manage || meeting.capabilities?.can_cancel || meeting.capabilities?.can_archive) && <Link href={`/admin/meetings?manage=${meeting.id}`} className="inline-flex min-h-11 items-center justify-center rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link">تعديل الموعد أو الإلغاء أو الأرشفة</Link>}</div></details>}</div>{!primary && <p className="text-q-ui text-q-text-2">لا يوجد إجراء مطلوب منك في هذه المرحلة.</p>}{!ready && unmet.length > 0 && <p className="mt-3 text-q-caption text-q-warning">قبل المتابعة: {unmet.map((check) => check.label).join("، ")}.</p>}</div>}
+        {viewingCurrent && selected.key === "invitation" && canViewInvitationDelivery && meeting.invitation_summary?.prepared && <InvitationStatus summary={meeting.invitation_summary} className="mt-4"/>}
+        {viewingCurrent && <div className="mt-6 border-t border-q-border pt-5"><div className="flex flex-wrap items-center gap-3">{primary}{meeting.capabilities?.can_manage_agenda && ["draft", "scheduled"].includes(meeting.status) && <Link href={`/admin/meetings?manage=${meeting.id}`} className="inline-flex min-h-11 items-center gap-2 rounded-q-control border border-q-primary bg-q-surface px-5 text-q-ui font-bold text-q-link hover:bg-q-surface-2"><ListChecks size={18}/>إدارة جدول الأعمال والتعليمات</Link>}{["closed", "archived"].includes(meeting.status) && <><Link href={`/admin/meetings/${meeting.id}/minutes`} className="inline-flex min-h-11 items-center gap-2 rounded-q-control border border-q-primary bg-q-surface px-5 text-q-ui font-bold text-q-link hover:bg-q-surface-2"><FileText size={18}/>عرض المحضر المعتمد</Link><MeetingMinutesDownloadButton meetingId={meeting.id} meetingTitle={meeting.title_ar}/></>}{hasSecondaryActions && <details><summary className="flex min-h-11 cursor-pointer items-center rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link">إجراءات أخرى</summary><div className="mt-2 grid gap-2 rounded-q-card border border-q-border bg-q-surface p-3">{meeting.status === "scheduled" && meeting.capabilities?.can_prepare_session && <Button variant="secondary" disabled={!ready || busy} onClick={() => setPreparationConfirmationOpen(true)}>اعتماد جدول الأعمال وتجهيز الاجتماع للبدء</Button>}{(meeting.capabilities?.can_manage || meeting.capabilities?.can_cancel || meeting.capabilities?.can_archive) && <Link href={`/admin/meetings?manage=${meeting.id}`} className="inline-flex min-h-11 items-center justify-center rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link">تعديل الموعد أو الإلغاء أو الأرشفة</Link>}</div></details>}</div>{!primary && <p className="text-q-ui text-q-text-2">لا يوجد إجراء مطلوب منك في هذه المرحلة.</p>}{!ready && unmet.length > 0 && <p className="mt-3 text-q-caption text-q-warning">قبل المتابعة: {unmet.map((check) => check.label).join("، ")}.</p>}</div>}
       </Card>
-      <Card><h2 className="text-q-h3 font-bold">ملخص جدول الأعمال</h2>{meeting.agenda_items?.length ? <ol className="mt-4 space-y-3">{meeting.agenda_items.map((item, index) => <li key={item.id} className="flex gap-3 rounded-q-control bg-q-surface-2 p-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-q-primary text-q-caption font-bold text-q-on-primary">{index + 1}</span><div><p className="text-q-ui font-bold">{item.topic?.title_ar ?? "بند اجتماع"}</p>{item.topic?.topic_no && <p className="mt-1 text-q-caption text-q-text-2">{item.topic.topic_no}</p>}</div></li>)}</ol> : <p className="mt-3 text-q-ui text-q-text-2">لم تُضف بنود إلى جدول الأعمال بعد.</p>}</Card>
+      <Card className="p-0">
+        <MeetingAgendaPanel
+          meetingId={meeting.id}
+          items={meeting.agenda_items ?? []}
+          attachments={attachments}
+          editable={false}
+          busy={false}
+          eligibleCount={null}
+          onAddProposals={() => undefined}
+          onMove={() => undefined}
+          onRemove={() => undefined}
+        />
+        {attachmentError && <InlineMessage tone="error" className="mx-4 mb-4">{attachmentError}</InlineMessage>}
+      </Card>
     </div>
-    {invitationOpen && meeting.updated_at && <InvitationTimingDialog meetingId={meeting.id} expectedUpdatedAt={meeting.updated_at} startTime={meeting.start_time} endTime={meeting.end_time} invitationSummary={meeting.invitation_summary} onClose={() => setInvitationOpen(false)} onSent={() => void load()}/>}
+    {invitationOpen && meeting.updated_at && meeting.capabilities?.can_send_invitations && <InvitationTimingDialog meetingId={meeting.id} expectedUpdatedAt={meeting.updated_at} startTime={meeting.start_time} endTime={meeting.end_time} invitationSummary={canViewInvitationDelivery ? meeting.invitation_summary : undefined} onClose={() => setInvitationOpen(false)} onSent={() => void load()}/>}
     {startTiming && <MeetingStartConfirmationDialog timing={startTiming} pending={busy} error={error} onClose={() => setStartTiming(null)} onConfirm={() => void startSession(true)}/>}
     {reactivationOpen && <Dialog title={meeting.status === "postponed" ? "إعادة استكمال الاجتماع" : "إعادة تفعيل الاجتماع"} description={meeting.status === "postponed" ? "يعود الاجتماع المؤجل نفسه إلى الجلسة الجارية بحضوره ونصابه، ويبقى قرار النصاب بانتظار رئيس المجلس. يُحفظ السبب في سجله وسجل التدقيق." : "يعود الاجتماع الملغى نفسه دون إنشاء اجتماع بديل، ويُحفظ السبب في سجله وسجل التدقيق."} onClose={() => { if (!busy) setReactivationOpen(false); }} closeDisabled={busy}
       footer={<>

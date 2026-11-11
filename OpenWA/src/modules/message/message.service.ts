@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SessionService } from '../session/session.service';
@@ -15,6 +15,8 @@ export interface GetMessagesOptions {
 
 @Injectable()
 export class MessageService {
+  private readonly logger = new Logger(MessageService.name);
+
   constructor(
     @InjectRepository(Message, 'data')
     private readonly messageRepository: Repository<Message>,
@@ -46,40 +48,67 @@ export class MessageService {
       type: 'text',
     });
 
+    let result;
     try {
-      const result = await engine.sendTextMessage(finalDto.chatId, finalDto.text);
+      result = await engine.sendTextMessage(finalDto.chatId, finalDto.text);
+    } catch (error) {
+      message.status = MessageStatus.FAILED;
+      try {
+        await this.messageRepository.save(message);
+      } catch (historyError) {
+        this.logger.error(
+          `Failed to persist the failed text status for ${message.id}`,
+          historyError instanceof Error ? historyError.stack : String(historyError),
+        );
+      }
+      try {
+        await this.hookManager.execute(
+          'message:failed',
+          { sessionId, error: error instanceof Error ? error.message : String(error), input: finalDto },
+          { sessionId, source: 'MessageService' },
+        );
+      } catch (hookError) {
+        this.logger.error(
+          'Text delivery failed and its failure hook could not be completed',
+          hookError instanceof Error ? hookError.stack : String(hookError),
+        );
+      }
 
-      // Update with actual WhatsApp message ID and status
-      message.waMessageId = result.id;
-      message.status = MessageStatus.SENT;
-      message.timestamp = result.timestamp;
+      throw error;
+    }
+
+    // The WhatsApp receipt is authoritative. Local history and post-delivery
+    // plugins are secondary effects and must never turn an accepted message
+    // into a provider error that causes the caller to send a duplicate.
+    message.waMessageId = result.id;
+    message.status = MessageStatus.SENT;
+    message.timestamp = result.timestamp;
+    try {
       await this.messageRepository.save(message);
+    } catch (historyError) {
+      this.logger.error(
+        `WhatsApp accepted text ${result.id}, but its local history could not be updated`,
+        historyError instanceof Error ? historyError.stack : String(historyError),
+      );
+    }
 
-      // Execute hook after successful send
+    try {
       await this.hookManager.execute(
         'message:sent',
         { sessionId, result, input: finalDto },
         { sessionId, source: 'MessageService' },
       );
-
-      return {
-        messageId: result.id,
-        timestamp: result.timestamp,
-      };
-    } catch (error) {
-      // Mark as failed
-      message.status = MessageStatus.FAILED;
-      await this.messageRepository.save(message);
-
-      // Execute hook on failure
-      await this.hookManager.execute(
-        'message:failed',
-        { sessionId, error: error instanceof Error ? error.message : String(error), input: finalDto },
-        { sessionId, source: 'MessageService' },
+    } catch (hookError) {
+      this.logger.error(
+        `WhatsApp accepted text ${result.id}, but its post-delivery hook failed`,
+        hookError instanceof Error ? hookError.stack : String(hookError),
       );
-
-      throw error;
     }
+
+    return {
+      messageId: result.id,
+      timestamp: result.timestamp,
+    };
   }
 
   async sendImage(sessionId: string, dto: SendMediaMessageDto): Promise<MessageResponseDto> {
@@ -93,24 +122,41 @@ export class MessageService {
       type: 'image',
     });
 
+    let result;
     try {
-      const result = await engine.sendImageMessage(dto.chatId, media);
-
-      // Update with actual WhatsApp message ID and status
-      message.waMessageId = result.id;
-      message.status = MessageStatus.SENT;
-      message.timestamp = result.timestamp;
-      await this.messageRepository.save(message);
-
-      return {
-        messageId: result.id,
-        timestamp: result.timestamp,
-      };
+      result = await engine.sendImageMessage(dto.chatId, media);
     } catch (error) {
       message.status = MessageStatus.FAILED;
-      await this.messageRepository.save(message);
+      try {
+        await this.messageRepository.save(message);
+      } catch (historyError) {
+        this.logger.error(
+          `Failed to persist the failed image status for ${message.id}`,
+          historyError instanceof Error ? historyError.stack : String(historyError),
+        );
+      }
       throw error;
     }
+
+    // A WhatsApp receipt is authoritative. Failure to update the optional
+    // OpenWA history after this point must not be reported as a delivery
+    // failure, otherwise the caller may send a duplicate textual fallback.
+    message.waMessageId = result.id;
+    message.status = MessageStatus.SENT;
+    message.timestamp = result.timestamp;
+    try {
+      await this.messageRepository.save(message);
+    } catch (historyError) {
+      this.logger.error(
+        `WhatsApp accepted image ${result.id}, but its local history could not be updated`,
+        historyError instanceof Error ? historyError.stack : String(historyError),
+      );
+    }
+
+    return {
+      messageId: result.id,
+      timestamp: result.timestamp,
+    };
   }
 
   async sendVideo(sessionId: string, dto: SendMediaMessageDto): Promise<MessageResponseDto> {

@@ -1,21 +1,28 @@
-import {ArrowDown,ArrowUp,ClipboardList,ListPlus,Trash2} from "lucide-react";
+"use client";
+import {useState} from "react";
+import {ArrowDown,ArrowUp,ClipboardList,FileSearch,ListPlus,Trash2} from "lucide-react";
 import Link from "next/link";
 import {Button} from "@/shared/ui/button";
 import {Badge} from "@/shared/ui/badge";
 import {InstructionContent} from "@/shared/content/instruction-content";
 import type {AgendaItem,MeetingTopicAttachment} from "../model/meeting";
 import {TopicAttachmentsPanel} from "./topic-attachments-panel";
+import {TopicContextDialog} from "./stage/topic-context-dialog";
 
 type Props={meetingId:string;items:AgendaItem[];attachments:MeetingTopicAttachment[];editable:boolean;busy:boolean;eligibleCount:number|null;canAddDirect?:boolean;onAddProposals:()=>void;onAddDirect?:()=>void;onMove:(index:number,direction:-1|1)=>void;onRemove:(id:string)=>void;onEditInstructions?:(item:AgendaItem)=>void};
 export function MeetingAgendaPanel({meetingId,items,attachments,editable,busy,eligibleCount,canAddDirect,onAddProposals,onAddDirect,onMove,onRemove,onEditInstructions}:Props){
+ const [contextTopic,setContextTopic]=useState<AgendaItem["topic"]|null>(null);
  return <section className="p-4" aria-labelledby="meeting-agenda-title">
   <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h3 id="meeting-agenda-title" className="flex items-center gap-2 text-q-h3 font-bold text-q-text"><ClipboardList size={20}/>جدول الأعمال</h3><p className="mt-2 text-q-caption text-q-text-2">الموضوعات المدرجة في هذا الاجتماع وبترتيب مناقشتها.</p></div><div className="flex flex-wrap items-center gap-2"><Badge tone="info">{items.length} بند</Badge>{editable&&eligibleCount!==null&&<Button variant="secondary" disabled={busy} aria-label={`عرض ${eligibleCount} موضوعات مقترحة`} onClick={onAddProposals}><ListPlus size={18}/>المقترحات <Badge tone="info">{eligibleCount}</Badge></Button>}{editable&&canAddDirect&&onAddDirect&&<Button disabled={busy} onClick={onAddDirect}><ListPlus size={18}/>موضوع مباشر</Button>}</div></div>
   {!items.length?<div className="rounded-q-card border border-dashed border-q-border bg-q-surface-2 p-8 text-center"><ClipboardList className="mx-auto text-q-text-3" size={28}/><h4 className="mt-3 text-q-h3 font-bold">جدول الأعمال فارغ</h4><p className="mt-2 text-q-ui text-q-text-2">أضف موضوعاً مباشراً، أو اختر موضوعاً مؤهلاً من المقترحات إن وجدت.</p></div>:<div className="space-y-4">{items.map((item,index)=><article key={item.id} className="rounded-q-card border border-q-border bg-q-surface p-4">
    <div className="flex flex-wrap items-start gap-3"><Badge tone="info">{item.agenda_order}</Badge>{/* A basis, not 0: on a narrow screen the buttons move below instead of squeezing the title. */}<div className="min-w-0 grow basis-60 space-y-3"><div className="flex flex-wrap items-center gap-2"><h4 className="text-q-h3 font-bold text-q-text">{item.topic?.title_ar??"موضوع غير متاح"}</h4>{item.topic?.is_direct&&<Badge tone="neutral">موضوع مباشر</Badge>}<Badge tone={item.requires_voting===false?"neutral":"warning"}>{item.requires_voting===false?"مناقشة فقط":"يتطلب تصويتاً"}</Badge></div><p className="text-q-caption text-q-text-2">{item.topic?.topic_no}{item.topic?.category_name_ar?` · ${item.topic.category_name_ar}`:""}</p>
     {item.topic?.submitted_by_name_ar&&<p className="text-q-ui text-q-text-2">مقدم الموضوع: {item.topic.submitted_by_name_ar}</p>}
     <details className="rounded-q-control border border-q-border p-3"><summary className="min-h-11 cursor-pointer text-q-ui font-bold">تعليمات المناقشة</summary>{item.discussion_instructions?<InstructionContent value={item.discussion_instructions}/>:<p className="text-q-ui text-q-text-2">لا توجد تعليمات مناقشة لهذا الموضوع.</p>}{onEditInstructions&&<Button variant="secondary" disabled={busy} onClick={()=>onEditInstructions(item)}>تعديل تعليمات المناقشة</Button>}</details>
-    {item.topic?.id&&<><TopicAttachmentsPanel meetingId={meetingId} attachments={attachments.filter(a=>a.topic_id===item.topic?.id)} compact/>{!item.topic.is_direct&&<Link href={`/admin/topics/${item.topic.id}`} className="inline-flex min-h-11 items-center text-q-ui text-q-link">عرض تفاصيل الموضوع ومرفقاته</Link>}</>}
+    {item.topic?.id&&<><TopicAttachmentsPanel meetingId={meetingId} attachments={attachments.filter(a=>a.topic_id===item.topic?.id)} compact/>
+     <div className="flex flex-wrap gap-2">{item.topic.context&&<Button variant="secondary" onClick={()=>setContextTopic(item.topic)}><FileSearch size={18}/>عرض تفاصيل الموضوع وقراراته السابقة</Button>}{editable&&!item.topic.is_direct&&<Link href={`/admin/topics/${item.topic.id}`} className="inline-flex min-h-11 items-center text-q-ui text-q-link">فتح ملف الموضوع الإداري</Link>}</div>
+    </>}
    </div>{editable&&<div className="flex flex-wrap gap-2"><Button variant="secondary" disabled={busy||index===0} aria-label="نقل البند إلى أعلى" onClick={()=>onMove(index,-1)}><ArrowUp size={18}/></Button><Button variant="secondary" disabled={busy||index===items.length-1} aria-label="نقل البند إلى أسفل" onClick={()=>onMove(index,1)}><ArrowDown size={18}/></Button><Button variant="danger" disabled={busy} aria-label="إزالة من جدول الأعمال" onClick={()=>onRemove(item.id)}><Trash2 size={18}/></Button></div>}</div>
   </article>)}</div>}
+  {contextTopic?.context&&<TopicContextDialog title={contextTopic.title_ar} context={contextTopic.context} onClose={()=>setContextTopic(null)}/>}
  </section>;
 }

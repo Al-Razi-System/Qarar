@@ -1,23 +1,34 @@
 import type { Metadata } from "next";
 import { SessionsWorkspace } from "@/features/sessions/ui/sessions-workspace";
+import { qararRpc } from "@/shared/api/qarar-server";
+import { PageHeader } from "@/shared/ui/page-header";
 
-export const metadata: Metadata = { title: "جلساتي والأجهزة المرتبطة" };
+export const metadata: Metadata = { title: "مراقبة الجلسات" };
 
-export default function SessionsPage() {
+type AccessContext = { is_system_admin?: boolean; permissions?: string[] };
+
+/** Same authority admin_list_sessions and request_session_revocation apply. */
+async function canMonitorOrganization() {
+  try {
+    const access = await qararRpc<AccessContext | null>("get_current_user_access_context", {});
+    return Boolean(access?.is_system_admin || access?.permissions?.some((permission) => permission === "iam.sessions.manage" || permission === "iam.users.manage"));
+  } catch {
+    return false;
+  }
+}
+
+export default async function SessionsPage() {
+  const canMonitor = await canMonitorOrganization();
   return (
     <div className="mx-auto max-w-[1480px]">
-      <div className="mb-7">
-        <p className="mb-1.5 text-[11px] font-bold text-[#ff7a00]">
-          إدارة الهوية والوصول
-        </p>
-        <h1 className="text-2xl font-black text-[var(--q-text)]">
-          جلساتي والأجهزة المرتبطة
-        </h1>
-        <p className="mt-2 text-xs leading-6 text-[var(--q-text-3)]">
-          راجع جلسات حسابك الفعلية وأبطل أي جهاز مشبوه أو مفقود فوراً.
-        </p>
-      </div>
-      <SessionsWorkspace />
+      <PageHeader
+        eyebrow="إدارة الهوية والوصول"
+        title={canMonitor ? "مراقبة الجلسات" : "جلساتي والأجهزة المرتبطة"}
+        description={canMonitor
+          ? "راجع جلسات مستخدمي مؤسستك النشطة على لوحة التحكم وتطبيق الجوال، وأبطل أي جهاز مشبوه أو مفقود فورًا."
+          : "راجع جلسات حسابك الفعلية وأبطل أي جهاز مشبوه أو مفقود فورًا."}
+      />
+      <SessionsWorkspace canMonitorOrganization={canMonitor} />
     </div>
   );
 }

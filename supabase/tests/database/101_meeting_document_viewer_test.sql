@@ -4,7 +4,7 @@
 -- Impact map: docs/engineering/impact/MEETING_DOCUMENT_VIEWER_AR.md
 begin;
 create extension if not exists pgtap;
-select plan(29);
+select plan(30);
 
 insert into public.organizations(id,code,name_ar) values
 ('a2000000-0000-0000-0000-000000000001','s101','Broadcast'),
@@ -161,7 +161,8 @@ select is(pg_temp.s101_state()->>'page',null,'a closed document has no page');
 select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,1);
 select is((pg_temp.s101_file()->>'download_allowed')::boolean,true,'the participant policy can be restored independently');
 select pg_temp.s101_as('a2000000-0000-0000-0000-000000000013');
-select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,true,'a member regains download access when the chair allows it');
+select is(pg_temp.s101_file()->>'id','a2000000-0000-0000-0000-0000000000a1','a member still sees a meeting attachment after downloads are restored');
+select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,false,'an ordinary member remains view-only when participant downloads are allowed');
 
 select * from finish();
 rollback;

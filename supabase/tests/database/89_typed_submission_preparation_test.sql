@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(44);
+select plan(51);
 
 insert into qarar_core.organizations(id,code,name_ar)
 values('89000000-0000-0000-0000-000000000001','typed-submission-ci','منظمة اختبار قراءة الحوكمة');
@@ -66,6 +66,16 @@ values('89000000-0000-0000-0000-000000000022','89000000-0000-0000-0000-000000000
 
 reset role;
 set local role qarar_api_executor;
+select is(api_v2.save_typed_submission_draft_v2('89000000-0000-0000-0000-000000000090','{"title":"مسودة برنامج أكاديمي","description":"وصف أول قابل للتعديل قبل تقديم الموضوع","versionId":"89000000-0000-0000-0000-000000000022","unitId":"89000000-0000-0000-0000-000000000011","evidence":[]}')->>'ok','true','owner saves a typed topic as a draft');
+select is(api_v2.save_typed_submission_draft_v2('89000000-0000-0000-0000-000000000090','{"title":"مسودة برنامج أكاديمي معدلة","description":"وصف معدل يبقى قابلا للتعديل قبل تقديم الموضوع","versionId":"89000000-0000-0000-0000-000000000022","unitId":"89000000-0000-0000-0000-000000000011","evidence":[]}')->>'ok','true','owner edits the same draft identity');
+select is(api_v2.get_my_typed_submission_draft_v2('89000000-0000-0000-0000-000000000090')#>>'{data,input,title}','مسودة برنامج أكاديمي معدلة','owner reloads the latest draft content');
+reset role;
+select is((select count(*)::integer from qarar_topics.topics where organization_id='89000000-0000-0000-0000-000000000001'),0,'saving and editing a draft does not create a topic');
+set local role qarar_api_executor;
+set local "request.jwt.claims"='{"sub":"89000000-0000-0000-0000-000000000003","role":"authenticated"}';
+select is(api_v2.get_my_typed_submission_draft_v2('89000000-0000-0000-0000-000000000090')->>'error_code','MODEL_BUNDLE_NOT_FOUND','another user cannot read the draft');
+select is(api_v2.save_typed_submission_draft_v2('89000000-0000-0000-0000-000000000090','{"title":"محاولة تعديل مسودة الغير","description":"وصف محاولة تعديل غير مصرح بها للمسودة","versionId":"89000000-0000-0000-0000-000000000022","unitId":"89000000-0000-0000-0000-000000000011","evidence":[]}')->>'error_code','MODEL_PERMISSION_DENIED','another user cannot edit the draft');
+set local "request.jwt.claims"='{"sub":"89000000-0000-0000-0000-000000000002","role":"authenticated"}';
 select is(api_v2.create_topic_from_type_v2('عنوان اختبار المرفقات','وصف اختبار المرفقات قبل التقديم','89000000-0000-0000-0000-000000000022','89000000-0000-0000-0000-000000000011',gen_random_uuid())->>'ok','false','legacy public command cannot bypass pre-submission requirements');
 create temporary table prepared as select api_v2.prepare_typed_submission_v2('89000000-0000-0000-0000-000000000050','{"title":"عنوان اختبار المرفقات","description":"وصف اختبار المرفقات قبل التقديم","versionId":"89000000-0000-0000-0000-000000000022","unitId":"89000000-0000-0000-0000-000000000011","evidence":[]}') payload;
 select is((select payload->>'ok' from prepared),'true','prepare without submitting');
@@ -79,7 +89,7 @@ insert into storage.objects(bucket_id,name,metadata) values
 ('qarar-evidence','topic-preparations/89000000-0000-0000-0000-000000000050/89000000-0000-0000-0000-000000000051.png','{"size":100,"mimetype":"image/png"}'),
 ('qarar-evidence','topic-preparations/89000000-0000-0000-0000-000000000050/89000000-0000-0000-0000-000000000052.png','{"size":100,"mimetype":"image/png"}');
 set local role qarar_api_executor;
-select is(api_v2.register_typed_submission_file_v2('89000000-0000-0000-0000-000000000050','89000000-0000-0000-0000-000000000051','proof.png','topic-preparations/89000000-0000-0000-0000-000000000050/89000000-0000-0000-0000-000000000051.png','image/png',100,'https://example.test/api/admin/typed-topics/files?submissionId=89000000-0000-0000-0000-000000000050&fileId=89000000-0000-0000-0000-000000000051',null)->>'ok','true','first real storage object registered');
+select is(api_v2.register_typed_submission_file_named_v2('89000000-0000-0000-0000-000000000050','89000000-0000-0000-0000-000000000051','proof.png','محضر اعتماد البرنامج','topic-preparations/89000000-0000-0000-0000-000000000050/89000000-0000-0000-0000-000000000051.png','image/png',100,'https://example.test/api/admin/typed-topics/files?submissionId=89000000-0000-0000-0000-000000000050&fileId=89000000-0000-0000-0000-000000000051',null)->>'ok','true','first real storage object registered with an optional display name');
 select is(api_v2.register_typed_submission_file_v2('89000000-0000-0000-0000-000000000050','89000000-0000-0000-0000-000000000052','proof2.png','topic-preparations/89000000-0000-0000-0000-000000000050/89000000-0000-0000-0000-000000000052.png','image/png',100,'https://example.test/api/admin/typed-topics/files?submissionId=89000000-0000-0000-0000-000000000050&fileId=89000000-0000-0000-0000-000000000052',null)->>'ok','true','second real storage object registered');
 select is(api_v2.register_typed_submission_file_v2('89000000-0000-0000-0000-000000000050','89000000-0000-0000-0000-000000000052','proof2.png','topic-preparations/89000000-0000-0000-0000-000000000050/89000000-0000-0000-0000-000000000052.png','image/png',100,'https://example.test/api/admin/typed-topics/files?submissionId=89000000-0000-0000-0000-000000000050&fileId=89000000-0000-0000-0000-000000000052',null)#>>'{data,idempotent_replay}','true','upload retry does not duplicate');
 set local "request.jwt.claims"='{"sub":"89000000-0000-0000-0000-000000000003","role":"authenticated"}';
@@ -91,9 +101,10 @@ select is((select payload->>'ok' from submitted),'true','final submission with v
 reset role;
 select is((select count(*)::integer from qarar_topics.topics where organization_id='89000000-0000-0000-0000-000000000001'),1,'only final submission creates topic');
 select is((select count(*)::integer from qarar_topics.topic_attachments where organization_id='89000000-0000-0000-0000-000000000001'),2,'files linked before topic visible');
+select is((select description from qarar_topics.topic_attachments where organization_id='89000000-0000-0000-0000-000000000001' and file_name='proof.png'),'محضر اعتماد البرنامج','optional display name is preserved separately from the physical file name');
 set local role qarar_api_executor;
 select is(api_v2.submit_typed_submission_v2('89000000-0000-0000-0000-000000000050')#>>'{data,idempotent_replay}','true','unknown final response replays safely');
-select is(api_v2.prepare_typed_submission_v2('89000000-0000-0000-0000-000000000050','{"title":"عنوان مختلف للاختبار","description":"وصف اختبار المرفقات قبل التقديم","versionId":"89000000-0000-0000-0000-000000000022","unitId":"89000000-0000-0000-0000-000000000011","evidence":[]}')->>'error_code','MODEL_VERSION_CONFLICT','immutable input conflicts');
+select is(api_v2.prepare_typed_submission_v2('89000000-0000-0000-0000-000000000050','{"title":"عنوان مختلف للاختبار","description":"وصف اختبار المرفقات قبل التقديم","versionId":"89000000-0000-0000-0000-000000000022","unitId":"89000000-0000-0000-0000-000000000011","evidence":[]}')->>'error_code','MODEL_BUNDLE_NOT_EDITABLE','submitted preparation cannot return to draft');
 select is(api_v2.get_typed_submission_file_v2('89000000-0000-0000-0000-000000000050','89000000-0000-0000-0000-000000000051')->>'ok','true','submitted file remains accessible to owner');
 reset role;
 select is(qarar_topics.get_topic_requirements_status((select (payload#>>'{data,topic_id}')::uuid from submitted))->>'ready_for_review','true','next review stage sees fulfilled requirements');

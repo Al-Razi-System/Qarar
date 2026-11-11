@@ -101,6 +101,7 @@ unknown fields.
 | `admin_get_role_detail` | `{id,code,name_ar,name_en?,description?,role_scope,is_active,permissions:PermissionSummary[]}` |
 | `admin_export_permission_matrix` | `{schema_version:1,exported_at,organization_id,permissions:object[],roles:object[],assignments:object[]}` |
 | `list_my_sessions` | `SessionSummary[]`; ordered by last activity, with session/device/platform/app/status/activity/revocation fields |
+| `admin_list_sessions` | `{items:AdminSessionSummary[],total:int,limit:int,offset:int}`; organisation sessions with user name/email, device, IP, status (`active`/`ended`/`revoked`), `is_current`, `last_activity_at` |
 | `request_session_revocation` | `{revoked:bool,session_id:uuid}`; application-level record only |
 | `service_finalize_temporary_user` | Internal `{user_id,membership_id?,must_change_password:true,status:"active"}`; never contains a password/hash |
 | `service_get_temporary_password_state` | Internal `{user_id,must_change_password:bool,expires_at}`; active account only |

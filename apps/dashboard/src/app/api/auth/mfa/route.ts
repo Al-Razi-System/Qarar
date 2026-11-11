@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getQararSupabaseRuntimeConfig } from "@/shared/config/qarar-runtime";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
+import { registerBrowserSession } from "@/shared/security/session-registration";
 
 async function context() {
   const store = await cookies();
@@ -74,5 +75,6 @@ export async function POST(request: Request) {
   value.store.set("qarar_access_token", session.access_token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: session.expires_in ?? 3600, path: "/" });
   value.store.set("qarar_refresh_token", session.refresh_token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 2592000, path: "/" });
   value.store.delete("qarar_mfa_access_token"); value.store.delete("qarar_mfa_refresh_token");
+  await registerBrowserSession({ request, cookieStore: value.store, accessToken: session.access_token, apiUrl: value.config.apiUrl, anonKey: value.config.anonKey });
   return NextResponse.json({ verified: true }, { headers: { "Cache-Control": "no-store" } });
 }

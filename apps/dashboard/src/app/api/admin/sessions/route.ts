@@ -5,19 +5,40 @@ import { rejectUntrustedMutation } from "@/shared/security/request-guards";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function apiError(error: unknown, fallback: string) {
+const ORGANIZATION_STATUSES = new Set(["active", "ended", "revoked", "all"]);
+
+function apiError(error: unknown, fallback: string, deniedMessage?: string) {
   if (error instanceof QararApiError) {
-    return NextResponse.json(
-      { message: error.status === 401 ? "انتهت الجلسة. سجّل الدخول مرة أخرى." : fallback },
-      { status: error.status === 401 ? 401 : 400 },
-    );
+    if (error.status === 401) return NextResponse.json({ message: "انتهت الجلسة. سجّل الدخول مرة أخرى." }, { status: 401 });
+    if (deniedMessage && (error.status === 403 || error.code === "42501")) return NextResponse.json({ message: deniedMessage }, { status: 403 });
+    return NextResponse.json({ message: fallback }, { status: 400 });
   }
 
   return NextResponse.json({ message: fallback }, { status: 500 });
 }
 
-/** Lists only the caller's sessions through the versioned IAM contract. */
-export async function GET() {
+/**
+ * Without a scope: the caller's own sessions. With scope=organization: every session in the
+ * caller's organisation, for whoever may revoke them (enforced by admin_list_sessions).
+ */
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  if (url.searchParams.get("scope") === "organization") {
+    const status = url.searchParams.get("status") ?? "active";
+    if (!ORGANIZATION_STATUSES.has(status)) {
+      return NextResponse.json({ message: "حالة الجلسة غير صالحة." }, { status: 400 });
+    }
+    const query = url.searchParams.get("q")?.trim().slice(0, 200) || null;
+    try {
+      const result = await qararRpc<{ items?: unknown[]; total?: number }>("admin_list_sessions", {
+        p_status: status, p_query: query, p_limit: 100, p_offset: 0,
+      });
+      return NextResponse.json({ items: Array.isArray(result?.items) ? result.items : [], total: result?.total ?? 0 });
+    } catch (error) {
+      return apiError(error, "تعذر تحميل جلسات المؤسسة.", "لا تملك صلاحية مراقبة جلسات المؤسسة.");
+    }
+  }
+
   try {
     const sessions = await qararRpc<unknown>("list_my_sessions", {});
     return NextResponse.json({ sessions: Array.isArray(sessions) ? sessions : [] });

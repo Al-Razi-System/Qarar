@@ -30,7 +30,8 @@ export async function POST(request:Request){
   // register verifies the actual storage object's size and mime in the database.
   if(!stored.ok&&stored.status!==409){const reply=await stored.json().catch(()=>null);if(reply?.statusCode!=="409")throw new Error(`Storage write failed: ${stored.status}`);}
   const url=new URL("/api/admin/typed-topics/files",origin);url.searchParams.set("submissionId",submissionId);url.searchParams.set("fileId",fileId);
-  const evidence=form.get("evidenceIndex");const registered=await qararRpcV2<Envelope<unknown>>("register_typed_submission_file_v2",{p_request_id:submissionId,p_file_id:fileId,p_name:file.name,p_path:path,p_mime:mime,p_size:file.size,p_url:url.toString(),p_evidence_index:evidence===null?null:Number(evidence)});
+  const displayName=String(form.get("displayName")??"").trim();if(displayName.length>200)return NextResponse.json({error:{message:"اسم المرفق الاختياري يجب ألا يتجاوز 200 حرف."}},{status:400});
+  const evidence=form.get("evidenceIndex");const registered=await qararRpcV2<Envelope<unknown>>("register_typed_submission_file_named_v2",{p_request_id:submissionId,p_file_id:fileId,p_name:file.name,p_display_name:displayName||null,p_path:path,p_mime:mime,p_size:file.size,p_url:url.toString(),p_evidence_index:evidence===null?null:Number(evidence)});
   return registered.ok?NextResponse.json({data:registered.data}):rejected(registered);
  }catch(error){return failure(error);}
 }
@@ -52,3 +53,16 @@ export async function GET(request:Request){try{
  if(!response.ok||!response.body)return NextResponse.json({error:{message:"المرفق غير موجود."}},{status:404});
  return new NextResponse(response.body,{headers:{"Content-Type":details.mime_type,"Content-Disposition":inline?"inline":"attachment","X-Content-Type-Options":"nosniff","Cache-Control":"private, no-store"}});
  }catch(error){return failure(error);}}
+export async function DELETE(request:Request){
+ const guard=rejectUntrustedMutation(request);if(guard)return guard;
+ try{
+  await requireQararSession();const query=new URL(request.url).searchParams,submissionId=query.get("submissionId")??"",fileId=query.get("fileId")??"";
+  if(!uuid(submissionId)||!uuid(fileId))return NextResponse.json({error:{message:"المرفق غير صالح."}},{status:400});
+  const removed=await qararRpcV2<Envelope<{id:string;path:string}>>("delete_my_typed_submission_file_v2",{p_request_id:submissionId,p_file_id:fileId});
+  if(!removed.ok)return rejected(removed);
+  const env=await getQararEnv();
+  const deleted=await fetch(`${env.SUPABASE_URL}/storage/v1/object/qarar-evidence/${removed.data.path}`,{method:"DELETE",headers:{apikey:env.SERVICE_ROLE_KEY,Authorization:`Bearer ${env.SERVICE_ROLE_KEY}`}});
+  if(!deleted.ok&&deleted.status!==404)console.error("typed-topic-file cleanup",{submissionId,fileId,status:deleted.status});
+  return NextResponse.json({data:{id:removed.data.id}});
+ }catch(error){return failure(error);}
+}

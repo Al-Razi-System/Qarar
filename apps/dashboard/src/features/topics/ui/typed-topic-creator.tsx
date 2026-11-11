@@ -5,11 +5,14 @@ import { Card } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { InstructionContent } from "@/shared/content/instruction-content";
+import { Dialog } from "@/shared/ui/dialog";
 const field = "mt-2 min-h-12 w-full rounded-q-control border border-q-border bg-q-surface px-4 py-3 text-q-ui text-q-text outline-none focus:border-q-primary focus:ring-2 focus:ring-q-primary disabled:bg-q-surface-2";
 type Choice = { topic_type_version_id: string; topic_type_name_ar: string };
 type Preview = { steps: { name_ar: string }[]; can_resume?: boolean; prior_steps?: {template_step_id:string;name_ar:string}[]; authoring?: { required_attachment_count?: number; submission_instructions?: string } };
-type PickedFile={id:string;file:File;evidenceIndex?:number};
+type PickedFile={id:string;file:File;evidenceIndex?:number;displayName:string};
+type SavedFile={id:string;file_name:string;display_name?:string|null;file_size_bytes:number;evidence_index?:number|null};
 type Evidence={template_step_id:string;meeting_date:string;meeting_reference:string;decision_type:string;decision_text:string;bypass_reason:string};
+const DRAFT_STORAGE_KEY="qarar.typed-topic.active-draft";
 class SubmissionFailure extends Error { constructor(message:string,readonly confirmed:boolean){super(message);} }
 async function read<T>(url: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(url, { cache: "no-store", signal }); const value = await response.json();
@@ -23,12 +26,14 @@ export function TypedTopicCreator() {
   const [created, setCreated] = useState<{ topic_id: string; topic_no: string } | null>(null);
   const busy = useRef(false); const receipt = useRef<{ input: string; id: string } | null>(null);
   const [uncertain,setUncertain]=useState(false);
-  const [files,setFiles]=useState<PickedFile[]>([]);const [resume,setResume]=useState(false);const [evidence,setEvidence]=useState<Evidence[]>([]);const [progress,setProgress]=useState("");
+  const [files,setFiles]=useState<PickedFile[]>([]);const [savedFiles,setSavedFiles]=useState<SavedFile[]>([]);const [resume,setResume]=useState(false);const [evidence,setEvidence]=useState<Evidence[]>([]);const [progress,setProgress]=useState("");
+  const [draftNotice,setDraftNotice]=useState("");
+  const [confirmSubmission,setConfirmSubmission]=useState(false);
   const fileControls=useRef<Record<string,HTMLInputElement|null>>({});
   function pickFiles(list:FileList|null,index?:number){
     if(!list)return;const picked=Array.from(list);
     if(files.length+picked.length>30||picked.some(file=>file.size<1||file.size>25*1024*1024||!(/\.(pdf|png|jpe?g|docx)$/i.test(file.name)))){setError("اختر ملفات PDF أو PNG أو JPEG أو DOCX لا تتجاوز 25 ميجابايت؛ الحد الأقصى 30 ملفًا.");return;}
-    setError("");setFiles(old=>[...old,...picked.map(file=>({file,id:crypto.randomUUID(),evidenceIndex:index}))]);
+    setError("");setFiles(old=>[...old,...picked.map(file=>({file,id:crypto.randomUUID(),evidenceIndex:index,displayName:""}))]);
   }
   function resetPrepared(){setFiles([]);setResume(false);setEvidence([]);}
   useEffect(() => {
@@ -40,50 +45,79 @@ export function TypedTopicCreator() {
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [unit, version, attempt]);
+  useEffect(()=>{
+    const id=window.localStorage.getItem(DRAFT_STORAGE_KEY);if(!id||!/^[0-9a-f-]{36}$/i.test(id))return;
+    const controller=new AbortController();
+    read<{request_id:string;status:string;input:{title:string;description:string;unitId:string;versionId:string;evidence?:Evidence[]};files:SavedFile[]}>(`/api/admin/typed-topics?draftId=${id}`,controller.signal)
+      .then(draft=>{if(controller.signal.aborted||draft.status!=="draft")return;receipt.current={id:draft.request_id,input:JSON.stringify(draft.input)};setUnit(draft.input.unitId);setVersion(draft.input.versionId);setTitle(draft.input.title);setDescription(draft.input.description);setEvidence(draft.input.evidence??[]);setResume((draft.input.evidence?.length??0)>0);setSavedFiles(draft.files??[]);setDraftNotice("استعدنا مسودتك المحفوظة ويمكنك متابعة تعديلها.");})
+      .catch(()=>window.localStorage.removeItem(DRAFT_STORAGE_KEY));
+    return()=>controller.abort();
+  },[]);
+  const inputJson=()=>JSON.stringify({title:title.trim(),description:description.trim(),unitId:unit,versionId:version,evidence:resume?evidence:[]});
+  async function command(body:unknown){const response=await fetch("/api/admin/typed-topics",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const value=await response.json().catch(()=>null);if(!response.ok||!value?.data){throw new SubmissionFailure(`${value?.error?.message??"تعذر إتمام العملية."}${value?.error?.traceId?` رقم التتبع: ${value.error.traceId}`:""}`,response.status>=400&&response.status<500&&Boolean(value?.error));}return value.data;}
+  async function uploadPending(input:string,id:string){
+    for(const [index,picked] of files.entries()){
+      if(savedFiles.some(saved=>saved.id===picked.id))continue;
+      setProgress(`جارٍ رفع المرفق ${index+1} من ${files.length}…`);const form=new FormData();form.set("file",picked.file);form.set("submissionId",id);form.set("fileId",picked.id);form.set("input",input);if(picked.displayName.trim())form.set("displayName",picked.displayName.trim());if(picked.evidenceIndex!==undefined)form.set("evidenceIndex",String(picked.evidenceIndex));
+      const uploaded=await fetch("/api/admin/typed-topics/files",{method:"POST",body:form});const value=await uploaded.json().catch(()=>null);
+      if(!uploaded.ok||value?.data?.id!==picked.id)throw new SubmissionFailure(`${value?.error?.message??"تعذر تأكيد رفع المرفق؛ لم يُقدم الموضوع."}${value?.error?.traceId?` رقم التتبع: ${value.error.traceId}`:""}`,uploaded.status>=400&&uploaded.status<500&&Boolean(value?.error));
+    }
+  }
+  async function saveDraft(showNotice=true){
+    if(busy.current||!preview||loading||title.trim().length<5||description.trim().length<10)return false;
+    busy.current=true;setPending(true);setError("");setDraftNotice("");const input=inputJson();
+    if(!receipt.current)receipt.current={input,id:crypto.randomUUID()};else receipt.current.input=input;
+    try{
+      setProgress("جارٍ حفظ المسودة…");await command({...JSON.parse(input),requestId:receipt.current.id,action:"save_draft"});await uploadPending(input,receipt.current.id);
+      const draft=await read<{files:SavedFile[]}>(`/api/admin/typed-topics?draftId=${receipt.current.id}`,new AbortController().signal);setSavedFiles(draft.files??[]);setFiles([]);window.localStorage.setItem(DRAFT_STORAGE_KEY,receipt.current.id);if(showNotice)setDraftNotice("حُفظت المسودة ويمكنك العودة إليها لاحقًا.");return true;
+    }catch(reason){setError(reason instanceof Error?reason.message:"تعذر حفظ المسودة.");return false;}
+    finally{busy.current=false;setPending(false);setProgress("");}
+  }
+  async function removeSavedFile(file:SavedFile){
+    if(!receipt.current||pending)return;setPending(true);setError("");
+    try{const response=await fetch(`/api/admin/typed-topics/files?submissionId=${receipt.current.id}&fileId=${file.id}`,{method:"DELETE"});const value=await response.json().catch(()=>null);if(!response.ok)throw new Error(value?.error?.message??"تعذر حذف المرفق.");setSavedFiles(old=>old.filter(item=>item.id!==file.id));setDraftNotice("حُذف المرفق من المسودة.");}
+    catch(reason){setError(reason instanceof Error?reason.message:"تعذر حذف المرفق.");}finally{setPending(false);}
+  }
   async function submit() {
     if (busy.current || !preview || loading || title.trim().length < 5 || description.trim().length < 10 || !requirementsReady) return;
     busy.current = true; setPending(true); setError("");
-    const input = JSON.stringify({ title:title.trim(), description:description.trim(), unitId: unit, versionId: version,evidence:resume?evidence:[] });
-    if (receipt.current?.input !== input) receipt.current = { input, id: crypto.randomUUID() };
+    const input = inputJson();
+    if (!receipt.current) receipt.current = { input, id: crypto.randomUUID() }; else receipt.current.input=input;
     try {
-      const command=async(body:unknown)=>{const response=await fetch("/api/admin/typed-topics",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const value=await response.json().catch(()=>null);if(!response.ok||!value?.data){throw new SubmissionFailure(`${value?.error?.message??"تعذر التحقق من تجهيز الطلب."}${value?.error?.traceId?` رقم التتبع: ${value.error.traceId}`:""}`,response.status>=400&&response.status<500&&Boolean(value?.error));}return value.data;};
       setProgress("جارٍ تجهيز الطلب دون تقديمه…");
-      const prepared=await command({...JSON.parse(input),requestId:receipt.current.id,action:"prepare"});
+      const prepared=await command({...JSON.parse(input),requestId:receipt.current.id,action:"save_draft"});
       if(!prepared.request_id)throw new Error("تعذر التحقق من تجهيز الطلب؛ أعد التحقق قبل المحاولة بطلب آخر.");
       if(prepared.result?.topic_id&&prepared.result?.topic_no){setCreated(prepared.result);return;}
-      for(const [index,picked] of files.entries()){
-        if(prepared.files?.some((saved:{id:string})=>saved.id===picked.id))continue;
-        setProgress(`جارٍ رفع المرفق ${index+1} من ${files.length}…`);const form=new FormData();form.set("file",picked.file);form.set("submissionId",receipt.current.id);form.set("fileId",picked.id);form.set("input",input);if(picked.evidenceIndex!==undefined)form.set("evidenceIndex",String(picked.evidenceIndex));
-        const uploaded=await fetch("/api/admin/typed-topics/files",{method:"POST",body:form});const value=await uploaded.json().catch(()=>null);
-        if(!uploaded.ok||value?.data?.id!==picked.id)throw new SubmissionFailure(`${value?.error?.message??"تعذر تأكيد رفع المرفق؛ لم يُقدم الموضوع."}${value?.error?.traceId?` رقم التتبع: ${value.error.traceId}`:""}`,uploaded.status>=400&&uploaded.status<500&&Boolean(value?.error));
-      }
+      await uploadPending(input,receipt.current.id);
       setProgress("اكتملت المرفقات؛ جارٍ التحقق والتقديم…");
       const response = await fetch("/api/admin/typed-topics", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action:"submit",requestId: receipt.current.id }) });
       const payload = await response.json().catch(()=>null);
       if(response.status>=500 || !payload || (response.ok && (!payload.data?.topic_id || !payload.data?.topic_no)))setUncertain(true);
       if (!response.ok) throw new SubmissionFailure(`${payload?.error?.message ?? "تعذر تقديم الموضوع."}${payload?.error?.traceId ? ` رقم التتبع: ${payload.error.traceId}` : ""}`,response.status>=400&&response.status<500&&Boolean(payload?.error));
-      if (!payload?.data?.topic_id || !payload.data.topic_no) throw new Error("تعذر التحقق من نتيجة التقديم؛ راجع قائمة موضوعاتك."); setCreated(payload.data);
+      if (!payload?.data?.topic_id || !payload.data.topic_no) throw new Error("تعذر التحقق من نتيجة التقديم؛ راجع قائمة موضوعاتك."); window.localStorage.removeItem(DRAFT_STORAGE_KEY);setCreated(payload.data);
     } catch (reason) { const confirmed=reason instanceof SubmissionFailure&&reason.confirmed;setUncertain(!confirmed);if(confirmed){receipt.current=null;setFiles(old=>old.map(f=>({...f,id:crypto.randomUUID()})));}setError(reason instanceof Error && !(reason instanceof TypeError) ? reason.message : "انقطع الاتصال. تحقق من التقديم قبل إنشاء طلب جديد."); }
     finally { busy.current = false; setPending(false);setProgress(""); }
   }
   const locked=pending||uncertain;
   const required=preview?.authoring?.required_attachment_count??0;
-  const requirementsReady=files.length>=required&&(!resume||(evidence.length>0&&evidence.every((item,index)=>item.meeting_date&&item.decision_text.trim().length>=3&&item.bypass_reason.trim().length>=10&&files.some(f=>f.evidenceIndex===index))));
-  function filePicker(index?:number){const key=index===undefined?"main":`proof-${index}`;return <div className="mt-4 space-y-3 rounded-q-control border border-q-border bg-q-surface-2 p-4"><label htmlFor={`files-${key}`} className="block text-q-ui font-bold">{index===undefined?"مرفقات الموضوع":"محضر أو دليل المرحلة"}</label><input id={`files-${key}`} ref={el=>{fileControls.current[key]=el;}} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.docx" disabled={locked} className="sr-only" onChange={event=>{pickFiles(event.target.files,index);event.target.value="";}}/><Button variant="secondary" disabled={locked} onClick={()=>fileControls.current[key]?.click()}>اختيار الملفات</Button><p className="text-q-caption text-q-text-2">PDF أو PNG أو JPEG أو DOCX؛ 25 ميجابايت لكل ملف.</p><ul className="space-y-2">{files.filter(f=>f.evidenceIndex===index).map(f=><li key={f.id} className="flex min-w-0 items-center justify-between gap-3 rounded-q-control border border-q-border p-3"><span className="min-w-0 break-all text-q-ui">{f.file.name}</span><Button variant="secondary" disabled={locked} onClick={()=>setFiles(old=>old.filter(item=>item.id!==f.id))} aria-label={`إزالة ${f.file.name}`}>إزالة</Button></li>)}</ul></div>;}
+  const totalFiles=files.length+savedFiles.length;
+  const requirementsReady=totalFiles>=required&&(!resume||(evidence.length>0&&evidence.every((item,index)=>item.meeting_date&&item.decision_text.trim().length>=3&&item.bypass_reason.trim().length>=10&&(files.some(f=>f.evidenceIndex===index)||savedFiles.some(f=>f.evidence_index===index)))));
+  function filePicker(index?:number){const key=index===undefined?"main":`proof-${index}`;return <div className="mt-4 space-y-3 rounded-q-control border border-q-border bg-q-surface-2 p-4"><label htmlFor={`files-${key}`} className="block text-q-ui font-bold">{index===undefined?"مرفقات الموضوع":"محضر أو دليل المرحلة"}</label><input id={`files-${key}`} ref={el=>{fileControls.current[key]=el;}} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.docx" disabled={locked} className="sr-only" onChange={event=>{pickFiles(event.target.files,index);event.target.value="";}}/><Button variant="secondary" disabled={locked} onClick={()=>fileControls.current[key]?.click()}>اختيار الملفات</Button><p className="text-q-caption text-q-text-2">PDF أو PNG أو JPEG أو DOCX؛ 25 ميجابايت لكل ملف. ويمكن تسمية كل مرفق باسم أوضح اختياريًا.</p><ul className="space-y-2">{savedFiles.filter(f=>(f.evidence_index??undefined)===index).map(f=><li key={f.id} className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-q-control border border-q-success bg-q-success-soft p-3"><span className="min-w-0 break-all text-q-ui">{f.display_name||f.file_name} <span className="text-q-caption text-q-text-2">(محفوظ)</span></span><Button variant="secondary" disabled={locked} onClick={()=>void removeSavedFile(f)} aria-label={`حذف ${f.display_name||f.file_name} من المسودة`}>حذف</Button></li>)}{files.filter(f=>f.evidenceIndex===index).map(f=><li key={f.id} className="grid min-w-0 gap-3 rounded-q-control border border-q-border p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"><span className="min-w-0 break-all text-q-ui">{f.file.name}</span><label className="text-q-caption font-bold text-q-text-2">{`اسم المرفق ${f.file.name} (اختياري)`}<input aria-label={`اسم المرفق ${f.file.name} (اختياري)`} className={field} maxLength={200} disabled={locked} value={f.displayName} onChange={event=>setFiles(old=>old.map(item=>item.id===f.id?{...item,displayName:event.target.value}:item))} placeholder="مثال: محضر اعتماد الخطة"/></label><Button variant="secondary" disabled={locked} onClick={()=>setFiles(old=>old.filter(item=>item.id!==f.id))} aria-label={`إزالة ${f.file.name}`}>إزالة</Button></li>)}</ul></div>;}
   return <section className="space-y-6 text-q-text" dir="rtl">
     {created ? <Card className="p-6 sm:p-8">
       <InlineMessage tone="success">تم تقديم الموضوع</InlineMessage>
       <h2 className="mt-6 text-q-h2 font-bold">تم تقديم الموضوع</h2><p className="mt-2 text-q-body font-bold">{title}</p><p className="mt-2 text-q-ui text-q-text-2">{created.topic_no}</p>
       <p className="mt-4 text-q-ui text-q-text-2">{resume?"أُرسلت محاضر المراحل السابقة للمراجعة المستقلة؛ لن يتجاوز المسار هذه المراحل قبل اعتماد الأدلة.":"رُبطت المرفقات بالموضوع وبدأ مساره من أول مرحلة."}</p>
       <Link className="mt-6 inline-flex min-h-11 items-center text-q-ui font-bold text-q-link" href={`/admin/topics/${created.topic_id}`}>عرض الموضوع ومرفقاته</Link>
-    </Card> : <form onSubmit={event => { event.preventDefault(); void submit(); }} className="space-y-6">
+    </Card> : <form onSubmit={event => { event.preventDefault(); if(requirementsReady)setConfirmSubmission(true); }} className="space-y-6">
       <Card className="p-6 sm:p-8">
         <h2 className="text-q-h3 font-bold">جهة التقديم</h2>
         <p className="mt-2 text-q-ui text-q-text-2">المجالس الظاهرة ضمن نطاق تقديمك. اختر المجلس لتظهر تصنيفاته المتاحة.</p>
         <fieldset disabled={locked} className="mt-6 grid min-w-0 gap-4 sm:grid-cols-2">
-          <label className="text-q-ui font-bold">المجلس<select aria-label="المجلس" className={field} value={unit} disabled={locked||loading} onChange={event => { resetPrepared();setLoading(true);setError("");setUnit(event.target.value);setVersion("");setTypes([]);setPreview(null); }}><option value="">اختر المجلس</option>{units.map(value => <option key={value.id} value={value.id}>{value.name_ar}</option>)}</select></label>
-          <label className="text-q-ui font-bold">تصنيف الموضوع<select aria-label="تصنيف الموضوع" className={field} value={version} disabled={!unit||loading||locked} onChange={event => { resetPrepared();setLoading(true);setError("");setVersion(event.target.value);setPreview(null);setTitle(types.find(value=>value.topic_type_version_id===event.target.value)?.topic_type_name_ar??""); }}><option value="">اختر التصنيف</option>{types.map(value=><option key={value.topic_type_version_id} value={value.topic_type_version_id}>{value.topic_type_name_ar}</option>)}</select></label>
+          <label className="text-q-ui font-bold">المجلس<select aria-label="المجلس" className={field} value={unit} disabled={locked||loading||savedFiles.length>0} onChange={event => { resetPrepared();setLoading(true);setError("");setUnit(event.target.value);setVersion("");setTypes([]);setPreview(null); }}><option value="">اختر المجلس</option>{units.map(value => <option key={value.id} value={value.id}>{value.name_ar}</option>)}</select></label>
+          <label className="text-q-ui font-bold">تصنيف الموضوع<select aria-label="تصنيف الموضوع" className={field} value={version} disabled={!unit||loading||locked||savedFiles.length>0} onChange={event => { resetPrepared();setLoading(true);setError("");setVersion(event.target.value);setPreview(null);setTitle(types.find(value=>value.topic_type_version_id===event.target.value)?.topic_type_name_ar??""); }}><option value="">اختر التصنيف</option>{types.map(value=><option key={value.topic_type_version_id} value={value.topic_type_version_id}>{value.topic_type_name_ar}</option>)}</select></label>
         </fieldset>
+        {savedFiles.length>0&&<p className="mt-3 text-q-caption text-q-text-2">لحماية متطلبات الملفات، احذف المرفقات المحفوظة قبل تغيير المجلس أو التصنيف.</p>}
         {loading&&<p className="mt-4 text-q-ui text-q-text-2" role="status">جارٍ التحقق من الخيارات والمسار…</p>}
         {!loading&&!unit&&!error&&!units.length&&<InlineMessage tone="info" className="mt-4">لا توجد مجالس نشطة متاحة للتقديم. تحقق من تفعيل المجلس واكتمال متطلباته، أو اطلب من مسؤول النظام مراجعة نطاق تقديمك.</InlineMessage>}
         {unit&&!version&&!loading&&!error&&!types.length&&<InlineMessage tone="info" className="mt-4">لا توجد تصنيفات منشورة ومتاحة لهذا المجلس.</InlineMessage>}
@@ -105,12 +139,26 @@ export function TypedTopicCreator() {
         {preview&&filePicker()}
         {preview&&!requirementsReady&&<InlineMessage tone="info" className="mt-4">أكمل المرفقات المطلوبة{resume?" وتاريخ وقرار وسبب ومحضر كل مرحلة سابقة":""} قبل التقديم. الملفات تُرفع وتُفحص قبل إرسال الطلب.</InlineMessage>}
         {progress&&<p role="status" className="mt-4 text-q-ui text-q-text-2">{progress}</p>}
+        {draftNotice&&<InlineMessage tone="success" className="mt-4">{draftNotice}</InlineMessage>}
         {error&&<div className="mt-4 space-y-3"><InlineMessage tone="error">{error}</InlineMessage>{!uncertain&&<Button variant="secondary" disabled={pending} onClick={()=>{setLoading(true);setError("");setPreview(null);setAttempt(value=>value+1);}}>تحديث الخيارات</Button>}</div>}
         {uncertain&&<div className="mt-4 space-y-3"><p className="text-q-ui text-q-text-2">المدخلات مقفلة لحماية الطلب من التكرار. التحقق يعيد الطلب نفسه بأمان.</p><Button variant="secondary" pending={pending} onClick={()=>void submit()}>التحقق من التقديم</Button><Link href="/admin/topics" className="ms-4 inline-flex min-h-11 items-center text-q-ui text-q-link">مراجعة قائمة الموضوعات</Link></div>}
-        <footer className="mt-6 flex flex-wrap items-center gap-4 border-t border-q-border pt-6"><Button type="submit" pending={pending} pendingLabel="جارٍ تجهيز وتقديم الموضوع…" disabled={uncertain||loading||!preview||!requirementsReady||title.trim().length<5||description.trim().length<10}>تقديم الموضوع</Button><Link href="/admin/topics" className="inline-flex min-h-11 items-center text-q-ui text-q-link">العودة للموضوعات</Link></footer>
+        <footer className="mt-6 flex flex-wrap items-center gap-4 border-t border-q-border pt-6"><Button type="submit" pending={pending} pendingLabel="جارٍ تجهيز وتقديم الموضوع…" disabled={uncertain||loading||!preview||!requirementsReady||title.trim().length<5||description.trim().length<10}>تقديم الموضوع</Button><Button variant="secondary" pending={pending} pendingLabel="جارٍ حفظ المسودة…" disabled={uncertain||loading||!preview||title.trim().length<5||description.trim().length<10} onClick={()=>void saveDraft()}>حفظ كمسودة</Button><Link href="/admin/topics" className="inline-flex min-h-11 items-center text-q-ui text-q-link">العودة للموضوعات</Link></footer>
         {!preview&&!error&&<p className="mt-3 text-q-caption text-q-text-2">اختر المجلس والتصنيف للتحقق من جاهزية المسار أولًا.</p>}
         {preview&&(title.trim().length<5||description.trim().length<10)&&<p className="mt-3 text-q-caption text-q-text-2">للتقديم: أدخل عنوانًا من 5 أحرف على الأقل وتفاصيل من 10 أحرف على الأقل.</p>}
       </Card>
     </form>}
+    {confirmSubmission&&<Dialog
+      title="تأكيد تقديم الموضوع"
+      description="بعد التقديم يبدأ المسار الرسمي ولا يمكنك تعديل بيانات الموضوع أو مرفقاته من نموذج التقديم."
+      closeDisabled={pending}
+      onClose={()=>setConfirmSubmission(false)}
+      footer={<><Button variant="secondary" disabled={pending} onClick={()=>setConfirmSubmission(false)}>العودة للتعديل</Button><Button pending={pending} pendingLabel="جارٍ تقديم الموضوع…" onClick={()=>{setConfirmSubmission(false);void submit();}}>تأكيد تقديم الموضوع</Button></>}
+    >
+      <InlineMessage tone="info">راجع العنوان والتفاصيل والمرفقات. اختر «العودة للتعديل» إذا كان الموضوع يحتاج أي تغيير.</InlineMessage>
+      <div className="rounded-q-control border border-q-border bg-q-surface-2 p-4">
+        <p className="text-q-ui font-bold">{title.trim()}</p>
+        <p className="mt-2 text-q-caption text-q-text-2">{totalFiles} مرفق · {preview?.steps.length??0} مرحلة في المسار</p>
+      </div>
+    </Dialog>}
   </section>;
 }

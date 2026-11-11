@@ -34,7 +34,11 @@ export class OpenWAProvider {
           caption: request.text.slice(0, 1024)
         }, request.deliveryId, controller.signal);
         if (mediaResponse.ok) return await this.acceptedResult(mediaResponse, this.code);
-        if (![400, 404, 409, 413, 415, 422].includes(mediaResponse.status)) this.throwHttpError(mediaResponse.status);
+        // OpenWA returns 500 when the media operation itself fails. Its message
+        // service guarantees that a receipt already obtained from WhatsApp is
+        // still returned successfully, so this response is a definite media
+        // failure and it is safe to try the complete textual invitation.
+        if (![400, 404, 409, 413, 415, 422, 500, 502, 503, 504].includes(mediaResponse.status)) this.throwHttpError(mediaResponse.status);
         const textResponse = await this.postMessage(resolvedSessionId, "send-text", { chatId, text: request.text }, request.deliveryId, controller.signal);
         if (!textResponse.ok) this.throwHttpError(textResponse.status);
         return await this.acceptedResult(textResponse, `openwa-text-fallback-${mediaResponse.status}`);

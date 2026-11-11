@@ -140,6 +140,43 @@ it("opens agenda continuation as a focused workspace for the requested meeting",
   expect(await screen.findByRole("dialog", { name: "إضافة موضوع مباشر" })).toBeVisible();
 });
 
+it("keeps the loaded agenda visible while it refreshes after returning to the browser tab", async () => {
+  let detailReads = 0;
+  let resolveRefresh: (value: unknown) => void = () => undefined;
+  const refreshPending = new Promise((resolve) => { resolveRefresh = resolve; });
+  const meeting = {
+    id: "meeting-background-refresh",
+    meeting_no: "MTG-2026-000090",
+    title_ar: "اجتماع ثابت أثناء التحديث",
+    status: "scheduled",
+    scheduled_date: "2026-11-11",
+    updated_at: "2026-11-11T10:00:00Z",
+    agenda_items: [],
+    capabilities: { can_manage: true, can_manage_agenda: true },
+  };
+  rpc.mockImplementation((contract: string) => {
+    if (contract === "get_meeting_detail") {
+      detailReads += 1;
+      return detailReads === 1 ? Promise.resolve(meeting) : refreshPending;
+    }
+    if (contract === "get_meeting_readiness") return Promise.resolve({ ready: false, checks: [] });
+    if (contract === "search_eligible_agenda_topics") return Promise.resolve({ items: [], total: 0 });
+    if (contract === "list_meeting_topic_attachments") return Promise.resolve([]);
+    return Promise.resolve([]);
+  });
+
+  render(<MeetingsWorkspace initialMeetingId={meeting.id}/>);
+  expect(await screen.findByRole("heading", { name: meeting.title_ar })).toBeVisible();
+
+  window.dispatchEvent(new Event("focus"));
+  await waitFor(() => expect(detailReads).toBe(2));
+  expect(screen.getByRole("heading", { name: meeting.title_ar })).toBeVisible();
+  expect(screen.queryByText("جارٍ فتح جدول أعمال الاجتماع…")).not.toBeInTheDocument();
+
+  resolveRefresh({ ...meeting, updated_at: "2026-11-11T10:01:00Z" });
+  await waitFor(() => expect(screen.getByRole("heading", { name: meeting.title_ar })).toBeVisible());
+});
+
 it("keeps the proposal browser visible when the current eligible count is zero", async () => {
   const meeting = {
     id: "meeting-without-current-proposals",

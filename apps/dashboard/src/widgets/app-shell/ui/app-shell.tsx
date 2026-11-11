@@ -25,7 +25,7 @@ const navGroups = [
     { href: "/admin/users", label: "المستخدمون", icon: Users, requiredAny: ["iam.users.read"] },
     { href: "/admin/permissions", label: "الأدوار والصلاحيات", icon: ShieldCheck, requiredAny: ["iam.roles.read", "iam.permissions.read"] },
     { href: "/admin/delegations", label: "التفويضات والإنابة", icon: KeyRound, requiredAny: ["iam.roles.assign"] },
-    { href: "/admin/sessions", label: "مراقبة الجلسات", icon: Workflow, requiredAny: ["iam.sessions.manage"] },
+    { href: "/admin/sessions", label: "مراقبة الجلسات", icon: Workflow, requiredAny: ["iam.sessions.manage", "iam.users.manage"] },
     { href: "/admin/audit", label: "سجل التدقيق", icon: ClipboardList, requiredAny: ["audit.logs.read"] },
   ]},
   { label: "إعدادات الاجتماعات", items: [

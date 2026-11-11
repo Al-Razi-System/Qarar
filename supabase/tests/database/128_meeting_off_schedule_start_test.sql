@@ -1,15 +1,17 @@
 begin;
 create extension if not exists pgtap;
-select plan(22);
+select plan(27);
 
 insert into public.organizations(id,code,name_ar,timezone) values
 ('c8000000-0000-0000-0000-000000000001','off-schedule-start','اختبار بدء الاجتماع','Asia/Riyadh');
 insert into auth.users(id,email) values
 ('c8000000-0000-0000-0000-000000000011','chair@off-schedule.test'),
-('c8000000-0000-0000-0000-000000000012','manager@off-schedule.test');
-insert into public.users(id,organization_id,email,full_name_ar) values
-('c8000000-0000-0000-0000-000000000011','c8000000-0000-0000-0000-000000000001','chair@off-schedule.test','رئيس المجلس'),
-('c8000000-0000-0000-0000-000000000012','c8000000-0000-0000-0000-000000000001','manager@off-schedule.test','مدير الحضور');
+('c8000000-0000-0000-0000-000000000012','manager@off-schedule.test'),
+('c8000000-0000-0000-0000-000000000013','admin@off-schedule.test');
+insert into public.users(id,organization_id,email,full_name_ar,is_system_admin) values
+('c8000000-0000-0000-0000-000000000011','c8000000-0000-0000-0000-000000000001','chair@off-schedule.test','رئيس المجلس',false),
+('c8000000-0000-0000-0000-000000000012','c8000000-0000-0000-0000-000000000001','manager@off-schedule.test','مدير الحضور',false),
+('c8000000-0000-0000-0000-000000000013','c8000000-0000-0000-0000-000000000001','admin@off-schedule.test','مسؤول النظام',true);
 insert into public.governance_unit_types(id,organization_id,code,name_ar) values
 ('c8000000-0000-0000-0000-000000000021','c8000000-0000-0000-0000-000000000001','council','مجلس');
 insert into public.governance_units(id,organization_id,unit_type_id,code,name_ar) values
@@ -33,7 +35,8 @@ insert into public.meetings(id,organization_id,meeting_no,governance_unit_id,tit
 ('c8000000-0000-0000-0000-000000000082','c8000000-0000-0000-0000-000000000001','MTG-2026-800002','c8000000-0000-0000-0000-000000000022','اجتماع مبكر',(clock_timestamp() at time zone 'Asia/Riyadh')::date+1,'10:00','11:00','c8000000-0000-0000-0000-000000000011','ready_to_start'),
 ('c8000000-0000-0000-0000-000000000083','c8000000-0000-0000-0000-000000000001','MTG-2026-800003','c8000000-0000-0000-0000-000000000022','اجتماع متأخر',(clock_timestamp() at time zone 'Asia/Riyadh')::date-1,'10:00','11:00','c8000000-0000-0000-0000-000000000011','ready_to_start'),
 ('c8000000-0000-0000-0000-000000000084','c8000000-0000-0000-0000-000000000001','MTG-2026-800004','c8000000-0000-0000-0000-000000000022','اجتماع قديم بلا وقت',(clock_timestamp() at time zone 'Asia/Riyadh')::date,null,null,'c8000000-0000-0000-0000-000000000011','ready_to_start'),
-('c8000000-0000-0000-0000-000000000085','c8000000-0000-0000-0000-000000000001','MTG-2026-800005','c8000000-0000-0000-0000-000000000022','تجاوز دون رئيس',(clock_timestamp() at time zone 'Asia/Riyadh')::date+1,'10:00','11:00','c8000000-0000-0000-0000-000000000011','ready_to_start');
+('c8000000-0000-0000-0000-000000000085','c8000000-0000-0000-0000-000000000001','MTG-2026-800005','c8000000-0000-0000-0000-000000000022','تجاوز دون رئيس',(clock_timestamp() at time zone 'Asia/Riyadh')::date+1,'10:00','11:00','c8000000-0000-0000-0000-000000000011','ready_to_start'),
+('c8000000-0000-0000-0000-000000000086','c8000000-0000-0000-0000-000000000001','MTG-2026-800006','c8000000-0000-0000-0000-000000000022','تجاوز مسؤول النظام',(clock_timestamp() at time zone 'Asia/Riyadh')::date+1,'10:00','11:00','c8000000-0000-0000-0000-000000000011','ready_to_start');
 
 create function pg_temp.s128_token(p_id uuid) returns timestamptz language sql security definer as
 $$select updated_at from qarar_meetings.meetings where id=p_id$$;
@@ -59,7 +62,7 @@ set local "request.jwt.claims"='{"sub":"c8000000-0000-0000-0000-000000000011","r
 select is(api_v1.get_meeting_session_start_timing_v2('c8000000-0000-0000-0000-000000000082')->>'requires_confirmation','true','early meeting preview requires confirmation');
 select throws_ok(
   $$select api_v1.open_meeting_session('c8000000-0000-0000-0000-000000000082',pg_temp.s128_token('c8000000-0000-0000-0000-000000000082'),false)$$,
-  'P0001','بدء الجلسة خارج الموعد المحدد يحتاج تأكيد رئيس المجلس. راجع الموعد ثم أكد بدء الجلسة الآن.','server refuses an early opening without confirmation');
+  'P0001','بدء الجلسة خارج الموعد المحدد يحتاج تأكيد رئيس المجلس أو مسؤول النظام. راجع الموعد ثم أكد بدء الجلسة الآن.','server refuses an early opening without confirmation');
 select is(pg_temp.s128_status('c8000000-0000-0000-0000-000000000082'),'ready_to_start','rejected early opening leaves meeting unchanged');
 select is(pg_temp.s128_roster_count('c8000000-0000-0000-0000-000000000082'),0,'rejected opening creates no roster');
 select is(api_v1.open_meeting_session('c8000000-0000-0000-0000-000000000082',pg_temp.s128_token('c8000000-0000-0000-0000-000000000082'),true)->'meeting'->>'status','in_progress','chair confirms early opening');
@@ -71,7 +74,7 @@ select matches(api_v1.generate_meeting_minutes_draft('c8000000-0000-0000-0000-00
 
 select throws_ok(
   $$select api_v1.open_meeting_session('c8000000-0000-0000-0000-000000000083',pg_temp.s128_token('c8000000-0000-0000-0000-000000000083'),false)$$,
-  'P0001','بدء الجلسة خارج الموعد المحدد يحتاج تأكيد رئيس المجلس. راجع الموعد ثم أكد بدء الجلسة الآن.','server refuses a late opening without confirmation');
+  'P0001','بدء الجلسة خارج الموعد المحدد يحتاج تأكيد رئيس المجلس أو مسؤول النظام. راجع الموعد ثم أكد بدء الجلسة الآن.','server refuses a late opening without confirmation');
 select is(api_v1.open_meeting_session('c8000000-0000-0000-0000-000000000083',pg_temp.s128_token('c8000000-0000-0000-0000-000000000083'),true)->'meeting'->>'status','in_progress','chair confirms late opening');
 select is(pg_temp.s128_opening_text('c8000000-0000-0000-0000-000000000083','timing_status'),'late','late classification is stored');
 
@@ -86,7 +89,15 @@ select is(pg_temp.s128_opening_text('c8000000-0000-0000-0000-000000000084','timi
 set local "request.jwt.claims"='{"sub":"c8000000-0000-0000-0000-000000000012","role":"authenticated"}';
 select throws_ok(
   $$select api_v1.open_meeting_session('c8000000-0000-0000-0000-000000000085',pg_temp.s128_token('c8000000-0000-0000-0000-000000000085'),true)$$,
-  '42501','تأكيد بدء الجلسة خارج الموعد متاح لرئيس المجلس فقط.','a permission holder cannot confirm off-schedule for the chair');
+  '42501','تأكيد بدء الجلسة خارج الموعد متاح لرئيس المجلس أو مسؤول النظام فقط.','a permission holder cannot confirm off-schedule for the chair or system admin');
+
+set local "request.jwt.claims"='{"sub":"c8000000-0000-0000-0000-000000000013","role":"authenticated"}';
+select is(api_v1.get_meeting_session_start_timing_v2('c8000000-0000-0000-0000-000000000086')->>'can_confirm_off_schedule','true','system admin is explicitly allowed to confirm an off-schedule opening');
+select is(api_v1.open_meeting_session('c8000000-0000-0000-0000-000000000086',pg_temp.s128_token('c8000000-0000-0000-0000-000000000086'),true)->'meeting'->>'status','in_progress','system admin confirms the off-schedule opening');
+select is(pg_temp.s128_audit_count('c8000000-0000-0000-0000-000000000086'),1,'system admin opening is audited once');
+select is((select metadata->>'confirmation_authority' from qarar_audit.audit_logs where entity_id='c8000000-0000-0000-0000-000000000086' and action='meetings.session.open'),'system_admin','audit records the system admin confirmation authority');
+select pg_temp.s128_move_to_minutes('c8000000-0000-0000-0000-000000000086');
+select matches(api_v1.generate_meeting_minutes_draft('c8000000-0000-0000-0000-000000000086')->>'content_draft','بدأت الجلسة مبكرًا بتأكيد مسؤول النظام','official minutes identify the system admin who confirmed the off-schedule opening');
 
 select * from finish();
 rollback;

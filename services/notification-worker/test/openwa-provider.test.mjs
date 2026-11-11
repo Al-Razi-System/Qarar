@@ -16,7 +16,10 @@ before(async () => {
       return;
     }
     if(mode==="slow") return;
-    const status=mode==="unauthorized"?401:mode==="rate"?429:mode==="server"?503:(mode==="media-rejected"&&request.url?.endsWith("/send-image"))?415:201;
+    const status=mode==="unauthorized"?401:mode==="rate"?429:mode==="server"?503:
+      mode==="media-and-text-error"?503:
+      ((mode==="media-rejected"||mode==="media-server-error")&&request.url?.endsWith("/send-image"))
+        ?(mode==="media-server-error"?500:415):201;
     response.writeHead(status,{"content-type":"application/json"});
     response.end(status===201?JSON.stringify({messageId:"wa-message-1",timestamp:1}):JSON.stringify({message:"failed"}));
   });
@@ -52,6 +55,31 @@ test("sends an invitation image as base64 and falls back to the full text when m
   const fallback=await provider.send(mediaRequest);
   assert.match(fallback.providerCode,/^openwa-text-fallback-/);
   assert.deepEqual(requests.map(item=>item.url),[
+    "/api/sessions/78086dde-0d9f-4feb-9296-7325c78cc2c0/messages/send-image",
+    "/api/sessions/78086dde-0d9f-4feb-9296-7325c78cc2c0/messages/send-text"
+  ]);
+});
+test("falls back to the full text when image delivery fails on the provider and counts the text receipt as success",async()=>{
+  requests=[]; mode="media-server-error";
+  const provider=new OpenWAProvider({baseUrl,sessionId:"qarar-test",apiKey:"secret"});
+  const result=await provider.send({...request,media:{base64:"iVBORw0KGgo=",mimetype:"image/png",filename:"meeting-invitation.png"}});
+  assert.equal(result.providerCode,"openwa-text-fallback-500");
+  assert.equal(result.providerMessageId,"wa-message-1");
+  assert.deepEqual(requests.map(item=>item.url),[
+    "/api/sessions",
+    "/api/sessions/78086dde-0d9f-4feb-9296-7325c78cc2c0/messages/send-image",
+    "/api/sessions/78086dde-0d9f-4feb-9296-7325c78cc2c0/messages/send-text"
+  ]);
+});
+test("reports failure only after both the invitation image and its textual fallback fail",async()=>{
+  requests=[]; mode="media-and-text-error";
+  const provider=new OpenWAProvider({baseUrl,sessionId:"qarar-test",apiKey:"secret"});
+  await assert.rejects(
+    provider.send({...request,media:{base64:"iVBORw0KGgo=",mimetype:"image/png",filename:"meeting-invitation.png"}}),
+    error=>error instanceof ProviderError&&error.code==="OPENWA_HTTP_503"&&error.retryable
+  );
+  assert.deepEqual(requests.map(item=>item.url),[
+    "/api/sessions",
     "/api/sessions/78086dde-0d9f-4feb-9296-7325c78cc2c0/messages/send-image",
     "/api/sessions/78086dde-0d9f-4feb-9296-7325c78cc2c0/messages/send-text"
   ]);

@@ -34,10 +34,10 @@ describe("MeetingStartConfirmationDialog", () => {
     expect(screen.getByText("MTG-2026-000001")).toBeInTheDocument();
   });
 
-  it("does not offer an enabled override to a non-chair", () => {
+  it("does not offer an enabled override to a member without chair or system authority", () => {
     render(<MeetingStartConfirmationDialog timing={timing({ can_confirm_off_schedule: false })} pending={false} error={null} onClose={vi.fn()} onConfirm={vi.fn()} />);
     expect(screen.getByRole("button", { name: "تأكيد وفتح الجلسة الآن" })).toBeDisabled();
-    expect(screen.getByText(/متاح لرئيس هذا المجلس فقط/)).toBeInTheDocument();
+    expect(screen.getByText(/متاح لرئيس هذا المجلس أو مسؤول النظام فقط/)).toBeInTheDocument();
   });
 
   it("keeps a server failure beside the confirmation action", () => {

@@ -1,9 +1,11 @@
 import type { MinutesDecision } from "./minutes-decisions";
+import type { MeetingTopicContext } from "./live-meeting";
 export type MeetingCapabilities = {
   can_manage?: boolean;
   can_manage_agenda?: boolean;
   can_schedule?: boolean;
   can_send_invitations?: boolean;
+  can_view_invitation_delivery?: boolean;
   can_prepare_session?: boolean;
   can_start_session?: boolean;
   can_cancel?: boolean;
@@ -76,6 +78,8 @@ export type AgendaItem = {
     category_name_ar?: string;
     submitted_by_name_ar?: string;
     is_direct?: boolean;
+    /** Context already authorized through this meeting: description, route and closed prior decisions. */
+    context?: MeetingTopicContext;
   };
 };
 

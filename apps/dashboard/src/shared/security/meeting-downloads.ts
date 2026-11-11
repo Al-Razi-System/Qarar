@@ -1,2 +1,2 @@
-/** Shown when the chair withheld downloads for an agenda item and a file is requested as a download through the meeting. */
-export const MEETING_DOWNLOAD_WITHHELD = "منع رئيس المجلس تنزيل مرفقات هذا البند، ويمكن عرضها داخل غرفة الاجتماع.";
+/** Safe copy for a file that the current meeting viewer may preview but may not download. */
+export const MEETING_DOWNLOAD_WITHHELD = "هذا المرفق متاح للعرض داخل النظام فقط، ولا تملك صلاحية تنزيله.";

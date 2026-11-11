@@ -33,7 +33,20 @@ it("refuses the download when the chair withheld it, and still shows the file in
   vi.stubGlobal("fetch", fetchMock);
   const download = await GET(request("attachment"));
   expect(download.status).toBe(403);
-  expect((await download.json()).error.message).toContain("منع رئيس المجلس");
+  expect((await download.json()).error.message).toContain("للعرض داخل النظام فقط");
+  expect(fetchMock).not.toHaveBeenCalled();
+  const shown = await GET(request("inline"));
+  expect(shown.status).toBe(200);
+  expect(shown.headers.get("Content-Disposition")).toBe("inline");
+});
+
+it("keeps an ordinary meeting viewer inline-only even when the item policy permits downloads", async () => {
+  rpc.mockResolvedValue([{ topic_id: topicId, file_url: fileUrl, download_allowed: true, viewer_download_allowed: false }]);
+  const fetchMock = vi.fn().mockResolvedValue(new Response("pdf"));
+  vi.stubGlobal("fetch", fetchMock);
+  const download = await GET(request("attachment"));
+  expect(download.status).toBe(403);
+  expect((await download.json()).error.message).toContain("للعرض داخل النظام فقط");
   expect(fetchMock).not.toHaveBeenCalled();
   const shown = await GET(request("inline"));
   expect(shown.status).toBe(200);

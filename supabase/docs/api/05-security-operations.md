@@ -20,11 +20,21 @@ Do not use hardware serial numbers as `device_id`; generate an app installation 
 
 ## List and Revoke Sessions
 
-`list_my_sessions()` returns the caller's devices ordered by last activity.
-The dashboard deliberately uses this versioned self-service contract rather
-than a table query. There is not yet an `admin_list_user_sessions` API contract;
-do not present an administrator with a fabricated cross-user device list until
-that separately reviewed contract exists.
+`list_my_sessions()` returns the caller's devices ordered by last activity, each with
+`status` (`active` while its Auth sign-in exists and has not expired, `ended` after logout
+or expiry, `revoked` after revocation), `is_current` (the session behind the caller's
+token) and `last_activity_at`.
+
+`admin_list_sessions(p_status, p_query, p_limit, p_offset)` returns
+`{items, total, limit, offset}` for every session in the caller's organisation, with the
+user's name and email. It requires `iam.sessions.manage` or `iam.users.manage`, the same
+authority `request_session_revocation` applies. `p_status` is `active` (default), `ended`,
+`revoked` or `all`; `p_query` matches name, email, device name or IP address.
+
+The dashboard registers its browser session with `register_user_session` after a password
+or MFA login: `device_id` is a random UUID kept in the `qarar_device_id` cookie and
+`p_auth_session_id` is the JWT `session_id` claim. A registration failure is logged and never
+blocks the login.
 
 `POST /functions/v1/iam-admin`
 

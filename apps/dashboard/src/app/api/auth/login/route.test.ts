@@ -202,4 +202,48 @@ describe("POST /api/auth/login", () => {
       }),
     );
   });
+  it("يسجّل جلسة المتصفح المرتبطة بجلسة Auth بعد الدخول الناجح", async () => {
+    vi.stubEnv("QARAR_SUPABASE_URL", "http://kong:8000");
+    vi.stubEnv("QARAR_SUPABASE_ANON_KEY", "runtime-anon-key");
+    cookies.mockResolvedValue({ set: cookieSet, delete: cookieDelete, get: vi.fn(() => undefined) });
+    const token = `x.${Buffer.from(JSON.stringify({ aal: "aal1", session_id: "5a1e0000-0000-4000-8000-000000000001" })).toString("base64url")}.x`;
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve(new Response(JSON.stringify(
+      String(input).includes("get_current_user_access_context") ? { is_system_admin: false, permissions: [], roles: [] }
+        : String(input).includes("register_user_session") ? "6b2f0000-0000-4000-8000-000000000002"
+          : { access_token: token, refresh_token: "refresh-token", expires_in: 3600, user: { id: "user-id" } }), { status: 200 })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(new Request("http://localhost/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0) Chrome/130.0", "X-Qarar-Client-IP": "203.0.113.20" },
+      body: JSON.stringify({ email: "admin@example.com", password: "password" }),
+    }));
+
+    expect(response.status).toBe(200);
+    const call = fetchMock.mock.calls.find(([input]) => String(input).includes("register_user_session"));
+    expect(call?.[1]?.headers).toMatchObject({ Authorization: `Bearer ${token}`, "Content-Profile": "api_v1" });
+    const body = JSON.parse(String(call?.[1]?.body));
+    expect(body).toMatchObject({
+      p_auth_session_id: "5a1e0000-0000-4000-8000-000000000001", p_platform: "web",
+      p_device_name: "Chrome على Windows", p_ip_address: "203.0.113.20",
+    });
+    expect(cookieSet).toHaveBeenCalledWith("qarar_device_id", body.p_device_id, expect.objectContaining({ httpOnly: true }));
+  });
+  it("لا يمنع الدخول إذا تعذر تسجيل جلسة المتصفح", async () => {
+    vi.stubEnv("QARAR_SUPABASE_URL", "http://kong:8000");
+    vi.stubEnv("QARAR_SUPABASE_ANON_KEY", "runtime-anon-key");
+    cookies.mockResolvedValue({ set: cookieSet, delete: cookieDelete, get: vi.fn(() => ({ value: "7c3a0000-0000-4000-8000-000000000003" })) });
+    const fetchMock = vi.fn().mockImplementation((input: string | URL | Request) => Promise.resolve(
+      String(input).includes("register_user_session") ? new Response(JSON.stringify({ code: "XX000" }), { status: 500 })
+        : new Response(JSON.stringify(String(input).includes("get_current_user_access_context") ? { is_system_admin: false, permissions: [], roles: [] }
+          : { access_token: "access-token", refresh_token: "refresh-token", expires_in: 3600, user: { id: "user-id" } }), { status: 200 })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(loginRequest());
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ authenticated: true });
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("register_user_session"))).toBe(true);
+    expect(cookieSet).not.toHaveBeenCalledWith("qarar_device_id", expect.anything(), expect.anything());
+  });
 });

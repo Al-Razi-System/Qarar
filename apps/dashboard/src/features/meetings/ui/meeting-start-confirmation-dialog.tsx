@@ -93,7 +93,7 @@ export function MeetingStartConfirmationDialog({ timing, pending, error, onClose
 
       {!canConfirm && (
         <InlineMessage tone="warning">
-          تأكيد البدء خارج الموعد متاح لرئيس هذا المجلس فقط. اطلب من الرئيس فتح الجلسة أو عد إلى الموعد المحدد.
+          تأكيد البدء خارج الموعد متاح لرئيس هذا المجلس أو مسؤول النظام فقط. اطلب من أحدهما فتح الجلسة أو عد إلى الموعد المحدد.
         </InlineMessage>
       )}
     </Dialog>

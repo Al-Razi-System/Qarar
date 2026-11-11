@@ -244,8 +244,11 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
     }
   }
 
-  async function openDetail(meetingId: string) {
-    setDetailLoading(true); setDetailError(null); setNotice(null);
+  async function openDetail(meetingId: string, options: { background?: boolean } = {}) {
+    const background = options.background === true && selected?.id === meetingId;
+    if (!background) setDetailLoading(true);
+    setDetailError(null);
+    if (!background) setNotice(null);
     try {
       const detail = await rpc<MeetingDetail>("get_meeting_detail", { p_meeting_id: meetingId }, { timeoutMs: 12_000 });
       if (!detail?.id) throw new Error("لم يُرجع الخادم بيانات الاجتماع المطلوبة.");
@@ -281,7 +284,7 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
       setDetailError(message);
       setNotice({ kind: "error", text: message });
     } finally {
-      setDetailLoading(false);
+      if (!background) setDetailLoading(false);
     }
   }
 
@@ -635,12 +638,12 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
 
   const refreshWorkspaceOnReturn = useEffectEvent(() => {
     if (focused) {
-      if (selected?.id) void openDetail(selected.id);
+      if (selected?.id) void openDetail(selected.id, { background: true });
       return;
     }
     if (listRequestRef.current || Date.now() - lastListSuccessAtRef.current < 30_000) return;
     void loadMeetings({ background: true });
-    if (selected?.id) void openDetail(selected.id);
+    if (selected?.id) void openDetail(selected.id, { background: true });
   });
   useEffect(() => {
     const refresh = () => refreshWorkspaceOnReturn();

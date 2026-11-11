@@ -56,7 +56,7 @@ export function TopicAttachmentsPanel({ meetingId, attachments, compact = false,
               <div className="min-w-0 flex-1">
                 <strong className="block truncate text-q-ui" title={attachment.file_name}>{attachment.file_name}</strong>
                 <span className="block text-q-caption text-q-text-2">{[fileKind(attachment.mime_type), formatSize(attachment.file_size_bytes), attachment.description].filter(Boolean).join(" · ")}</span>
-                {!downloadable && <span className="block text-q-caption text-q-text-2">التنزيل غير متاح لهذا البند؛ يُعرض داخل الغرفة.</span>}
+                {!downloadable && <span className="block text-q-caption text-q-text-2">هذا المرفق للعرض داخل النظام فقط.</span>}
               </div>
               <div className="flex shrink-0 gap-2">
                 {followsBroadcast ? null : onView
@@ -65,9 +65,10 @@ export function TopicAttachmentsPanel({ meetingId, attachments, compact = false,
                       {viewing ? "معروض" : "عرض"}
                     </button>
                   )
-                  : <a href={attachmentUrl(attachment.file_url, meetingId, "inline")} target="_blank" rel="noreferrer" aria-label={`عرض ${attachment.file_name}`} className={linkClass}>عرض</a>}
+                  : viewable && <a href={attachmentUrl(attachment.file_url, meetingId, "inline")} target="_blank" rel="noreferrer" aria-label={`عرض ${attachment.file_name}`} className={linkClass}>عرض</a>}
                 {downloadable && <a href={attachmentUrl(attachment.file_url, meetingId, "attachment")} download aria-label={`تنزيل ${attachment.file_name}`} className={linkClass}>تنزيل</a>}
               </div>
+              {!viewable && !downloadable && <p className="m-0 w-full text-q-caption text-q-text-2">لا تتوفر معاينة آمنة لهذا النوع من الملفات.</p>}
             </li>
           );
         })}

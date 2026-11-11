@@ -24,3 +24,15 @@ it("does not expose agenda actions when the meeting is not editable for the view
  expect(screen.queryByRole("button",{name:"عرض 4 موضوعات مقترحة"})).not.toBeInTheDocument();
  expect(screen.queryByRole("button",{name:"موضوع مباشر"})).not.toBeInTheDocument();
 });
+
+it("opens the topic context and previous decisions inside the agenda",()=>{
+ render(<MeetingAgendaPanel meetingId="meeting" items={[{
+  id:"item-1",agenda_order:1,topic:{id:"topic-1",title_ar:"الخطة",context:{
+   description:"تفاصيل الخطة.",route:[],previous_decisions:[{id:"decision-1",decision_no:"DEC-1",decision_text:"اعتماد مبدئي.",meeting_title_ar:"اجتماع سابق",meeting_no:"MTG-1",meeting_date:"2026-10-01",unit_name_ar:"مجلس الكلية"}],
+  }},
+ }]} attachments={[]} editable={false} busy={false} eligibleCount={null} onAddProposals={()=>{}} onMove={()=>{}} onRemove={()=>{}}/>);
+ fireEvent.click(screen.getByRole("button",{name:"عرض تفاصيل الموضوع وقراراته السابقة"}));
+ expect(screen.getByText("تفاصيل الخطة.")).toBeVisible();
+ expect(screen.getByText("اعتماد مبدئي.")).toBeVisible();
+ expect(screen.queryByRole("link",{name:"عرض تفاصيل الموضوع ومرفقاته"})).not.toBeInTheDocument();
+});
