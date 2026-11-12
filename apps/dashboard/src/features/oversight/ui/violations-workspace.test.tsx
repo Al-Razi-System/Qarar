@@ -35,11 +35,11 @@ describe("ViolationsWorkspace", () => {
     render(<ViolationsWorkspace />);
     const link = (await screen.findByText("محضر لم يُعتمد بعد", { selector: "span" })).closest("a");
     expect(link).toHaveAttribute("href", "/admin/meetings/m1");
-    expect(link).toHaveTextContent("متأخر منذ ١١ يومًا");
+    expect(link).toHaveTextContent("متأخر منذ 11 يومًا");
     expect(link).toHaveTextContent("صُعّد إلى أقرب متابع");
     expect(link).toHaveTextContent("مجلس تتابعه");
     expect(screen.getByText("متأخر منذ يومين")).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: "ملخص التجاوزات المفتوحة" })).toHaveTextContent("محضر لم يُعتمد بعد: ١");
+    expect(screen.getByRole("list", { name: "ملخص التجاوزات المفتوحة" })).toHaveTextContent("محضر لم يُعتمد بعد: 1");
     expect(document.body).not.toHaveTextContent("minutes_pending");
   });
 

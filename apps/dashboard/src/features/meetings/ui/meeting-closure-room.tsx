@@ -126,4 +126,4 @@ function ClosureProgress({ status }: { status: string }) {
 }
 
 function messageOf(error: unknown, fallback: string) { return error instanceof Error ? error.message : fallback; }
-function formatTime(value: Date) { return new Intl.DateTimeFormat("ar-SA", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(value); }
+function formatTime(value: Date) { return new Intl.DateTimeFormat("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(value); }

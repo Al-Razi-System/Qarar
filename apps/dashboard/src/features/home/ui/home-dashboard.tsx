@@ -25,7 +25,7 @@ export type HomeData = {
   } | null;
 };
 
-const n = (value: number) => value.toLocaleString("ar-SA");
+const n = (value: number) => value.toLocaleString("ar-SA-u-nu-latn");
 
 function dateLabel(value: string | null | undefined, time?: string | null) {
   if (!value) return "";
@@ -33,11 +33,11 @@ function dateLabel(value: string | null | undefined, time?: string | null) {
   if (Number.isNaN(date.getTime())) return "";
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const days = Math.round((date.getTime() - today.getTime()) / 86_400_000);
-  const day = days === 0 ? "اليوم" : days === 1 ? "غدًا" : days === -1 ? "أمس" : date.toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" });
+  const day = days === 0 ? "اليوم" : days === 1 ? "غدًا" : days === -1 ? "أمس" : date.toLocaleDateString("ar-SA-u-nu-latn", { weekday: "long", day: "numeric", month: "long" });
   const clock = time?.match(/^(\d{2}):(\d{2})/);
   if (!clock) return day;
   const hour = Number(clock[1]);
-  return `${day} ${(hour % 12 || 12).toLocaleString("ar-SA")}:${clock[2]} ${hour < 12 ? "ص" : "م"}`;
+  return `${day} ${(hour % 12 || 12).toLocaleString("ar-SA-u-nu-latn")}:${clock[2]} ${hour < 12 ? "ص" : "م"}`;
 }
 
 function ActionCard({ icon, title, count, href, tone = "info", badge, children, empty }: {

@@ -203,6 +203,6 @@ function parseMinuteItems(content: string, items: NonNullable<MeetingDetail["age
   return result;
 }
 function normalizeArabic(value: string) { return value.replace(/[\s\d٠-٩۰-۹.,،:：؛;()\-_/]/g, "").replace(/[أإآ]/g, "ا").replace(/ى/g, "ي"); }
-function formatDate(value?: string | null) { if (!value) return "غير محدد"; const date = new Date(`${value}T00:00:00`); return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { dateStyle: "long" }).format(date); }
-function formatDateTime(value?: string | null) { if (!value) return "غير محدد"; const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : `${new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { dateStyle: "long", timeZone: "Asia/Aden" }).format(date)} · ${new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Aden" }).format(date)}`; }
+function formatDate(value?: string | null) { if (!value) return "غير محدد"; const date = new Date(`${value}T00:00:00`); return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { dateStyle: "long" }).format(date); }
+function formatDateTime(value?: string | null) { if (!value) return "غير محدد"; const date = new Date(value); return Number.isNaN(date.valueOf()) ? value : `${new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { dateStyle: "long", timeZone: "Asia/Aden" }).format(date)} · ${new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Aden" }).format(date)}`; }
 function locationLabel(value?: string) { return value === "virtual" ? "اجتماع افتراضي" : value === "hybrid" ? "اجتماع هجين" : "مقر المجلس"; }

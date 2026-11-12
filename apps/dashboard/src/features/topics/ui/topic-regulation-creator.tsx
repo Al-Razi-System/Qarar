@@ -1598,7 +1598,7 @@ export function TopicRegulationCreator({ onFollowTopic }: TopicRegulationCreator
 
                 {summary?.exception && (
                   <div className="mt-3 grid gap-3 rounded-xl border border-amber-100 bg-white p-3 text-[11px] lg:grid-cols-3">
-                    <SummaryTile title="حالة الاستثناء" value={exceptionStatusLabels[summary.exception.status ?? ""] ?? summary.exception.status ?? "—"} hint={summary.exception.valid_until ? `ينتهي: ${new Date(summary.exception.valid_until).toLocaleString("ar-SA")}` : undefined} />
+                    <SummaryTile title="حالة الاستثناء" value={exceptionStatusLabels[summary.exception.status ?? ""] ?? summary.exception.status ?? "—"} hint={summary.exception.valid_until ? `ينتهي: ${new Date(summary.exception.valid_until).toLocaleString("ar-SA-u-nu-latn")}` : undefined} />
                     <SummaryTile title="المسار المطلوب" value={summary.exception.workflow_name_ar || "—"} hint={summary.exception.requested_source === "custom" ? "مسار مخصص" : "استثناء"} />
                     <SummaryTile title="سبب الطلب" value={summary.exception.reason || "—"} />
                   </div>

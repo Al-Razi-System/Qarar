@@ -8,7 +8,6 @@ export default function ViolationsPage() {
   return (
     <div className="mx-auto max-w-[1480px]">
       <PageHeader
-        eyebrow="الحوكمة والمتابعة"
         title="التجاوزات"
         description="ما تأخر في المجالس التي تقودها أو تتابعها: اجتماعات لم تنعقد، وتكليفات متأخرة، ومحاضر لم تُعتمد، وموضوعات متوقفة، واجتماعات بنصاب غير مكتمل. يُغلق التجاوز تلقائيًا عند معالجته."
       />

@@ -52,7 +52,7 @@ describe("OversightWorkspace", () => {
     render(<OversightWorkspace />);
     const card = await screen.findByRole("article", { name: /رئيس المجلس في كل «مجلس كلية»/ });
     expect(card).toHaveTextContent("يتابع المجالس من نوع «مجلس قسم» التابعة لوحدة مجلسه");
-    expect(card).toHaveTextContent("٢٤ مجلسًا");
+    expect(card).toHaveTextContent("24 مجلسًا");
     expect(card).toHaveTextContent("عميد الحاسوب");
     expect(screen.getByText(/مجلس قسم الحاسب/)).toBeInTheDocument();
     expect(document.body).not.toHaveTextContent("position_rule");
@@ -71,7 +71,7 @@ describe("OversightWorkspace", () => {
     fireEvent.click(within(dialog).getByRole("checkbox", { name: "مجلس كلية" }));
     fireEvent.click(within(dialog).getByRole("checkbox", { name: "مجلس قسم" }));
 
-    expect(await within(dialog).findByText("سيتابع ٣٠ مجلسًا")).toBeInTheDocument();
+    expect(await within(dialog).findByText("سيتابع 30 مجلسًا")).toBeInTheDocument();
     expect(calls.filter((call) => call.contract === "admin_preview_oversight_v2").at(-1)?.params.p_definition).toMatchObject({
       holder_kind: "user", holder_user_id: "40000000-0000-4000-8000-000000000001", target_mode: "subtree", root_unit_id: uni,
       target_class_ids: [collegeClass, deptClass],

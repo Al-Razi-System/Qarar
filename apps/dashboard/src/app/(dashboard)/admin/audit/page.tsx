@@ -9,7 +9,6 @@ export default function AuditPage() {
   return (
     <div className="mx-auto max-w-[1480px]">
       <PageHeader
-        eyebrow="التدقيق والامتثال"
         title="سجل التدقيق الحكومي"
         description="من فعل ماذا، بأي سجل، ومتى ومن أين، بما فيها المحاولات المرفوضة والفاشلة. السجل للإضافة فقط ولا يقبل التعديل أو الحذف."
         meta={<Badge tone="info">للإضافة فقط · بحث · تصدير</Badge>}

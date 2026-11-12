@@ -78,7 +78,7 @@ const outcomeLabels: Record<string, string> = { approved: "موافقة", reject
 function dateLabel(value?: string | null) {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeZone: "Asia/Riyadh" }).format(date);
+  return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("ar-SA-u-nu-latn", { dateStyle: "medium", timeZone: "Asia/Riyadh" }).format(date);
 }
 
 function fileSizeLabel(value?: number) {

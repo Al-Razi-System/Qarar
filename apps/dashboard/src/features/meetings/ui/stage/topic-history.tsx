@@ -3,7 +3,7 @@ import { voteResultLabel } from "../../model/agenda-flow";
 import type { TopicGovernanceHistory } from "../../model/live-meeting";
 
 function dateLabel(value?: string) {
-  return value ? new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`)) : "دون تاريخ";
+  return value ? new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`)) : "دون تاريخ";
 }
 
 function decisionTypeLabel(value: string) {

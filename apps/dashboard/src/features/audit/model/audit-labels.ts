@@ -139,14 +139,14 @@ export type DisplayValue = { text: string; technical?: boolean };
 export function displayValue(value: unknown): DisplayValue {
   if (value === null || value === undefined || value === "") return { text: "—" };
   if (typeof value === "boolean") return { text: value ? "نعم" : "لا" };
-  if (typeof value === "number") return { text: value.toLocaleString("ar-SA") };
+  if (typeof value === "number") return { text: value.toLocaleString("ar-SA-u-nu-latn") };
   if (typeof value === "string") {
     if (values[value]) return { text: values[value] };
     if (UUID.test(value)) return { text: `معرّف ${value.slice(0, 8)}`, technical: true };
     if (ISO_DATE.test(value)) {
       const date = new Date(value);
       if (!Number.isNaN(date.getTime())) {
-        return { text: value.length <= 10 ? date.toLocaleDateString("ar-SA", { dateStyle: "medium" }) : date.toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short" }) };
+        return { text: value.length <= 10 ? date.toLocaleDateString("ar-SA-u-nu-latn", { dateStyle: "medium" }) : date.toLocaleString("ar-SA-u-nu-latn", { dateStyle: "medium", timeStyle: "short" }) };
       }
     }
     return { text: value.length > 240 ? `${value.slice(0, 240)}…` : value, technical: /^[a-z0-9_.-]+$/.test(value) };
@@ -157,7 +157,7 @@ export function displayValue(value: unknown): DisplayValue {
 export function formatTime(value: string, withSeconds = false) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("ar-SA", withSeconds ? { dateStyle: "long", timeStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" });
+  return date.toLocaleString("ar-SA-u-nu-latn", withSeconds ? { dateStyle: "long", timeStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" });
 }
 
 export function deviceLabel(userAgent?: string | null) {

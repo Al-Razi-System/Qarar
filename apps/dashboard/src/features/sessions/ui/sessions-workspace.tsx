@@ -52,7 +52,7 @@ function activityLabel(value?: string | null) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? "وقت النشاط غير متاح"
-    : `آخر نشاط ${date.toLocaleString("ar-SA", { dateStyle: "medium", timeStyle: "short" })}`;
+    : `آخر نشاط ${date.toLocaleString("ar-SA-u-nu-latn", { dateStyle: "medium", timeStyle: "short" })}`;
 }
 
 function platformLabel(session: SessionSummary) {

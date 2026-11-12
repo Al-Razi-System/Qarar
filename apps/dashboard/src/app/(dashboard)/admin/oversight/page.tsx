@@ -8,7 +8,6 @@ export default function OversightPage() {
   return (
     <div className="mx-auto max-w-[1480px]">
       <PageHeader
-        eyebrow="الحوكمة والمتابعة"
         title="صلاحيات متابعة المجالس"
         description="حدّد من يتابع أداء أي مجالس عبر الشجرة: بالمنصب فتنتقل مع من يشغله، أو بقاعدة لكل مجالس نوع، أو لشخص بعينه. المتابعة اطلاع فقط."
       />

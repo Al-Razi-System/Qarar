@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "متابعة القرارات" };
 export default function DecisionFollowUpPage() {
   return (
     <div className="mx-auto max-w-[1480px]">
-      <PageHeader eyebrow="التنفيذ والمتابعة" title="متابعة القرارات" description="قرارات المجالس ومهامها، والمتأخر منها، وإغلاق القرار بعد إنجاز تكاليفه." />
+      <PageHeader title="متابعة القرارات" description="قرارات المجالس ومهامها، والمتأخر منها، وإغلاق القرار بعد إنجاز تكاليفه." />
       <DecisionFollowUpWorkspace />
     </div>
   );

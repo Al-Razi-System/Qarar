@@ -19,7 +19,7 @@ const ratio = (a: string, b: string) => { const [hi, lo] = [luminance(a), lumina
 
 const pairs: Array<[string, string]> = [
   ["--q-text", "--q-bg"], ["--q-text", "--q-surface"], ["--q-text-2", "--q-bg"], ["--q-text-2", "--q-surface"],
-  ["--q-text-3", "--q-surface-2"], ["--q-link", "--q-bg"], ["--q-on-primary", "--q-primary"], ["--q-on-stage", "--q-stage-from"],
+  ["--q-text-3", "--q-surface-2"], ["--q-link", "--q-surface-2"], ["--q-text", "--q-rail"], ["--q-text-2", "--q-rail"], ["--q-text-3", "--q-rail"], ["--q-link", "--q-surface"], ["--q-on-accent", "--q-accent"], ["--q-accent-text", "--q-surface"], ["--q-text-3", "--q-surface"], ["--q-link", "--q-bg"], ["--q-on-primary", "--q-primary"], ["--q-on-stage", "--q-stage-from"],
   ["--q-on-header", "--q-header"], ["--q-success", "--q-success-soft"], ["--q-danger", "--q-danger-soft"], ["--q-warning", "--q-warning-soft"],
 ];
 

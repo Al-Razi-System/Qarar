@@ -124,7 +124,7 @@ describe("AuditWorkspace", () => {
     const calls = mockAudit();
     render(<AuditWorkspace />);
     await screen.findByRole("button", { name: /مدير النظام/ });
-    expect(screen.getByText("يعرض ٣ من ١٢٠")).toBeInTheDocument();
+    expect(screen.getByText("يعرض 3 من 120")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "عرض المزيد" }));
 

@@ -31,7 +31,7 @@ describe("NotificationBell", () => {
   it("shows the real unread count instead of a permanent dot", async () => {
     mockApi(1);
     render(<Harness />);
-    expect(await screen.findByRole("button", { name: "الإشعارات، ١ غير مقروءة" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "الإشعارات، 1 غير مقروءة" })).toBeInTheDocument();
   });
 
   it("opens the latest notifications and marks one read when followed", async () => {

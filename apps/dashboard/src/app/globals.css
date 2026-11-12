@@ -71,6 +71,14 @@
   --q-on-danger: #ffffff;
   --q-neutral-soft: #e9edf2;
 
+  /* The navigation rail wears the logo's sky blue. */
+  --q-rail: #dff0f7;
+  --q-rail-border: #c3dfeb;
+  /* The logo's orange: lateness and whatever asks for attention. Text on it is dark, never white. */
+  --q-accent: #f78a2c;
+  --q-on-accent: #3a1d00;
+  --q-accent-text: #a34f00;
+
   --q-header: #0a2338;
   --q-on-header: #ffffff;
   --q-stage-from: #0080c6;
@@ -124,6 +132,12 @@
   --q-on-danger: #2a0705;
   --q-neutral-soft: #1c274a;
 
+  --q-rail: #0c1530;
+  --q-rail-border: #25315a;
+  --q-accent: #f78a2c;
+  --q-on-accent: #3a1d00;
+  --q-accent-text: #f9a55a;
+
   --q-header: #060b1f;
   --q-on-header: #f3f6fb;
   --q-stage-from: #0a5f94;
@@ -167,6 +181,11 @@
   --color-q-danger-soft: var(--q-danger-soft);
   --color-q-on-danger: var(--q-on-danger);
   --color-q-neutral-soft: var(--q-neutral-soft);
+  --color-q-rail: var(--q-rail);
+  --color-q-rail-border: var(--q-rail-border);
+  --color-q-accent: var(--q-accent);
+  --color-q-on-accent: var(--q-on-accent);
+  --color-q-accent-text: var(--q-accent-text);
   --color-q-header: var(--q-header);
   --color-q-on-header: var(--q-on-header);
   --color-q-on-stage: var(--q-on-stage);
@@ -217,6 +236,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-qarar), "IBM Plex Sans Arabic", Tahoma, Arial, sans-serif;
+  /* Figures line up in tables and counters. */
+  font-variant-numeric: tabular-nums;
 }
 
 button,
@@ -236,7 +257,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(0, 102, 204, 0.32);
+  outline: 3px solid var(--q-focus);
   outline-offset: 2px;
 }
 
@@ -245,8 +266,8 @@ button:disabled {
 }
 
 ::selection {
-  color: var(--qarar-white);
-  background: var(--qarar-primary);
+  color: var(--q-on-primary);
+  background: var(--q-primary);
 }
 
 .soft-grid {
@@ -258,7 +279,7 @@ button:disabled {
 
 .thin-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #c9d8e8 transparent;
+  scrollbar-color: var(--q-border-strong) transparent;
 }
 
 /* The council table surface in the live meeting room. */

@@ -11,7 +11,7 @@ export default async function MyTasksPage({ searchParams }: { searchParams: Prom
   const taskId = typeof requested === "string" && UUID.test(requested) ? requested : null;
   return (
     <div className="mx-auto max-w-[1480px]">
-      <PageHeader eyebrow="التنفيذ والمتابعة" title="مهامي" description="التكليفات التي تنفذها، وما ينتظر تحققك من إنجازه، وما تتابعه." />
+      <PageHeader title="مهامي" description="التكليفات التي تنفذها، وما ينتظر تحققك من إنجازه، وما تتابعه." />
       <MyTasksWorkspace initialTaskId={taskId} />
     </div>
   );

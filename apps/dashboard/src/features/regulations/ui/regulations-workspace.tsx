@@ -1990,7 +1990,7 @@ export function RegulationsWorkspace({
                             <td className="px-4 py-3.5 text-[9px] text-[var(--q-text-3)]">
                               {p.updated_at
                                 ? new Date(p.updated_at).toLocaleDateString(
-                                    "ar-SA",
+                                    "ar-SA-u-nu-latn",
                                   )
                                 : "—"}
                             </td>
@@ -3365,7 +3365,7 @@ export function RegulationsWorkspace({
                             <p className="mt-1 text-[9px] text-[var(--q-text-3)]">
                               قدمه: {request.requester_name_ar}
                               {request.submitted_at
-                                ? ` · ${new Date(request.submitted_at).toLocaleDateString("ar-SA")}`
+                                ? ` · ${new Date(request.submitted_at).toLocaleDateString("ar-SA-u-nu-latn")}`
                                 : ""}
                             </p>
                           </div>
@@ -3396,7 +3396,7 @@ export function RegulationsWorkspace({
                                       ·{" "}
                                       {new Date(
                                         step.meeting_date,
-                                      ).toLocaleDateString("ar-SA")}
+                                      ).toLocaleDateString("ar-SA-u-nu-latn")}
                                       {step.meeting_reference
                                         ? ` · ${step.meeting_reference}`
                                         : ""}
@@ -3636,7 +3636,7 @@ export function RegulationsWorkspace({
                           <td className="p-4">{e.workflow_name_ar || "—"}</td>
                           <td className="p-4">
                             {new Date(e.valid_until).toLocaleDateString(
-                              "ar-SA",
+                              "ar-SA-u-nu-latn",
                             )}
                           </td>
                           <td className="p-4">

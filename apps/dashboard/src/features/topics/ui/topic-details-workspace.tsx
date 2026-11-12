@@ -190,7 +190,7 @@ async function rpc<T>(contract: string, params: Record<string, unknown>) {
 function dateLabel(value?: string | null) {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("ar-YE", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("ar-YE-u-nu-latn", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 function groupPriorRouteCouncils(steps: PriorRouteStep[]): PriorRouteCouncil[] {

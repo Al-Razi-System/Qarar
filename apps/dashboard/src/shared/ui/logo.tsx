@@ -1,49 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export function Logo({
-  compact = false,
-  inverse = false,
-}: {
-  compact?: boolean;
-  inverse?: boolean;
-}) {
-  if (inverse) {
-    return (
-      <Link
-        href="/admin/users"
-        className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-white px-3 shadow-sm"
-        aria-label="قرار"
-      >
-        <Image
-          src="/brand/qarar-logo-sidebar.png"
-          alt="شعار قرار"
-          width={190}
-          height={78}
-          priority
-          className="h-9 w-auto object-contain"
-        />
-      </Link>
-    );
-  }
-
+/** The product mark in the navigation rail. */
+export function Logo() {
   return (
-    <Link href="/admin/users" className="inline-flex items-center gap-3">
-      <span
-        className={`grid h-11 w-11 place-items-center rounded-[14px] text-xl font-black shadow-sm ${
-          "bg-gradient-to-br from-[#0066cc] to-[#1e88e5] text-white"
-        }`}
-      >
+    <Link href="/admin" aria-label="قرار، الصفحة الرئيسية" className="inline-flex min-h-11 items-center gap-3">
+      <span aria-hidden="true" className="grid h-10 w-10 place-items-center rounded-q-control bg-q-primary text-q-h3 font-bold text-q-on-primary">
         ق
       </span>
-      {!compact && (
-        <span className="text-[#0a1330]">
-          <span className="block text-xl font-black tracking-tight">قــرار</span>
-          <span className="block text-[9px] font-bold tracking-[0.38em] opacity-65">
-            QARAR
-          </span>
-        </span>
-      )}
+      <span className="text-q-h3 font-bold text-q-text">قرار</span>
     </Link>
   );
 }

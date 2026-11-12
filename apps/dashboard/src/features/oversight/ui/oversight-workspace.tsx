@@ -45,7 +45,7 @@ function Field({ label, children, hint }: { label: string; children: (describedB
 function formatDate(value: string | null | undefined) {
   if (!value) return null;
   const date = new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString("ar-SA", { dateStyle: "medium" });
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString("ar-SA-u-nu-latn", { dateStyle: "medium" });
 }
 
 function AssignmentCard({ assignment, onEdit, onEnd }: { assignment: OversightAssignment; onEdit: () => void; onEnd: () => void }) {
@@ -65,7 +65,7 @@ function AssignmentCard({ assignment, onEdit, onEnd }: { assignment: OversightAs
           {!active && <Badge tone="neutral">منتهية</Badge>}
           {active && assignment.holder_kind !== "user" && (
             <span className="text-q-caption text-q-text-3">
-              {holders.length ? `يشغلها الآن: ${holders.slice(0, 4).join("، ")}${holders.length > 4 ? ` و${(holders.length - 4).toLocaleString("ar-SA")} آخرون` : ""}` : "لا أحد يشغل هذا المنصب الآن"}
+              {holders.length ? `يشغلها الآن: ${holders.slice(0, 4).join("، ")}${holders.length > 4 ? ` و${(holders.length - 4).toLocaleString("ar-SA-u-nu-latn")} آخرون` : ""}` : "لا أحد يشغل هذا المنصب الآن"}
             </span>
           )}
         </div>
@@ -95,7 +95,7 @@ function PreviewPanel({ preview, loading, error, ready }: { preview: OversightPr
       {preview.councils.length > 0 && (
         <p className="text-q-caption text-q-text-2">
           {preview.councils.slice(0, 8).map((council) => council.name_ar).join("، ")}
-          {preview.councils.length > 8 && ` و${(preview.councils.length - 8).toLocaleString("ar-SA")} أخرى`}
+          {preview.councils.length > 8 && ` و${(preview.councils.length - 8).toLocaleString("ar-SA-u-nu-latn")} أخرى`}
         </p>
       )}
       <p className="text-q-caption text-q-text-3">
@@ -395,7 +395,7 @@ export function OversightWorkspace() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-q-ui text-q-text-2">{active.length ? `${active.length.toLocaleString("ar-SA")} تعيين ساري` : "لا توجد تعيينات متابعة بعد."}</p>
+        <p className="text-q-ui text-q-text-2">{active.length ? `${active.length.toLocaleString("ar-SA-u-nu-latn")} تعيين ساري` : "لا توجد تعيينات متابعة بعد."}</p>
         <Button onClick={() => { setNotice(null); setEditing("new"); }}><Plus size={16} aria-hidden="true" /> تعيين متابعة</Button>
       </div>
       {notice && <InlineMessage tone="success">{notice}</InlineMessage>}

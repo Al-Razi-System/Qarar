@@ -25,7 +25,6 @@ export default async function AdminDashboardPage() {
   return (
     <div className="mx-auto max-w-[1480px]">
       <PageHeader
-        eyebrow="مركز القيادة"
         title={name ? `مرحبًا ${name}` : "لوحة التحكم"}
         description="ما ينتظر إجراءك، وحال المجالس التي تقودها أو تتابعها."
       />

@@ -9,6 +9,7 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".next-e2e/**",
     "out/**",
     "build/**",
     "storybook-static/**",
@@ -47,7 +48,7 @@ const eslintConfig = defineConfig([
       "src/features/oversight/ui/**/*.tsx",
       "src/app/(dashboard)/admin/oversight/**/*.tsx",
       "src/app/(dashboard)/admin/violations/**/*.tsx",
-      "src/widgets/app-shell/ui/notification-bell.tsx",
+      "src/widgets/app-shell/ui/**/*.tsx",
       "src/features/home/ui/**/*.tsx",
       "src/app/(dashboard)/admin/page.tsx",
     ],
@@ -55,8 +56,6 @@ const eslintConfig = defineConfig([
       "src/shared/ui/form-field.tsx",
       "src/shared/ui/governance-page-header.tsx",
       "src/shared/ui/instruction-editor.tsx",
-      "src/shared/ui/logo.tsx",
-      "src/shared/ui/page-header.tsx",
       "src/**/*.test.tsx",
     ],
     rules: {
@@ -75,10 +74,23 @@ const eslintConfig = defineConfig([
           message: "Use the type scale (text-q-caption … text-q-h1); 13px is the smallest allowed size.",
         },
         {
+          selector: "Literal[value=/^ar-[A-Z]{2}(-u-ca-[a-z]+)?$/]",
+          message: "Add -u-nu-latn to the locale so numbers print as 0123 like the rest of the product.",
+        },
+        {
           selector: "CallExpression[callee.object.name='window'][callee.property.name=/^(alert|confirm|prompt)$/]",
           message: "Use an in-page dialog or inline message instead of a native browser dialog.",
         },
       ],
+    },
+  },
+  {
+    // One numeral system on screen (0123): an Arabic formatting locale always
+    // carries nu-latn. A bare "ar-SA" prints ١٢٣ beside 2026 from the database.
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    ignores: ["src/shared/ui/**", "src/features/permissions/ui/permission-matrix.tsx", "src/app/(dashboard)/admin/permissions/**", "src/features/account/ui/**", "src/features/topics/ui/typed-topic-creator.tsx", "src/features/topics/ui/topic-submission-attachments.tsx", "src/app/(dashboard)/admin/topics/new/page.tsx", "src/features/meetings/ui/**", "src/features/audit/ui/**", "src/features/sessions/ui/**", "src/app/(dashboard)/admin/audit/**", "src/app/(dashboard)/admin/sessions/**", "src/features/oversight/ui/**", "src/app/(dashboard)/admin/oversight/**", "src/app/(dashboard)/admin/violations/**", "src/widgets/app-shell/ui/**", "src/features/home/ui/**", "src/app/(dashboard)/admin/page.tsx"],
+    rules: {
+      "no-restricted-syntax": ["error", { selector: "Literal[value=/^ar-[A-Z]{2}(-u-ca-[a-z]+)?$/]", message: "Add -u-nu-latn to the locale so numbers print as 0123 like the rest of the product." }],
     },
   },
 ]);

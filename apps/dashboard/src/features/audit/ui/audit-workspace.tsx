@@ -371,7 +371,7 @@ export function AuditWorkspace() {
       link.remove();
       URL.revokeObjectURL(url);
       setExportNotice({ tone: "success", text: count >= EXPORT_LIMIT
-        ? `صُدِّر أحدث ${EXPORT_LIMIT.toLocaleString("ar-SA")} حدث فقط؛ ضيّق الفترة لتصدير الباقي.`
+        ? `صُدِّر أحدث ${EXPORT_LIMIT.toLocaleString("ar-SA-u-nu-latn")} حدث فقط؛ ضيّق الفترة لتصدير الباقي.`
         : `تم تصدير ${count} حدث بالفلاتر الحالية.` });
     } catch (error) {
       setExportNotice({ tone: "error", text: error instanceof Error ? error.message : "تعذر التصدير." });
@@ -383,9 +383,9 @@ export function AuditWorkspace() {
   const resultCount = (key: AuditResult) => facets?.results?.[key];
   const resultOptions = [
     { value: "all", label: "الكل" },
-    { value: "success", label: `ناجحة${resultCount("success") !== undefined ? ` (${resultCount("success")!.toLocaleString("ar-SA")})` : ""}` },
-    { value: "denied", label: `مرفوضة${resultCount("denied") !== undefined ? ` (${resultCount("denied")!.toLocaleString("ar-SA")})` : ""}` },
-    { value: "failure", label: `فاشلة${resultCount("failure") !== undefined ? ` (${resultCount("failure")!.toLocaleString("ar-SA")})` : ""}` },
+    { value: "success", label: `ناجحة${resultCount("success") !== undefined ? ` (${resultCount("success")!.toLocaleString("ar-SA-u-nu-latn")})` : ""}` },
+    { value: "denied", label: `مرفوضة${resultCount("denied") !== undefined ? ` (${resultCount("denied")!.toLocaleString("ar-SA-u-nu-latn")})` : ""}` },
+    { value: "failure", label: `فاشلة${resultCount("failure") !== undefined ? ` (${resultCount("failure")!.toLocaleString("ar-SA-u-nu-latn")})` : ""}` },
   ] as const;
   const hasFilters = JSON.stringify(filters) !== JSON.stringify(emptyFilters);
   const selectClass = "min-h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui text-q-text outline-none focus:border-q-focus";
@@ -424,7 +424,7 @@ export function AuditWorkspace() {
             <select value={filters.entityType} onChange={(event) => applyFilters({ entityType: event.target.value })} className={`mt-1 ${selectClass}`}>
               <option value="">كل الأنواع</option>
               {(facets?.entity_types ?? []).map((type) => (
-                <option key={type.value} value={type.value}>{entityLabel(type.value)} ({type.count.toLocaleString("ar-SA")})</option>
+                <option key={type.value} value={type.value}>{entityLabel(type.value)} ({type.count.toLocaleString("ar-SA-u-nu-latn")})</option>
               ))}
             </select>
           </label>
@@ -433,7 +433,7 @@ export function AuditWorkspace() {
             <select value={filters.actorId} onChange={(event) => applyFilters({ actorId: event.target.value })} className={`mt-1 ${selectClass}`}>
               <option value="">كل المنفذين</option>
               {(facets?.actors ?? []).map((actor) => (
-                <option key={actor.id} value={actor.id}>{actor.name_ar ?? "مستخدم بلا اسم"} ({actor.count.toLocaleString("ar-SA")})</option>
+                <option key={actor.id} value={actor.id}>{actor.name_ar ?? "مستخدم بلا اسم"} ({actor.count.toLocaleString("ar-SA-u-nu-latn")})</option>
               ))}
             </select>
           </label>
@@ -458,7 +458,7 @@ export function AuditWorkspace() {
         <header className="flex flex-wrap items-center justify-between gap-2 border-b border-q-border px-4 py-3 sm:px-5">
           <h2 className="text-q-h3 font-black text-q-text">الأحداث</h2>
           {!loading && !loadError && (
-            <span className="text-q-caption text-q-text-3">يعرض {events.length.toLocaleString("ar-SA")} من {total.toLocaleString("ar-SA")}</span>
+            <span className="text-q-caption text-q-text-3">يعرض {events.length.toLocaleString("ar-SA-u-nu-latn")} من {total.toLocaleString("ar-SA-u-nu-latn")}</span>
           )}
         </header>
         {loading ? (

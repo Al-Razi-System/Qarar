@@ -62,9 +62,9 @@ export type OversightPreview = {
 const quote = (value?: string | null) => `«${value ?? "—"}»`;
 const list = (values: string[]) => values.map(quote).join(" و");
 
-/** Arabic counting: «مجلس واحد»، «مجلسان»، «٥ مجالس»، «٢٤ مجلسًا»، «١٠٠ مجلس». */
+/** Arabic counting: «مجلس واحد»، «مجلسان»، «5 مجالس»، «24 مجلسًا»، «100 مجلس». */
 export function councilCount(count: number) {
-  const n = count.toLocaleString("ar-SA");
+  const n = count.toLocaleString("ar-SA-u-nu-latn");
   if (count === 0) return "لا مجالس";
   if (count === 1) return "مجلس واحد";
   if (count === 2) return "مجلسان";

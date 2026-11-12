@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BookOpenCheck, Eye, TriangleAlert, Building2, Calendar, ChevronDown, CircleHelp, ClipboardList, FileText, GitBranch, KeyRound, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquareText, Search, Settings, ShieldCheck, Users, Workflow, X } from "lucide-react";
+import { BookOpenCheck, Eye, TriangleAlert, Building2, Calendar, ChevronDown, ClipboardList, FileText, GitBranch, KeyRound, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquareText, Search, ShieldCheck, Users, Workflow, X } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { SelfAvatar } from "@/shared/ui/self-avatar";
 
@@ -64,13 +64,12 @@ function canOpenItem(access: AppAccessContext, item: { href: string; requiredAny
 
 function Navigation({ pathname, access, onNavigate }: NavigationProps) {
   const active = (href: string) => href === "/admin" ? pathname === href : pathname.startsWith(href);
-  return <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-5">
-    {navGroups.map((group) => ({ ...group, items: group.items.filter((item) => canOpenItem(access, item)) })).filter((group) => group.items.length).map((group) => <div key={group.label} className="mb-6">
-      <p className="mb-2 px-3 text-[11px] font-bold tracking-wide text-[#91a0b2]">{group.label}</p>
-      <nav aria-label={group.label} className="space-y-1">
-        {group.items.map((item) => { const Icon = item.icon; return <Link key={item.href} href={item.href} onClick={onNavigate} aria-current={active(item.href) ? "page" : undefined} className={`group relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13px] transition ${active(item.href) ? "bg-[#0872df] font-bold text-white shadow-[0_8px_20px_rgba(0,102,204,.20)]" : "text-[#52647a] hover:bg-[#f1f6fb] hover:text-[#17283f]"}`}>
-          {active(item.href) && <span className="absolute right-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-l-full bg-[#ff8a1f]" />}
-          <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${active(item.href) ? "bg-white/15 text-white" : "bg-[#f2f6fa] text-[#718399] group-hover:bg-white group-hover:text-[#0066cc]"}`}><Icon size={16} /></span><span>{item.label}</span>
+  return <div className="thin-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-4">
+    {navGroups.map((group) => ({ ...group, items: group.items.filter((item) => canOpenItem(access, item)) })).filter((group) => group.items.length).map((group) => <div key={group.label} className="mb-5">
+      <p className="mb-1 px-3 text-q-caption font-semibold text-q-text-3">{group.label}</p>
+      <nav aria-label={group.label} className="space-y-0.5">
+        {group.items.map((item) => { const Icon = item.icon; const current = active(item.href); return <Link key={item.href} href={item.href} onClick={onNavigate} aria-current={current ? "page" : undefined} className={`flex min-h-11 items-center gap-3 rounded-q-control px-3 text-q-ui transition-colors ${current ? "bg-q-surface font-semibold text-q-link" : "text-q-text-2 hover:bg-q-surface/60 hover:text-q-text"}`}>
+          <Icon size={18} aria-hidden="true" className="shrink-0" /><span className="min-w-0 flex-1 truncate">{item.label}</span>{current && <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-q-accent" />}
         </Link>; })}
       </nav>
     </div>)}
@@ -118,28 +117,43 @@ export function AppShell({ children, access }: { children: ReactNode; access: Ap
   }
 
   if (!canAccessCurrentPath) {
-    return <div dir="rtl" className="grid min-h-screen place-items-center bg-[#f4f7fb] text-sm font-bold text-[#52647a]">جارٍ توجيهك إلى مساحة العمل المتاحة لحسابك…</div>;
+    return <div dir="rtl" className="grid min-h-screen place-items-center bg-q-bg text-q-ui font-bold text-q-text-2">جارٍ توجيهك إلى مساحة العمل المتاحة لحسابك…</div>;
   }
 
-  return <div dir="rtl" className="min-h-screen bg-[#f4f7fb] text-[#14233a]">
-    {mobileNavigationOpen && <button type="button" aria-label="إغلاق القائمة" onClick={() => setMobileNavigationOpen(false)} className="fixed inset-0 z-40 bg-[#071b39]/45 backdrop-blur-sm lg:hidden" />}
-    <aside className={`fixed inset-y-0 right-0 z-50 flex w-[min(86vw,320px)] flex-col border-l border-[#dbe5ef] bg-white text-[#17283f] shadow-[-8px_0_30px_rgba(15,42,72,.12)] transition-transform duration-200 lg:hidden ${mobileNavigationOpen ? "translate-x-0" : "translate-x-full"}`}>
-      <div className="flex h-[72px] items-center justify-between border-b border-[#e8eef4] px-5"><Logo /><button type="button" onClick={() => setMobileNavigationOpen(false)} aria-label="إغلاق القائمة" className="grid h-10 w-10 place-items-center rounded-xl text-[#52647a] hover:bg-[#f2f6fa]"><X size={20} /></button></div>
+  const iconButton = "grid h-11 w-11 place-items-center rounded-q-control";
+  const menuItem = "flex min-h-11 w-full items-center gap-2 rounded-q-control px-3 text-right text-q-ui text-q-text hover:bg-q-surface-2 disabled:opacity-60";
+  const organization = access.organization_name_ar?.trim();
+
+  return <div dir="rtl" className="min-h-screen bg-q-bg text-q-text">
+    {mobileNavigationOpen && <button type="button" aria-label="إغلاق القائمة" onClick={() => setMobileNavigationOpen(false)} className="fixed inset-0 z-40 bg-q-scrim lg:hidden" />}
+    <aside className={`fixed inset-y-0 right-0 z-50 flex w-[min(86vw,320px)] flex-col bg-q-rail text-q-text shadow-xl transition-transform duration-200 lg:hidden ${mobileNavigationOpen ? "translate-x-0" : "translate-x-full"}`}>
+      <div className="flex h-16 items-center justify-between px-4"><Logo /><button type="button" onClick={() => setMobileNavigationOpen(false)} aria-label="إغلاق القائمة" className={`${iconButton} text-q-text-2 hover:bg-q-surface`}><X size={20} aria-hidden="true" /></button></div>
       <Navigation pathname={pathname} access={access} onNavigate={() => setMobileNavigationOpen(false)} />
-      <div className="border-t border-[#e8eef4] bg-[#fbfcfe] p-4"><button type="button" onClick={() => void logout()} disabled={loggingOut} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#dce6ef] bg-white text-xs font-bold text-[#52647a] hover:text-[#0066cc] disabled:opacity-60"><LogOut size={15} />{loggingOut ? "جارٍ تسجيل الخروج…" : "تسجيل الخروج"}</button></div>
+      <div className="border-t border-q-rail-border p-3"><button type="button" onClick={() => void logout()} disabled={loggingOut} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-q-control border border-q-rail-border bg-q-surface text-q-ui font-semibold text-q-text-2 hover:text-q-text disabled:opacity-60"><LogOut size={18} aria-hidden="true" />{loggingOut ? "جارٍ تسجيل الخروج…" : "تسجيل الخروج"}</button></div>
     </aside>
 
-    <aside className="fixed inset-y-0 right-0 z-30 hidden w-[272px] flex-col border-l border-[#dbe5ef] bg-white text-[#17283f] shadow-[-8px_0_30px_rgba(15,42,72,.04)] lg:flex">
-      <div className="flex h-[82px] items-center border-b border-[#e8eef4] px-6"><Logo /></div>
+    <aside className="fixed inset-y-0 right-0 z-30 hidden w-64 flex-col border-l border-q-rail-border bg-q-rail text-q-text lg:flex">
+      <div className="flex h-16 items-center px-5"><Logo /></div>
       <Navigation pathname={pathname} access={access} />
-      <div className="mt-auto border-t border-[#e8eef4] bg-[#fbfcfe] p-4"><div className="mb-3 flex items-center gap-2 rounded-xl px-2 text-[11px] text-[#6f8095]"><Settings size={15} /> إعدادات النظام <CircleHelp className="mr-auto" size={15} /></div><div className="flex items-center gap-2.5 rounded-xl border border-[#dce6ef] bg-white p-2.5 shadow-sm"><SelfAvatar key={access.user_id} name={displayName} /><div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-[#22344c]">{displayName}</p><p className="mt-0.5 truncate text-[10px] text-[#8998aa]">{roleLabel}</p></div><button type="button" onClick={() => void logout()} disabled={loggingOut} aria-label="تسجيل الخروج" className="grid h-8 w-8 place-items-center rounded-lg text-[#8191a4] hover:bg-[#f1f6fb] hover:text-[#0066cc] disabled:opacity-60"><LogOut size={15} /></button></div></div>
+      {organization && <p className="truncate border-t border-q-rail-border px-5 py-3 text-q-caption text-q-text-2">{organization}</p>}
     </aside>
-    <div className="lg:mr-[272px]">
-      <header className="sticky top-0 z-20 flex h-[72px] items-center gap-3 border-b border-[#e1e9f2] bg-white/95 px-4 backdrop-blur-xl sm:px-5 lg:h-[82px] lg:px-8"><button type="button" onClick={() => setMobileNavigationOpen(true)} className="grid h-10 w-10 place-items-center rounded-xl text-[#52647a] hover:bg-[#f2f6fa] lg:hidden" aria-label="فتح القائمة"><Menu size={23} /></button><form onSubmit={submitSearch} className="relative hidden w-full max-w-[420px] sm:block"><Search size={17} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8b9aad]" /><input value={search} onChange={(event) => setSearch(event.target.value)} aria-label="بحث في الموضوعات" placeholder="ابحث في الموضوعات…" className="h-11 w-full rounded-xl border border-[#e3eaf2] bg-[#f8fafc] pr-10 pl-4 text-xs outline-none focus:border-[#9bc9f2] focus:bg-white focus:ring-4 focus:ring-[#0066cc]/5" /></form><div className="mr-auto flex items-center gap-2">
-        <NotificationBell open={notificationsOpen} onOpenChange={(open) => { setNotificationsOpen(open); if (open) setProfileOpen(false); }} />
-        <div className="relative"><button type="button" onClick={() => { setProfileOpen((open) => !open); setNotificationsOpen(false); }} aria-expanded={profileOpen} className="hidden items-center gap-2 rounded-xl border border-[#e5ebf2] px-3 py-2 sm:flex"><SelfAvatar key={access.user_id} name={displayName} /><span className="max-w-40 truncate text-xs font-bold text-[#23334b]">{displayName}</span><ChevronDown size={14} className="text-[#8b9aad]" /></button>{profileOpen && <div className="absolute left-0 top-12 z-30 w-60 rounded-2xl border border-[#dce7f1] bg-white p-2 shadow-xl"><div className="border-b border-[#edf2f6] px-3 py-2"><p className="truncate text-[11px] font-bold text-[#24364d]">{displayName}</p><p className="mt-1 truncate text-[10px] text-[#718196]">{access.email}</p><p className="mt-1 text-[10px] font-bold text-[#0872df]">{roleLabel}</p></div><Link href="/admin/account" onClick={() => setProfileOpen(false)} className="mt-1 flex min-h-10 items-center gap-2 rounded-xl px-3 text-[11px] font-bold text-[#0066cc] hover:bg-[#f2f6fa]"><Users size={15} />حسابي الشخصي</Link><button type="button" onClick={() => void logout()} disabled={loggingOut} className="mt-1 flex h-9 w-full items-center gap-2 rounded-xl px-3 text-right text-[11px] font-bold text-[#52647a] hover:bg-[#f2f6fa] hover:text-[#0066cc]"><LogOut size={15} />{loggingOut ? "جارٍ الخروج…" : "تسجيل الخروج"}</button></div>}</div>
-      </div></header>
-      <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+    <div className="lg:mr-64">
+      <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-q-border bg-q-surface px-4 sm:px-6 lg:px-8">
+        <button type="button" onClick={() => setMobileNavigationOpen(true)} className={`${iconButton} text-q-text-2 hover:bg-q-surface-2 lg:hidden`} aria-label="فتح القائمة"><Menu size={22} aria-hidden="true" /></button>
+        <form onSubmit={submitSearch} className="relative hidden w-full max-w-md sm:block"><Search size={18} aria-hidden="true" className="absolute right-3 top-1/2 -translate-y-1/2 text-q-text-3" /><input value={search} onChange={(event) => setSearch(event.target.value)} aria-label="بحث في الموضوعات" placeholder="ابحث في الموضوعات…" className="h-11 w-full rounded-q-control border border-q-border bg-q-bg pr-10 pl-4 text-q-ui text-q-text outline-none placeholder:text-q-text-3 focus:border-q-primary focus:bg-q-surface" /></form>
+        <div className="mr-auto flex items-center gap-2">
+          <NotificationBell open={notificationsOpen} onOpenChange={(open) => { setNotificationsOpen(open); if (open) setProfileOpen(false); }} />
+          <div className="relative">
+            <button type="button" onClick={() => { setProfileOpen((open) => !open); setNotificationsOpen(false); }} aria-expanded={profileOpen} aria-label={`قائمة الحساب: ${displayName}`} className="flex min-h-11 items-center gap-2 rounded-q-control px-1 hover:bg-q-surface-2 sm:px-2"><SelfAvatar key={access.user_id} name={displayName} /><span className="hidden min-w-0 text-right sm:block"><span className="block max-w-44 truncate text-q-ui font-bold text-q-text">{displayName}</span><span className="block max-w-44 truncate text-q-caption text-q-text-3">{roleLabel}</span></span><ChevronDown size={16} aria-hidden="true" className="hidden text-q-text-3 sm:block" /></button>
+            {profileOpen && <div className="absolute left-0 top-14 z-30 w-64 rounded-q-card border border-q-border bg-q-surface p-2 shadow-xl">
+              <div className="border-b border-q-border px-3 pb-2"><p className="truncate text-q-ui font-bold text-q-text">{displayName}</p><p className="truncate text-q-caption text-q-text-3">{access.email}</p><p className="text-q-caption font-bold text-q-link">{roleLabel}</p></div>
+              <Link href="/admin/account" onClick={() => setProfileOpen(false)} className={`${menuItem} mt-1`}><Users size={18} aria-hidden="true" />حسابي الشخصي</Link>
+              <button type="button" onClick={() => void logout()} disabled={loggingOut} className={menuItem}><LogOut size={18} aria-hidden="true" />{loggingOut ? "جارٍ الخروج…" : "تسجيل الخروج"}</button>
+            </div>}
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8">{children}</main>
     </div>
   </div>;
 }

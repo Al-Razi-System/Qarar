@@ -46,12 +46,12 @@ function days(count: number) {
   if (count <= 0) return "اليوم";
   if (count === 1) return "منذ يوم";
   if (count === 2) return "منذ يومين";
-  return `منذ ${count.toLocaleString("ar-SA")} ${count % 100 >= 3 && count % 100 <= 10 ? "أيام" : "يومًا"}`;
+  return `منذ ${count.toLocaleString("ar-SA-u-nu-latn")} ${count % 100 >= 3 && count % 100 <= 10 ? "أيام" : "يومًا"}`;
 }
 
 function escalationText(level: number) {
   if (level <= 0) return null;
-  return level === 1 ? "صُعّد إلى أقرب متابع" : `صُعّد ${level.toLocaleString("ar-SA")} مستويات`;
+  return level === 1 ? "صُعّد إلى أقرب متابع" : `صُعّد ${level.toLocaleString("ar-SA-u-nu-latn")} مستويات`;
 }
 
 const selectClass = "min-h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui text-q-text outline-none focus:border-q-focus";
@@ -107,7 +107,7 @@ export function ViolationsWorkspace() {
         </div>
         {status !== "resolved" && byRule.size > 0 && (
           <ul aria-label="ملخص التجاوزات المفتوحة" className="flex flex-wrap gap-2">
-            {[...byRule.entries()].map(([code, value]) => <li key={code}><Badge tone="warning">{value.name}: {value.count.toLocaleString("ar-SA")}</Badge></li>)}
+            {[...byRule.entries()].map(([code, value]) => <li key={code}><Badge tone="warning">{value.name}: {value.count.toLocaleString("ar-SA-u-nu-latn")}</Badge></li>)}
           </ul>
         )}
       </section>
@@ -142,7 +142,7 @@ export function ViolationsWorkspace() {
                     </span>
                     <span className="mt-0.5 block text-q-caption text-q-text-2"><span className="font-bold">{item.council_name_ar}</span> · {item.subject_label}</span>
                     <span className="mt-0.5 block text-q-caption text-q-text-3">
-                      {item.status === "open" ? `متأخر ${days(item.days_open)}` : `عولج ${item.resolved_at ? new Date(item.resolved_at).toLocaleDateString("ar-SA", { dateStyle: "medium" }) : ""}`}
+                      {item.status === "open" ? `متأخر ${days(item.days_open)}` : `عولج ${item.resolved_at ? new Date(item.resolved_at).toLocaleDateString("ar-SA-u-nu-latn", { dateStyle: "medium" }) : ""}`}
                     </span>
                   </span>
                   <ChevronLeft size={18} aria-hidden="true" className="mt-1 shrink-0 text-q-text-3" />

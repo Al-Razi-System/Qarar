@@ -28,10 +28,10 @@ function relativeTime(value: string) {
   const minutes = Math.round((Date.now() - date.getTime()) / 60_000);
   if (Number.isNaN(minutes)) return "";
   if (minutes < 1) return "الآن";
-  if (minutes < 60) return `قبل ${minutes.toLocaleString("ar-SA")} دقيقة`;
+  if (minutes < 60) return `قبل ${minutes.toLocaleString("ar-SA-u-nu-latn")} دقيقة`;
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `قبل ${hours.toLocaleString("ar-SA")} ساعة`;
-  return date.toLocaleDateString("ar-SA", { dateStyle: "medium" });
+  if (hours < 24) return `قبل ${hours.toLocaleString("ar-SA-u-nu-latn")} ساعة`;
+  return date.toLocaleDateString("ar-SA-u-nu-latn", { dateStyle: "medium" });
 }
 
 async function readInbox(): Promise<Inbox> {
@@ -94,7 +94,7 @@ export function NotificationBell({ open, onOpenChange }: { open: boolean; onOpen
   }
 
   const unread = inbox?.unread_count ?? 0;
-  const label = unread > 0 ? `الإشعارات، ${unread.toLocaleString("ar-SA")} غير مقروءة` : "الإشعارات";
+  const label = unread > 0 ? `الإشعارات، ${unread.toLocaleString("ar-SA-u-nu-latn")} غير مقروءة` : "الإشعارات";
 
   return (
     <div className="relative">
@@ -107,8 +107,8 @@ export function NotificationBell({ open, onOpenChange }: { open: boolean; onOpen
       >
         <Bell size={18} aria-hidden="true" />
         {unread > 0 && (
-          <span aria-hidden="true" className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-q-danger px-1 text-q-caption font-bold leading-none text-q-on-danger">
-            {unread > 99 ? "+٩٩" : unread.toLocaleString("ar-SA")}
+          <span aria-hidden="true" className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-q-accent px-1 text-q-caption font-bold leading-none text-q-on-accent">
+            {unread > 99 ? "+99" : String(unread)}
           </span>
         )}
       </button>

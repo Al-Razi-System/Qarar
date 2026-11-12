@@ -4,7 +4,9 @@ import { HomeDashboard, type HomeData } from "./home-dashboard";
 
 vi.mock("next/link", () => ({ default: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => <a href={href} className={className}>{children}</a> }));
 
-const today = new Date().toISOString().slice(0, 10);
+// The local calendar day: the UTC day differs from it around midnight and made this test fail then.
+const now = new Date();
+const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 const base: HomeData = {
   user: { name_ar: "أمل" },
   meetings: { count: 2, items: [
@@ -24,13 +26,13 @@ const base: HomeData = {
 describe("HomeDashboard", () => {
   it("leads with what is waiting for this person, each card linking to where to act", () => {
     render(<HomeDashboard data={base} />);
-    expect(screen.getByText("٢ منها يحتاج إجراءً عاجلًا")).toBeInTheDocument();
+    expect(screen.getByText("2 منها يحتاج إجراءً عاجلًا")).toBeInTheDocument();
     const meetings = screen.getByRole("article", { name: "اجتماعاتي القادمة" });
     expect(within(meetings).getByText("منعقد الآن")).toBeInTheDocument();
-    expect(within(meetings).getByText(/اليوم ١:30 م/)).toBeInTheDocument();
+    expect(within(meetings).getByText(/اليوم 1:30 م/)).toBeInTheDocument();
     const votes = screen.getByRole("article", { name: "تصويت ينتظر صوتك" });
     expect(within(votes).getByText("خطة الكلية").closest("a")).toHaveAttribute("href", "/admin/meetings/m2");
-    expect(within(screen.getByRole("article", { name: "تكليفاتي" })).getByText("١ متأخر")).toBeInTheDocument();
+    expect(within(screen.getByRole("article", { name: "تكليفاتي" })).getByText("1 متأخر")).toBeInTheDocument();
     expect(within(screen.getByRole("article", { name: "محاضر بانتظار توقيعك" })).getByText("لا محاضر تنتظر توقيعك.")).toBeInTheDocument();
     expect(within(screen.getByRole("article", { name: "موضوعات تحتاج إجراءك" })).getByText("أُعيد إليك")).toBeInTheDocument();
   });
@@ -38,8 +40,8 @@ describe("HomeDashboard", () => {
   it("shows the follow-up scope with its violations, and hides organisation indicators from non-administrators", () => {
     render(<HomeDashboard data={base} />);
     const scope = screen.getByRole("article", { name: "نطاق متابعتي" });
-    expect(scope).toHaveTextContent("تتابع ٢٤ مجلسًا");
-    expect(within(scope).getByText("٣ تجاوز مفتوح").closest("a")).toHaveAttribute("href", "/admin/violations");
+    expect(scope).toHaveTextContent("تتابع 24 مجلسًا");
+    expect(within(scope).getByText("3 تجاوز مفتوح").closest("a")).toHaveAttribute("href", "/admin/violations");
     expect(within(scope).getByText(/T-9 خطة/).closest("a")).toHaveAttribute("href", "/admin/topics/t9");
     expect(screen.getByRole("article", { name: "المجالس التي أقودها" })).toHaveTextContent("لا تجاوزات");
     expect(screen.queryByText("مؤشرات المؤسسة")).not.toBeInTheDocument();
@@ -53,6 +55,6 @@ describe("HomeDashboard", () => {
     expect(screen.getByText("لا شيء ينتظرك الآن.")).toBeInTheDocument();
     expect(screen.queryByRole("article", { name: "نطاق متابعتي" })).not.toBeInTheDocument();
     expect(screen.getByText("مؤشرات المؤسسة")).toBeInTheDocument();
-    expect(screen.getByText("تجاوزات مفتوحة").closest("a")).toHaveTextContent("٤٢");
+    expect(screen.getByText("تجاوزات مفتوحة").closest("a")).toHaveTextContent("42");
   });
 });

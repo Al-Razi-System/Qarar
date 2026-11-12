@@ -22,7 +22,6 @@ export default async function SessionsPage() {
   return (
     <div className="mx-auto max-w-[1480px]">
       <PageHeader
-        eyebrow="إدارة الهوية والوصول"
         title={canMonitor ? "مراقبة الجلسات" : "جلساتي والأجهزة المرتبطة"}
         description={canMonitor
           ? "راجع جلسات مستخدمي مؤسستك النشطة على لوحة التحكم وتطبيق الجوال، وأبطل أي جهاز مشبوه أو مفقود فورًا."
