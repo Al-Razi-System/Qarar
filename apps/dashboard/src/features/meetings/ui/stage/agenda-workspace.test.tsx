@@ -325,22 +325,24 @@ describe("AgendaWorkspace documents", () => {
     expect(onBroadcastDocument).toHaveBeenLastCalledWith(null, null, "a2");
   });
 
-  it("hides the download of a withheld item and lets only the chair change it", async () => {
+  it("keeps leadership access while letting it change the member download policy", async () => {
     const onChange = vi.fn();
-    const withheld = { ...pdf, download_allowed: false };
+    const withheld = { ...pdf, download_allowed: false, viewer_download_allowed: true, viewer_can_manage_downloads: true };
     const downloads = { pendingItemId: null, errorItemId: null, error: null, onChange };
     const { props, view } = setup("chair", { agenda: withMaterials, attachments: [withheld], broadcast: broadcastOf({ viewer_controls: true, can_hand_over: true, agenda_item_id: "a2", panel: "attachments" }), onBroadcast: vi.fn(), onHandOver: vi.fn(), downloads });
-    expect(screen.queryByRole("link", { name: "تنزيل قائمة اللجنة.pdf" })).not.toBeInTheDocument();
-    expect(screen.getByText("هذا المرفق للعرض داخل النظام فقط.")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("checkbox", { name: "السماح للمشاركين بتنزيل مرفقات هذا البند" }));
+    expect(screen.getByRole("link", { name: "تنزيل قائمة اللجنة.pdf" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "فتح تنزيل المرفقات للأعضاء" }));
+    await userEvent.click(screen.getByRole("button", { name: "تأكيد فتح التنزيل" }));
     expect(onChange).toHaveBeenCalledWith("a2", true, 2);
     view.rerender(<AgendaWorkspace {...props} downloads={{ ...downloads, pendingItemId: "a2" }} />);
-    expect(screen.getByRole("checkbox", { name: "السماح للمشاركين بتنزيل مرفقات هذا البند" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "جارٍ الحفظ…" })).toBeDisabled();
     expect(screen.getByText("جارٍ حفظ إذن التنزيل…")).toBeInTheDocument();
     view.rerender(<AgendaWorkspace {...props} downloads={{ ...downloads, errorItemId: "a2", error: "تغيّر إذن التنزيل من شاشة أخرى" }} />);
     expect(screen.getByRole("alert")).toHaveTextContent("تغيّر إذن التنزيل من شاشة أخرى");
-    view.rerender(<AgendaWorkspace {...props} session={sessionOf("member")} broadcast={broadcastOf({ agenda_item_id: "a2", panel: "attachments" })} />);
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    view.rerender(<AgendaWorkspace {...props} session={sessionOf("member")} attachments={[{ ...withheld, viewer_download_allowed: false, viewer_can_manage_downloads: false }]} broadcast={broadcastOf({ agenda_item_id: "a2", panel: "attachments" })} />);
+    expect(screen.queryByRole("button", { name: "فتح تنزيل المرفقات للأعضاء" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "تنزيل قائمة اللجنة.pdf" })).not.toBeInTheDocument();
+    expect(screen.getByText("هذا المرفق للعرض داخل النظام فقط.")).toBeInTheDocument();
   });
 });
 
@@ -352,7 +354,7 @@ describe("AgendaWorkspace item timer", () => {
       downloads: { pendingItemId: null, errorItemId: null, error: null, onChange: vi.fn() },
     });
     expect(screen.getByRole("link", { name: "تنزيل قائمة اللجنة.pdf" })).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: "السماح للمشاركين بتنزيل مرفقات هذا البند" })).not.toBeChecked();
+    expect(screen.queryByRole("button", { name: "فتح تنزيل المرفقات للأعضاء" })).not.toBeInTheDocument();
   });
   const timers = (overrides = {}) => ({
     data: { server_now: "2026-10-16T08:07:32Z", timers: [{ agenda_item_id: "a1", planned_minutes: 5, discussion_started_at: "2026-10-16T08:00:00Z", discussion_ended_at: null, revision: 3, ...overrides }] },

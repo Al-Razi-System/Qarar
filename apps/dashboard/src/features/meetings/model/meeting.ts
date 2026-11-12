@@ -152,11 +152,13 @@ export type MeetingTopicAttachment = {
   id: string; topic_id: string; file_name: string; file_url: string; mime_type: string; file_size_bytes?: number; description?: string | null; created_at?: string;
   /** The agenda item the file is discussed under, in this meeting. */
   agenda_item_id?: string;
-  /** False when the chair withheld downloads for the item; the file is then shown inside the room only. */
+  /** The member policy for this agenda item; false is the default (view inside Qarar only). */
   download_allowed?: boolean;
-  /** Effective viewer permission; a contextual chair retains access independently of participant policy. */
+  /** Effective permission of the current viewer after applying contextual role and item policy. */
   viewer_download_allowed?: boolean;
-  /** The revision of that decision, sent back when the chair changes it. */
+  /** Only contextual council leadership may change the item policy. */
+  viewer_can_manage_downloads?: boolean;
+  /** The revision of that decision, sent back when council leadership changes it. */
   download_revision?: number;
 };
 export type AgendaCandidate = {

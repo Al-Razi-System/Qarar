@@ -1,12 +1,20 @@
+"use client";
+
+import { useState } from "react";
+import { Download, Eye } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
+import { Dialog } from "@/shared/ui/dialog";
+import { InlineMessage } from "@/shared/ui/inline-message";
 import type { MeetingTopicAttachment } from "../model/meeting";
 
 const linkClass = "inline-flex min-h-11 items-center rounded-q-control border border-q-border bg-q-surface px-3 text-q-caption font-bold text-q-link hover:bg-q-surface-2";
 
-/** The chair's decision on downloading this item's files, with its in-place feedback. */
+/** Council leadership's decision on member downloads, with in-place feedback. */
 export type DownloadControl = {
   allowed: boolean;
-  /** Only the council's chair decides. */
+  /** Only the contextual council chair or rapporteur decides. */
   canChange: boolean;
   pending: boolean;
   error?: string | null;
@@ -25,25 +33,26 @@ export function TopicAttachmentsPanel({ meetingId, attachments, compact = false,
   /** A participant following the broadcast sees what the controller opens and opens nothing of their own. */
   followsBroadcast?: boolean;
 }) {
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
   if (!attachments.length) return null;
 
   return (
     <section aria-label="مرفقات الموضوع" className="flex flex-col gap-3 font-sans text-q-text">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="m-0 text-q-caption font-bold text-q-text-2">ملفات العرض والمناقشة · {attachments.length}</p>
-        {downloads?.canChange && (
-          <label className="flex min-h-11 items-center gap-2 text-q-caption font-bold text-q-text">
-            <input
-              type="checkbox"
-              className="h-5 w-5 accent-q-primary"
-              checked={downloads.allowed}
-              disabled={downloads.pending}
-              onChange={(event) => downloads.onChange(event.target.checked)}
-            />
-            السماح للمشاركين بتنزيل مرفقات هذا البند
-          </label>
-        )}
       </div>
+      {downloads?.canChange && <div className="flex flex-wrap items-center justify-between gap-3 rounded-q-control border border-q-border bg-q-surface-2 p-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-q-control bg-q-surface text-q-link" aria-hidden="true">{downloads.allowed ? <Download size={20}/> : <Eye size={20}/>}</span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2"><strong className="text-q-ui">تنزيل المرفقات للأعضاء</strong><Badge tone={downloads.allowed ? "success" : "neutral"}>{downloads.allowed ? "التنزيل متاح" : "عرض فقط"}</Badge></div>
+            <p className="m-0 mt-1 text-q-caption text-q-text-2">يستطيع الأعضاء عرض الملفات داخل قرار دائمًا، ولا يظهر لهم التنزيل إلا عند فتحه لهذا البند.</p>
+          </div>
+        </div>
+        <Button variant="secondary" pending={downloads.pending} pendingLabel="جارٍ الحفظ…" onClick={() => setConfirmationOpen(true)}>
+          {downloads.allowed ? "إيقاف تنزيل المرفقات للأعضاء" : "فتح تنزيل المرفقات للأعضاء"}
+        </Button>
+      </div>}
       {downloads?.pending && <p role="status" className="m-0 text-q-caption font-bold text-q-text-2">جارٍ حفظ إذن التنزيل…</p>}
       {downloads?.error && <p role="alert" className="m-0 text-q-caption font-bold text-q-danger">{downloads.error}</p>}
       <ul className={`m-0 grid list-none gap-2 p-0 ${compact ? "" : "sm:grid-cols-2"}`}>
@@ -73,6 +82,29 @@ export function TopicAttachmentsPanel({ meetingId, attachments, compact = false,
           );
         })}
       </ul>
+      {downloads?.canChange && confirmationOpen && <Dialog
+        title={downloads.allowed ? "إيقاف تنزيل المرفقات للأعضاء؟" : "فتح تنزيل المرفقات للأعضاء؟"}
+        description="يسري القرار على مرفقات هذا البند فقط، ويُحفظ في سجل التدقيق."
+        closeDisabled={downloads.pending}
+        onClose={() => setConfirmationOpen(false)}
+        footer={<>
+          <Button variant="secondary" disabled={downloads.pending} onClick={() => setConfirmationOpen(false)}>إلغاء</Button>
+          <Button
+            variant={downloads.allowed ? "danger" : "primary"}
+            pending={downloads.pending}
+            pendingLabel="جارٍ الحفظ…"
+            onClick={() => { setConfirmationOpen(false); downloads.onChange(!downloads.allowed); }}
+          >
+            {downloads.allowed ? "تأكيد الإيقاف" : "تأكيد فتح التنزيل"}
+          </Button>
+        </>}
+      >
+        <InlineMessage tone={downloads.allowed ? "warning" : "info"}>
+          {downloads.allowed
+            ? "بعد الإيقاف تبقى المعاينة داخل النظام متاحة، وتختفي روابط التنزيل من شاشات الأعضاء."
+            : "بعد الفتح يستطيع أعضاء الاجتماع تنزيل جميع مرفقات هذا البند حتى يُغلق الإذن مجددًا."}
+        </InlineMessage>
+      </Dialog>}
     </section>
   );
 }

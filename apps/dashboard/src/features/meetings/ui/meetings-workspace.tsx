@@ -162,6 +162,7 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
   const [minutesText, setMinutesText] = useState("");
   const [readiness, setReadiness] = useState<MeetingReadiness | null>(null);
   const [topicAttachments, setTopicAttachments] = useState<MeetingTopicAttachment[]>([]);
+  const [downloadState, setDownloadState] = useState<{ pendingItemId: string | null; errorItemId: string | null; error: string | null }>({ pendingItemId: null, errorItemId: null, error: null });
   const listRequestRef = useRef<AbortController | null>(null);
   const lastListSuccessAtRef = useRef(0);
   const initialManagedMeetingRef = useRef<string | null>(null);
@@ -416,6 +417,28 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
       setNotice({ kind: "success", text: "حُفظ ترتيب جدول الأعمال." });
     } catch (err) { setNotice({ kind: "error", text: err instanceof Error ? err.message : "تعذر ترتيب جدول الأعمال." }); }
     finally { setDetailLoading(false); }
+  }
+
+  async function setAgendaItemDownloads(agendaItemId: string, allowed: boolean, revision: number) {
+    if (!selected) return;
+    setDownloadState({ pendingItemId: agendaItemId, errorItemId: null, error: null });
+    try {
+      await rpc("set_agenda_item_downloads_v2", {
+        p_agenda_item_id: agendaItemId,
+        p_allowed: allowed,
+        p_expected_revision: revision,
+      });
+      await openDetail(selected.id, { background: true });
+      setDownloadState({ pendingItemId: null, errorItemId: null, error: null });
+      setNotice({ kind: "success", text: allowed ? "فُتح تنزيل مرفقات البند للأعضاء." : "أصبح البند للعرض داخل النظام فقط." });
+    } catch (error) {
+      setDownloadState({
+        pendingItemId: null,
+        errorItemId: agendaItemId,
+        error: meetingErrorMessage(error, "تعذر حفظ إذن تنزيل المرفقات."),
+      });
+      await openDetail(selected.id, { background: true });
+    }
   }
 
   async function loadAgendaCandidates(queryOverride?: string) {
@@ -809,6 +832,7 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
                 onMove={(index, direction) => void moveAgendaItem(index, direction)}
                 onRemove={(id) => void removeAgendaItem(id)}
                 onEditInstructions={selected.capabilities?.can_edit_topic_instructions?item=>{if(item.topic)setInstructionTarget({topicId:item.topic.id,title:item.topic.title_ar,text:item.discussion_instructions??"",updatedAt:item.updated_at});}:undefined}
+                downloadState={{...downloadState,onChange:(agendaItemId,allowed,revision)=>void setAgendaItemDownloads(agendaItemId,allowed,revision)}}
               />}
 
               {readiness && ["draft","scheduled","ready_to_start"].includes(selected.status) && <div className="p-5"><h3 className="mb-3 text-q-caption font-bold text-q-text">جاهزية الاجتماع</h3><div className="grid gap-2 sm:grid-cols-2">{readiness.checks.map((check) => <div key={check.code} className={`flex items-center gap-2 rounded-q-control border px-3 py-2 text-q-caption font-bold ${check.complete ? "border-q-success bg-q-success-soft text-q-success" : "border-q-warning bg-q-warning-soft text-q-warning"}`}><span className={`grid h-5 w-5 place-items-center rounded-full ${check.complete ? "bg-q-success text-q-on-primary" : "bg-q-warning text-q-on-primary"}`}>{check.complete ? "✓" : "!"}</span><span>{check.label}{typeof check.count === "number" ? ` (${check.count})` : ""}</span></div>)}</div></div>}

@@ -1,10 +1,10 @@
--- In-room document viewer and per-item download permission (product owner,
--- 2026-10-15): files open inside the room and follow the broadcast; the chair
--- decides per agenda item whether its files may be downloaded.
+-- In-room document viewer and per-item download permission. Files open inside
+-- the room and follow the broadcast. Member downloads are opt-in per item and
+-- only the contextual chair or rapporteur may change that decision.
 -- Impact map: docs/engineering/impact/MEETING_DOCUMENT_VIEWER_AR.md
 begin;
 create extension if not exists pgtap;
-select plan(30);
+select plan(33);
 
 insert into public.organizations(id,code,name_ar) values
 ('a2000000-0000-0000-0000-000000000001','s101','Broadcast'),
@@ -23,8 +23,8 @@ insert into public.users(id,organization_id,email,full_name_ar,is_system_admin) 
 ('a2000000-0000-0000-0000-000000000016','a2000000-0000-0000-0000-000000000002','other@s101b.test','Other Tenant User',false);
 insert into public.governance_unit_types(id,organization_id,code,name_ar) values
 ('a2000000-0000-0000-0000-000000000021','a2000000-0000-0000-0000-000000000001','council','Council');
-insert into public.governance_units(id,organization_id,unit_type_id,code,name_ar,quorum_percentage) values
-('a2000000-0000-0000-0000-000000000022','a2000000-0000-0000-0000-000000000001','a2000000-0000-0000-0000-000000000021','faculty','Faculty Council',50);
+insert into qarar_core.governance_units(id,organization_id,unit_type_id,code,name_ar,quorum_percentage,activated_at) values
+('a2000000-0000-0000-0000-000000000022','a2000000-0000-0000-0000-000000000001','a2000000-0000-0000-0000-000000000021','faculty','Faculty Council',50,clock_timestamp());
 delete from public.roles where organization_id='a2000000-0000-0000-0000-000000000001' and code in ('council_chair','council_rapporteur');
 insert into public.roles(id,organization_id,code,name_ar,role_scope) values
 ('a2000000-0000-0000-0000-000000000031','a2000000-0000-0000-0000-000000000001','council_chair','Chair','governance_unit'),
@@ -84,31 +84,33 @@ $$ select count(*) from qarar_audit.audit_logs where action='meetings.agenda.dow
 set local role authenticated;
 select pg_temp.s101_as('a2000000-0000-0000-0000-000000000011');
 
--- Existing items keep their files downloadable; the list says so per file.
-select is((pg_temp.s101_file()->>'download_allowed')::boolean,true,'files stay downloadable until the chair decides otherwise');
+-- Every item starts view-only; no historical true value may silently grant members access.
+select is((pg_temp.s101_file()->>'download_allowed')::boolean,false,'files start view-only until council leadership explicitly opens downloads');
 select is(pg_temp.s101_file()->>'agenda_item_id','a2000000-0000-0000-0000-000000000091','each file names the agenda item it belongs to');
 
--- The chair withholds downloads for item 1; it is audited and guarded by updated_at.
+-- The chair opens downloads for item 1; it is audited and guarded by revision.
 select is((pg_temp.s101_file()->>'download_revision')::integer,0,'an undecided item has download revision 0');
-select is((api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',false,0)->>'attachments_downloadable')::boolean,
-  false,'the chair withholds downloads for an item');
-select is((pg_temp.s101_file()->>'download_allowed')::boolean,false,'the list reports the withheld download');
-select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,true,'the chair retains downloading while participants are blocked');
+select is((pg_temp.s101_file()->>'viewer_can_manage_downloads')::boolean,true,'the chair can manage the item download policy');
+select is((api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,0)->>'attachments_downloadable')::boolean,
+  true,'the chair opens downloads for members on an item');
+select is((pg_temp.s101_file()->>'download_allowed')::boolean,true,'the list reports the opened member download policy');
 select is(pg_temp.s101_download_audits(),1::bigint,'the decision is audited');
-select throws_ok($$ select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,0) $$,
+select throws_ok($$ select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',false,0) $$,
   '40001',null,'a stale revision is refused instead of overwriting the decision');
 
--- Only the chair decides.
+-- The contextual rapporteur may also decide; a global administrator may not.
 select pg_temp.s101_as('a2000000-0000-0000-0000-000000000012');
-select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,false,'the rapporteur does not inherit the chair download exception');
-select throws_ok($$ select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,1) $$,
-  '42501',null,'the rapporteur cannot change the download permission');
+select is((pg_temp.s101_file()->>'viewer_can_manage_downloads')::boolean,true,'the contextual rapporteur can manage the item download policy');
+select is((api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',false,1)->>'attachments_downloadable')::boolean,
+  false,'the rapporteur can return the item to view-only');
+select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,true,'the rapporteur retains file access while managing a view-only item');
 select pg_temp.s101_as('a2000000-0000-0000-0000-000000000015');
 select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,false,'a global administrator does not inherit the chair download exception');
-select throws_ok($$ select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,1) $$,
+select is((pg_temp.s101_file()->>'viewer_can_manage_downloads')::boolean,false,'a global administrator cannot manage a contextual council decision');
+select throws_ok($$ select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,2) $$,
   '42501',null,'a system administrator cannot change the download permission');
 select pg_temp.s101_as('a2000000-0000-0000-0000-000000000016');
-select throws_ok($$ select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,1) $$,
+select throws_ok($$ select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,2) $$,
   'P0002',null,'another tenant cannot reach the item');
 
 -- Opening a document is part of the broadcast and needs a running session.
@@ -158,11 +160,20 @@ select api_v2.set_meeting_broadcast_document_v2('a2000000-0000-0000-0000-0000000
 select is(api_v2.set_meeting_broadcast_document_v2('a2000000-0000-0000-0000-000000000081',null,null,4)->>'agenda_item_id',
   'a2000000-0000-0000-0000-000000000091','closing the document keeps the item on screen');
 select is(pg_temp.s101_state()->>'page',null,'a closed document has no page');
-select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,1);
+select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000091',true,2);
 select is((pg_temp.s101_file()->>'download_allowed')::boolean,true,'the participant policy can be restored independently');
 select pg_temp.s101_as('a2000000-0000-0000-0000-000000000013');
 select is(pg_temp.s101_file()->>'id','a2000000-0000-0000-0000-0000000000a1','a member still sees a meeting attachment after downloads are restored');
-select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,false,'an ordinary member remains view-only when participant downloads are allowed');
+select is((pg_temp.s101_file()->>'viewer_download_allowed')::boolean,true,'an ordinary member can download only after council leadership opens the item policy');
+
+-- The policy is immutable once the meeting reaches its terminal stage.
+reset role;
+update qarar_meetings.meetings set status='cancelled'
+where id='a2000000-0000-0000-0000-000000000082';
+set local role authenticated;
+select pg_temp.s101_as('a2000000-0000-0000-0000-000000000011');
+select throws_ok($$ select api_v2.set_agenda_item_downloads_v2('a2000000-0000-0000-0000-000000000093',true,0) $$,
+  '23514',null,'the download policy cannot change after the meeting is cancelled');
 
 select * from finish();
 rollback;

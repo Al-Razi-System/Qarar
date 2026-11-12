@@ -43,7 +43,7 @@ type Props = {
   onHandOver?: (toRole: "chair" | "rapporteur") => void;
   /** The controller opened, turned or closed a file of an item. */
   onBroadcastDocument?: (attachmentId: string | null, page: number | null, agendaItemId: string) => void;
-  /** The chair's download decision for an item, with where it stands. */
+  /** Council leadership's download decision for an item, with where it stands. */
   downloads?: { pendingItemId: string | null; errorItemId: string | null; error: string | null; onChange: (agendaItemId: string, allowed: boolean, revision: number) => void };
   /** The items' discussion timers, with the server's time minus this device's. */
   timers?: { data: MeetingItemTimers | null; clockOffsetMs: number };
@@ -120,7 +120,8 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
   const flow = flows[selected.id];
   const manager = session.viewer.can_manage_voting;
   const blockers = manager ? completionBlockers(session, ordered, rounds, decisions, referred) : [];
-  // Only the council's chair decides on downloads and referrals; the broadcast tells the room who that is.
+  // Referrals remain the chair's decision. Download policy is independently
+  // authorized by the attachment contract for the contextual chair/rapporteur.
   const viewerIsChair = Boolean(live && (live.can_hand_over || live.can_take_back));
   const nextItem = ordered.find((item) => item.agenda_order > selected.agenda_order && !["discussed", "postponed"].includes(item.agenda_status ?? "pending"));
   const { actions, note } = chairActions(selected, session, flow, { canRefer: viewerIsChair && Boolean(referrals && onRequestReferral), nextItemId: nextItem?.id ?? null });
@@ -139,8 +140,8 @@ export function AgendaWorkspace({ session, agenda, attachments, topicHistory, ro
 
   const itemFiles = attachments.filter((attachment) => attachment.topic_id === selected.topic?.id);
   const downloadControl = downloads && itemFiles.length > 0 ? {
-    allowed: itemFiles.every((file) => file.download_allowed !== false),
-    canChange: viewerIsChair,
+    allowed: itemFiles.every((file) => file.download_allowed === true),
+    canChange: itemFiles.some((file) => file.viewer_can_manage_downloads === true),
     pending: downloads.pendingItemId === selected.id,
     error: downloads.errorItemId === selected.id ? downloads.error : null,
     onChange: (allowed: boolean) => downloads.onChange(selected.id, allowed, itemFiles[0]?.download_revision ?? 0),

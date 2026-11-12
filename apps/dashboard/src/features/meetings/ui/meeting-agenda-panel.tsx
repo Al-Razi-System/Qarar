@@ -9,8 +9,24 @@ import type {AgendaItem,MeetingTopicAttachment} from "../model/meeting";
 import {TopicAttachmentsPanel} from "./topic-attachments-panel";
 import {TopicContextDialog} from "./stage/topic-context-dialog";
 
-type Props={meetingId:string;items:AgendaItem[];attachments:MeetingTopicAttachment[];editable:boolean;busy:boolean;eligibleCount:number|null;canAddDirect?:boolean;onAddProposals:()=>void;onAddDirect?:()=>void;onMove:(index:number,direction:-1|1)=>void;onRemove:(id:string)=>void;onEditInstructions?:(item:AgendaItem)=>void};
-export function MeetingAgendaPanel({meetingId,items,attachments,editable,busy,eligibleCount,canAddDirect,onAddProposals,onAddDirect,onMove,onRemove,onEditInstructions}:Props){
+type DownloadState={pendingItemId:string|null;errorItemId:string|null;error:string|null;onChange:(agendaItemId:string,allowed:boolean,revision:number)=>void};
+type Props={meetingId:string;items:AgendaItem[];attachments:MeetingTopicAttachment[];editable:boolean;busy:boolean;eligibleCount:number|null;canAddDirect?:boolean;onAddProposals:()=>void;onAddDirect?:()=>void;onMove:(index:number,direction:-1|1)=>void;onRemove:(id:string)=>void;onEditInstructions?:(item:AgendaItem)=>void;downloadState?:DownloadState};
+
+function AgendaItemAttachments({meetingId,item,attachments,downloadState}:{meetingId:string;item:AgendaItem;attachments:MeetingTopicAttachment[];downloadState?:DownloadState}){
+ const topicId=item.topic?.id;
+ if(!topicId)return null;
+ const itemFiles=attachments.filter((attachment)=>attachment.topic_id===topicId);
+ const downloads=downloadState&&itemFiles.length>0?{
+  allowed:itemFiles.every((file)=>file.download_allowed===true),
+  canChange:itemFiles.some((file)=>file.viewer_can_manage_downloads===true),
+  pending:downloadState.pendingItemId===item.id,
+  error:downloadState.errorItemId===item.id?downloadState.error:null,
+  onChange:(allowed:boolean)=>downloadState.onChange(item.id,allowed,itemFiles[0]?.download_revision??0),
+ }:undefined;
+ return <TopicAttachmentsPanel meetingId={meetingId} attachments={itemFiles} compact downloads={downloads}/>;
+}
+
+export function MeetingAgendaPanel({meetingId,items,attachments,editable,busy,eligibleCount,canAddDirect,onAddProposals,onAddDirect,onMove,onRemove,onEditInstructions,downloadState}:Props){
  const [contextTopic,setContextTopic]=useState<AgendaItem["topic"]|null>(null);
  return <section className="p-4" aria-labelledby="meeting-agenda-title">
   <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h3 id="meeting-agenda-title" className="flex items-center gap-2 text-q-h3 font-bold text-q-text"><ClipboardList size={20}/>جدول الأعمال</h3><p className="mt-2 text-q-caption text-q-text-2">الموضوعات المدرجة في هذا الاجتماع وبترتيب مناقشتها.</p></div><div className="flex flex-wrap items-center gap-2"><Badge tone="info">{items.length} بند</Badge>{editable&&eligibleCount!==null&&<Button variant="secondary" disabled={busy} aria-label={`عرض ${eligibleCount} موضوعات مقترحة`} onClick={onAddProposals}><ListPlus size={18}/>المقترحات <Badge tone="info">{eligibleCount}</Badge></Button>}{editable&&canAddDirect&&onAddDirect&&<Button disabled={busy} onClick={onAddDirect}><ListPlus size={18}/>موضوع مباشر</Button>}</div></div>
@@ -18,7 +34,7 @@ export function MeetingAgendaPanel({meetingId,items,attachments,editable,busy,el
    <div className="flex flex-wrap items-start gap-3"><Badge tone="info">{item.agenda_order}</Badge>{/* A basis, not 0: on a narrow screen the buttons move below instead of squeezing the title. */}<div className="min-w-0 grow basis-60 space-y-3"><div className="flex flex-wrap items-center gap-2"><h4 className="text-q-h3 font-bold text-q-text">{item.topic?.title_ar??"موضوع غير متاح"}</h4>{item.topic?.is_direct&&<Badge tone="neutral">موضوع مباشر</Badge>}<Badge tone={item.requires_voting===false?"neutral":"warning"}>{item.requires_voting===false?"مناقشة فقط":"يتطلب تصويتاً"}</Badge></div><p className="text-q-caption text-q-text-2">{item.topic?.topic_no}{item.topic?.category_name_ar?` · ${item.topic.category_name_ar}`:""}</p>
     {item.topic?.submitted_by_name_ar&&<p className="text-q-ui text-q-text-2">مقدم الموضوع: {item.topic.submitted_by_name_ar}</p>}
     <details className="rounded-q-control border border-q-border p-3"><summary className="min-h-11 cursor-pointer text-q-ui font-bold">تعليمات المناقشة</summary>{item.discussion_instructions?<InstructionContent value={item.discussion_instructions}/>:<p className="text-q-ui text-q-text-2">لا توجد تعليمات مناقشة لهذا الموضوع.</p>}{onEditInstructions&&<Button variant="secondary" disabled={busy} onClick={()=>onEditInstructions(item)}>تعديل تعليمات المناقشة</Button>}</details>
-    {item.topic?.id&&<><TopicAttachmentsPanel meetingId={meetingId} attachments={attachments.filter(a=>a.topic_id===item.topic?.id)} compact/>
+    {item.topic?.id&&<><AgendaItemAttachments meetingId={meetingId} item={item} attachments={attachments} downloadState={downloadState}/>
      <div className="flex flex-wrap gap-2">{item.topic.context&&<Button variant="secondary" onClick={()=>setContextTopic(item.topic)}><FileSearch size={18}/>عرض تفاصيل الموضوع وقراراته السابقة</Button>}{editable&&!item.topic.is_direct&&<Link href={`/admin/topics/${item.topic.id}`} className="inline-flex min-h-11 items-center text-q-ui text-q-link">فتح ملف الموضوع الإداري</Link>}</div>
     </>}
    </div>{editable&&<div className="flex flex-wrap gap-2"><Button variant="secondary" disabled={busy||index===0} aria-label="نقل البند إلى أعلى" onClick={()=>onMove(index,-1)}><ArrowUp size={18}/></Button><Button variant="secondary" disabled={busy||index===items.length-1} aria-label="نقل البند إلى أسفل" onClick={()=>onMove(index,1)}><ArrowDown size={18}/></Button><Button variant="danger" disabled={busy} aria-label="إزالة من جدول الأعمال" onClick={()=>onRemove(item.id)}><Trash2 size={18}/></Button></div>}</div>

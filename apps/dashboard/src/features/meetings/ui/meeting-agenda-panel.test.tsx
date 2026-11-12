@@ -1,4 +1,5 @@
 import {fireEvent,render,screen} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import {expect,it,vi} from "vitest";
 import {MeetingAgendaPanel} from "./meeting-agenda-panel";
 it("keeps proposed topics behind one compact counter action inside the agenda header",()=>{
@@ -35,4 +36,22 @@ it("opens the topic context and previous decisions inside the agenda",()=>{
  expect(screen.getByText("تفاصيل الخطة.")).toBeVisible();
  expect(screen.getByText("اعتماد مبدئي.")).toBeVisible();
  expect(screen.queryByRole("link",{name:"عرض تفاصيل الموضوع ومرفقاته"})).not.toBeInTheDocument();
+});
+
+it("lets contextual council leadership explicitly open member downloads per agenda item",async()=>{
+ const user=userEvent.setup();
+ const onChange=vi.fn();
+ render(<MeetingAgendaPanel meetingId="meeting" items={[{
+  id:"item-1",agenda_order:1,topic:{id:"topic-1",title_ar:"الخطة"},
+ }]} attachments={[{
+  id:"file-1",topic_id:"topic-1",agenda_item_id:"item-1",file_name:"الخطة.pdf",file_url:"/api/file",mime_type:"application/pdf",
+  download_allowed:false,viewer_download_allowed:true,viewer_can_manage_downloads:true,download_revision:4,
+ }]} editable busy={false} eligibleCount={0} onAddProposals={()=>{}} onMove={()=>{}} onRemove={()=>{}}
+ downloadState={{pendingItemId:null,errorItemId:null,error:null,onChange}}/>);
+
+ expect(screen.getByText("عرض فقط")).toBeInTheDocument();
+ await user.click(screen.getByRole("button",{name:"فتح تنزيل المرفقات للأعضاء"}));
+ expect(screen.getByRole("dialog",{name:"فتح تنزيل المرفقات للأعضاء؟"})).toBeInTheDocument();
+ await user.click(screen.getByRole("button",{name:"تأكيد فتح التنزيل"}));
+ expect(onChange).toHaveBeenCalledWith("item-1",true,4);
 });
