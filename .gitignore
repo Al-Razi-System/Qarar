@@ -40,3 +40,6 @@ data/staging-v4/
 data/بيانات الموظفين.txt
 __pycache__/
 *.py[cod]
+
+# Claude Code local session worktrees
+.claude/worktrees/
