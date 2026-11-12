@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { QararApiError, qararEdge, qararRpc } from "@/shared/api/qarar-server";
+import { QararApiError, qararEdge, qararRpc, qararRpcV2 } from "@/shared/api/qarar-server";
 import { readJsonObject } from "@/shared/security/json-body";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
 
@@ -19,7 +19,7 @@ function apiError(error: unknown, fallback: string, deniedMessage?: string) {
 
 /**
  * Without a scope: the caller's own sessions. With scope=organization: every session in the
- * caller's organisation, for whoever may revoke them (enforced by admin_list_sessions).
+ * caller's organisation, for whoever may revoke them (enforced by admin_list_sessions_v2).
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     }
     const query = url.searchParams.get("q")?.trim().slice(0, 200) || null;
     try {
-      const result = await qararRpc<{ items?: unknown[]; total?: number }>("admin_list_sessions", {
+      const result = await qararRpcV2<{ items?: unknown[]; total?: number }>("admin_list_sessions_v2", {
         p_status: status, p_query: query, p_limit: 100, p_offset: 0,
       });
       return NextResponse.json({ items: Array.isArray(result?.items) ? result.items : [], total: result?.total ?? 0 });

@@ -12,7 +12,7 @@ select is(
 
 select is(
   (select count(*)::integer from qarar_architecture.entity_registry),
-  133, -- current reviewed module entity registry after the periodic topic occurrence entity
+  137, -- reviewed 2026-11-12: + oversight_assignments, oversight_rules, oversight_violations, user_notifications
   'all application entities are registered');
 
 select is(
@@ -21,7 +21,7 @@ select is(
    join qarar_architecture.module_registry m using (module_code)
    join pg_class c on c.relname = e.entity_name and c.relkind in ('r', 'p')
    join pg_namespace n on n.oid = c.relnamespace and n.nspname = m.schema_name),
-  133,
+  137,
   'all registered entities are physically owned by their module');
 
 select is(
@@ -53,7 +53,7 @@ select is(
    from qarar_architecture.api_contract_registry
    where api_version = 'v1'),
  251,
-  -- Current frozen v1 surface after the October meeting and topic journey additions.
+  -- Frozen v1 surface. 2026-11-12: three contracts briefly added here were moved to api_v2; new contracts go to api_v2.
   'api_v1 contract count is explicit and reviewed');
 
 select is(

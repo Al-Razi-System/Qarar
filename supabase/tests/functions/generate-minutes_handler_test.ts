@@ -27,6 +27,7 @@ type BuildOptions = {
 
 const build = (options: BuildOptions = {}) => {
   const calls: Array<{ target: "caller" | "service"; name: string; args?: Record<string, unknown> }> = []
+  const contexts: Array<{ client: string; context: Record<string, string> }> = []
   let minuteRead = 0
   let prompt = ""
   const meeting = {
@@ -97,13 +98,15 @@ const build = (options: BuildOptions = {}) => {
 
   return {
     handler: createGenerateMinutesHandler({
-      createCaller: () => caller,
+      createCaller: (_authorization: string, context: Record<string, string>) => { contexts.push({ client: "caller", context }); return caller },
       service,
+      serviceFor: (context: Record<string, string>) => { contexts.push({ client: "service", context }); return service },
       generate,
       generationTimeoutMs: options.generationTimeoutMs,
       aiConfigured: options.aiConfigured,
     }),
     calls,
+    contexts,
     getPrompt: () => prompt,
   }
 }
@@ -192,4 +195,20 @@ test("uses only api_v1 contracts and sends minimized untrusted data to the provi
   assert.ok(!getPrompt().includes("secret@example.test"))
   assert.ok(!getPrompt().includes("عنوان لا يلزم"))
   assert.ok(!getPrompt().includes("لا ترسل هذا"))
+})
+
+test("forwards the dashboard's request context to the caller and service clients", async () => {
+  const { handler, contexts } = build()
+  const response = await handler(new Request("http://local/generate-minutes", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json", Authorization: "Bearer test-token",
+      "X-Qarar-Request-Id": "req-minutes-1", "X-Qarar-Client-IP": "203.0.113.41", "X-Qarar-User-Agent": "Mozilla/5.0 Chrome/130",
+    },
+    body: JSON.stringify({ meeting_id: meetingId }),
+  }))
+  assert.equal(response.status, 200)
+  const expected = { "X-Qarar-Request-Id": "req-minutes-1", "X-Qarar-Client-IP": "203.0.113.41", "X-Qarar-User-Agent": "Mozilla/5.0 Chrome/130" }
+  assert.deepEqual(contexts.find((c) => c.client === "caller")?.context, expected)
+  assert.deepEqual(contexts.find((c) => c.client === "service")?.context, expected)
 })

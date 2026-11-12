@@ -119,6 +119,49 @@ function taskFields(variables, role, dueLabel = "موعد الإنجاز") {
   ];
 }
 
+
+function daysText(value) {
+  const days = Number(value);
+  if (!Number.isInteger(days) || days < 0) return null;
+  if (days === 0) return "اليوم";
+  if (days === 1) return "يوم واحد";
+  if (days === 2) return "يومان";
+  return days % 100 >= 3 && days % 100 <= 10 ? `${days} أيام` : `${days} يومًا`;
+}
+
+function councilsText(value) {
+  const count = Number(value);
+  if (!Number.isInteger(count) || count < 1) return null;
+  if (count === 1) return "مجلس واحد";
+  if (count === 2) return "مجلسين";
+  return count % 100 >= 3 && count % 100 <= 10 ? `${count} مجالس` : `${count} مجلسًا`;
+}
+
+function violationFields(variables) {
+  return [
+    field("نوع التجاوز", required(variables.rule_name_ar, "نوع التجاوز")),
+    field("المجلس", required(variables.governance_unit_name_ar, "المجلس")),
+    field("البند", required(variables.subject_label, "البند")),
+    field("متأخر منذ", variables.due_since ? formatDate(variables.due_since, "تاريخ التأخر") : null),
+  ];
+}
+
+const escalationLevel = level => (Number(level) === 1 ? "أقرب متابع" : Number(level) > 1 ? `المستوى ${Number(level)}` : null);
+
+function digestFields(variables) {
+  const total = Number(variables.total_open);
+  if (!Number.isInteger(total) || total < 1) throw new TypeError("عدد التجاوزات مطلوب للقالب");
+  const rules = Array.isArray(variables.by_rule) ? variables.by_rule.filter(rule => clean(rule?.name_ar) && Number.isInteger(rule?.count)) : [];
+  const oldest = Array.isArray(variables.oldest) ? variables.oldest.slice(0, 5).map((item, index) =>
+    `${index + 1}. ${clean(item?.council_name_ar) ?? "مجلس"} — ${clean(item?.rule_name_ar) ?? "تجاوز"}: ${compactDescription(item?.subject_label, 120) ?? ""} (${daysText(item?.days_open) ?? "—"})`) : [];
+  return [
+    field("التجاوزات المفتوحة", `${total}${councilsText(variables.council_count) ? ` في ${councilsText(variables.council_count)}` : ""}`),
+    rules.length ? rules.map(rule => `• ${clean(rule.name_ar)}: ${rule.count}`).join("\n") : null,
+    oldest.length ? `الأقدم:\n${oldest.join("\n")}` : null,
+    field("عرض الكل", variables.violations_url),
+  ];
+}
+
 const templates = Object.freeze({
   meeting_invitation: variables => message("دعوة اجتماع", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"ندعوك لحضور الاجتماع التالي:"), meetingFields(variables), custom(variables.custom_action,"يرجى الدخول إلى نظام قرار للاطلاع على جدول الأعمال وتأكيد حضورك.")),
   meeting_reminder: variables => message("تذكير باجتماع", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"نذكّرك بقرب موعد الاجتماع التالي:"), meetingFields(variables), custom(variables.custom_action,"يرجى التأكد من جاهزيتك والاطلاع على جدول الأعمال قبل الموعد.")),
@@ -133,7 +176,10 @@ const templates = Object.freeze({
   task_overdue: variables => message("تكليف متأخر", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"تجاوز التكليف التالي موعد إنجازه:"), taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ", "موعد الإنجاز السابق"), custom(variables.custom_action,"يرجى تحديث حالة التكليف واتخاذ الإجراء اللازم في نظام قرار.")),
   task_submitted: variables => message("تكليف بانتظار التحقق", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"سلّم المكلّف إنجاز التكليف التالي للمراجعة:"), taskFields(variables, "المتابع"), custom(variables.custom_action,"يرجى مراجعة الإنجاز والأدلة واتخاذ قرار التحقق في نظام قرار.")),
   task_returned: variables => message("إعادة تكليف للاستكمال", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"أُعيد التكليف التالي إليك لاستكماله:"), [...taskFields(variables, "المكلّف بالتنفيذ"), field("سبب الإعادة", required(variables.return_reason, "سبب الإعادة"))], custom(variables.custom_action,"يرجى مراجعة ملاحظات المتابع واستكمال المطلوب في نظام قرار.")),
-  task_completed: variables => message("اكتمال تكليف", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"تم اعتماد إنجاز التكليف التالي:"), taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ"), custom(variables.custom_action,"يمكنك الاطلاع على سجل الإنجاز الكامل في نظام قرار."))
+  task_completed: variables => message("اكتمال تكليف", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"تم اعتماد إنجاز التكليف التالي:"), taskFields(variables, variables.recipient_role === "follower" ? "المتابع" : "المكلّف بالتنفيذ"), custom(variables.custom_action,"يمكنك الاطلاع على سجل الإنجاز الكامل في نظام قرار.")),
+  oversight_violation: variables => message("تجاوز في مجلسك", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"رُصد في مجلسك تأخر يحتاج إلى معالجة:"), [...violationFields(variables), field("للمعالجة", variables.violation_url)], custom(variables.custom_action,"يُغلق التنبيه تلقائيًا عند المعالجة. إن لم يُعالج خلال المهلة يُصعَّد إلى المتابع الأعلى.")),
+  oversight_escalation: variables => message("تصعيد تجاوز", recipient(variables.recipient_name_ar), custom(variables.custom_intro,"تجاوز في مجلس تتابعه لم يُعالَج في المجلس خلال المهلة:"), [...violationFields(variables), field("مدة التأخر", daysText(variables.days_open)), field("مستوى التصعيد", escalationLevel(variables.escalation_level)), field("التفاصيل", variables.violation_url)], custom(variables.custom_action,"يرجى المتابعة مع رئاسة المجلس.")),
+  oversight_digest: variables => message("ملخص المتابعة اليومي", recipient(variables.recipient_name_ar), custom(variables.custom_intro,`حال المجالس التي تتابعها${clean(variables.digest_date) ? ` في ${formatDate(variables.digest_date, "تاريخ الملخص")}` : ""}:`), digestFields(variables), custom(variables.custom_action,"يصلك هذا الملخص صباح كل يوم فيه تجاوزات مفتوحة في نطاقك.")),
 });
 
 export function renderTemplate(templateCode, variables) {

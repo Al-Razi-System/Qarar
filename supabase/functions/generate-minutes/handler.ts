@@ -16,9 +16,26 @@ export type RpcClient = {
   schema?: (schema: string) => RpcClient
 }
 
+const REQUEST_ID = /^[A-Za-z0-9._:-]{1,100}$/
+const CLIENT_IP = /^[0-9A-Fa-f:.]{2,45}$/
+
+/** Same contract as iam-admin: what the database stamps on audit rows for this request. */
+export const requestContextHeaders = (request: Request): Record<string, string> => {
+  const context: Record<string, string> = {}
+  const requestId = request.headers.get("X-Qarar-Request-Id")
+  context["X-Qarar-Request-Id"] = requestId && REQUEST_ID.test(requestId) ? requestId : crypto.randomUUID()
+  const clientIp = request.headers.get("X-Qarar-Client-IP")
+  if (clientIp && CLIENT_IP.test(clientIp)) context["X-Qarar-Client-IP"] = clientIp
+  const userAgent = request.headers.get("X-Qarar-User-Agent") ?? request.headers.get("User-Agent")
+  if (userAgent) context["X-Qarar-User-Agent"] = userAgent.slice(0, 500)
+  return context
+}
+
 export type GenerateMinutesDependencies = {
-  createCaller: (authorization: string) => RpcClient
+  createCaller: (authorization: string, context: Record<string, string>) => RpcClient
   service: RpcClient | null
+  /** A service client carrying this request's context, so service-side audit rows keep it. */
+  serviceFor?: (context: Record<string, string>) => RpcClient | null
   generate: (prompt: string, signal: AbortSignal) => Promise<string>
   allowedOrigins?: readonly string[]
   generationTimeoutMs?: number
@@ -318,7 +335,9 @@ export const createGenerateMinutesHandler = (dependencies: GenerateMinutesDepend
 
   try {
     const { meetingId } = await parseGenerateMinutesRequest(request)
-    const caller = dependencies.createCaller(authorization)
+    const context = requestContextHeaders(request)
+    const caller = dependencies.createCaller(authorization, context)
+    const service = dependencies.service ? (dependencies.serviceFor?.(context) ?? dependencies.service) : null
     const userResult = await caller.auth?.getUser()
     if (!userResult || userResult.error || !userResult.data?.user?.id) {
       return json(request, dependencies, { error: "invalid_token" }, 401)
@@ -345,14 +364,14 @@ export const createGenerateMinutesHandler = (dependencies: GenerateMinutesDepend
     if (dependencies.aiConfigured === false) {
       return json(request, dependencies, { error: "ai_provider_not_configured" }, 503)
     }
-    if (!dependencies.service) return json(request, dependencies, { error: "rate_limit_unavailable" }, 503)
+    if (!service) return json(request, dependencies, { error: "rate_limit_unavailable" }, 503)
 
     // Attendance is intentionally obtained through its governed read contract. A meeting manager
     // without attendance.read/attendance.manage receives a normal authorization denial instead of
     // sending attendance data to the AI provider.
     const session = requireRecord(await callRpc(caller, "get_meeting_session_detail", { p_meeting_id: meetingId }))
     const prompt = buildMinutesPrompt(meeting, session)
-    await consumeRateLimit(dependencies.service, actorUserId)
+    await consumeRateLimit(service, actorUserId)
     const content = await generateWithTimeout(dependencies, prompt)
 
     // Do not overwrite a human draft that appeared while the external provider was running.

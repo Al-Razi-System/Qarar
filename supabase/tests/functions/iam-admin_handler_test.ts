@@ -278,3 +278,50 @@ for (const redirectTo of [
     assert.ok(!calls.some((call) => call.name === "generateLink" || call.name === "sendEmail" || call.name === "service_record_iam_event"))
   })
 }
+
+test("forwards the dashboard's request context to every database client it builds", async () => {
+  const contexts: Array<{ client: string; context: Record<string, string> }> = []
+  const { handler, calls } = build()
+  const forwarding = createIamAdminHandler({
+
+    createCaller: (_authorization: string, context: Record<string, string>) => {
+      contexts.push({ client: "caller", context })
+      return {
+        auth: { getUser: async () => ({ data: { user: { id: "actor-id" } }, error: null }) },
+        rpc: async (name: string) => name === "request_session_revocation"
+          ? { data: { user_id: "target-id", auth_session_id: "auth-session-id" }, error: null }
+          : { data: true, error: null },
+      }
+    },
+    admin: { rpc: async () => ({ data: 1, error: null }) },
+    adminFor: (context: Record<string, string>) => {
+      contexts.push({ client: "admin", context })
+      return { rpc: async (name: string, args: any) => { calls.push({ name, args }); return { data: 1, error: null } } }
+    },
+    sendEmail: async () => undefined,
+    allowedOrigins: ["https://app.test"],
+    originConfigurationValid: true,
+    logError: () => undefined,
+  })
+  const response = await forwarding(new Request("http://local/iam-admin", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer test-token", "Content-Type": "application/json",
+      "X-Qarar-Request-Id": "req-edge-1", "X-Qarar-Client-IP": "203.0.113.40", "X-Qarar-User-Agent": "Mozilla/5.0 Chrome/130",
+    },
+    body: JSON.stringify({ action: "revoke_session", session_id: "11111111-1111-4111-8111-111111111111" }),
+  }))
+  assert.equal(response.status, 200)
+  const expected = { "X-Qarar-Request-Id": "req-edge-1", "X-Qarar-Client-IP": "203.0.113.40", "X-Qarar-User-Agent": "Mozilla/5.0 Chrome/130" }
+  assert.deepEqual(contexts.find(c => c.client === "caller")?.context, expected)
+  assert.deepEqual(contexts.find(c => c.client === "admin")?.context, expected)
+  assert.ok(calls.some(c => c.name === "service_revoke_auth_sessions"))
+})
+
+test("drops a malformed client address and request id, and still gives the request an id", async () => {
+  const { requestContextHeaders } = await import("../../functions/iam-admin/handler.ts")
+  const context = requestContextHeaders(new Request("http://local", { headers: { "X-Qarar-Request-Id": "bad id;drop", "X-Qarar-Client-IP": "203.0.113.1, 10.0.0.1", "User-Agent": "native-app/1.0" } }))
+  assert.match(context["X-Qarar-Request-Id"], /^[0-9a-f-]{36}$/)
+  assert.equal(context["X-Qarar-Client-IP"], undefined)
+  assert.equal(context["X-Qarar-User-Agent"], "native-app/1.0")
+})

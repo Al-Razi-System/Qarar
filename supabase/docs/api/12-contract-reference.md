@@ -155,7 +155,6 @@ function metadata. Run `npm run docs:api-contracts` after an intentional contrac
 | `admin_list_iam_approval_requests` | `iam` | `authenticated` | `p_status text` | `jsonb` |
 | `admin_list_permissions` | `iam` | `authenticated` | `p_module text, p_active_only boolean` | `jsonb` |
 | `admin_list_roles` | `iam` | `authenticated` | `p_query text, p_scope text, p_active_only boolean` | `jsonb` |
-| `admin_list_sessions` | `iam` | `authenticated` | `p_status text, p_query text, p_limit integer, p_offset integer` | `jsonb` |
 | `admin_request_permission_matrix_import` | `iam` | `authenticated` | `p_matrix jsonb, p_justification text` | `uuid` |
 | `admin_request_role_permissions_change` | `iam` | `authenticated` | `p_role_id uuid, p_permission_codes text[], p_justification text` | `uuid` |
 | `admin_request_user_offboarding` | `iam` | `authenticated` | `p_target_user_id uuid, p_successor_user_id uuid, p_justification text` | `uuid` |

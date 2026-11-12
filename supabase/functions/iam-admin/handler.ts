@@ -63,9 +63,29 @@ const readJsonPayload = async (request: Request): Promise<JsonPayloadResult> => 
   }
 }
 
+const REQUEST_ID = /^[A-Za-z0-9._:-]{1,100}$/
+const CLIENT_IP = /^[0-9A-Fa-f:.]{2,45}$/
+
+/**
+ * The context the database stamps on every audit row (request id, reported client address, device).
+ * Forwarded unchanged from the dashboard; a native client gets a fresh request id.
+ */
+export const requestContextHeaders = (request: Request): Record<string, string> => {
+  const context: Record<string, string> = {}
+  const requestId = request.headers.get("X-Qarar-Request-Id")
+  context["X-Qarar-Request-Id"] = requestId && REQUEST_ID.test(requestId) ? requestId : crypto.randomUUID()
+  const clientIp = request.headers.get("X-Qarar-Client-IP")
+  if (clientIp && CLIENT_IP.test(clientIp)) context["X-Qarar-Client-IP"] = clientIp
+  const userAgent = request.headers.get("X-Qarar-User-Agent") ?? request.headers.get("User-Agent")
+  if (userAgent) context["X-Qarar-User-Agent"] = userAgent.slice(0, 500)
+  return context
+}
+
 export type IamAdminDependencies = {
-  createCaller: (authorization: string) => any
+  createCaller: (authorization: string, context: Record<string, string>) => any
   admin: any
+  /** A service client carrying this request's context, so service-side audit rows keep it. */
+  adminFor?: (context: Record<string, string>) => any
   sendEmail: (message: { to: string; subject: string; text: string; html: string }) => Promise<void>
   allowedOrigins?: readonly string[]
   originConfigurationValid?: boolean
@@ -148,7 +168,9 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
   const authorization = request.headers.get("Authorization")
   if (!authorization?.startsWith("Bearer ")) return json(request, dependencies, { error: "missing_authorization" }, 401)
 
-  const caller = dependencies.createCaller(authorization)
+  const context = requestContextHeaders(request)
+  const caller = dependencies.createCaller(authorization, context)
+  const admin = dependencies.adminFor?.(context) ?? dependencies.admin
   const { data: callerData, error: callerError } = await caller.auth.getUser()
   if (callerError || !callerData?.user) return json(request, dependencies, { error: "invalid_token" }, 401)
   const actorUserId = callerData.user.id
@@ -163,7 +185,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
 
     if (payload.action === "create_user") {
       await requirePermission(caller, "iam.users.manage")
-      await requireRateLimit(dependencies.admin, actorUserId, "iam.create_user")
+      await requireRateLimit(admin, actorUserId, "iam.create_user")
       const email = payload.email?.trim().toLowerCase()
       if (!email || !payload.full_name_ar?.trim()) return json(request, dependencies, { error: "email_and_full_name_ar_required" }, 400)
       if (!payload.role_id && payload.governance_unit_id) {
@@ -191,7 +213,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
       const token = direct ? "" : await issueActivationToken(dependencies.activationTokenSecret ?? "", expiresAt)
 
       const bootstrapPassword = `${base64Url(crypto.getRandomValues(new Uint8Array(32)))}aA1!`
-      const { data: created, error: createError } = await dependencies.admin.auth.admin.createUser({
+      const { data: created, error: createError } = await admin.auth.admin.createUser({
         email,
         password: direct ? payload.temporary_password : bootstrapPassword,
         email_confirm: false,
@@ -202,7 +224,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
       if (createError || !created?.user) return json(request, dependencies, { error: "auth_user_creation_failed" }, 409)
 
       const userId = created.user.id
-      const { data: finalized, error: finalizeError } = await api(dependencies.admin).rpc(direct ? "service_finalize_temporary_user" : "service_finalize_invited_user", {
+      const { data: finalized, error: finalizeError } = await api(admin).rpc(direct ? "service_finalize_temporary_user" : "service_finalize_invited_user", {
         p_actor_user_id: actorUserId,
         p_auth_user_id: userId,
         p_email: email,
@@ -215,18 +237,18 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
         p_membership_title: payload.membership_title ?? null,
       })
       if (finalizeError) {
-        await dependencies.admin.auth.admin.deleteUser(userId, false)
+        await admin.auth.admin.deleteUser(userId, false)
         throw Object.assign(new Error(`application provisioning failed: ${finalizeError.message}`), direct ? { status: 503 } : {})
       }
       if (direct) {
         if (finalized?.user_id !== userId || finalized.must_change_password !== true) throw Object.assign(new Error("temporary provisioning receipt unconfirmed"), { status: 503 })
         // Confirm only after the database gate is committed. An Auth identity
         // without an application receipt remains unable to sign in.
-        const { error: confirmError } = await dependencies.admin.auth.admin.updateUserById(userId, { email_confirm: true })
+        const { error: confirmError } = await admin.auth.admin.updateUserById(userId, { email_confirm: true })
         if (confirmError) throw Object.assign(new Error("temporary account confirmation failed"), { status: 503 })
         return json(request, dependencies, { ...finalized, account_created: true, invitation_sent: false, must_change_password: true }, 201)
       }
-      const { data: invitation, error: invitationError } = await api(dependencies.admin).rpc("service_issue_activation_invitation", {
+      const { data: invitation, error: invitationError } = await api(admin).rpc("service_issue_activation_invitation", {
         p_actor_user_id: actorUserId,
         p_auth_user_id: userId,
         p_email: email,
@@ -237,7 +259,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
         p_expires_at: expiresAt.toISOString(),
       })
       if (invitationError) {
-        await dependencies.admin.auth.admin.deleteUser(userId, false)
+        await admin.auth.admin.deleteUser(userId, false)
         throw new Error(`activation invitation failed: ${invitationError.message}`)
       }
       const activationUrl = `${appOrigin}/activate#token=${encodeURIComponent(token)}`
@@ -252,27 +274,27 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
 
     if (["update_user_status", "lock_user", "unlock_user"].includes(payload.action)) {
       await requirePermission(caller, "iam.users.manage")
-      await requireRateLimit(dependencies.admin, actorUserId, "iam.update_user_status", 30, 600)
+      await requireRateLimit(admin, actorUserId, "iam.update_user_status", 30, 600)
       if (!payload.user_id) return json(request, dependencies, { error: "user_id_required" }, 400)
       const status = payload.action === "lock_user" ? "suspended" : payload.action === "unlock_user" ? "active" : payload.status
       if (!["active", "inactive", "suspended"].includes(status)) return json(request, dependencies, { error: "invalid_user_status" }, 400)
 
-      const { data: before, error: getError } = await dependencies.admin.auth.admin.getUserById(payload.user_id)
+      const { data: before, error: getError } = await admin.auth.admin.getUserById(payload.user_id)
       if (getError || !before?.user) return json(request, dependencies, { error: "auth_user_not_found" }, 404)
       const wasBanned = before.user.banned_until && new Date(before.user.banned_until).getTime() > Date.now()
-      const { error: authError } = await dependencies.admin.auth.admin.updateUserById(payload.user_id, {
+      const { error: authError } = await admin.auth.admin.updateUserById(payload.user_id, {
         ban_duration: status === "active" ? "none" : "876000h",
       })
       if (authError) throw new Error(`Auth status update failed: ${authError.message}`)
 
-      const { data, error } = await api(dependencies.admin).rpc("service_apply_user_status", {
+      const { data, error } = await api(admin).rpc("service_apply_user_status", {
         p_actor_user_id: actorUserId,
         p_user_id: payload.user_id,
         p_status: status,
         p_reason: payload.reason ?? null,
       })
       if (error) {
-        await dependencies.admin.auth.admin.updateUserById(payload.user_id, {
+        await admin.auth.admin.updateUserById(payload.user_id, {
           ban_duration: wasBanned ? "876000h" : "none",
         })
         throw new Error(`application status update failed: ${error.message}`)
@@ -284,7 +306,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
       if (!payload.session_id) return json(request, dependencies, { error: "session_id_required" }, 400)
       const { data: session, error } = await api(caller).rpc("request_session_revocation", { p_session_id: payload.session_id })
       if (error) throw Object.assign(new Error("session revocation request denied"), { status: 403 })
-      const { data: revokedCount, error: revokeError } = await api(dependencies.admin).rpc("service_revoke_auth_sessions", {
+      const { data: revokedCount, error: revokeError } = await api(admin).rpc("service_revoke_auth_sessions", {
         p_actor_user_id: actorUserId,
         p_user_id: session.user_id,
         p_auth_session_id: session.auth_session_id,
@@ -299,12 +321,12 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
       if (!payload.user_id) return json(request, dependencies, { error: "user_id_required" }, 400)
       const redirectTo = resolveAllowedRedirect(payload.redirect_to, dependencies.allowedOrigins ?? [])
       if (redirectTo === null) return json(request, dependencies, { error: "invalid_redirect_to" }, 400)
-      await requireRateLimit(dependencies.admin, actorUserId, payload.action, 5, 900)
+      await requireRateLimit(admin, actorUserId, payload.action, 5, 900)
       const user = await getManagedUser(caller, payload.user_id)
       if (payload.action === "resend_invitation") {
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         const token = await issueActivationToken(dependencies.activationTokenSecret ?? "", expiresAt)
-        const { error: invitationError } = await api(dependencies.admin).rpc("service_issue_activation_invitation", {
+        const { error: invitationError } = await api(admin).rpc("service_issue_activation_invitation", {
           p_actor_user_id: actorUserId, p_auth_user_id: payload.user_id, p_email: user.email,
           p_full_name_ar: user.full_name_ar ?? "", p_role_id: null, p_governance_unit_id: null,
           p_token_hash: await activationHexDigest(token), p_expires_at: expiresAt.toISOString(),
@@ -319,7 +341,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
         return json(request, dependencies, { sent: true, user_id: payload.user_id, destination: user.email.replace(/(^.).*(@.*$)/, "$1***$2") })
       }
       const type = payload.action === "resend_invitation" ? "invite" : "recovery"
-      const { data, error } = await dependencies.admin.auth.admin.generateLink({
+      const { data, error } = await admin.auth.admin.generateLink({
         type,
         email: user.email,
         options: redirectTo ? { redirectTo } : {},
@@ -333,7 +355,7 @@ export const createIamAdminHandler = (dependencies: IamAdminDependencies) => asy
         text: `Use this secure link to ${action}: ${data.properties.action_link}`,
         html: `<p>Use the secure link below to ${action}.</p><p><a href="${data.properties.action_link}">${title}</a></p>`,
       })
-      const { error: auditError } = await api(dependencies.admin).rpc("service_record_iam_event", {
+      const { error: auditError } = await api(admin).rpc("service_record_iam_event", {
         p_actor_user_id: actorUserId,
         p_target_user_id: payload.user_id,
         p_action: type === "invite" ? "iam.invitation.resent" : "iam.password_reset.sent",

@@ -101,7 +101,7 @@ unknown fields.
 | `admin_get_role_detail` | `{id,code,name_ar,name_en?,description?,role_scope,is_active,permissions:PermissionSummary[]}` |
 | `admin_export_permission_matrix` | `{schema_version:1,exported_at,organization_id,permissions:object[],roles:object[],assignments:object[]}` |
 | `list_my_sessions` | `SessionSummary[]`; ordered by last activity, with session/device/platform/app/status/activity/revocation fields |
-| `admin_list_sessions` | `{items:AdminSessionSummary[],total:int,limit:int,offset:int}`; organisation sessions with user name/email, device, IP, status (`active`/`ended`/`revoked`), `is_current`, `last_activity_at` |
+| `admin_list_sessions_v2` | `{items:AdminSessionSummary[],total:int,limit:int,offset:int}`; organisation sessions with user name/email, device, IP, status (`active`/`ended`/`revoked`), `is_current`, `last_activity_at` |
 | `request_session_revocation` | `{revoked:bool,session_id:uuid}`; application-level record only |
 | `service_finalize_temporary_user` | Internal `{user_id,membership_id?,must_change_password:true,status:"active"}`; never contains a password/hash |
 | `service_get_temporary_password_state` | Internal `{user_id,must_change_password:bool,expires_at}`; active account only |
@@ -301,6 +301,7 @@ AuditItem = {
 |---|---|
 | `admin_search_audit_logs` | `Page<AuditItem>` |
 | `admin_get_audit_log` | Complete `AuditItem` |
+| `admin_get_audit_facets_v2` | `{entity_types:[{value,count}],actors:[{id,name_ar,count}],results:{success?,denied?,failure?}}` |
 | `admin_export_audit_logs` | `{schema_version,exported_at,organization_id,items:AuditItem[]}` |
 
 ## Decoder Rule
@@ -492,3 +493,19 @@ and result types remain in the generated contract reference.
 | `get_topic_prior_route_summaries` | array of `topic_id`, `status`, `missing_evidence_count` for visible matching topics |
 | `create_meeting_series_from_existing` | series `id`, `frequency`, `occurrences` with meeting identity, number, sequence and scheduled date |
 | `update_meeting_series_recurrence` | series `id`, `frequency`, `updated_occurrences` |
+
+## Council oversight (v2)
+
+| Contract | Response |
+|---|---|
+| `admin_get_oversight_workspace_v2` | `{assignments:OversightAssignment[],users,roles,classes,units,councils,unlinked_councils}` |
+| `admin_preview_oversight_v2` | `{council_count,councils:[{id,name_ar,class_name_ar}],holders:[{id,name_ar,council_count}]}` |
+| `admin_save_oversight_assignment_v2` | `OversightAssignment` with `coverage:{council_count,holder_count,holders}` |
+| `admin_end_oversight_assignment_v2` | `OversightAssignment` (status `ended`) |
+| `get_my_oversight_scope_v2` | `{councils:[{id,name_ar,class_name_ar,scope_unit_name_ar,via}]}` |
+| `get_my_oversight_violations_v2` | `{items:[{id,rule_code,rule_name_ar,council_id,council_name_ar,subject_type,subject_label,subject_link,due_since,detected_at,status,resolved_at,days_open,escalation_level,relation}],total,councils,rules}` |
+| `admin_get_oversight_rules_v2` | `[{rule_code,name_ar,enabled,threshold_days,escalation_days,escalate_immediately,version}]` |
+| `admin_save_oversight_rules_v2` | Same as `admin_get_oversight_rules_v2` after saving |
+| `get_my_notifications_v2` | `{items:[{id,category,title_ar,body_ar,link_path,created_at,read_at}],unread_count}` |
+| `get_my_home_v2` | `{user,meetings:{count,items},votes:{count,items},signatures:{count,items},tasks:{open,overdue,to_verify,items},topics:{returned,to_review,items},leadership,oversight|null,organization|null,generated_at}` |
+

@@ -16,6 +16,9 @@ export function templateFor(context) {
     case "execution.task.submitted": return "task_submitted";
     case "execution.task.returned": return "task_returned";
     case "execution.task.completed": return "task_completed";
+    case "oversight.violation.detected": return "oversight_violation";
+    case "oversight.violation.escalated": return "oversight_escalation";
+    case "oversight.digest": return "oversight_digest";
     default: return null;
   }
 }
@@ -41,10 +44,14 @@ function applicationVariables(payload, appBaseUrl) {
   const origin = new URL(appBaseUrl).origin;
   const meetingId = payload?.meeting_id;
   const taskId = payload?.action_item_id;
+  // Oversight links are internal paths written by the database; anything else is dropped, never followed.
+  const subjectLink = typeof payload?.subject_link === "string" && /^\/admin\/[A-Za-z0-9/_?=&.-]*$/.test(payload.subject_link) ? payload.subject_link : null;
   return {
     ...payload,
     meeting_url: meetingId ? `${origin}/admin/meetings/${encodeURIComponent(meetingId)}` : undefined,
-    task_url: taskId ? `${origin}/admin/tasks?task=${encodeURIComponent(taskId)}` : undefined
+    task_url: taskId ? `${origin}/admin/tasks?task=${encodeURIComponent(taskId)}` : undefined,
+    violation_url: subjectLink ? `${origin}${subjectLink}` : undefined,
+    violations_url: `${origin}/admin/violations`
   };
 }
 

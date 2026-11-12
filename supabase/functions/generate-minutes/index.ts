@@ -61,14 +61,20 @@ const generate = async (prompt: string, signal: AbortSignal): Promise<string> =>
 }
 
 const handler = createGenerateMinutesHandler({
-  createCaller: (authorization) => {
+  createCaller: (authorization, context) => {
     if (!isSupabaseConfigured) throw new ProviderError("function_not_configured", 503)
     return createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authorization } },
+      global: { headers: { ...context, Authorization: authorization } },
       auth: { persistSession: false, autoRefreshToken: false },
     })
   },
   service,
+  serviceFor: (context) => isSupabaseConfigured
+    ? createClient(supabaseUrl, serviceRoleKey, {
+      global: { headers: context },
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    : null,
   generate,
   allowedOrigins,
   aiConfigured: Boolean(geminiApiKey),

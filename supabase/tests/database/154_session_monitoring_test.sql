@@ -30,7 +30,7 @@ insert into qarar_iam.user_sessions(id,organization_id,user_id,auth_session_id,d
 -- A member without iam.sessions.manage / iam.users.manage cannot list the organisation.
 set local "request.jwt.claims"='{"sub":"54000000-0000-0000-0000-000000000011","role":"authenticated","session_id":"54000000-0000-0000-0000-0000000000a2"}';
 set local role authenticated;
-select throws_ok($$select api_v1.admin_list_sessions('all',null,50,0)$$,'42501',null,'a member cannot monitor other users'' sessions');
+select throws_ok($$select api_v2.admin_list_sessions_v2('all',null,50,0)$$,'42501',null,'a member cannot monitor other users'' sessions');
 create temporary table mine as select api_v1.list_my_sessions() p;
 select is((select s->>'status' from mine, jsonb_array_elements(p) s where s->>'id'='54000000-0000-0000-0000-0000000000b3'),'ended','a session whose sign-in expired is ended, not active');
 select is((select s->>'is_current' from mine, jsonb_array_elements(p) s where s->>'id'='54000000-0000-0000-0000-0000000000b2'),'true','the session behind this token is marked current');
@@ -38,15 +38,15 @@ reset role;
 
 set local "request.jwt.claims"='{"sub":"54000000-0000-0000-0000-000000000010","role":"authenticated","session_id":"54000000-0000-0000-0000-0000000000a1"}';
 set local role authenticated;
-create temporary table org_active as select api_v1.admin_list_sessions('active',null,50,0) p;
-create temporary table org_all as select api_v1.admin_list_sessions('all',null,50,0) p;
-create temporary table org_named as select api_v1.admin_list_sessions('all','عضو',50,0) p;
+create temporary table org_active as select api_v2.admin_list_sessions_v2('active',null,50,0) p;
+create temporary table org_all as select api_v2.admin_list_sessions_v2('all',null,50,0) p;
+create temporary table org_named as select api_v2.admin_list_sessions_v2('all','عضو',50,0) p;
 select is((select (p->>'total')::int from org_active),2,'active lists the two live sessions of this organisation');
 select is((select (p->>'total')::int from org_all),4,'all lists every session of this organisation and none of another');
 select is((select s->>'status' from org_all, jsonb_array_elements(p->'items') s where s->>'id'='54000000-0000-0000-0000-0000000000b4'),'revoked','a revoked session stays revoked');
 select is((select s->>'user_name_ar' from org_active, jsonb_array_elements(p->'items') s where s->>'id'='54000000-0000-0000-0000-0000000000b2'),'عضو عادي','each session names its user');
 select is((select (p->>'total')::int from org_named),3,'search narrows by user name');
-select throws_ok($$select api_v1.admin_list_sessions('open',null,50,0)$$,'22023',null,'an unknown status is rejected');
+select throws_ok($$select api_v2.admin_list_sessions_v2('open',null,50,0)$$,'22023',null,'an unknown status is rejected');
 
 select * from finish();
 rollback;

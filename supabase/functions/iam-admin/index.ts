@@ -23,11 +23,15 @@ const mailer = nodemailer.createTransport({
 })
 
 const handler = createIamAdminHandler({
-  createCaller: (authorization) => createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authorization } },
+  createCaller: (authorization, context) => createClient(supabaseUrl, anonKey, {
+    global: { headers: { ...context, Authorization: authorization } },
     auth: { persistSession: false, autoRefreshToken: false },
   }),
   admin,
+  adminFor: (context) => createClient(supabaseUrl, serviceRoleKey, {
+    global: { headers: context },
+    auth: { persistSession: false, autoRefreshToken: false },
+  }),
   allowedOrigins: originConfiguration.allowedOrigins,
   originConfigurationValid: originConfiguration.valid,
   isProduction,

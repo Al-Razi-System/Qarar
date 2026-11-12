@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { qararRpc, qararEdge } = vi.hoisted(() => ({ qararRpc: vi.fn(), qararEdge: vi.fn() }));
+const { qararRpc, qararRpcV2, qararEdge } = vi.hoisted(() => ({ qararRpc: vi.fn(), qararRpcV2: vi.fn(), qararEdge: vi.fn() }));
 vi.mock("@/shared/api/qarar-server", async () => {
   const actual = await vi.importActual<typeof import("@/shared/api/qarar-server")>("@/shared/api/qarar-server");
-  return { ...actual, qararRpc, qararEdge };
+  return { ...actual, qararRpc, qararRpcV2, qararEdge };
 });
 
 import { QararApiError } from "@/shared/api/qarar-server";
@@ -20,21 +20,21 @@ describe("GET /api/admin/sessions", () => {
   });
 
   it("lists the organisation's sessions through the monitoring contract", async () => {
-    qararRpc.mockResolvedValue({ items: [{ id: "s2" }], total: 1 });
+    qararRpcV2.mockResolvedValue({ items: [{ id: "s2" }], total: 1 });
     const response = await GET(new Request("http://localhost/api/admin/sessions?scope=organization&status=all&q=%20عضو%20"));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ items: [{ id: "s2" }], total: 1 });
-    expect(qararRpc).toHaveBeenCalledWith("admin_list_sessions", { p_status: "all", p_query: "عضو", p_limit: 100, p_offset: 0 });
+    expect(qararRpcV2).toHaveBeenCalledWith("admin_list_sessions_v2", { p_status: "all", p_query: "عضو", p_limit: 100, p_offset: 0 });
   });
 
   it("rejects an unknown status before calling the database", async () => {
     const response = await GET(new Request("http://localhost/api/admin/sessions?scope=organization&status=open"));
     expect(response.status).toBe(400);
-    expect(qararRpc).not.toHaveBeenCalled();
+    expect(qararRpcV2).not.toHaveBeenCalled();
   });
 
   it("answers a denied caller with safe Arabic copy", async () => {
-    qararRpc.mockRejectedValue(new QararApiError("permission denied: iam.sessions.manage", 403, "42501"));
+    qararRpcV2.mockRejectedValue(new QararApiError("permission denied: iam.sessions.manage", 403, "42501"));
     const response = await GET(new Request("http://localhost/api/admin/sessions?scope=organization"));
     expect(response.status).toBe(403);
     const body = await response.json();

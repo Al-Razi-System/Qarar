@@ -7,7 +7,8 @@ select plan(8);
 select has_trigger('qarar_meetings','meetings','meeting_record_change_notification_events','meeting schedule/cancellation trigger exists');
 select has_trigger('qarar_meetings','agenda_items','meeting_agenda_change_notification_events','agenda update trigger exists');
 select matches((select prosrc from pg_proc where oid='qarar_governance.claim_whatsapp_notification_outbox(uuid,uuid,integer,integer)'::regprocedure),'meeting\.invitation\.updated','WhatsApp worker can claim invitation updates');
-select matches((select prosrc from pg_proc where oid='qarar_governance.get_notification_dispatch_context(uuid,uuid)'::regprocedure),'meeting_cancelled','cancellation template policy is resolved');
+-- Behaviour, not source text: the shared event-to-template mapping resolves a cancellation (2026-11-12).
+select is(qarar_governance.notification_template_code('meeting.cancelled','{}'),'meeting_cancelled','cancellation template policy is resolved');
 
 insert into public.organizations(id,code,name_ar) values
 ('bd000000-0000-0000-0000-000000000001','s129','Meeting change notifications');

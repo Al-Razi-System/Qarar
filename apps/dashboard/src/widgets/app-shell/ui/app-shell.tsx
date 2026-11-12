@@ -1,10 +1,11 @@
 "use client";
 
+import { NotificationBell } from "./notification-bell";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, BookOpenCheck, Building2, Calendar, ChevronDown, CircleHelp, ClipboardList, FileText, GitBranch, KeyRound, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquareText, Search, Settings, ShieldCheck, Users, Workflow, X } from "lucide-react";
+import { BookOpenCheck, Eye, TriangleAlert, Building2, Calendar, ChevronDown, CircleHelp, ClipboardList, FileText, GitBranch, KeyRound, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquareText, Search, Settings, ShieldCheck, Users, Workflow, X } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { SelfAvatar } from "@/shared/ui/self-avatar";
 
@@ -20,11 +21,14 @@ const navGroups = [
     { href: "/admin/topics", label: "المعاملات والموضوعات", icon: FileText, requiredAny: ["topics.read", "topics.create"] },
     { href: "/admin/meetings", label: "الاجتماعات والقرارات", icon: Calendar, requiredAny: ["meetings.read"] },
     { href: "/admin/follow-up", label: "متابعة القرارات", icon: ClipboardList, requiredAny: ["decisions.read", "execution.tasks.read", "execution.tasks.manage"] },
+    // Everyone may open it; the contract shows only councils the user leads or follows.
+    { href: "/admin/violations", label: "التجاوزات", icon: TriangleAlert },
   ]},
   { label: "الإدارة والتشغيل", items: [
     { href: "/admin/users", label: "المستخدمون", icon: Users, requiredAny: ["iam.users.read"] },
     { href: "/admin/permissions", label: "الأدوار والصلاحيات", icon: ShieldCheck, requiredAny: ["iam.roles.read", "iam.permissions.read"] },
     { href: "/admin/delegations", label: "التفويضات والإنابة", icon: KeyRound, requiredAny: ["iam.roles.assign"] },
+    { href: "/admin/oversight", label: "متابعة المجالس", icon: Eye, requiredAny: ["governance.oversight.manage"] },
     { href: "/admin/sessions", label: "مراقبة الجلسات", icon: Workflow, requiredAny: ["iam.sessions.manage", "iam.users.manage"] },
     { href: "/admin/audit", label: "سجل التدقيق", icon: ClipboardList, requiredAny: ["audit.logs.read"] },
   ]},
@@ -132,7 +136,7 @@ export function AppShell({ children, access }: { children: ReactNode; access: Ap
     </aside>
     <div className="lg:mr-[272px]">
       <header className="sticky top-0 z-20 flex h-[72px] items-center gap-3 border-b border-[#e1e9f2] bg-white/95 px-4 backdrop-blur-xl sm:px-5 lg:h-[82px] lg:px-8"><button type="button" onClick={() => setMobileNavigationOpen(true)} className="grid h-10 w-10 place-items-center rounded-xl text-[#52647a] hover:bg-[#f2f6fa] lg:hidden" aria-label="فتح القائمة"><Menu size={23} /></button><form onSubmit={submitSearch} className="relative hidden w-full max-w-[420px] sm:block"><Search size={17} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8b9aad]" /><input value={search} onChange={(event) => setSearch(event.target.value)} aria-label="بحث في الموضوعات" placeholder="ابحث في الموضوعات…" className="h-11 w-full rounded-xl border border-[#e3eaf2] bg-[#f8fafc] pr-10 pl-4 text-xs outline-none focus:border-[#9bc9f2] focus:bg-white focus:ring-4 focus:ring-[#0066cc]/5" /></form><div className="mr-auto flex items-center gap-2">
-        <div className="relative"><button type="button" onClick={() => { setNotificationsOpen((open) => !open); setProfileOpen(false); }} aria-expanded={notificationsOpen} aria-label="الإشعارات" className="relative grid h-10 w-10 place-items-center rounded-xl border border-[#e5ebf2] text-[#52647a] hover:bg-[#f6f9fc]"><Bell size={18} /><span className="absolute left-2.5 top-2 h-2 w-2 rounded-full border-2 border-white bg-[#ff7a00]" /></button>{notificationsOpen && <div role="status" className="absolute left-0 top-12 z-30 w-72 rounded-2xl border border-[#dce7f1] bg-white p-4 text-right shadow-xl"><strong className="text-xs text-[#0a1330]">الإشعارات</strong><p className="mt-2 text-[11px] leading-5 text-[#617287]">لا توجد إشعارات جديدة الآن. ستظهر هنا تنبيهات المهام والمسارات المطلوبة منك.</p></div>}</div>
+        <NotificationBell open={notificationsOpen} onOpenChange={(open) => { setNotificationsOpen(open); if (open) setProfileOpen(false); }} />
         <div className="relative"><button type="button" onClick={() => { setProfileOpen((open) => !open); setNotificationsOpen(false); }} aria-expanded={profileOpen} className="hidden items-center gap-2 rounded-xl border border-[#e5ebf2] px-3 py-2 sm:flex"><SelfAvatar key={access.user_id} name={displayName} /><span className="max-w-40 truncate text-xs font-bold text-[#23334b]">{displayName}</span><ChevronDown size={14} className="text-[#8b9aad]" /></button>{profileOpen && <div className="absolute left-0 top-12 z-30 w-60 rounded-2xl border border-[#dce7f1] bg-white p-2 shadow-xl"><div className="border-b border-[#edf2f6] px-3 py-2"><p className="truncate text-[11px] font-bold text-[#24364d]">{displayName}</p><p className="mt-1 truncate text-[10px] text-[#718196]">{access.email}</p><p className="mt-1 text-[10px] font-bold text-[#0872df]">{roleLabel}</p></div><Link href="/admin/account" onClick={() => setProfileOpen(false)} className="mt-1 flex min-h-10 items-center gap-2 rounded-xl px-3 text-[11px] font-bold text-[#0066cc] hover:bg-[#f2f6fa]"><Users size={15} />حسابي الشخصي</Link><button type="button" onClick={() => void logout()} disabled={loggingOut} className="mt-1 flex h-9 w-full items-center gap-2 rounded-xl px-3 text-right text-[11px] font-bold text-[#52647a] hover:bg-[#f2f6fa] hover:text-[#0066cc]"><LogOut size={15} />{loggingOut ? "جارٍ الخروج…" : "تسجيل الخروج"}</button></div>}</div>
       </div></header>
       <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>

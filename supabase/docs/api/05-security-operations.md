@@ -25,7 +25,7 @@ Do not use hardware serial numbers as `device_id`; generate an app installation 
 or expiry, `revoked` after revocation), `is_current` (the session behind the caller's
 token) and `last_activity_at`.
 
-`admin_list_sessions(p_status, p_query, p_limit, p_offset)` returns
+`admin_list_sessions_v2(p_status, p_query, p_limit, p_offset)` returns
 `{items, total, limit, offset}` for every session in the caller's organisation, with the
 user's name and email. It requires `iam.sessions.manage` or `iam.users.manage`, the same
 authority `request_session_revocation` applies. `p_status` is `active` (default), `ended`,

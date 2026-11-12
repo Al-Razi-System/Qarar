@@ -39,6 +39,17 @@ const eslintConfig = defineConfig([
       "src/features/meetings/ui/decision-composer-dialog.tsx",
       "src/features/meetings/ui/topic-attachments-panel.tsx",
       "src/features/meetings/ui/vote-result-panel.tsx",
+      // Governance administration, migrated screen by screen.
+      "src/features/audit/ui/**/*.tsx",
+      "src/features/sessions/ui/**/*.tsx",
+      "src/app/(dashboard)/admin/audit/**/*.tsx",
+      "src/app/(dashboard)/admin/sessions/**/*.tsx",
+      "src/features/oversight/ui/**/*.tsx",
+      "src/app/(dashboard)/admin/oversight/**/*.tsx",
+      "src/app/(dashboard)/admin/violations/**/*.tsx",
+      "src/widgets/app-shell/ui/notification-bell.tsx",
+      "src/features/home/ui/**/*.tsx",
+      "src/app/(dashboard)/admin/page.tsx",
     ],
     ignores: [
       "src/shared/ui/form-field.tsx",

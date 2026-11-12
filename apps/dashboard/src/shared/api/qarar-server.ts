@@ -1,6 +1,8 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { randomUUID } from "node:crypto";
+import { isIP } from "node:net";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { cache } from "react";
@@ -61,6 +63,75 @@ async function assertSensitiveMfa(accessToken: string, signal?: AbortSignal) {
 // repeating the same access-context request during one server render.
 const assertSensitiveMfaOnce = cache(assertSensitiveMfa);
 
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,100}$/;
+
+/**
+ * Context the database stamps on every audit row: one request id per incoming request, the client
+ * address the reverse proxy reported (the same trusted header the login rate limit uses) and the
+ * device. Outside a request (tests, scripts) it is simply empty.
+ */
+export const qararRequestContextHeaders = cache(async (): Promise<Record<string, string>> => {
+  try {
+    const incoming = await headers();
+    const context: Record<string, string> = {};
+    const requestId = incoming.get("x-request-id");
+    context["X-Qarar-Request-Id"] = requestId && REQUEST_ID_PATTERN.test(requestId) ? requestId : randomUUID();
+    const clientIp = incoming.get("x-qarar-client-ip");
+    if (clientIp && !clientIp.includes(",") && isIP(clientIp) !== 0) context["X-Qarar-Client-IP"] = clientIp;
+    const userAgent = incoming.get("user-agent");
+    if (userAgent) context["X-Qarar-User-Agent"] = userAgent.slice(0, 500);
+    return context;
+  } catch {
+    return {};
+  }
+});
+
+function tokenSubject(token: string) {
+  try {
+    const encoded = token.split(".")[1];
+    const sub = encoded ? (JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as { sub?: unknown }).sub : null;
+    return typeof sub === "string" && /^[0-9a-f-]{36}$/i.test(sub) ? sub : null;
+  } catch { return null; }
+}
+
+/**
+ * A rejected command rolls back its own transaction, so its audit row never lands. Denials and
+ * failures are therefore recorded here, as the service, in a separate transaction. Recording must
+ * never change what the user is told, so every error is swallowed.
+ */
+async function recordApiOutcome(apiVersion: "v1" | "v2", contract: string, accessToken: string, status: number, code?: string) {
+  const denied = status === 403 || code === "42501";
+  const failed = status >= 500 || (typeof code === "string" && code.startsWith("PGRST2"));
+  if (!denied && !failed) return;
+  const actor = tokenSubject(accessToken);
+  if (!actor || !/^[a-z][a-z0-9_]{0,79}$/.test(contract)) return;
+  try {
+    const env = await getQararEnv();
+    if (!env.SERVICE_ROLE_KEY) return;
+    await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/service_record_api_outcome_v2`, {
+      method: "POST",
+      headers: {
+        apikey: env.SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        "Accept-Profile": "api_v2",
+        "Content-Profile": "api_v2",
+        ...(await qararRequestContextHeaders()),
+      },
+      body: JSON.stringify({
+        p_actor_user_id: actor, p_api_version: apiVersion, p_contract: contract,
+        p_result: denied ? "denied" : "failure",
+        p_error_code: code && /^[A-Za-z0-9_]{1,20}$/.test(code) ? code : null,
+        p_http_status: status,
+      }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(2_000),
+    });
+  } catch {
+    // The original error is what the user must see.
+  }
+}
+
 export async function qararRpc<T>(
   name: string,
   body: Record<string, unknown>,
@@ -71,6 +142,7 @@ export async function qararRpc<T>(
   if (options.signal) await assertSensitiveMfa(accessToken, options.signal);
   else await assertSensitiveMfaOnce(accessToken);
   const localEnv = await getQararEnv();
+  const context = await qararRequestContextHeaders();
   const request = (token: string) => fetch(
     `${localEnv.SUPABASE_URL}/rest/v1/rpc/${name}`,
     {
@@ -81,6 +153,7 @@ export async function qararRpc<T>(
         "Content-Type": "application/json",
         "Accept-Profile": "api_v1",
         "Content-Profile": "api_v1",
+        ...context,
       },
       body: JSON.stringify(body),
       cache: "no-store",
@@ -96,6 +169,7 @@ export async function qararRpc<T>(
     const payload = await response.json().catch(() => ({})) as {
       code?: string; message?: string; details?: string; hint?: string;
     };
+    await recordApiOutcome("v1", name, accessToken, response.status, payload.code);
     throw new QararApiError(
       payload.message ?? `QARAR_API_${response.status}`,
       response.status,
@@ -127,6 +201,7 @@ export async function qararRpcV2<T>(
       "Content-Type": "application/json",
       "Accept-Profile": "api_v2",
       "Content-Profile": "api_v2",
+      ...(await qararRequestContextHeaders()),
     },
     body: JSON.stringify(body),
     cache: "no-store",
@@ -134,6 +209,7 @@ export async function qararRpcV2<T>(
   if (response.status === 401) throw new Error("UNAUTHENTICATED");
   if (!response.ok) {
     const payload = await response.json().catch(() => ({})) as { code?: string; message?: string; details?: string; hint?: string };
+    await recordApiOutcome("v2", name, accessToken, response.status, payload.code);
     throw new QararApiError(payload.message ?? `QARAR_API_${response.status}`, response.status, payload.code, payload.details, payload.hint);
   }
   if (response.status === 204) return null as T;
@@ -176,6 +252,7 @@ export async function qararEdge<T>(
         apikey: localEnv.ANON_KEY,
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
+        ...(await qararRequestContextHeaders()),
       },
       body: JSON.stringify(body),
       cache: "no-store",
@@ -194,7 +271,7 @@ export async function qararTable<T>(table: string, query: string): Promise<T> {
   await assertSensitiveMfaOnce(accessToken);
   const localEnv = await getQararEnv();
   const response = await fetch(`${localEnv.SUPABASE_URL}/rest/v1/${table}?${query}`, {
-    headers: { apikey: localEnv.ANON_KEY, Authorization: `Bearer ${accessToken}` },
+    headers: { apikey: localEnv.ANON_KEY, Authorization: `Bearer ${accessToken}`, ...(await qararRequestContextHeaders()) },
     cache: "no-store",
   });
   if (!response.ok) throw new Error(response.status === 401 ? "UNAUTHENTICATED" : `QARAR_API_${response.status}`);

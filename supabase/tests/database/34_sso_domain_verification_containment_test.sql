@@ -139,10 +139,10 @@ reset role;
 select ok(
   exists (
     select 1
-    from public.audit_logs
+    from qarar_audit.audit_logs
     where organization_id = '34343434-0000-0000-0000-000000000000'
       and action = 'sso_domains.insert'
-      and metadata -> 'new' ->> 'status' = 'disabled'
+      and coalesce(new_data, metadata -> 'new') ->> 'status' = 'disabled'
   ),
   'pending domain registration is written to the audit trail'
 );

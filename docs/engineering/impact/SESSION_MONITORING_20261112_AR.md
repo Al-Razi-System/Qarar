@@ -29,7 +29,7 @@
 
 ## المستهلكون والعقود
 
-- جديد: `api_v1.admin_list_sessions(p_status, p_query, p_limit, p_offset)`.
+- جديد: `api_v2.admin_list_sessions_v2(p_status, p_query, p_limit, p_offset)`.
 - معدّل بإضافة حقول فقط: `qarar_iam.list_my_sessions()` تضيف `status`, `is_current`,
   `last_activity_at`. الحقول القديمة باقية بأسمائها وقيمها، فأي مستهلك آخر للعقد لا يتأثر بالإضافة.
 - `register_user_session` بلا تغيير؛ تستدعيه الآن `/api/auth/login` و`/api/auth/mfa`.

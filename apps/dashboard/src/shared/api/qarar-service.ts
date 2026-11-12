@@ -1,5 +1,5 @@
 import "server-only";
-import { getQararEnv, QararApiError } from "@/shared/api/qarar-server";
+import { getQararEnv, QararApiError, qararRequestContextHeaders } from "@/shared/api/qarar-server";
 
 export async function qararServiceRpc<T>(name: string, body: Record<string, unknown>): Promise<T> {
   const env = await getQararEnv();
@@ -12,6 +12,7 @@ export async function qararServiceRpc<T>(name: string, body: Record<string, unkn
       "Content-Type": "application/json",
       "Accept-Profile": "api_v1",
       "Content-Profile": "api_v1",
+      ...(await qararRequestContextHeaders()),
     },
     body: JSON.stringify(body),
     cache: "no-store",

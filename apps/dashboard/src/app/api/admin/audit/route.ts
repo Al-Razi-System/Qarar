@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { qararRpc } from "@/shared/api/qarar-server";
+import { qararRpc, qararRpcV2 } from "@/shared/api/qarar-server";
 import { safeAdminError } from "@/shared/security/admin-error";
 import { isJsonObject, readJsonObject } from "@/shared/security/json-body";
 import { rejectUntrustedMutation } from "@/shared/security/request-guards";
 
 const contracts = new Set([
-  "admin_search_audit_logs", "admin_get_audit_log", "admin_export_audit_logs",
+  "admin_search_audit_logs", "admin_get_audit_log", "admin_export_audit_logs", "admin_get_audit_facets_v2",
 ]);
 
 export async function POST(request: Request) {
@@ -23,7 +23,9 @@ export async function POST(request: Request) {
     if (params !== undefined && !isJsonObject(params)) {
       return NextResponse.json({ error: { message: "معاملات العملية غير صالحة." } }, { status: 400 });
     }
-    const data = await qararRpc<unknown>(contract, params ?? {});
+    const data = contract.endsWith("_v2")
+      ? await qararRpcV2<unknown>(contract, params ?? {})
+      : await qararRpc<unknown>(contract, params ?? {});
     return NextResponse.json({ data });
   } catch (error) {
     const safeError = safeAdminError(error, "تعذر تنفيذ العملية.", 500);

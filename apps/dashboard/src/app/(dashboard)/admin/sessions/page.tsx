@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "مراقبة الجلسات" };
 
 type AccessContext = { is_system_admin?: boolean; permissions?: string[] };
 
-/** Same authority admin_list_sessions and request_session_revocation apply. */
+/** Same authority admin_list_sessions_v2 and request_session_revocation apply. */
 async function canMonitorOrganization() {
   try {
     const access = await qararRpc<AccessContext | null>("get_current_user_access_context", {});
