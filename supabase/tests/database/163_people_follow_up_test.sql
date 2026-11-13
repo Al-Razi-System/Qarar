@@ -37,7 +37,7 @@ select ('63000000-0000-0000-0000-00000000090'||n)::uuid,'63000000-0000-0000-0000
 from clock c, (values (1,'closed'),(2,'closed'),(3,'scheduled')) v(n,st);
 insert into qarar_attendance.attendance_records(organization_id,meeting_id,user_id,membership_id,attendance_status)
 select '63000000-0000-0000-0000-000000000001',('63000000-0000-0000-0000-00000000090'||n)::uuid,('63000000-0000-0000-0000-00000000010'||usr)::uuid,'63000000-0000-0000-0000-000000000703',s
-from (values (1,1,'present'),(2,1,'present'),(1,2,'absent'),(2,2,'absent'),(1,3,'present'),(3,3,'present')) v(n,usr,s);
+from (values (1,1,'present'),(2,1,'present'),(1,2,'absent'),(1,3,'present'),(3,3,'present')) v(n,usr,s);
 insert into qarar_topics.topics(id,organization_id,topic_no,title_ar,submitted_by_user_id,status,current_unit_id) values
 ('63000000-0000-0000-0000-000000000801','63000000-0000-0000-0000-000000000001','T-1','موضوع','63000000-0000-0000-0000-000000000103','listed','63000000-0000-0000-0000-000000000501');
 insert into qarar_meetings.agenda_items(id,organization_id,meeting_id,agenda_order,topic_id) values
@@ -72,17 +72,17 @@ create temporary view pp as select p from seen, jsonb_array_elements(f->'people'
 
 select is((select jsonb_agg(p->>'full_name_ar') from pp), '["أمل","سارة","وليد"]'::jsonb, 'members of my councils are listed once each, those needing attention first; other councils'' members are not shown');
 select is((select p->'councils' from pp where p->>'full_name_ar'='أمل'),
-  '[{"id":"63000000-0000-0000-0000-000000000501","name_ar":"مجلس الكلية","role_code":"council_chair","role_name_ar":"رئيس"}]'::jsonb, 'two roles in one council show as the higher one');
+  '[{"id":"63000000-0000-0000-0000-000000000501","name_ar":"مجلس الكلية","role_code":"council_chair","role_name_ar":"رئيس","attendance":{"present":2,"recorded":2}}]'::jsonb, 'two roles in one council show as the higher one, with attendance in that council');
 select is((select p - 'councils' - 'user_id' - 'full_name_ar' from pp where p->>'full_name_ar'='أمل'),
   '{"state":"attention","attendance":{"present":2,"recorded":2},"votes":{"eligible":1,"voted":1},"minutes":{"total":1,"signed":1,"pending":0},"tasks":{"total":2,"done":1,"overdue":1},"topics_submitted":0}'::jsonb,
   'a member''s attendance, voting, signatures and tasks; a late task needs attention');
 select is((select jsonb_build_object('state', p->>'state', 'minutes', p->'minutes', 'att', p->'attendance', 'topics', p->'topics_submitted') from pp where p->>'full_name_ar'='سارة'),
   '{"state":"attention","minutes":{"total":1,"signed":0,"pending":1},"att":{"present":1,"recorded":1},"topics":1}'::jsonb, 'a pending signature needs attention; attendance counts held sessions only');
 select is((select jsonb_build_object('state', p->>'state', 'att', p->'attendance', 'votes', p->'votes') from pp where p->>'full_name_ar'='وليد'),
-  '{"state":"attention","att":{"present":0,"recorded":2},"votes":{"eligible":1,"voted":0}}'::jsonb, 'missing most sessions needs attention; a vote not cast is counted without revealing any vote');
+  '{"state":"attention","att":{"present":0,"recorded":1},"votes":{"eligible":1,"voted":0}}'::jsonb, 'being absent from one''s only session needs attention; a vote not cast is counted without revealing any vote');
 select ok((select f::text !~ 'reject|approve|vote_value' from seen where who='amal'), 'the direction of a vote never leaves the database');
 select is((select f->'summary' from seen where who='amal'),
-  '{"total":3,"attention":3,"regular":0,"no_activity":0,"present":3,"recorded":5,"voted":1,"eligible":3,"pending_signatures":1,"tasks":2,"tasks_done":1,"tasks_overdue":1}'::jsonb, 'the summary adds the members up');
+  '{"total":3,"attention":3,"regular":0,"no_activity":0,"present":3,"recorded":4,"voted":1,"eligible":3,"pending_signatures":1,"tasks":2,"tasks_done":1,"tasks_overdue":1}'::jsonb, 'the summary adds the members up');
 select is((select (f->'summary'->>'total')::int from seen where who='walid'), 0, 'a plain member follows no one');
 select ok(not has_function_privilege('anon','api_v2.get_my_people_follow_up_v2(date)','execute')
   and not has_function_privilege('authenticated','qarar_voting.member_votes_v2(uuid,uuid[])','execute'), 'only signed-in users reach it, and only through api_v2');

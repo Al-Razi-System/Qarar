@@ -1,12 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import type { PeopleFollowUp, PersonRow } from "../model/performance";
+import { peopleReport, personReasons, type PeopleFollowUp, type PersonRow } from "../model/performance";
 import { PeopleFollowUpView } from "./people-follow-up";
 
 const person = (extra: Partial<PersonRow>): PersonRow => ({
   user_id: "u1", full_name_ar: "د. أحمد", state: "attention",
-  councils: [{ id: "c1", name_ar: "مجلس الكلية", role_code: "council_chair", role_name_ar: "رئيس المجلس" }, { id: "c2", name_ar: "مجلس الجامعة", role_code: "council_member", role_name_ar: "عضو" }],
+  councils: [{ id: "c1", name_ar: "مجلس الكلية", role_code: "council_chair", role_name_ar: "رئيس المجلس", attendance: { present: 1, recorded: 1 } }, { id: "c2", name_ar: "مجلس الجامعة", role_code: "council_member", role_name_ar: "عضو" }],
   attendance: { present: 1, recorded: 4 }, votes: { eligible: 3, voted: 3 }, minutes: { total: 2, signed: 1, pending: 1 },
   tasks: { total: 3, done: 1, overdue: 2 }, topics_submitted: 2, ...extra,
 });
@@ -24,11 +24,12 @@ describe("PeopleFollowUpView", () => {
     render(<PeopleFollowUpView data={data} />);
     expect(rows()[0]).toHaveTextContent("د. أحمد");
     expect(rows()[0]).toHaveTextContent("رئيس المجلس، مجلس الكلية، ومجلس آخر");
-    expect(rows()[0]).toHaveTextContent("25%");
+    expect(rows()[0]).toHaveTextContent("حضر 1 من 4");
+    expect(rows()[0]).toHaveTextContent("غاب 3، 25%");
     expect(rows()[0]).toHaveTextContent("3 من 3");
     expect(rows()[0]).toHaveTextContent("1 بانتظاره");
     expect(rows()[0]).toHaveTextContent("2 متأخرة");
-    expect(rows()[0]).toHaveTextContent("2 تكليفات متأخرة، محضر ينتظر توقيعه، غاب عن أكثر الجلسات");
+    expect(rows()[0]).toHaveTextContent("2 تكليفات متأخرة، محضر ينتظر توقيعه، غاب عن 3 جلسات من 4");
     expect(within(rows()[1]).getByText("منتظم")).toBeInTheDocument();
   });
 
@@ -50,6 +51,16 @@ describe("PeopleFollowUpView", () => {
     render(<PeopleFollowUpView data={data} initialCouncilId="c1" />);
     expect(rows()).toHaveLength(1);
     expect(rows()[0]).toHaveTextContent("د. أحمد");
+    expect(rows()[0]).toHaveTextContent("حضر 1 من 1");
+  });
+
+  it("flags a single absence from a member's only session, and reports absences in the export", () => {
+    const once = person({ attendance: { present: 0, recorded: 1 }, minutes: { total: 0, signed: 0, pending: 0 }, tasks: { total: 0, done: 0, overdue: 0 } });
+    expect(personReasons(once)).toEqual(["غاب عن جلسة واحدة من 1"]);
+    const sheet = peopleReport(data, [person({})]).sheets[0];
+    expect(sheet.rows[0]).toHaveLength(sheet.columns.length);
+    expect(sheet.columns.slice(4, 8).map((column) => column.header)).toEqual(["حضر", "غاب", "من جلسات", "نسبة الحضور %"]);
+    expect(sheet.rows[0].slice(4, 8)).toEqual([1, 3, 4, 25]);
   });
 
   it("says so when there is no member in scope", () => {

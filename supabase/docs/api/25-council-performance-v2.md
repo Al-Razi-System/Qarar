@@ -21,7 +21,7 @@ Council object:
 |---|---|
 | `id`, `name_ar`, `parent_name_ar`, `unit_status` | the council and its parent unit |
 | `leads`, `follows` | why the caller sees it |
-| `state` | `inactive` (unit not active), `stalled` (an escalated open violation, or the last two due sessions not held), `attention` (any open violation or a session past its due day), else `regular` |
+| `state` | `inactive` (unit not active), `stalled` (an escalated open violation, or the last two due sessions not held), `attention` (any open violation, a session past its due day, the latest due session held late, attendance below 75%, or a late task), else `regular` |
 | `sessions` | `{on_time, late, missed, overdue, upcoming, cancelled, due}`; `due` = the first four |
 | `marks` | due sessions in order: `{meeting_id, outcome, late_days, due_on}` |
 | `next_due` | due day of the next upcoming session |
@@ -77,8 +77,8 @@ the caller leads or follows. Returns `{academic_year_start, summary, councils, p
 
 Person: `{user_id, full_name_ar, councils:[{id,name_ar,role_code,role_name_ar}], state, attendance:{present,recorded},
 votes:{eligible,voted}, minutes:{total,signed,pending}, tasks:{total,done,overdue}, topics_submitted}`.
-`votes` counts closed rounds only and never exposes how anyone voted. `state` is `attention` (a late task, a pending
-signature, or under half of two or more sessions or rounds), `no_activity`, else `regular`.
+`votes` counts closed rounds only and never exposes how anyone voted. Each council entry also carries the member's `attendance` in that council. `state` is `attention` (a late task, a pending
+signature, or attendance or voting below 75%), `no_activity`, else `regular`.
 
 ## Session outcome
 

@@ -1,4 +1,4 @@
-import type { CsvCell } from "@/shared/lib/csv";
+import type { Report, ReportColumn, ReportSheet, ReportTone } from "@/shared/lib/excel-report";
 import type { Metric } from "@/shared/ui/metric-strip";
 import type { RhythmSession, SessionOutcome } from "@/shared/ui/session-rhythm";
 import type { Share } from "@/shared/ui/share-bar";
@@ -214,7 +214,7 @@ export function topicsMetrics({ summary }: TopicsFollowUp): Metric[] {
 export type PersonState = "attention" | "regular" | "no_activity";
 export type PersonRow = {
   user_id: string; full_name_ar: string; state: PersonState;
-  councils: Array<{ id: string; name_ar: string; role_code: string; role_name_ar: string }>;
+  councils: Array<{ id: string; name_ar: string; role_code: string; role_name_ar: string; attendance?: { present: number; recorded: number } }>;
   attendance: { present: number; recorded: number }; votes: { eligible: number; voted: number };
   minutes: { total: number; signed: number; pending: number }; tasks: { total: number; done: number; overdue: number }; topics_submitted: number;
 };
@@ -228,13 +228,38 @@ export type PeopleFollowUp = {
 export const personStateLabel: Record<PersonState, string> = { attention: "يحتاج متابعة", regular: "منتظم", no_activity: "بلا نشاط بعد" };
 export const personStateTone: Record<PersonState, "warning" | "success" | "neutral"> = { attention: "warning", regular: "success", no_activity: "neutral" };
 
+/** Below this share of sessions attended or rounds voted in, a member or a council needs attention. Same as the indicators' target. */
+export const belowTarget = (part: number, whole: number) => whole > 0 && part * 4 < whole * 3;
+const sessionsWord = (count: number) => (count === 1 ? "جلسة واحدة" : count === 2 ? "جلستين" : `${count} جلسات`);
+
+/** A member's figures inside one council when the list is narrowed to it, else across all their councils. */
+export function personAttendance(person: PersonRow, councilId = "") {
+  return (councilId && person.councils.find((council) => council.id === councilId)?.attendance) || person.attendance;
+}
+
 /** Why a member needs attention, in the reader's words. */
 export function personReasons(person: PersonRow) {
   const reasons: string[] = [];
+  const { attendance, votes } = person;
   if (person.tasks.overdue > 0) reasons.push(person.tasks.overdue === 1 ? "تكليف متأخر" : `${person.tasks.overdue} تكليفات متأخرة`);
   if (person.minutes.pending > 0) reasons.push(person.minutes.pending === 1 ? "محضر ينتظر توقيعه" : `${person.minutes.pending} محاضر تنتظر توقيعه`);
-  if (person.attendance.recorded >= 2 && person.attendance.present * 2 < person.attendance.recorded) reasons.push("غاب عن أكثر الجلسات");
-  if (person.votes.eligible >= 2 && person.votes.voted * 2 < person.votes.eligible) reasons.push("لم يصوّت في أكثر الجولات");
+  if (belowTarget(attendance.present, attendance.recorded)) reasons.push(`غاب عن ${sessionsWord(attendance.recorded - attendance.present)} من ${attendance.recorded}`);
+  if (belowTarget(votes.voted, votes.eligible)) reasons.push(`لم يصوّت في ${votes.eligible - votes.voted} من ${votes.eligible} جولات`);
+  return reasons;
+}
+
+/** Why a council is not regular, in the reader's words. */
+export function councilReasons(council: CouncilRow) {
+  const reasons: string[] = [];
+  const last = council.marks[council.marks.length - 1];
+  const notHeld = council.sessions.missed + council.sessions.overdue;
+  if (council.state === "inactive") return ["المجلس غير مفعّل"];
+  if (council.violations.escalated > 0) reasons.push(council.violations.escalated === 1 ? "تجاوز مصعَّد" : `${council.violations.escalated} تجاوزات مصعَّدة`);
+  if (notHeld > 0) reasons.push(notHeld === 1 ? "جلسة لم تنعقد" : `${notHeld} جلسات لم تنعقد`);
+  if (last?.outcome === "late") reasons.push(`آخر جلسة تأخرت ${days(last.late_days)}`);
+  if (belowTarget(council.attendance.present, council.attendance.recorded)) reasons.push(`الحضور ${percent(council.attendance.present, council.attendance.recorded)}`);
+  if (council.tasks.overdue > 0) reasons.push(council.tasks.overdue === 1 ? "تكليف متأخر" : `${council.tasks.overdue} تكليفات متأخرة`);
+  if (reasons.length === 0 && council.violations.open > 0) reasons.push(council.violations.open === 1 ? "تجاوز مفتوح" : `${council.violations.open} تجاوزات مفتوحة`);
   return reasons;
 }
 
@@ -253,45 +278,70 @@ export function peopleMetrics({ summary }: PeopleFollowUp): Metric[] {
 }
 
 const outcomeWord: Record<SessionOutcome, string> = { on_time: "في موعدها", late: "متأخرة", missed: "لم تنعقد", overdue: "لم تنعقد بعد", cancelled: "ملغاة أو مؤجلة", upcoming: "قادمة" };
-const ratio = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : null);
+const share = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : null);
+const col = (header: string, width = 16, tone?: ReportColumn["tone"]): ReportColumn => ({ header, width, tone });
+const stateTones: Record<string, ReportTone> = { "متعثر": "bad", "متوقف": "bad", "يحتاج متابعة": "warn", "مُعاد": "warn", "منتظم": "good", "محسوم": "good" };
+const byState: ReportColumn["tone"] = (value) => stateTones[String(value)] ?? null;
+const positive: ReportColumn["tone"] = (value) => (typeof value === "number" && value > 0 ? "warn" : null);
+const lowShare: ReportColumn["tone"] = (value) => (typeof value === "number" && value < 75 ? "warn" : null);
+const subtitle = (start: string) => `العام الجامعي ${academicYearLabel(start)}`;
 
-export const overviewCsv = (councils: CouncilRow[]): CsvCell[][] => [
-  ["المجلس", "الوحدة", "الحالة", "جلسات مستحقة", "في موعدها", "متأخرة", "لم تنعقد", "نسبة الحضور %", "متوسط اعتماد المحضر (يوم)", "محاضر معلّقة",
-    "القرارات", "تحتاج تنفيذًا", "نُفّذت", "الموضوعات", "غير محوكمة", "التكليفات", "المنجزة", "المتأخرة", "تجاوزات مفتوحة"],
-  ...councils.map((c) => [c.name_ar, c.parent_name_ar, stateLabel[c.state], c.sessions.due, c.sessions.on_time, c.sessions.late, c.sessions.missed + c.sessions.overdue,
-    ratio(c.attendance.present, c.attendance.recorded), c.minutes.avg_days, c.minutes.pending, c.decision_stats.total, c.decision_stats.needs_execution, c.decision_stats.executed,
+const councilsSheet = (councils: CouncilRow[], title: string): ReportSheet => ({
+  name: "المجالس", title, empty: "لا مجالس بهذه التصفية.",
+  columns: [col("المجلس", 34), col("الوحدة", 26), col("الحالة", 16, byState), col("سبب المتابعة", 40), col("جلسات مستحقة", 12), col("في موعدها", 11), col("متأخرة", 10, positive),
+    col("لم تنعقد", 10, positive), col("نسبة الحضور %", 13, lowShare), col("متوسط اعتماد المحضر (يوم)", 15), col("محاضر معلّقة", 11, positive), col("القرارات", 10),
+    col("تحتاج تنفيذًا", 11), col("نُفّذت", 9), col("الموضوعات", 10), col("غير محوكمة", 11, positive), col("التكليفات", 10), col("المنجزة", 9), col("المتأخرة", 10, positive), col("تجاوزات مفتوحة", 12, positive)],
+  rows: councils.map((c) => [c.name_ar, c.parent_name_ar, stateLabel[c.state], councilReasons(c).join("، "), c.sessions.due, c.sessions.on_time, c.sessions.late, c.sessions.missed + c.sessions.overdue,
+    share(c.attendance.present, c.attendance.recorded), c.minutes.avg_days, c.minutes.pending, c.decision_stats.total, c.decision_stats.needs_execution, c.decision_stats.executed,
     c.topics.total, c.topics.ungoverned, c.tasks.total, c.tasks.done, c.tasks.overdue, c.violations.open]),
-];
+});
 
-/** One council's report: its summary, then each list under its own heading. */
-export function councilCsv(data: CouncilPerformance, activity: Activity | null): CsvCell[][] {
+export const overviewReport = (data: Overview, councils: CouncilRow[]): Report => ({
+  filename: `متابعة-المجالس-${academicYearLabel(data.academic_year_start)}`, title: "متابعة المجالس", subtitle: subtitle(data.academic_year_start),
+  sheets: [{ ...councilsSheet(councils, "متابعة المجالس"), facts: [["عدد المجالس", councils.length], ["منتظمة", data.summary.regular], ["تحتاج متابعة", data.summary.attention], ["متعثرة", data.summary.stalled]] }],
+});
+
+/** One council's report: a summary sheet, then a sheet for each list. */
+export function councilReport(data: CouncilPerformance, activity: Activity | null): Report {
   const { council } = data;
-  const rows: CsvCell[][] = [
-    ["تقرير أداء المجلس", council.name_ar], ["العام الجامعي", academicYearLabel(data.academic_year_start)], ["الحالة", stateLabel[council.state]],
-    ["الرئيس", council.chair_name_ar], ["عدد الأعضاء", council.member_count], [],
-    ...overviewCsv([council]), [],
-    ["الجلسات"], ["الجلسة", "الموعد المخطط", "آخر موعد", "تاريخ الانعقاد", "النتيجة", "أيام التأخير", "الحاضرون", "المسجَّلون", "اعتماد المحضر", "القرارات"],
-    ...data.sessions.map((x) => [x.title_ar, x.planned_on, x.due_on, x.held_on, outcomeWord[x.outcome], x.late_days, x.present, x.recorded, x.minutes_approved_on, x.decisions]),
+  const title = `تقرير أداء ${council.name_ar}`;
+  const sheets: ReportSheet[] = [
+    { ...councilsSheet([council], title), name: "الملخص", facts: [["المجلس", council.name_ar], ["الحالة", stateLabel[council.state]], ["الرئيس", council.chair_name_ar], ["عدد الأعضاء", council.member_count],
+      ["القرارات الصادرة", council.decision_stats.total], ["المنفذون", executorsText(council.decision_stats.executors)]] },
+    { name: "الجلسات", title: `جلسات ${council.name_ar}`, empty: "لا جلسات في هذا العام.",
+      columns: [col("الجلسة", 40), col("الموعد المخطط", 14), col("آخر موعد", 14), col("تاريخ الانعقاد", 14), col("النتيجة", 15, (v) => (v === "في موعدها" ? "good" : v === "متأخرة" ? "warn" : v === "قادمة" ? null : "bad")),
+        col("أيام التأخير", 11, positive), col("الحاضرون", 10), col("المسجَّلون", 10), col("اعتماد المحضر", 14), col("القرارات", 10)],
+      rows: data.sessions.map((x) => [x.title_ar, x.planned_on, x.due_on, x.held_on, outcomeWord[x.outcome], x.late_days, x.present, x.recorded, x.minutes_approved_on, x.decisions]) },
   ];
-  if (!activity) return rows;
-  return [...rows, [],
-    ["الموضوعات"], ["الرقم", "الموضوع", "الجلسة", "تاريخ الجلسة", "الحوكمة", "في الجلسة", "رقم القرار", "النتيجة"],
-    ...activity.topics.map((x) => [x.topic_no, x.title_ar, x.meeting_title_ar, x.meeting_date, governanceLabel(x.governance_source), agendaLabel(x.agenda_status), x.decision_no, x.decision_no ? outcomeLabel(x.outcome_kind) : null]), [],
-    ["القرارات"], ["الرقم", "نص القرار", "الموضوع", "النتيجة", "النوع", "الجلسة", "تاريخ الصدور", "التكليفات", "المنجز منها"],
-    ...activity.decisions.map((x) => [x.decision_no, x.decision_text, x.topic_title_ar, outcomeLabel(x.outcome_kind), x.type_name_ar, x.meeting_title_ar, x.issued_at.slice(0, 10), x.tasks, x.tasks_done]), [],
-    ["التكليفات"], ["الرقم", "التكليف", "المكلَّف", "الجهة", "الموعد", "الحالة", "متأخر", "رقم القرار"],
-    ...activity.tasks.map((x) => [x.action_no, x.title_ar, x.assignee_name_ar, x.assignee_unit_ar, x.due_date, taskStatusLabel(x.status), x.overdue ? "نعم" : "لا", x.decision_no]),
-  ];
+  if (activity) sheets.push(
+    { name: "الموضوعات", title: `موضوعات ${council.name_ar}`, empty: "لم يُدرج موضوع.",
+      columns: [col("الرقم", 18), col("الموضوع", 44), col("الجلسة", 34), col("تاريخ الجلسة", 14), col("الحوكمة", 16, (v) => (v === "محوكم" ? null : "warn")), col("في الجلسة", 15), col("رقم القرار", 18), col("النتيجة", 12)],
+      rows: activity.topics.map((x) => [x.topic_no, x.title_ar, x.meeting_title_ar, x.meeting_date, governanceLabel(x.governance_source), agendaLabel(x.agenda_status), x.decision_no, x.decision_no ? outcomeLabel(x.outcome_kind) : null]) },
+    { name: "القرارات", title: `قرارات ${council.name_ar}`, empty: "لم يصدر قرار.",
+      columns: [col("الرقم", 18), col("نص القرار", 60), col("الموضوع", 36), col("النتيجة", 12), col("النوع", 14), col("الجلسة", 34), col("تاريخ الصدور", 14), col("التكليفات", 10), col("المنجز منها", 11)],
+      rows: activity.decisions.map((x) => [x.decision_no, x.decision_text, x.topic_title_ar, outcomeLabel(x.outcome_kind), x.type_name_ar, x.meeting_title_ar, x.issued_at.slice(0, 10), x.tasks, x.tasks_done]) },
+    { name: "التكليفات", title: `تكليفات ${council.name_ar}`, empty: "لا تكليفات.",
+      columns: [col("الرقم", 18), col("التكليف", 44), col("المكلَّف", 26), col("الجهة", 26), col("الموعد", 14), col("الحالة", 16, (v) => (v === "متأخر" ? "bad" : v === "منجز" || v === "مغلق" ? "good" : null)), col("رقم القرار", 18)],
+      rows: activity.tasks.map((x) => [x.action_no, x.title_ar, x.assignee_name_ar, x.assignee_unit_ar, x.due_date, x.overdue ? "متأخر" : taskStatusLabel(x.status), x.decision_no]) });
+  return { filename: `تقرير-${council.name_ar}-${academicYearLabel(data.academic_year_start)}`, title, subtitle: subtitle(data.academic_year_start), sheets };
 }
 
-export const topicsCsv = (topics: TopicRow[]): CsvCell[][] => [
-  ["الرقم", "الموضوع", "التصنيف", "الحوكمة", "الحالة", "يقف عند", "أيام الانتظار", "العمر (يوم)", "مراحل المسار", "المنجز منها", "مرات الإدراج", "رقم القرار", "النتيجة", "التكليفات", "المنجز منها"],
-  ...topics.map((x) => [x.topic_no, x.title_ar, x.category_name_ar, governanceLabel(x.governance_source), topicStateLabel[x.state], x.at_council_name_ar, x.waiting_days, x.age_days,
-    x.steps_total, x.steps_done, x.listed_count, x.decision_no, x.decision_no ? outcomeLabel(x.outcome_kind) : null, x.tasks, x.tasks_done]),
-];
+export const topicsReport = (data: TopicsFollowUp, topics: TopicRow[]): Report => ({
+  filename: `متابعة-الموضوعات-${academicYearLabel(data.academic_year_start)}`, title: "متابعة الموضوعات", subtitle: subtitle(data.academic_year_start),
+  sheets: [{ name: "الموضوعات", title: "متابعة الموضوعات", empty: "لا موضوعات بهذه التصفية.",
+    facts: [["عدد الموضوعات", topics.length], ["متوقفة", data.summary.stalled], ["محسومة", data.summary.finished], ["غير محوكمة", data.summary.ungoverned]],
+    columns: [col("الرقم", 18), col("الموضوع", 44), col("التصنيف", 28), col("الحوكمة", 16, (v) => (v === "محوكم" ? null : "warn")), col("الحالة", 14, byState), col("يقف عند", 32), col("أيام الانتظار", 12),
+      col("العمر (يوم)", 11), col("مراحل المسار", 11), col("المنجز منها", 11), col("مرات الإدراج", 11), col("رقم القرار", 18), col("النتيجة", 12), col("التكليفات", 10), col("المنجز منها", 11)],
+    rows: topics.map((x) => [x.topic_no, x.title_ar, x.category_name_ar, governanceLabel(x.governance_source), topicStateLabel[x.state], x.at_council_name_ar, x.waiting_days, x.age_days,
+      x.steps_total, x.steps_done, x.listed_count, x.decision_no, x.decision_no ? outcomeLabel(x.outcome_kind) : null, x.tasks, x.tasks_done]) }],
+});
 
-export const peopleCsv = (people: PersonRow[]): CsvCell[][] => [
-  ["العضو", "المجالس", "الحالة", "سبب المتابعة", "حضر", "من جلسات", "صوّت", "من جولات", "وقّع محاضر", "من محاضر", "محاضر تنتظره", "التكليفات", "المنجزة", "المتأخرة", "موضوعات قدّمها"],
-  ...people.map((x) => [x.full_name_ar, x.councils.map((c) => `${c.name_ar} (${c.role_name_ar})`).join("؛ "), personStateLabel[x.state], personReasons(x).join("؛ "),
-    x.attendance.present, x.attendance.recorded, x.votes.voted, x.votes.eligible, x.minutes.signed, x.minutes.total, x.minutes.pending, x.tasks.total, x.tasks.done, x.tasks.overdue, x.topics_submitted]),
-];
+export const peopleReport = (data: PeopleFollowUp, people: PersonRow[], councilId = ""): Report => ({
+  filename: `متابعة-الأعضاء-${academicYearLabel(data.academic_year_start)}`, title: "متابعة الأعضاء", subtitle: subtitle(data.academic_year_start),
+  sheets: [{ name: "الأعضاء", title: "متابعة الأعضاء", empty: "لا أعضاء بهذه التصفية.",
+    facts: [["عدد الأعضاء", people.length], ["المجلس", data.councils.find((c) => c.id === councilId)?.name_ar ?? "كل المجالس"], ["يحتاجون متابعة", people.filter((p) => p.state === "attention").length]],
+    columns: [col("العضو", 28), col("الصفة والمجلس", 46), col("الحالة", 16, byState), col("سبب المتابعة", 44), col("حضر", 8), col("غاب", 8, positive), col("من جلسات", 10), col("نسبة الحضور %", 13, lowShare),
+      col("صوّت", 8), col("من جولات", 10), col("وقّع محاضر", 11), col("محاضر تنتظره", 12, positive), col("التكليفات", 10), col("المنجزة", 9), col("المتأخرة", 10, positive), col("موضوعات قدّمها", 13)],
+    rows: people.map((x) => { const a = personAttendance(x, councilId); return [x.full_name_ar, x.councils.map((c) => `${c.role_name_ar}، ${c.name_ar}`).join("\n"), personStateLabel[x.state], personReasons(x).join("، "),
+      a.present, a.recorded - a.present, a.recorded, share(a.present, a.recorded), x.votes.voted, x.votes.eligible, x.minutes.signed, x.minutes.pending, x.tasks.total, x.tasks.done, x.tasks.overdue, x.topics_submitted]; }) }],
+});

@@ -7,7 +7,7 @@ import { MetricStrip } from "@/shared/ui/metric-strip";
 import { RhythmLegend, SessionRhythm } from "@/shared/ui/session-rhythm";
 import { ShareBar } from "@/shared/ui/share-bar";
 import { ExportButton } from "./export-button";
-import { councilCsv, councilMetrics, decisionShares, executorsText, fullRhythm, rhythmSentence, shortDate, stateLabel, stateTone, topicShares, type Activity, type CouncilPerformance } from "../model/performance";
+import { councilReport, councilReasons, councilMetrics, decisionShares, executorsText, fullRhythm, rhythmSentence, shortDate, stateLabel, stateTone, topicShares, type Activity, type CouncilPerformance } from "../model/performance";
 import { CouncilExplorer, initialView, type ExplorerView } from "./council-explorer";
 
 const panel = "rounded-q-card border border-q-border bg-q-surface";
@@ -29,9 +29,10 @@ export function CouncilPerformanceView({ data, activity = null }: { data: Counci
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-q-ui text-q-text-2">
         <Badge tone={stateTone[council.state]}>{stateLabel[council.state]}</Badge>
+        {council.state !== "regular" && council.state !== "inactive" && <span className="font-semibold text-q-accent-text">{councilReasons(council).join("، ")}</span>}
         {council.chair_name_ar && <span>يرأسه {council.chair_name_ar}</span>}
         <Link href={`/admin/performance/people?council=${council.id}`} className="font-semibold text-q-link hover:underline">عدد الأعضاء: {council.member_count}</Link>
-        <span className="ms-auto"><ExportButton label="تصدير التقرير" filename={`تقرير-${council.name_ar}-${data.academic_year_start}`} rows={() => councilCsv(data, activity)} /></span>
+        <span className="ms-auto"><ExportButton label="تصدير التقرير" report={() => councilReport(data, activity)} /></span>
       </div>
 
       <section aria-labelledby="rhythm-title" className={`${panel} flex flex-col gap-4 p-5`}>

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(30);
+select plan(31);
 
 -- "Today" as the contracts see it, and the academic year that contains it.
 create temporary table clock as
@@ -23,7 +23,8 @@ insert into qarar_core.governance_units(id,organization_id,unit_type_id,scope_un
 ('61000000-0000-0000-0000-000000000501','61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000202','61000000-0000-0000-0000-000000000401','a','مجلس الكلية','active'),
 ('61000000-0000-0000-0000-000000000502','61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000202','61000000-0000-0000-0000-000000000401','b','مجلس القسم','active'),
 ('61000000-0000-0000-0000-000000000503','61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000202','61000000-0000-0000-0000-000000000401','c','مجلس خامل','inactive'),
-('61000000-0000-0000-0000-000000000504','61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000202','61000000-0000-0000-0000-000000000401','e','مجلس اللجنة','active');
+('61000000-0000-0000-0000-000000000504','61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000202','61000000-0000-0000-0000-000000000401','e','مجلس اللجنة','active'),
+('61000000-0000-0000-0000-000000000505','61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000202','61000000-0000-0000-0000-000000000401','f','مجلس متأخر','active');
 delete from qarar_iam.roles where organization_id='61000000-0000-0000-0000-000000000001' and code in ('council_member','council_chair');
 insert into qarar_iam.roles(id,organization_id,code,name_ar,role_scope) values
 ('61000000-0000-0000-0000-000000000601','61000000-0000-0000-0000-000000000001','council_member','عضو','governance_unit'),
@@ -47,12 +48,13 @@ from clock c, (values
   (5,'61000000-0000-0000-0000-000000000501','ملغاة',-10,-10,'cancelled'),
   (6,'61000000-0000-0000-0000-000000000501','قادمة',20,20,'draft'),
   (7,'61000000-0000-0000-0000-000000000502','جلسة القسم',-15,-12,'closed'),
-  (8,'61000000-0000-0000-0000-000000000504','جلسة اللجنة',-3,-3,'scheduled')
+  (8,'61000000-0000-0000-0000-000000000504','جلسة اللجنة',-3,-3,'scheduled'),
+  (9,'61000000-0000-0000-0000-000000000505','جلسة انعقدت متأخرة',-5,-9,'closed')
 ) v(n,council,title,sched,due,status);
 insert into qarar_meetings.meeting_status_history(organization_id,meeting_id,from_status,to_status,changed_by_user_id,changed_at)
 select '61000000-0000-0000-0000-000000000001',('61000000-0000-0000-0000-0000000009'||lpad(n::text,2,'0'))::uuid,'ready_to_start','in_progress',
   '61000000-0000-0000-0000-000000000103', ((c.t+held)::timestamp + interval '12 hours') at time zone 'Asia/Riyadh'
-from clock c, (values (1,-41),(2,-24),(7,-15)) v(n,held);
+from clock c, (values (1,-41),(2,-24),(7,-15),(9,-5)) v(n,held);
 insert into qarar_attendance.attendance_records(organization_id,meeting_id,user_id,membership_id,attendance_status)
 select '61000000-0000-0000-0000-000000000001',('61000000-0000-0000-0000-0000000009'||lpad(n::text,2,'0'))::uuid,
   '61000000-0000-0000-0000-000000000101','61000000-0000-0000-0000-000000000701',s
@@ -111,9 +113,9 @@ reset role;
 create temporary view a as select c from seen, jsonb_array_elements(overview->'councils') c where who='amal' and c->>'name_ar'='مجلس الكلية';
 
 select is((select overview->'summary' from seen where who='amal'),
-  '{"total":4,"regular":1,"attention":1,"stalled":1,"inactive":1}'::jsonb, 'the overview counts each council once, by state');
+  '{"total":5,"regular":1,"attention":2,"stalled":1,"inactive":1}'::jsonb, 'the overview counts each council once, by state');
 select is((select jsonb_agg(c->>'state') from seen, jsonb_array_elements(overview->'councils') c where who='amal'),
-  '["stalled","attention","regular","inactive"]'::jsonb, 'councils needing attention come first, inactive ones last');
+  '["stalled","attention","attention","regular","inactive"]'::jsonb, 'councils needing attention come first, inactive ones last');
 select is((select c->'sessions' from a),
   '{"on_time":1,"late":1,"missed":1,"overdue":1,"upcoming":1,"cancelled":1,"due":4}'::jsonb, 'every session lands in exactly one outcome');
 select is((select jsonb_agg(m->>'outcome') from a, jsonb_array_elements(c->'marks') m),
@@ -129,6 +131,8 @@ select is((select (c->>'next_due')::date from a), (select t+20 from clock), 'the
 select ok((select (c->>'leads')::boolean and (c->>'follows')::boolean from a), 'the row says whether I lead and whether I follow the council');
 select is((select c->>'state' from seen, jsonb_array_elements(overview->'councils') c where who='amal' and c->>'name_ar'='مجلس اللجنة'),
   'attention', 'one session past its due day needs attention without being stalled');
+select is((select c->>'state' from seen, jsonb_array_elements(overview->'councils') c where who='amal' and c->>'name_ar'='مجلس متأخر'),
+  'attention', 'a council whose latest due session was held late needs attention even with nothing open');
 select is((select c->>'state' from seen, jsonb_array_elements(overview->'councils') c where who='amal' and c->>'name_ar'='مجلس خامل'),
   'inactive', 'a council that is not active is never reported as stalled');
 

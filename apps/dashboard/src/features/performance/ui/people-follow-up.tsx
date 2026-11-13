@@ -5,7 +5,7 @@ import { Badge } from "@/shared/ui/badge";
 import { MetricStrip } from "@/shared/ui/metric-strip";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
 import { ExportButton } from "./export-button";
-import { peopleCsv, peopleMetrics, percent, personReasons, personStateLabel, personStateTone, type PeopleFollowUp, type PersonState } from "../model/performance";
+import { peopleReport, personAttendance, peopleMetrics, percent, personReasons, personStateLabel, personStateTone, type PeopleFollowUp, type PersonState } from "../model/performance";
 
 type StateFilter = "all" | PersonState;
 const cell = "px-3 py-3.5 align-top";
@@ -39,7 +39,7 @@ export function PeopleFollowUpView({ data, initialCouncilId = "" }: { data: Peop
               {data.councils.map((council) => <option key={council.id} value={council.id}>{council.name_ar}</option>)}
             </select>
           </label>
-          <ExportButton filename={`متابعة-الأعضاء-${data.academic_year_start}`} rows={() => peopleCsv(rows)} />
+          <ExportButton report={() => peopleReport(data, rows, councilId)} />
         </div>
         {rows.length === 0 ? <p className="m-0 border-t border-q-border p-6 text-q-ui text-q-text-2">لا أعضاء بهذه التصفية.</p> : (
           <div className="overflow-x-auto">
@@ -54,13 +54,15 @@ export function PeopleFollowUpView({ data, initialCouncilId = "" }: { data: Peop
                 {rows.map((person) => {
                   const reasons = personReasons(person);
                   const [first, ...rest] = person.councils;
+                  const attendance = personAttendance(person, councilId);
+                  const absent = attendance.recorded - attendance.present;
                   return (
                     <tr key={person.user_id} className="border-t border-q-border">
                       <td className={`${cell} max-w-xs ps-6`}>
                         <span className="font-semibold text-q-text">{person.full_name_ar}</span>
                         <div className="text-q-caption text-q-text-3">{first.role_name_ar}، {first.name_ar}{rest.length > 0 ? `، و${rest.length === 1 ? "مجلس آخر" : `${rest.length} مجالس أخرى`}` : ""}</div>
                       </td>
-                      <td className={cell}>{percent(person.attendance.present, person.attendance.recorded)}<div className="text-q-caption text-q-text-3">{of(person.attendance.present, person.attendance.recorded)}</div></td>
+                      <td className={cell}>{attendance.recorded > 0 ? `حضر ${attendance.present} من ${attendance.recorded}` : "—"}{attendance.recorded > 0 && <div className={`text-q-caption ${absent > 0 ? "font-semibold text-q-accent-text" : "text-q-text-3"}`}>{absent > 0 ? `غاب ${absent}، ` : ""}{percent(attendance.present, attendance.recorded)}</div>}</td>
                       <td className={cell}>{of(person.votes.voted, person.votes.eligible)}</td>
                       <td className={cell}>{of(person.minutes.signed, person.minutes.total)}{person.minutes.pending > 0 && <div className="text-q-caption font-semibold text-q-accent-text">{person.minutes.pending} بانتظاره</div>}</td>
                       <td className={cell}>{of(person.tasks.done, person.tasks.total)}{person.tasks.overdue > 0 && <div className="text-q-caption font-semibold text-q-accent-text">{person.tasks.overdue} متأخرة</div>}</td>

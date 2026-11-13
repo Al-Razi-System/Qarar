@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { academicYearLabel, councilCsv, councilMetrics, days, overviewCsv, rhythmSentence, type Activity, type CouncilPerformance, type CouncilRow, type Overview } from "../model/performance";
+import { academicYearLabel, councilMetrics, councilReasons, councilReport, days, rhythmSentence, type Activity, type CouncilPerformance, type CouncilRow, type Overview } from "../model/performance";
 import { CouncilPerformanceView } from "./council-performance";
 import { OversightOverview } from "./oversight-overview";
 
@@ -58,19 +58,22 @@ describe("performance wording", () => {
   });
 });
 
-describe("report export", () => {
-  it("writes one row per council with the figures the table shows", () => {
-    const [header, row] = overviewCsv([graphics]);
-    expect(header).toHaveLength(row.length);
-    expect(row.slice(0, 8)).toEqual(["مجلس قسم الجرافيكس", "كلية الحاسبات", "يحتاج متابعة", 3, 1, 1, 1, 83]);
+describe("reports and reasons", () => {
+  it("says why a council is not regular", () => {
+    expect(councilReasons(graphics)).toEqual(["جلسة لم تنعقد", "تكليف متأخر"]);
+    expect(councilReasons({ ...college, state: "attention", marks: [{ meeting_id: "x", outcome: "late", late_days: 22, due_on: "2026-10-14" }], attendance: { present: 3, recorded: 8 } }))
+      .toEqual(["آخر جلسة تأخرت 22 يومًا", "الحضور 38%"]);
   });
 
-  it("writes a council report with its sessions, and the lists only when they were loaded", () => {
-    const report = councilCsv({ academic_year_start: "2026-09-01", council: { ...graphics, chair_name_ar: "د. أحمد", member_count: 9 }, sessions: [], violations: [] }, null);
-    expect(report[0]).toEqual(["تقرير أداء المجلس", "مجلس قسم الجرافيكس"]);
-    expect(report[1]).toEqual(["العام الجامعي", "2026–2027"]);
-    expect(report.some((row) => row[0] === "الجلسات")).toBe(true);
-    expect(report.some((row) => row[0] === "التكليفات")).toBe(false);
+  it("builds a council report with a summary sheet and one sheet per list when they were loaded", () => {
+    const base = { academic_year_start: "2026-09-01", council: { ...graphics, chair_name_ar: "د. أحمد", member_count: 9 }, sessions: [], violations: [] };
+    expect(councilReport(base, null).sheets.map((sheet) => sheet.name)).toEqual(["الملخص", "الجلسات"]);
+    const full = councilReport(base, { topics: [], decisions: [], tasks: [] });
+    expect(full.sheets.map((sheet) => sheet.name)).toEqual(["الملخص", "الجلسات", "الموضوعات", "القرارات", "التكليفات"]);
+    expect(full.filename).toBe("تقرير-مجلس قسم الجرافيكس-2026–2027");
+    const summary = full.sheets[0];
+    expect(summary.rows[0]).toHaveLength(summary.columns.length);
+    expect(summary.rows[0].slice(0, 4)).toEqual(["مجلس قسم الجرافيكس", "كلية الحاسبات", "يحتاج متابعة", "جلسة لم تنعقد، تكليف متأخر"]);
   });
 });
 

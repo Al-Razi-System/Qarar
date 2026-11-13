@@ -6,7 +6,7 @@ import { Badge } from "@/shared/ui/badge";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
 import { RhythmLegend, SessionRhythm } from "@/shared/ui/session-rhythm";
 import { ExportButton } from "./export-button";
-import { overviewCsv, compactRhythm, days, percent, rhythmSentence, stateLabel, stateTone, type CouncilState, type Overview } from "../model/performance";
+import { overviewReport, councilReasons, compactRhythm, days, percent, rhythmSentence, stateLabel, stateTone, type CouncilState, type Overview } from "../model/performance";
 
 type Filter = "all" | CouncilState;
 const cell = "px-3 py-3.5 align-top";
@@ -33,7 +33,7 @@ export function OversightOverview({ data }: { data: Overview }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl label="تصفية المجالس حسب الحالة" options={options} value={filter} onChange={setFilter} className="flex-wrap" />
-        <div className="flex flex-wrap items-center gap-4"><RhythmLegend /><ExportButton filename={`متابعة-المجالس-${data.academic_year_start}`} rows={() => overviewCsv(rows)} /></div>
+        <div className="flex flex-wrap items-center gap-4"><RhythmLegend /><ExportButton report={() => overviewReport(data, rows)} /></div>
       </div>
       <section aria-label="المجالس" className="overflow-hidden rounded-q-card border border-q-border bg-q-surface">
         <div className="overflow-x-auto">
@@ -80,7 +80,7 @@ export function OversightOverview({ data }: { data: Overview }) {
                       {council.tasks.total > 0 ? `${council.tasks.done} من ${council.tasks.total}` : "—"}
                       {council.tasks.overdue > 0 && <div className="text-q-caption text-q-accent-text">{council.tasks.overdue} متأخرة</div>}
                     </td>
-                    <td className={`${cell} pe-6`}><Badge tone={stateTone[council.state]}>{stateLabel[council.state]}</Badge></td>
+                    <td className={`${cell} max-w-56 pe-6`}><Badge tone={stateTone[council.state]}>{stateLabel[council.state]}</Badge>{council.state !== "regular" && council.state !== "inactive" && <div className="mt-1 text-q-caption text-q-text-2">{councilReasons(council).join("، ")}</div>}</td>
                   </tr>
                 );
               })}

@@ -7,7 +7,7 @@ import { MetricStrip } from "@/shared/ui/metric-strip";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
 import { StepTrack } from "@/shared/ui/step-track";
 import { ExportButton } from "./export-button";
-import { topicsCsv, days, governanceLabel, isGoverned, outcomeLabel, topicStateLabel, topicStateTone, topicsMetrics, type TopicState, type TopicsFollowUp } from "../model/performance";
+import { topicsReport, days, governanceLabel, isGoverned, outcomeLabel, topicStateLabel, topicStateTone, topicsMetrics, type TopicState, type TopicsFollowUp } from "../model/performance";
 
 type StateFilter = "all" | TopicState;
 type GovernanceFilter = "all" | "governed" | "ungoverned";
@@ -84,7 +84,7 @@ export function TopicsFollowUpView({ data, initial }: { data: TopicsFollowUp; in
               { value: "in_progress", label: `قيد المعالجة ${summary.in_progress}` }, { value: "finished", label: `محسومة ${summary.finished}` }]} />
           <SegmentedControl label="تصفية حسب الحوكمة" value={filter.governance} onChange={(governance) => setFilter({ ...filter, governance })}
             options={[{ value: "all", label: "الكل" }, { value: "governed", label: "محوكمة" }, { value: "ungoverned", label: "غير محوكمة" }]} />
-          <ExportButton filename={`متابعة-الموضوعات-${data.academic_year_start}`} rows={() => topicsCsv(rows)} />
+          <ExportButton report={() => topicsReport(data, rows)} />
         </div>
         {picked && (
           <div className="flex flex-wrap items-center gap-3 border-t border-q-border bg-q-bg px-6 py-2 text-q-ui text-q-text-2">
