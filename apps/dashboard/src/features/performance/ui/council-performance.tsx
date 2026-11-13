@@ -29,7 +29,7 @@ export function CouncilPerformanceView({ data, activity = null }: { data: Counci
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-q-ui text-q-text-2">
         <Badge tone={stateTone[council.state]}>{stateLabel[council.state]}</Badge>
         {council.chair_name_ar && <span>يرأسه {council.chair_name_ar}</span>}
-        <span>عدد الأعضاء: {council.member_count}</span>
+        <Link href={`/admin/performance/people?council=${council.id}`} className="font-semibold text-q-link hover:underline">عدد الأعضاء: {council.member_count}</Link>
       </div>
 
       <section aria-labelledby="rhythm-title" className={`${panel} flex flex-col gap-4 p-5`}>

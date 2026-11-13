@@ -209,3 +209,44 @@ export function topicsMetrics({ summary }: TopicsFollowUp): Metric[] {
       ratio: summary.total > 0 ? summary.ungoverned / summary.total : null, tone: "accent" },
   ];
 }
+
+export type PersonState = "attention" | "regular" | "no_activity";
+export type PersonRow = {
+  user_id: string; full_name_ar: string; state: PersonState;
+  councils: Array<{ id: string; name_ar: string; role_code: string; role_name_ar: string }>;
+  attendance: { present: number; recorded: number }; votes: { eligible: number; voted: number };
+  minutes: { total: number; signed: number; pending: number }; tasks: { total: number; done: number; overdue: number }; topics_submitted: number;
+};
+export type PeopleFollowUp = {
+  academic_year_start: string;
+  summary: { total: number; attention: number; regular: number; no_activity: number; present: number; recorded: number; voted: number; eligible: number; pending_signatures: number; tasks: number; tasks_done: number; tasks_overdue: number };
+  councils: Array<{ id: string; name_ar: string }>;
+  people: PersonRow[];
+};
+
+export const personStateLabel: Record<PersonState, string> = { attention: "يحتاج متابعة", regular: "منتظم", no_activity: "بلا نشاط بعد" };
+export const personStateTone: Record<PersonState, "warning" | "success" | "neutral"> = { attention: "warning", regular: "success", no_activity: "neutral" };
+
+/** Why a member needs attention, in the reader's words. */
+export function personReasons(person: PersonRow) {
+  const reasons: string[] = [];
+  if (person.tasks.overdue > 0) reasons.push(person.tasks.overdue === 1 ? "تكليف متأخر" : `${person.tasks.overdue} تكليفات متأخرة`);
+  if (person.minutes.pending > 0) reasons.push(person.minutes.pending === 1 ? "محضر ينتظر توقيعه" : `${person.minutes.pending} محاضر تنتظر توقيعه`);
+  if (person.attendance.recorded >= 2 && person.attendance.present * 2 < person.attendance.recorded) reasons.push("غاب عن أكثر الجلسات");
+  if (person.votes.eligible >= 2 && person.votes.voted * 2 < person.votes.eligible) reasons.push("لم يصوّت في أكثر الجولات");
+  return reasons;
+}
+
+export function peopleMetrics({ summary }: PeopleFollowUp): Metric[] {
+  const attended = summary.recorded > 0 ? summary.present / summary.recorded : null;
+  return [
+    { label: "الحضور", value: percent(summary.present, summary.recorded), note: attended == null ? "لم يُسجَّل حضور بعد" : `${summary.present} حضور من ${summary.recorded}، والمستهدف 75%`,
+      ratio: attended, target: targets.attendance, tone: attended != null && attended < targets.attendance ? "accent" : "primary" },
+    { label: "المشاركة في التصويت", value: percent(summary.voted, summary.eligible), note: summary.eligible > 0 ? `${summary.voted} صوتًا من ${summary.eligible} مستحقًا` : "لا جولات تصويت مغلقة",
+      ratio: summary.eligible > 0 ? summary.voted / summary.eligible : null },
+    { label: "محاضر تنتظر التوقيع", value: String(summary.pending_signatures), note: summary.pending_signatures > 0 ? "تعطّل اعتماد المحضر" : "لا توقيعات معلّقة",
+      ratio: summary.pending_signatures > 0 ? 1 : 0, tone: "accent" },
+    { label: "تنفيذ التكليفات", value: summary.tasks > 0 ? `${summary.tasks_done} من ${summary.tasks}` : "—", note: summary.tasks_overdue > 0 ? `${summary.tasks_overdue} متأخرة` : "لا تكليفات متأخرة",
+      ratio: summary.tasks > 0 ? summary.tasks_done / summary.tasks : null, target: targets.tasks, tone: summary.tasks_overdue > 0 ? "accent" : "primary" },
+  ];
+}

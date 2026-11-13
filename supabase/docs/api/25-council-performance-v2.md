@@ -70,6 +70,16 @@ at most, stalled first).
 `state`: `finished` (status `approved`/`rejected`/`closed` or a completed route), `stalled` (an open `topic_stalled`
 violation), `returned`, else `in_progress`. A topic stands at the council of its active route step, else its current unit.
 
+## `POST /rest/v1/rpc/get_my_people_follow_up_v2`
+
+Body: `{"p_academic_year": "2026-09-01" | null}`. Lists the active members (chair, rapporteur, member) of the councils
+the caller leads or follows. Returns `{academic_year_start, summary, councils, people}`.
+
+Person: `{user_id, full_name_ar, councils:[{id,name_ar,role_code,role_name_ar}], state, attendance:{present,recorded},
+votes:{eligible,voted}, minutes:{total,signed,pending}, tasks:{total,done,overdue}, topics_submitted}`.
+`votes` counts closed rounds only and never exposes how anyone voted. `state` is `attention` (a late task, a pending
+signature, or under half of two or more sessions or rounds), `no_activity`, else `regular`.
+
 ## Session outcome
 
 The due day is the end of the planned window (`planned_window_end`), or `scheduled_date` for an unplanned session; it

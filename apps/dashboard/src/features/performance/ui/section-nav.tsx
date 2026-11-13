@@ -4,6 +4,7 @@ import { cn } from "@/shared/lib/utils";
 const sections = [
   { key: "councils", href: "/admin/performance", label: "المجالس" },
   { key: "topics", href: "/admin/performance/topics", label: "الموضوعات" },
+  { key: "people", href: "/admin/performance/people", label: "الأعضاء" },
 ] as const;
 
 /** The follow-up centre's dashboards share one switch, so they read as one place. */
