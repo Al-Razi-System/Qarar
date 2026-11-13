@@ -50,6 +50,8 @@ const eslintConfig = defineConfig([
       "src/app/(dashboard)/admin/violations/**/*.tsx",
       "src/widgets/app-shell/ui/**/*.tsx",
       "src/features/home/ui/**/*.tsx",
+      "src/features/performance/ui/**/*.tsx",
+      "src/app/(dashboard)/admin/performance/**/*.tsx",
       "src/app/(dashboard)/admin/page.tsx",
     ],
     ignores: [
@@ -88,7 +90,7 @@ const eslintConfig = defineConfig([
     // One numeral system on screen (0123): an Arabic formatting locale always
     // carries nu-latn. A bare "ar-SA" prints ١٢٣ beside 2026 from the database.
     files: ["src/**/*.ts", "src/**/*.tsx"],
-    ignores: ["src/shared/ui/**", "src/features/permissions/ui/permission-matrix.tsx", "src/app/(dashboard)/admin/permissions/**", "src/features/account/ui/**", "src/features/topics/ui/typed-topic-creator.tsx", "src/features/topics/ui/topic-submission-attachments.tsx", "src/app/(dashboard)/admin/topics/new/page.tsx", "src/features/meetings/ui/**", "src/features/audit/ui/**", "src/features/sessions/ui/**", "src/app/(dashboard)/admin/audit/**", "src/app/(dashboard)/admin/sessions/**", "src/features/oversight/ui/**", "src/app/(dashboard)/admin/oversight/**", "src/app/(dashboard)/admin/violations/**", "src/widgets/app-shell/ui/**", "src/features/home/ui/**", "src/app/(dashboard)/admin/page.tsx"],
+    ignores: ["src/shared/ui/**", "src/features/permissions/ui/permission-matrix.tsx", "src/app/(dashboard)/admin/permissions/**", "src/features/account/ui/**", "src/features/topics/ui/typed-topic-creator.tsx", "src/features/topics/ui/topic-submission-attachments.tsx", "src/app/(dashboard)/admin/topics/new/page.tsx", "src/features/meetings/ui/**", "src/features/audit/ui/**", "src/features/sessions/ui/**", "src/app/(dashboard)/admin/audit/**", "src/app/(dashboard)/admin/sessions/**", "src/features/oversight/ui/**", "src/app/(dashboard)/admin/oversight/**", "src/app/(dashboard)/admin/violations/**", "src/widgets/app-shell/ui/**", "src/features/home/ui/**", "src/features/performance/ui/**", "src/app/(dashboard)/admin/performance/**", "src/app/(dashboard)/admin/page.tsx"],
     rules: {
       "no-restricted-syntax": ["error", { selector: "Literal[value=/^ar-[A-Z]{2}(-u-ca-[a-z]+)?$/]", message: "Add -u-nu-latn to the locale so numbers print as 0123 like the rest of the product." }],
     },

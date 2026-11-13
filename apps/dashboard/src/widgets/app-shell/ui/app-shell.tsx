@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BookOpenCheck, Eye, TriangleAlert, Building2, Calendar, ChevronDown, ClipboardList, FileText, GitBranch, KeyRound, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquareText, Search, ShieldCheck, Users, Workflow, X } from "lucide-react";
+import { BookOpenCheck, ChartNoAxesColumn, Eye, TriangleAlert, Building2, Calendar, ChevronDown, ClipboardList, FileText, GitBranch, KeyRound, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquareText, Search, ShieldCheck, Users, Workflow, X } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { SelfAvatar } from "@/shared/ui/self-avatar";
 
@@ -21,14 +21,15 @@ const navGroups = [
     { href: "/admin/topics", label: "المعاملات والموضوعات", icon: FileText, requiredAny: ["topics.read", "topics.create"] },
     { href: "/admin/meetings", label: "الاجتماعات والقرارات", icon: Calendar, requiredAny: ["meetings.read"] },
     { href: "/admin/follow-up", label: "متابعة القرارات", icon: ClipboardList, requiredAny: ["decisions.read", "execution.tasks.read", "execution.tasks.manage"] },
-    // Everyone may open it; the contract shows only councils the user leads or follows.
+    // Everyone may open these; the contracts show only councils the user leads or follows.
+    { href: "/admin/performance", label: "المتابعة والأداء", icon: ChartNoAxesColumn },
     { href: "/admin/violations", label: "التجاوزات", icon: TriangleAlert },
   ]},
   { label: "الإدارة والتشغيل", items: [
     { href: "/admin/users", label: "المستخدمون", icon: Users, requiredAny: ["iam.users.read"] },
     { href: "/admin/permissions", label: "الأدوار والصلاحيات", icon: ShieldCheck, requiredAny: ["iam.roles.read", "iam.permissions.read"] },
     { href: "/admin/delegations", label: "التفويضات والإنابة", icon: KeyRound, requiredAny: ["iam.roles.assign"] },
-    { href: "/admin/oversight", label: "متابعة المجالس", icon: Eye, requiredAny: ["governance.oversight.manage"] },
+    { href: "/admin/oversight", label: "إسناد المتابعة", icon: Eye, requiredAny: ["governance.oversight.manage"] },
     { href: "/admin/sessions", label: "مراقبة الجلسات", icon: Workflow, requiredAny: ["iam.sessions.manage", "iam.users.manage"] },
     { href: "/admin/audit", label: "سجل التدقيق", icon: ClipboardList, requiredAny: ["audit.logs.read"] },
   ]},
