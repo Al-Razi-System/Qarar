@@ -1,4 +1,5 @@
 "use client";
+import { Card } from "@/shared/ui/card";
 
 import { useRef, useState } from "react";
 import type { MeetingDetail } from "../model/meeting";
@@ -83,10 +84,10 @@ export function MeetingScheduleDialog({ meeting, onClose, onSaved }: { meeting: 
         <label className={label}>وقت البداية<input type="time" required value={start} onChange={(event) => { setStart(event.target.value); setProblem(null); }} className={field}/></label>
         <label className={label}>وقت النهاية<input type="time" required value={end} onChange={(event) => { setEnd(event.target.value); setProblem(null); }} className={field}/></label>
       </div>
-      {outside && <div className="grid gap-3 rounded-q-control border border-q-warning bg-q-warning-soft p-3">
+      {outside && <Card className="grid gap-3 rounded-q-card border border-q-warning bg-q-warning-soft p-3">
         <p className="m-0 text-q-ui font-bold text-q-warning">هذا اليوم خارج أسبوع الدورة المخطط. سيُحفظ مع سبب الانعقاد فيه ويظهر في تفاصيل الاجتماع.</p>
         <TextArea label="سبب الانعقاد خارج أسبوع الدورة" value={reason} onChange={(event) => { setReason(event.target.value); setProblem(null); }} maxLength={1000} rows={2} error={reasonError}/>
-      </div>}
+      </Card>}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className={label}>نوع المكان<select value={locationType} onChange={(event) => setLocationType(event.target.value)} className={field}>
           <option value="onsite">حضوري</option><option value="online">عن بُعد</option><option value="hybrid">هجين</option>
