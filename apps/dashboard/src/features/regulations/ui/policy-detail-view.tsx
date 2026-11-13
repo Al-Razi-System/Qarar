@@ -1,5 +1,10 @@
 "use client";
 
+import { Badge as QBadge } from "@/shared/ui/badge";
+
+import { PageHeader } from "@/shared/ui/page-header";
+import { Button as QButton } from "@/shared/ui/button";
+
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -244,91 +249,66 @@ export function PolicyDetailView({
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-2">
-      <div className="flex h-9 items-center justify-between">
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
         <Link
           href="/admin/regulations"
           title="العودة إلى قائمة جميع اللوائح"
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#dce6ef] bg-white px-2.5 text-[9px] font-bold text-[var(--q-text-2)] hover:text-[var(--q-primary)]"
+          className="inline-flex min-h-11 min-w-11 items-center inline-flex min-h-11 items-center gap-1.5 rounded-q-control border border-q-border bg-q-surface px-2.5 text-q-caption font-bold text-q-text-2 hover:text-q-primary"
         >
           <ArrowRight size={14} />
           العودة إلى دليل اللوائح
         </Link>
-        <button
+        <QButton variant="ghost"
           type="button"
           title="عرض مراحل الجاهزية والمراجعة والاعتماد والنفاذ"
           onClick={() => selectTab("journey")}
-          className="inline-flex h-8 items-center rounded-lg bg-[var(--q-surface-2)] px-2.5 text-[9px] font-black text-[var(--q-primary)]"
+          className="min-w-11 inline-flex min-h-11 items-center rounded-q-control bg-q-surface-2 px-2.5 text-q-ui font-bold text-q-primary"
         >
           عرض دليل التنفيذ
-        </button>
+        </QButton>
       </div>
-      <header className="overflow-hidden rounded-xl border border-[#d7e3ef] bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--q-surface-2)] text-[var(--q-primary)]">
-                <BookOpenCheck size={16} />
-              </span>
-              <div>
-                <p className="text-[9px] font-black text-[#f17822]">
-                  سجل لائحة نظامية
-                </p>
-                <h1 className="mt-0.5 text-lg font-black text-[var(--q-text)]">
-                  {policy.name_ar}
-                </h1>
-              </div>
-              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-700">
-                {policy.status === "active" ? "نشطة" : policy.status}
-              </span>
-            </div>
-            <p className="mt-2 max-w-4xl text-[10px] leading-5 text-[#63758a]">
-              {policy.description || "لا يوجد وصف مسجل لهذه اللائحة."}
-            </p>
-          </div>
-          <div className="flex gap-2 text-center">
-            <div className="rounded-lg bg-[#f3f7fb] px-3 py-1.5">
-              <strong className="block text-sm text-[var(--q-text)]">
+      <div className="min-w-0">
+        <PageHeader title={policy.name_ar} description={policy.description || "لا يوجد وصف مسجل لهذه اللائحة."} meta={<QBadge tone="success">{policy.status === "active" ? "نشطة" : policy.status}</QBadge>} actions={<div className="flex gap-2 text-center">
+            <div className="rounded-q-control bg-q-surface-2 px-3 py-1.5">
+              <strong className="block text-q-ui text-q-text">
                 {policy.versions?.length ?? 0}
               </strong>
-              <span className="text-[9px] text-[#7b8da1]">إصدار</span>
+              <span className="text-q-caption text-q-text-3">إصدار</span>
             </div>
-            <div className="rounded-lg bg-[var(--q-surface-2)] px-3 py-1.5">
-              <strong className="block text-sm text-[var(--q-primary)]">
+            <div className="rounded-q-control bg-q-surface-2 px-3 py-1.5">
+              <strong className="block text-q-ui text-q-primary">
                 {readinessPercent}%
               </strong>
-              <span className="text-[9px] text-[#6f8296]">جاهزية</span>
+              <span className="text-q-caption text-q-text-3">جاهزية</span>
             </div>
-          </div>
-        </div>
-        <div className="grid gap-2 border-t border-[#e9eef4] bg-[var(--q-bg)] px-4 py-3 text-[9px] text-[#617389] sm:grid-cols-3 sm:px-6">
+          </div>} />
+        <div className="grid gap-2 border-t border-q-border bg-q-bg px-4 py-3 text-q-caption text-q-text-2 sm:grid-cols-3 sm:px-6">
           <span>
-            <strong className="text-[#263950]">الرمز:</strong> {policy.code}
+            <strong className="text-q-text">الرمز:</strong> {policy.code}
           </span>
           <span>
-            <strong className="text-[#263950]">الإصدار الحالي:</strong>{" "}
+            <strong className="text-q-text">الإصدار الحالي:</strong>{" "}
             {version?.version_label || version?.version_no || "—"}
           </span>
           <span>
-            <strong className="text-[#263950]">الحالة النظامية:</strong>{" "}
+            <strong className="text-q-text">الحالة النظامية:</strong>{" "}
             {version
               ? (legalLabels[version.legal_status] ?? version.legal_status)
               : "لا يوجد إصدار"}
           </span>
         </div>
-      </header>
+      </div>
       <PolicyWorkspaceGuide />
-      <section className="overflow-hidden rounded-2xl border border-[#dbe6f1] bg-white shadow-[0_8px_24px_rgba(15,42,72,.05)]">
-        <div className="border-b border-[#e8eef4] bg-[var(--q-bg)] px-4 py-3 sm:px-5">
+      <section className="overflow-hidden rounded-q-card border border-q-border bg-q-surface ">
+        <div className="border-b border-q-border bg-q-bg px-4 py-3 sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-[10px] font-black text-[#f17822]">
-                مساحة عمل اللائحة
-              </p>
-              <h2 className="mt-1 text-sm font-black text-[#172a42]">
+
+              <h2 className="mt-1 text-q-ui font-bold text-q-text">
                 اقرأ المحتوى أولاً، ثم انتقل إلى العملية المطلوبة
               </h2>
             </div>
-            <p className="text-[10px] text-[#617389]">
+            <p className="text-q-caption text-q-text-2">
               كل قسم مستقل وواضح، مع بقاء العلاقة بين المادة والنطاق والقواعد
               والإصدار.
             </p>
@@ -343,38 +323,38 @@ export function PolicyDetailView({
             const Icon = tab.icon;
             const selected = activeTab === tab.id;
             return (
-              <button
+              <QButton variant="ghost"
                 key={tab.id}
                 type="button"
                 title={tab.description}
                 onClick={() => selectTab(tab.id)}
                 aria-selected={selected}
                 role="tab"
-                className={`relative flex min-w-52 items-center gap-3 rounded-xl border px-3 py-3 text-right transition ${selected ? "border-[var(--q-primary)] bg-[var(--q-primary)] text-white shadow-[0_7px_16px_rgba(0,102,204,.18)]" : "border-[#e1eaf2] bg-white text-[#465a72] hover:border-[#9bc9f2] hover:bg-[#f7fbff]"}`}
+                className={`min-w-11 relative flex min-w-52 items-center gap-3 rounded-q-control border px-3 py-3 text-right transition ${selected ? "border-q-primary bg-q-primary text-q-on-primary " : "border-q-border bg-q-surface text-q-text-2 hover:border-q-primary hover:bg-q-surface"}`}
               >
                 <span
-                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${selected ? "bg-white/15" : "bg-[var(--q-surface-2)] text-[var(--q-primary)]"}`}
+                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-q-control ${selected ? "bg-q-surface/15" : "bg-q-surface-2 text-q-primary"}`}
                 >
                   <Icon size={17} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <strong className="block text-[11px] font-black">
+                  <strong className="block text-q-caption font-bold">
                     {tab.label}
                   </strong>
                   <span
-                    className={`mt-1 block text-[10px] ${selected ? "text-white/75" : "text-[#7d8da1]"}`}
+                    className={`mt-1 block text-q-caption ${selected ? "text-q-on-primary/75" : "text-q-text-3"}`}
                   >
                     {tab.description}
                   </span>
                 </span>
                 {tab.badge && (
                   <span
-                    className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-black ${selected ? "bg-white/15 text-white" : "bg-[var(--q-surface-2)] text-[var(--q-primary)]"}`}
+                    className={`shrink-0 rounded-full px-2 py-1 text-q-caption font-bold ${selected ? "bg-q-surface/15 text-q-on-primary" : "bg-q-surface-2 text-q-primary"}`}
                   >
                     {tab.badge}
                   </span>
                 )}
-              </button>
+              </QButton>
             );
           })}
         </nav>
@@ -391,17 +371,17 @@ export function PolicyDetailView({
         )}
         {activeTab === "journey" && (
           <div className="space-y-4">
-            <section className="rounded-2xl border border-[#dbe7f1] bg-white p-4 shadow-sm">
+            <section className="rounded-q-card border border-q-border bg-q-surface p-4 ">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-[9px] font-black text-[#f17822]">
+                  <p className="text-q-caption font-bold text-q-link">
                     دورة حياة الإصدار
                   </p>
-                  <h3 className="mt-1 text-sm font-black text-[#19324c]">
+                  <h3 className="mt-1 text-q-ui font-bold text-q-text">
                     ثلاث مراحل مستقلة قبل تطبيق اللائحة
                   </h3>
                 </div>
-                <span className="rounded-xl bg-[#f1f7fc] px-3 py-2 text-[8px] font-black text-[#42627e]">
+                <span className="rounded-q-control bg-q-surface-2 px-3 py-2 text-q-caption font-bold text-q-text-2">
                   فحص الجاهزية لا يعتمد الإصدار تلقائياً
                 </span>
               </div>
@@ -428,7 +408,7 @@ export function PolicyDetailView({
                   result="النتيجة: نسخة مطبقة فعلياً وقابلة للتدقيق."
                 />
               </div>
-              <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[9px] leading-6 text-amber-900">
+              <p className="mt-3 rounded-q-control border border-q-border bg-q-warning-soft px-4 py-3 text-q-caption leading-6 text-q-warning">
                 <strong>الفرق المهم:</strong> الاعتماد يثبت الموافقة النظامية
                 على المحتوى، أما النفاذ فيحدد متى يبدأ النظام بتطبيقه. يمكن
                 اعتماد إصدار اليوم وتحديد نفاذه في تاريخ لاحق.
@@ -480,18 +460,18 @@ function LifecyclePhase({
   result: string;
 }) {
   return (
-    <article className="rounded-2xl border border-[#dce7f0] bg-[var(--q-bg)] p-4">
+    <article className="rounded-q-card border border-q-border bg-q-bg p-4">
       <div className="flex items-center gap-2">
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
+        <span className="grid h-9 w-9 place-items-center rounded-q-control bg-q-surface-2 text-q-primary">
           {icon}
         </span>
-        <span className="text-[8px] font-black text-[#8192a4]">
+        <span className="text-q-caption font-bold text-q-text-3">
           المرحلة {number}
         </span>
       </div>
-      <h4 className="mt-3 text-[11px] font-black text-[#243d56]">{title}</h4>
-      <p className="mt-1 text-[9px] leading-5 text-[#6c7f92]">{text}</p>
-      <p className="mt-3 border-t border-[#e3ebf2] pt-2 text-[8px] font-black text-[#37698f]">
+      <h4 className="mt-3 text-q-caption font-bold text-q-text">{title}</h4>
+      <p className="mt-1 text-q-caption leading-5 text-q-text-3">{text}</p>
+      <p className="mt-3 border-t border-q-border pt-2 text-q-caption font-bold text-q-text-2">
         {result}
       </p>
     </article>
