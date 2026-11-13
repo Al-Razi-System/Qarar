@@ -52,23 +52,23 @@ export type TopicDetail = Topic & {
 export type ReviewAction = "approve" | "reject" | "return";
 
 export const topicStatusMeta: Record<string, { label: string; className: string }> = {
-  new: { label: "بانتظار المراجعة", className: "bg-sky-50 text-sky-700 ring-sky-200" },
-  under_review: { label: "قيد المراجعة", className: "bg-blue-50 text-blue-700 ring-blue-200" },
-  returned: { label: "مطلوب استكمال", className: "bg-amber-50 text-amber-800 ring-amber-200" },
-  approved: { label: "معتمد للمسار", className: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
-  rejected: { label: "مرفوض", className: "bg-red-50 text-red-700 ring-red-200" },
-  deferred: { label: "مؤجل", className: "bg-orange-50 text-orange-700 ring-orange-200" },
-  listed: { label: "مدرج في اجتماع", className: "bg-cyan-50 text-cyan-700 ring-cyan-200" },
-  in_process: { label: "قيد المعالجة", className: "bg-indigo-50 text-indigo-700 ring-indigo-200" },
-  postponed: { label: "مؤجل للاجتماع", className: "bg-orange-50 text-orange-700 ring-orange-200" },
-  closed: { label: "مغلق", className: "bg-slate-100 text-slate-700 ring-slate-200" },
+  new: { label: "بانتظار المراجعة", className: "bg-q-surface-2 text-q-link ring-q-primary" },
+  under_review: { label: "قيد المراجعة", className: "bg-q-surface-2 text-q-link ring-q-primary" },
+  returned: { label: "مطلوب استكمال", className: "bg-q-warning-soft text-q-warning ring-q-warning" },
+  approved: { label: "معتمد للمسار", className: "bg-q-success-soft text-q-success ring-q-success" },
+  rejected: { label: "مرفوض", className: "bg-q-danger-soft text-q-danger ring-q-danger" },
+  deferred: { label: "مؤجل", className: "bg-q-warning-soft text-q-warning ring-q-warning" },
+  listed: { label: "مدرج في اجتماع", className: "bg-q-surface-2 text-q-link ring-q-primary" },
+  in_process: { label: "قيد المعالجة", className: "bg-q-surface-2 text-q-link ring-q-primary" },
+  postponed: { label: "مؤجل للاجتماع", className: "bg-q-warning-soft text-q-warning ring-q-warning" },
+  closed: { label: "مغلق", className: "bg-q-surface-2 text-q-text-2 ring-q-border" },
 };
 
 export const priorityMeta: Record<string, { label: string; className: string }> = {
-  low: { label: "منخفضة", className: "bg-slate-100 text-slate-600" },
-  medium: { label: "متوسطة", className: "bg-blue-50 text-blue-700" },
-  high: { label: "عالية", className: "bg-orange-50 text-orange-700" },
-  urgent: { label: "عاجلة", className: "bg-red-50 text-red-700" },
+  low: { label: "منخفضة", className: "bg-q-surface-2 text-q-text-2" },
+  medium: { label: "متوسطة", className: "bg-q-surface-2 text-q-link" },
+  high: { label: "عالية", className: "bg-q-warning-soft text-q-warning" },
+  urgent: { label: "عاجلة", className: "bg-q-danger-soft text-q-danger" },
 };
 
 export const routingStatusLabels: Record<string, string> = {
@@ -93,24 +93,24 @@ export function topicUnitName(topic: TopicDetail | Topic) {
 export function topicStatus(topic: Topic) {
   if (topic.prior_route_status === "draft") return {
     label: (topic.prior_route_missing_evidence_count ?? 0) > 0 ? "مطلوب استكمال الأدلة" : "جاهز لإرسال الأدلة",
-    className: "bg-amber-50 text-amber-800 ring-amber-200",
+    className: "bg-q-warning-soft text-q-warning ring-q-warning",
   };
   if (topic.prior_route_status === "submitted") return {
     label: "بانتظار مراجعة أدلة المسار",
-    className: "bg-sky-50 text-sky-700 ring-sky-200",
+    className: "bg-q-surface-2 text-q-link ring-q-primary",
   };
   if (topic.prior_route_status === "rejected") return {
     label: "أدلة المسار بحاجة لتصحيح",
-    className: "bg-red-50 text-red-700 ring-red-200",
+    className: "bg-q-danger-soft text-q-danger ring-q-danger",
   };
   return topicStatusMeta[topic.status] ?? {
     label: "حالة غير معرّفة",
-    className: "bg-slate-100 text-slate-700 ring-slate-200",
+    className: "bg-q-surface-2 text-q-text-2 ring-q-border",
   };
 }
 
 export function topicPriority(topic: Topic) {
-  return priorityMeta[topic.priority] ?? { label: "غير محددة", className: "bg-slate-100 text-slate-600" };
+  return priorityMeta[topic.priority] ?? { label: "غير محددة", className: "bg-q-surface-2 text-q-text-2" };
 }
 
 export function routingStatusLabel(status?: string | null) {
