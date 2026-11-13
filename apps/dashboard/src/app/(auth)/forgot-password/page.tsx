@@ -1,2 +1,2 @@
 import { ForgotPasswordForm } from "@/features/auth/ui/forgot-password-form";
-export default function ForgotPasswordPage() { return <main className="w-full max-w-md"><h1 className="text-3xl font-black">استعادة كلمة المرور</h1><p className="mt-3 text-sm text-slate-600">أدخل بريدك المؤسسي وسنرسل رابطًا محدود الصلاحية.</p><ForgotPasswordForm /></main>; }
+export default function ForgotPasswordPage() { return <main className="col-span-full mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-10"><h1 className="text-q-h1 font-bold">استعادة كلمة المرور</h1><p className="mt-3 text-q-ui text-q-text-2">أدخل بريدك المؤسسي وسنرسل رابطًا محدود الصلاحية.</p><ForgotPasswordForm /></main>; }
