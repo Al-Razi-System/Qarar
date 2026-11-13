@@ -1,8 +1,11 @@
 "use client";
 
+import { Button as QButton } from "@/shared/ui/button";
+
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { BookOpen, ChevronLeft, FileText, LoaderCircle, Search, Plus, Pencil, Check, Archive, Trash2, MoreHorizontal, Power, CircleCheck } from "lucide-react";
-import { GovernancePageHeader } from "@/shared/ui/governance-page-header";
+import Link from "next/link";
+import { PageHeader } from "@/shared/ui/page-header";
 import { LibraryError, libraryRpc, verifyLibraryDetail } from "../api/regulation-library-client";
 import type { LibraryAction, LibraryDetail, LibraryList } from "../model/regulation-library";
 import { RegulationLibraryDialog, type LibraryDialog } from "./regulation-library-dialog";
@@ -162,35 +165,34 @@ export function RegulationLibrary({ initialPolicies, initialTotal, initialCanMan
       ? "النص الحالي" : version?.id === currentVersion?.id && version?.legal_status === "under_review" ? "النص قيد المراجعة" : version?.id === currentVersion?.id && version?.legal_status === "approved" ? "نص معتمد بانتظار النفاذ" : `نسخة محفوظة · ${legalLabels[version?.legal_status ?? ""] ?? "حالة غير معروفة"}`;
 
   return <div className={styles.library} dir="rtl">
-    <GovernancePageHeader current="regulations" title="اللوائح والبنود" description="مكتبة الأسانيد النظامية. أضف اللائحة ونظّم بنودها، ثم نشّط كل بند من موضعه."
-      actions={initialCanManage && <button disabled={mutationBusy || detailBusy || listBusy} onClick={() => setDialog({ kind: "create" })}><Plus size={19} aria-hidden />إضافة لائحة</button>} />
+    <div><PageHeader title="اللوائح والبنود" description="مكتبة الأسانيد النظامية. أضف اللائحة ونظّم بنودها، ثم نشّط كل بند من موضعه." actions={initialCanManage && <QButton type="submit" variant="ghost" disabled={mutationBusy || detailBusy || listBusy} onClick={() => setDialog({ kind: "create" })}><Plus size={19} aria-hidden />إضافة لائحة</QButton>} /><nav aria-label="إعدادات الحوكمة" className="mb-6 flex flex-wrap gap-2 border-b border-q-border pb-3"><Link href="/admin/regulations/library" aria-current="page" className="inline-flex min-h-11 min-w-11 items-center inline-flex min-h-11 items-center rounded-q-control px-4 text-q-ui font-semibold bg-q-surface-2 text-q-link">اللوائح والبنود</Link><Link href="/admin/workflows" className="inline-flex min-h-11 min-w-11 items-center inline-flex min-h-11 items-center rounded-q-control px-4 text-q-ui font-semibold text-q-text-2 hover:bg-q-surface-2">مسارات الموضوعات</Link><Link href="/admin/governance-model" className="inline-flex min-h-11 min-w-11 items-center inline-flex min-h-11 items-center rounded-q-control px-4 text-q-ui font-semibold text-q-text-2 hover:bg-q-surface-2">تصنيفات الموضوعات</Link></nav></div>
     <div className={styles.workspace}>
       <aside className={styles.catalog} aria-label="قائمة اللوائح">
         <div className={styles.panelHeading}><h2>اللوائح</h2><span>{total}</span></div>
         <form className={styles.search} onSubmit={(event) => { event.preventDefault(); void loadList(query, 0); }}>
           <input aria-label="البحث في اللوائح" placeholder="اسم اللائحة أو مرجعها" value={query} onChange={(event) => setQuery(event.target.value)} />
-          <button type="submit" aria-label="بحث" disabled={listBusy}><Search aria-hidden size={19} /></button>
+          <QButton variant="ghost" type="submit" aria-label="بحث" disabled={listBusy}><Search aria-hidden size={19} /></QButton>
         </form>
-        {listError && <div className={styles.error} role="alert">{listError}<button onClick={() => void loadList(requestedList.current.search, requestedList.current.offset)}>إعادة تحميل القائمة</button></div>}
+        {listError && <div className={styles.error} role="alert">{listError}<QButton type="submit" variant="ghost" onClick={() => void loadList(requestedList.current.search, requestedList.current.offset)}>إعادة تحميل القائمة</QButton></div>}
         {listBusy && <p className={styles.loading} role="status"><LoaderCircle className={styles.spinner} size={18} />جارٍ تحميل اللوائح…</p>}
         <div className={styles.policyList} aria-busy={listBusy}>
           {!policies.length && !listBusy && <p className={styles.empty}>لا توجد لوائح في هذه القائمة.</p>}
-          {policies.map((policy) => <button key={policy.id} disabled={listBusy || mutationBusy} aria-pressed={selection?.id === policy.id} className={styles.policy} onClick={() => void openPolicy(policy)}>
+          {policies.map((policy) => <QButton type="submit" variant="ghost" key={policy.id} disabled={listBusy || mutationBusy} aria-pressed={selection?.id === policy.id} className={styles.policy} onClick={() => void openPolicy(policy)}>
             <FileText aria-hidden size={21} /><span><strong>{policy.name_ar}</strong><small><bdi>{policy.code}</bdi>{policy.status !== "active" && " · مؤرشفة أو معطلة"}</small></span><ChevronLeft aria-hidden size={16} />
-          </button>)}
+          </QButton>)}
         </div>
         <nav className={styles.pagination} aria-label="صفحات اللوائح">
-          <button disabled={listBusy || offset === 0} onClick={() => void loadList(appliedQuery, Math.max(0, offset - PAGE_SIZE))}>السابق</button>
+          <QButton type="submit" variant="ghost" disabled={listBusy || offset === 0} onClick={() => void loadList(appliedQuery, Math.max(0, offset - PAGE_SIZE))}>السابق</QButton>
           <span>صفحة {Math.floor(offset / PAGE_SIZE) + 1}</span>
-          <button disabled={listBusy || offset + PAGE_SIZE >= total} onClick={() => void loadList(appliedQuery, offset + PAGE_SIZE)}>التالي</button>
+          <QButton type="submit" variant="ghost" disabled={listBusy || offset + PAGE_SIZE >= total} onClick={() => void loadList(appliedQuery, offset + PAGE_SIZE)}>التالي</QButton>
         </nav>
         {version && <nav className={styles.outline} aria-label="فهرس المحتوى">
           <div className={styles.panelHeading}><h3>بنود اللائحة</h3><span>{entries.length}</span></div>
           <input className={styles.contentSearch} aria-label="البحث داخل اللائحة" placeholder="ابحث عن بند…" value={contentQuery} onChange={(event) => setContentQuery(event.target.value)} />
           {!visibleEntries.length && <p className={styles.empty}>{entries.length ? "لا توجد نتائج مطابقة." : "أضف أول بند للبدء."}</p>}
-          {visibleEntries.map(({ item: entry, depth }) => <button key={entry.id} onClick={() => setItemId(entry.id)} aria-pressed={entry.id === itemId} className={styles.outlineItem} style={{ paddingInlineStart: `${14 + Math.min(depth, 5) * 12}px` }}>
+          {visibleEntries.map(({ item: entry, depth }) => <QButton type="submit" variant="ghost" key={entry.id} onClick={() => setItemId(entry.id)} aria-pressed={entry.id === itemId} className={styles.outlineItem} style={{ paddingInlineStart: `${14 + Math.min(depth, 5) * 12}px` }}>
             <small>{itemLabels[entry.item_type] ?? "نص نظامي"}</small><strong>{entry.title_ar}</strong>
-          </button>)}
+          </QButton>)}
         </nav>}
       </aside>
       <section className={styles.document} aria-label="قارئ اللائحة" aria-busy={detailBusy}>
@@ -198,26 +200,26 @@ export function RegulationLibrary({ initialPolicies, initialTotal, initialCanMan
         {selection && <>
           <header className={styles.documentHeader}><div><small>اللائحة</small><h2>{selection.name_ar}</h2><bdi>{selection.code}</bdi></div>
             {version && <div className={styles.readingState}><span>{readingLabel}</span>
-              {version.id !== currentVersion?.id && currentVersion && <button onClick={() => selectReadingVersion(currentVersion.id)}>العودة للنص الحالي</button>}
+              {version.id !== currentVersion?.id && currentVersion && <QButton type="submit" variant="ghost" onClick={() => selectReadingVersion(currentVersion.id)}>العودة للنص الحالي</QButton>}
             </div>}
           </header>
           {detailBusy && <p className={styles.loading} role="status"><LoaderCircle className={styles.spinner} size={20} />جارٍ تحميل نص اللائحة…</p>}
-          {detailError && <div className={styles.error} role="alert">{detailError}<button onClick={() => void openPolicy(selection)}>إعادة تحميل اللائحة</button></div>}
+          {detailError && <div className={styles.error} role="alert">{detailError}<QButton type="submit" variant="ghost" onClick={() => void openPolicy(selection)}>إعادة تحميل اللائحة</QButton></div>}
           {detail && <>
             <div className={styles.actionBar} aria-label="إجراءات اللائحة">
               {canManage && <>
-                <button className={styles.secondary} disabled={mutationBusy || detail.status !== "active"} onClick={() => setDialog({ kind: "identity", policy: detail })}><Pencil size={16} />بيانات اللائحة</button>
-                {!editable && <button className={styles.primary} disabled={mutationBusy || inReview || detail.status !== "active"} onClick={() => queuedText ? selectReadingVersion(queuedText.id) : void beginEditing()}><Pencil size={16} />{queuedText ? "فتح التعديل المحفوظ" : versions.length ? "بدء تعديل" : "إضافة أول بند"}</button>}
-                {editable && <button className={styles.primary} disabled={mutationBusy} onClick={() => setDialog({ kind: "item", items: version.items })}><Plus size={17} />إضافة بند</button>}
+                <QButton type="submit" variant="ghost" className={styles.secondary} disabled={mutationBusy || detail.status !== "active"} onClick={() => setDialog({ kind: "identity", policy: detail })}><Pencil size={16} />بيانات اللائحة</QButton>
+                {!editable && <QButton type="submit" variant="ghost" className={styles.primary} disabled={mutationBusy || inReview || detail.status !== "active"} onClick={() => queuedText ? selectReadingVersion(queuedText.id) : void beginEditing()}><Pencil size={16} />{queuedText ? "فتح التعديل المحفوظ" : versions.length ? "بدء تعديل" : "إضافة أول بند"}</QButton>}
+                {editable && <QButton type="submit" variant="ghost" className={styles.primary} disabled={mutationBusy} onClick={() => setDialog({ kind: "item", items: version.items })}><Plus size={17} />إضافة بند</QButton>}
               </>}
               <span className={styles.state}>{versionStatusLabel(version)}</span>
-              {canManage && <details className={styles.more}><summary>المزيد</summary>
-                <button disabled={mutationBusy} onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); confirm("set_status", detail.status === "active" ? "أرشفة اللائحة" : "إعادة تفعيل اللائحة", "يُحفظ النص والسجل التاريخي. الأرشفة تمنع التعديل ولا تمحو القرارات المرتبطة.", detail.status === "active" ? "تأكيد الأرشفة" : "إعادة التفعيل", { status: detail.status === "active" ? "archived" : "active" }, detail.status === "active"); }}><Archive size={16} />{detail.status === "active" ? "أرشفة اللائحة" : "إعادة التفعيل"}</button>
+              {canManage && <details className={styles.more}><summary className="min-h-11 content-center">المزيد</summary>
+                <QButton type="submit" variant="ghost" disabled={mutationBusy} onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); confirm("set_status", detail.status === "active" ? "أرشفة اللائحة" : "إعادة تفعيل اللائحة", "يُحفظ النص والسجل التاريخي. الأرشفة تمنع التعديل ولا تمحو القرارات المرتبطة.", detail.status === "active" ? "تأكيد الأرشفة" : "إعادة التفعيل", { status: detail.status === "active" ? "archived" : "active" }, detail.status === "active"); }}><Archive size={16} />{detail.status === "active" ? "أرشفة اللائحة" : "إعادة التفعيل"}</QButton>
               </details>}
             </div>
             {saving && !item && <p className={styles.loading} role="status"><LoaderCircle className={styles.spinner} size={18} />جارٍ حفظ العملية…</p>}
             {notice && !item && <p className={styles.success} role="status"><Check size={18} />{notice}</p>}
-            {mutationError && <div className={styles.error} role="alert">{mutationError.message}<button onClick={() => void openPolicy(detail)}>إعادة تحميل اللائحة</button></div>}
+            {mutationError && <div className={styles.error} role="alert">{mutationError.message}<QButton type="submit" variant="ghost" onClick={() => void openPolicy(detail)}>إعادة تحميل اللائحة</QButton></div>}
             {canManage && !editable && version && <p className={styles.hint}>{readOnlyReason}</p>}
           </>}
           {detail && !versions.length && <p className={styles.empty}>لم يُضف نص لهذه اللائحة بعد.</p>}
@@ -229,13 +231,13 @@ export function RegulationLibrary({ initialPolicies, initialTotal, initialCanMan
                   <div className={styles.itemHeading}><h3>{item.title_ar}</h3><span className={`${styles.statusBadge} ${itemState === "نشط" ? styles.statusActive : itemState === "معطل" ? styles.statusInactive : styles.statusDraft}`}><CircleCheck size={16} />{itemState}</span></div>
                   <p className={styles.reference}><bdi>{item.item_code}</bdi>{pendingEdit && <span className={styles.pendingBadge}>تعديل غير منشور</span>}</p>
                   <div className={styles.itemToolbar} aria-label="إجراءات البند">
-                    {editable && <button className={styles.secondary} disabled={mutationBusy} onClick={() => setDialog({ kind: "item", item, items: version.items })}><Pencil size={17} />تعديل البند</button>}
+                    {editable && <QButton type="submit" variant="ghost" className={styles.secondary} disabled={mutationBusy} onClick={() => setDialog({ kind: "item", item, items: version.items })}><Pencil size={17} />تعديل البند</QButton>}
                     {directAction && !["chapter", "section"].includes(item.item_type) && <>
-                      {(!publishedItem?.is_active || pendingEdit) && <button className={styles.primary} disabled={mutationBusy || !(item.official_text?.trim() || item.body_text?.trim())} onClick={() => confirm("set_item_publication", pendingEdit && publishedItem?.is_active ? "نشر تعديل البند" : "تنشيط البند", "سيُنشر نص هذا البند فقط؛ مسودات بقية البنود لن تتغير. يُحفظ السجل السابق تلقائيًا.", "تأكيد التنشيط", { version_id: version.id, item_id: item.id, is_active: true })}><Power size={17} />{pendingEdit && publishedItem?.is_active ? "نشر تعديل البند" : "تنشيط البند"}</button>}
-                      {publishedItem?.is_active && <button className={styles.secondary} disabled={mutationBusy} onClick={() => confirm("set_item_publication", "تعطيل البند", "سيتوقف استخدام هذا البند مع حفظ تاريخه وارتباطاته. أي تعديل غير منشور يبقى في المسودة.", "تأكيد التعطيل", { version_id: version.id, item_id: item.id, is_active: false })}><Power size={17} />تعطيل البند</button>}
+                      {(!publishedItem?.is_active || pendingEdit) && <QButton type="submit" variant="ghost" className={styles.primary} disabled={mutationBusy || !(item.official_text?.trim() || item.body_text?.trim())} onClick={() => confirm("set_item_publication", pendingEdit && publishedItem?.is_active ? "نشر تعديل البند" : "تنشيط البند", "سيُنشر نص هذا البند فقط؛ مسودات بقية البنود لن تتغير. يُحفظ السجل السابق تلقائيًا.", "تأكيد التنشيط", { version_id: version.id, item_id: item.id, is_active: true })}><Power size={17} />{pendingEdit && publishedItem?.is_active ? "نشر تعديل البند" : "تنشيط البند"}</QButton>}
+                      {publishedItem?.is_active && <QButton type="submit" variant="ghost" className={styles.secondary} disabled={mutationBusy} onClick={() => confirm("set_item_publication", "تعطيل البند", "سيتوقف استخدام هذا البند مع حفظ تاريخه وارتباطاته. أي تعديل غير منشور يبقى في المسودة.", "تأكيد التعطيل", { version_id: version.id, item_id: item.id, is_active: false })}><Power size={17} />تعطيل البند</QButton>}
                     </>}
-                    {editable && <details className={styles.itemMore}><summary aria-label="المزيد من إجراءات البند"><MoreHorizontal size={22} /></summary><div>
-                      <button className={styles.danger} disabled={mutationBusy || !canRemoveItem} onClick={() => confirm("remove_item", "حذف البند من المسودة", "سيُحذف البند غير المنشور من مساحة العمل فقط.", "تأكيد حذف البند", { version_id: version.id, item_id: item.id }, true)}><Trash2 size={16} />حذف البند</button>
+                    {editable && <details className={styles.itemMore}><summary className="min-h-11 content-center" aria-label="المزيد من إجراءات البند"><MoreHorizontal size={22} /></summary><div>
+                      <QButton type="submit" variant="ghost" className={styles.danger} disabled={mutationBusy || !canRemoveItem} onClick={() => confirm("remove_item", "حذف البند من المسودة", "سيُحذف البند غير المنشور من مساحة العمل فقط.", "تأكيد حذف البند", { version_id: version.id, item_id: item.id }, true)}><Trash2 size={16} />حذف البند</QButton>
                       {!canRemoveItem && <small>{publishedItem ? "البند منشور؛ عطّله بدل حذف سجله." : "عالج البنود التابعة ومرفقات المصدر قبل الحذف."}</small>}
                     </div></details>}
                   </div>
@@ -244,7 +246,7 @@ export function RegulationLibrary({ initialPolicies, initialTotal, initialCanMan
                   {directAction && !["chapter", "section"].includes(item.item_type) && !(item.official_text?.trim() || item.body_text?.trim()) && <p className={styles.hint}>أضف نص البند قبل تنشيطه.</p>}
                 </header>
                 <div className={styles.legalText}>{item.official_text?.trim() || item.body_text?.trim() || "لم يُضف النص الرسمي لهذا البند بعد."}</div>
-                {!!(item.interpretation_text || item.source_locator || item.source_page_from || item.attachments?.length) && <details className={styles.source} key={item.id}><summary>التفسير وبيانات المصدر</summary>
+                {!!(item.interpretation_text || item.source_locator || item.source_page_from || item.attachments?.length) && <details className={styles.source} key={item.id}><summary className="min-h-11 content-center">التفسير وبيانات المصدر</summary>
                   {item.interpretation_text && <section><h4>تفسير المصدر</h4><p>{item.interpretation_text}</p></section>}
                   {item.source_locator && <p>موضع النص: {item.source_locator}</p>}
                   {item.source_page_from != null && <p>الصفحة {item.source_page_from}{item.source_page_to != null && item.source_page_to !== item.source_page_from ? ` إلى ${item.source_page_to}` : ""}</p>}
@@ -254,13 +256,13 @@ export function RegulationLibrary({ initialPolicies, initialTotal, initialCanMan
             </article>
           </div>}
           {version && versions.length > 1 && <details className={styles.history} key={detail?.id}>
-            <summary>النسخ السابقة والتعديلات</summary>
+            <summary className="min-h-11 content-center">النسخ السابقة والتعديلات</summary>
             <p>للاطلاع عند الحاجة فقط؛ اختيار نسخة هنا لا يغيّر اللائحة أو اعتمادها.</p>
             <label className={styles.version}>النسخ المحفوظة<select value={versionId} onChange={(event) => selectReadingVersion(event.target.value)}>
               {versions.map((entry) => <option key={entry.id} value={entry.id}>نسخة {entry.version_no} · {versionStatusLabel(entry)}{entry.id === currentVersion?.id ? " · المعروضة افتراضيًا" : ""}</option>)}
             </select></label>
           </details>}
-          {!!((detail?.attachments?.length ?? 0) + (version?.attachments?.length ?? 0)) && <details className={styles.history}><summary>وثائق مصدر اللائحة</summary><RegulationSourceFiles attachments={[...(detail?.attachments ?? []), ...(version?.attachments ?? [])]} /></details>}
+          {!!((detail?.attachments?.length ?? 0) + (version?.attachments?.length ?? 0)) && <details className={styles.history}><summary className="min-h-11 content-center">وثائق مصدر اللائحة</summary><RegulationSourceFiles attachments={[...(detail?.attachments ?? []), ...(version?.attachments ?? [])]} /></details>}
         </>}
       </section>
     </div>

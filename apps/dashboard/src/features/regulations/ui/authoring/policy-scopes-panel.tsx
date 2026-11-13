@@ -1,5 +1,10 @@
 "use client";
 
+import { Card as QCard } from "@/shared/ui/card";
+import { Badge as QBadge } from "@/shared/ui/badge";
+
+import { Button as QButton } from "@/shared/ui/button";
+
 import { useState } from "react";
 import {
   Building2,
@@ -132,22 +137,22 @@ function ScopeImpact({
   const units = resolvePolicyScopeUnits(scope, references);
   return (
     <div
-      className={`mt-3 rounded-xl border p-3 ${units.length ? "border-emerald-200 bg-emerald-50/70" : "border-amber-200 bg-amber-50"}`}
+      className={`mt-3 rounded-q-control border p-3 ${units.length ? "border-q-border bg-q-success-soft/70" : "border-q-border bg-q-warning-soft"}`}
     >
       <div className="flex items-center gap-2">
         <Users
           size={14}
-          className={units.length ? "text-emerald-700" : "text-amber-700"}
+          className={units.length ? "text-q-success" : "text-q-warning"}
         />
         <strong
-          className={`text-[9px] ${units.length ? "text-emerald-800" : "text-amber-800"}`}
+          className={`text-q-caption ${units.length ? "text-q-success" : "text-q-warning"}`}
         >
           {impactLabel(units.length)}
         </strong>
       </div>
       {units.length > 0 && (
         <div className="mt-2">
-          <p className="mb-2 text-[8px] font-black text-[#49657e]">
+          <p className="mb-2 text-q-caption font-bold text-q-text-2">
             المجالس المشمولة الآن:
           </p>
           <div
@@ -156,16 +161,16 @@ function ScopeImpact({
             {units.map((unit) => (
               <span
                 key={unit.id}
-                className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-2.5 py-2 text-[8px] font-bold text-[#35536b]"
+                className="flex items-center gap-1.5 rounded-q-control border border-q-border bg-q-surface px-2.5 py-2 text-q-caption font-bold text-q-text-2"
               >
-                <Building2 size={11} className="shrink-0 text-emerald-600" />
+                <Building2 size={11} className="shrink-0 text-q-success" />
                 {String(unit.name_ar ?? unit.code)}
               </span>
             ))}
           </div>
         </div>
       )}
-      <p className="mt-2 text-[8px] leading-5 text-[#6d7f90]">
+      <p className="mt-2 text-q-caption leading-5 text-q-text-3">
         النتيجة تُحتسب من شجرة المجالس الحالية، وأي مجلس جديد يطابق القاعدة
         سيُضم تلقائياً.
       </p>
@@ -244,17 +249,17 @@ export function PolicyScopesPanel({
     );
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--q-border)] bg-white shadow-sm">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e5edf4] bg-[var(--q-bg)] p-4 sm:p-5">
+    <section className="overflow-hidden rounded-q-card border border-q-border bg-q-surface ">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-q-border bg-q-bg p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff2e8] text-[#d96712]">
+          <span className="grid h-10 w-10 place-items-center rounded-q-control bg-q-surface-2 text-q-link">
             <Route size={18} />
           </span>
           <div>
-            <h3 className="text-sm font-black text-[#1b3049]">
+            <h3 className="text-q-ui font-bold text-q-text">
               المجالس المشمولة بنطاق الإصدار
             </h3>
-            <p className="mt-1 text-[9px] leading-5 text-[#718398]">
+            <p className="mt-1 text-q-caption leading-5 text-q-text-3">
               كل بطاقة تعرض قاعدة الاختيار ونتيجتها الفعلية من شجرة المجالس
               الحالية.
             </p>
@@ -269,9 +274,9 @@ export function PolicyScopesPanel({
             <Plus size={14} /> إضافة نطاق
           </PrimaryAction>
         ) : (
-          <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[9px] font-black text-slate-700">
+          <QBadge className="rounded-full bg-q-neutral-soft px-3 py-1.5 text-q-caption font-bold text-q-text-2">
             الإصدار للقراءة فقط
-          </span>
+          </QBadge>
         )}
       </header>
       <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_280px] sm:p-5">
@@ -279,9 +284,9 @@ export function PolicyScopesPanel({
           {version.scopes.map((scope) => (
             <article
               key={scope.id}
-              className="flex items-start gap-3 rounded-2xl border border-[var(--q-border)] bg-white p-4 shadow-sm"
+              className="flex items-start gap-3 rounded-q-card border border-q-border bg-q-surface p-4 "
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-q-control bg-q-surface-2 text-q-primary">
                 {scope.scope_type === "organization" ? (
                   <Building2 size={17} />
                 ) : scope.scope_type === "governance_class" ||
@@ -293,22 +298,22 @@ export function PolicyScopesPanel({
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <strong className="text-[11px] text-[#243a52]">
+                  <strong className="text-q-caption text-q-text">
                     {scopeLabels[scope.scope_type] ?? scope.scope_type}
                   </strong>
-                  <span className="rounded-full bg-[#f0f5f9] px-2 py-0.5 text-[8px] font-black text-[#667b91]">
+                  <QBadge className="rounded-full bg-q-surface-2 px-2 py-0.5 text-q-caption font-bold text-q-text-2">
                     أولوية {scope.priority}
-                  </span>
+                  </QBadge>
                   {scope.include_descendants && (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[8px] font-black text-emerald-700">
+                    <QBadge className="rounded-full bg-q-success-soft px-2 py-0.5 text-q-caption font-bold text-q-success">
                       يشمل التابع
-                    </span>
+                    </QBadge>
                   )}
                 </div>
-                <p className="mt-1.5 text-[9px] leading-5 text-[#6f8297]">
+                <p className="mt-1.5 text-q-caption leading-5 text-q-text-3">
                   {scopeDescription(scope, references)}
                 </p>
-                <p className="mt-2 flex items-center gap-1 text-[8px] text-[#8998a9]">
+                <p className="mt-2 flex items-center gap-1 text-q-caption text-q-text-3">
                   <CalendarDays size={11} />
                   {scope.valid_from
                     ? `من ${scope.valid_from}`
@@ -320,15 +325,15 @@ export function PolicyScopesPanel({
                 <ScopeImpact scope={scope} references={references} />
               </div>
               {editable && (
-                <button
+                <QButton variant="ghost"
                   type="button"
                   title="حذف نطاق التطبيق من هذه المسودة"
                   aria-label={`حذف نطاق ${scopeLabels[scope.scope_type] ?? scope.scope_type}`}
                   onClick={() => setDeleting(scope)}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-red-600 hover:bg-red-50"
+                  className="min-w-11 grid min-h-11 min-w-11 shrink-0 place-items-center rounded-q-control text-q-danger hover:bg-q-danger-soft"
                 >
                   <Trash2 size={14} />
-                </button>
+                </QButton>
               )}
             </article>
           ))}
@@ -343,35 +348,35 @@ export function PolicyScopesPanel({
               }
               action={
                 editable ? (
-                  <button
+                  <QButton variant="ghost"
                     type="button"
                     title="إضافة أول نطاق تطبيق"
                     onClick={() => setAdding(true)}
-                    className="rounded-xl bg-[var(--q-primary)] px-4 py-2.5 text-[10px] font-black text-white"
+                    className="min-w-11 rounded-q-control bg-q-primary px-4 py-2.5 text-q-ui font-bold text-q-on-primary"
                   >
                     إضافة أول نطاق
-                  </button>
+                  </QButton>
                 ) : undefined
               }
             />
           )}
         </div>
         <aside className="space-y-3">
-          <div className="rounded-2xl border border-[#d9e8f5] bg-[#f3f9ff] p-4">
-            <h4 className="text-[10px] font-black text-[#285071]">
+          <QCard className="p-0 rounded-q-card border border-q-border bg-q-surface p-4">
+            <h4 className="text-q-caption font-bold text-q-text-2">
               كيف تختار النطاق؟
             </h4>
-            <ul className="mt-3 space-y-2 text-[9px] leading-5 text-[#60778e]">
+            <ul className="mt-3 space-y-2 text-q-caption leading-5 text-q-text-2">
               <li>• استخدم «تصنيف مجالس» لكل مجالس الأقسام أو الكليات.</li>
               <li>• استخدم «نوع وحدة» لكل الوحدات من نوع تنظيمي واحد.</li>
               <li>• استخدم «وحدة والجهات التابعة» لفرع تنظيمي كامل.</li>
               <li>• الأولوية الأعلى تحسم عند وجود أكثر من نطاق مطابق.</li>
             </ul>
-          </div>
-          <div className="rounded-2xl border border-[#f0ddc9] bg-[#fff9f3] p-4 text-[9px] leading-6 text-[#76533a]">
+          </QCard>
+          <QCard className="p-0 rounded-q-card border border-q-border bg-q-surface-2 p-4 text-q-caption leading-6 text-q-text-2">
             ربط المادة بدور مجلس أو خطوة اعتماد يتم في «القواعد والمسارات». هنا
             نحدد فقط أين يسري الإصدار.
-          </div>
+          </QCard>
         </aside>
       </div>
 
@@ -391,20 +396,20 @@ export function PolicyScopesPanel({
           description="لن يُحذف أي مجلس؛ سيُزال ارتباط هذا الإصدار بالنطاق فقط."
           onClose={() => setDeleting(undefined)}
         >
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-[10px] leading-6 text-red-900">
+          <QCard className="p-0 rounded-q-control border border-q-border bg-q-danger-soft p-4 text-q-caption leading-6 text-q-danger">
             سيتم حذف نطاق «
             {scopeLabels[deleting.scope_type] ?? deleting.scope_type}» من
             المسودة.
-          </div>
+          </QCard>
           <div className="mt-5 flex justify-end gap-2">
-            <button
+            <QButton variant="ghost"
               type="button"
               title="إلغاء الحذف"
               onClick={() => setDeleting(undefined)}
-              className="h-10 rounded-xl border border-[var(--q-border)] px-4 text-[10px] font-black text-[#52677e]"
+              className="min-w-11 min-h-11 rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-text-2"
             >
               إلغاء
-            </button>
+            </QButton>
             <PrimaryAction
               busy={busy}
               tone="red"
@@ -580,7 +585,7 @@ function ScopeDialog({
           />
         </AuthoringField>
         {form.type === "unit_subtree" && (
-          <label className="flex items-center gap-2 rounded-xl border border-[var(--q-border)] bg-white p-3 text-[9px] font-bold text-[#40566e]">
+          <label className="flex items-center gap-2 rounded-q-control border border-q-border bg-q-surface p-3 text-q-caption font-bold text-q-text-2">
             <input
               type="checkbox"
               checked={form.includeDescendants}
@@ -594,13 +599,13 @@ function ScopeDialog({
       </div>
       {canPreview && (
         <div className="mt-4">
-          <p className="text-[9px] font-black text-[#2f4962]">
+          <p className="text-q-caption font-bold text-q-text-2">
             معاينة قبل الحفظ
           </p>
           <ScopeImpact scope={previewScope} references={references} compact />
         </div>
       )}
-      <div className="mt-6 flex justify-end border-t border-[#e4ebf2] pt-4">
+      <div className="mt-6 flex justify-end border-t border-q-border pt-4">
         <PrimaryAction
           busy={busy}
           onClick={onSave}

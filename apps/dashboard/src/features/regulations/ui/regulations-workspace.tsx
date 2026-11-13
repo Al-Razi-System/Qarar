@@ -1,5 +1,12 @@
 "use client";
 
+import { Card as QCard } from "@/shared/ui/card";
+import { Badge as QBadge } from "@/shared/ui/badge";
+
+import { Badge as SharedBadge } from "@/shared/ui/badge";
+import { PageHeader } from "@/shared/ui/page-header";
+import { Button as QButton } from "@/shared/ui/button";
+
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -327,16 +334,16 @@ const typeLabels: Record<string, string> = {
   framework: "إطار",
 };
 const statusClass: Record<string, string> = {
-  draft: "bg-slate-100 text-slate-600",
-  under_review: "bg-amber-50 text-amber-700",
-  approved: "bg-blue-50 text-blue-700",
-  effective: "bg-emerald-50 text-emerald-700",
-  suspended: "bg-red-50 text-red-700",
-  expired: "bg-slate-100 text-slate-500",
-  active: "bg-emerald-50 text-emerald-700",
-  pending: "bg-amber-50 text-amber-700",
-  submitted: "bg-amber-50 text-amber-700",
-  rejected: "bg-red-50 text-red-700",
+  draft: "bg-q-neutral-soft text-q-text-2",
+  under_review: "bg-q-warning-soft text-q-warning",
+  approved: "bg-q-surface-2 text-q-link",
+  effective: "bg-q-success-soft text-q-success",
+  suspended: "bg-q-danger-soft text-q-danger",
+  expired: "bg-q-neutral-soft text-q-text-2",
+  active: "bg-q-success-soft text-q-success",
+  pending: "bg-q-warning-soft text-q-warning",
+  submitted: "bg-q-warning-soft text-q-warning",
+  rejected: "bg-q-danger-soft text-q-danger",
 };
 const automationLabels: Record<string, string> = {
   not_configured: "غير مهيأ",
@@ -421,11 +428,9 @@ async function rpc<T>(contract: string, params: Record<string, unknown> = {}) {
 
 function Badge({ value }: { value: string }) {
   return (
-    <span
-      className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${statusClass[value] ?? "bg-slate-100 text-slate-600"}`}
-    >
+    <SharedBadge className={statusClass[value]}>
       {legalLabels[value] ?? value}
-    </span>
+    </SharedBadge>
   );
 }
 function Field({
@@ -447,12 +452,12 @@ function Field({
       {control ? (
         <label
           htmlFor={id}
-          className="mb-1 block text-[10px] font-bold text-[#3b4b62]"
+          className="mb-1 block text-q-caption font-bold text-q-text-2"
         >
           {label}
         </label>
       ) : (
-        <span className="mb-1 block text-[10px] font-bold text-[#3b4b62]">
+        <span className="mb-1 block text-q-caption font-bold text-q-text-2">
           {label}
         </span>
       )}
@@ -462,15 +467,15 @@ function Field({
           })
         : children}
       {hint && (
-        <span className="mt-1 block text-[8px] text-[#8997a8]">{hint}</span>
+        <span className="mt-1 block text-q-caption text-q-text-3">{hint}</span>
       )}
     </div>
   );
 }
 const input =
-  "h-9 w-full rounded-lg border border-[var(--q-border)] bg-white px-3 text-[11px] outline-none transition focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
+  "h-9 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-caption outline-none transition focus:border-q-primary focus:ring-2 focus:ring-q-primary/10";
 const textarea =
-  "min-h-20 w-full rounded-lg border border-[var(--q-border)] bg-white p-3 text-[11px] leading-5 outline-none focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
+  "min-h-20 w-full rounded-q-control border border-q-border bg-q-surface p-3 text-q-caption leading-5 outline-none focus:border-q-primary focus:ring-2 focus:ring-q-primary/10";
 
 function Dialog({
   title,
@@ -487,7 +492,7 @@ function Dialog({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-[#071526]/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-q-header/50 p-4 backdrop-blur-sm"
       onMouseDown={onClose}
     >
       <section
@@ -495,20 +500,20 @@ function Dialog({
         aria-modal="true"
         aria-label={title}
         onMouseDown={(e) => e.stopPropagation()}
-        className={`max-h-[92vh] w-full overflow-y-auto rounded-2xl bg-white shadow-2xl ${wide ? "max-w-4xl" : "max-w-xl"}`}
+        className={`max-h-[92vh] w-full overflow-y-auto rounded-q-card bg-q-surface shadow-2xl ${wide ? "max-w-4xl" : "max-w-xl"}`}
       >
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e9eef4] bg-white/95 px-5 py-4 backdrop-blur">
-          <h2 className="text-sm font-black text-[#14233a]">{title}</h2>
-          <button
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-q-border bg-q-surface/95 px-5 py-4 backdrop-blur">
+          <h2 className="text-q-ui font-bold text-q-text">{title}</h2>
+          <QButton type="submit" variant="ghost"
             onClick={onClose}
-            className="grid h-8 w-8 place-items-center rounded-lg bg-[#f1f5f9] text-[var(--q-text-3)]"
+            className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control bg-q-surface-2 text-q-text-3"
             aria-label="إغلاق"
           >
             <X size={15} />
-          </button>
+          </QButton>
         </header>
         <div className="p-5">
-          {feedback && <div role={feedback.kind === "error" ? "alert" : "status"} className={`mb-4 rounded-xl border p-3 text-[11px] font-bold leading-5 ${feedback.kind === "error" ? "border-red-200 bg-red-50 text-red-800" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}><p>{feedback.text}</p>{feedback.detail && <details className="mt-2 text-[9px] opacity-80"><summary>تفاصيل إضافية</summary><p dir="ltr" className="mt-1 break-all">{feedback.detail}</p></details>}</div>}
+          {feedback && <div role={feedback.kind === "error" ? "alert" : "status"} className={`mb-4 rounded-q-control border p-3 text-q-caption font-bold leading-5 ${feedback.kind === "error" ? "border-q-border bg-q-danger-soft text-q-danger" : "border-q-border bg-q-success-soft text-q-success"}`}><p>{feedback.text}</p>{feedback.detail && <details className="mt-2 text-q-caption opacity-80"><summary className="min-h-11 content-center">تفاصيل إضافية</summary><p dir="ltr" className="mt-1 break-all">{feedback.detail}</p></details>}</div>}
           {children}
         </div>
       </section>
@@ -1719,11 +1724,11 @@ export function RegulationsWorkspace({
   }
 
   return (
-    <div className="-mx-5 -my-7 min-h-[calc(100vh-84px)] bg-[#eef3f8] px-4 py-5 lg:-mx-8 lg:-my-8 lg:px-6 lg:py-6">
+    <div className="min-w-0 bg-q-bg py-5">
       <div className="space-y-4">
         {notice && (
           <div
-            className={`flex items-start gap-3 rounded-xl border p-4 text-xs shadow-sm ${notice.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}
+            className={`flex items-start gap-3 rounded-q-control border p-4 text-q-caption  ${notice.kind === "success" ? "border-q-border bg-q-success-soft text-q-success" : "border-q-border bg-q-danger-soft text-q-danger"}`}
           >
             <span className="mt-0.5">
               {notice.kind === "success" ? (
@@ -1735,8 +1740,8 @@ export function RegulationsWorkspace({
             <div>
               <strong>{notice.text}</strong>
               {notice.detail && (
-                <details className="mt-2 text-[10px] opacity-80">
-                  <summary>تفاصيل تقنية</summary>
+                <details className="mt-2 text-q-caption opacity-80">
+                  <summary className="min-h-11 content-center">تفاصيل تقنية</summary>
                   <p dir="ltr" className="mt-1 break-all">
                     {notice.detail}
                   </p>
@@ -1746,30 +1751,17 @@ export function RegulationsWorkspace({
           </div>
         )}
 
-        <header className="overflow-hidden rounded-lg border border-[#d9e4ef] bg-white shadow-sm">
-          <div className="grid gap-4 border-b border-[#e5edf5] p-4 xl:grid-cols-[1fr_auto] xl:items-end">
-            <div>
-              <p className="mb-1 text-[10px] font-black text-[#ff7a00]">
-                مركز الحوكمة التنظيمية
-              </p>
-              <h1 className="text-xl font-black text-[var(--q-text)]">
-                اللوائح والمسارات
-              </h1>
-              <p className="mt-1.5 max-w-3xl text-[11px] leading-5 text-[#5f7085]">
-                مساحة تشغيل واحدة لإعداد اللائحة، ضبط نطاقها، ربط البنود بمسار
-                الاعتماد، ثم اختبار المطابقة قبل التفعيل.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
+        <div className="min-w-0">
+          <PageHeader title="اللوائح والمسارات" description="مساحة تشغيل واحدة لإعداد اللائحة، ضبط نطاقها، ربط البنود بمسار الاعتماد، ثم اختبار المطابقة قبل التفعيل." actions={<div className="flex flex-wrap gap-2">
               {busy && (
-                <span className="flex h-9 items-center gap-2 rounded-lg border border-[#d8e5f2] bg-[var(--q-bg)] px-3 text-[11px] font-bold text-[var(--q-primary)]">
+                <span className="flex h-9 items-center gap-2 rounded-q-control border border-q-border bg-q-bg px-3 text-q-caption font-bold text-q-primary">
                   <LoaderCircle className="animate-spin" size={14} /> جار
                   التنفيذ
                 </span>
               )}
               {tab === "policies" && (
                 <>
-                  <button
+                  <QButton type="submit" variant="ghost"
                     onClick={() => {
                       setEditingPolicy(null);
                       setPolicyForm({
@@ -1782,25 +1774,25 @@ export function RegulationsWorkspace({
                       });
                       setModal("policy");
                     }}
-                    className="flex h-9 items-center justify-center gap-2 rounded-lg bg-[var(--q-primary)] px-4 text-[11px] font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.18)]"
+                    className="min-w-11 flex min-h-11 items-center justify-center gap-2 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary "
                   >
                     <CirclePlus size={15} />
                     إنشاء لائحة
-                  </button>
-                  <button
+                  </QButton>
+                  <QButton type="submit" variant="ghost"
                     onClick={() => {
                       setBundleJsonText("");
                       setModal("import_bundle");
                     }}
-                    className="flex h-9 items-center justify-center gap-2 rounded-lg border border-[#cbd9e8] bg-white px-3 text-[11px] font-bold text-[var(--q-text-2)] hover:border-[var(--q-primary)] hover:text-[var(--q-primary)]"
+                    className="min-w-11 flex min-h-11 items-center justify-center gap-2 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-bold text-q-text-2 hover:border-q-primary hover:text-q-primary"
                   >
                     <FileJson size={15} />
                     استيراد حزمة JSON
-                  </button>
+                  </QButton>
                 </>
               )}
               {tab === "classes" && (
-                <button
+                <QButton type="submit" variant="ghost"
                   onClick={() => {
                     setClassForm({
                       code: "",
@@ -1811,14 +1803,14 @@ export function RegulationsWorkspace({
                     });
                     setModal("class");
                   }}
-                  className="flex h-9 items-center justify-center gap-2 rounded-lg bg-[var(--q-primary)] px-4 text-[11px] font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.18)]"
+                  className="min-w-11 flex min-h-11 items-center justify-center gap-2 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary "
                 >
                   <Plus size={15} />
                   تصنيف جديد
-                </button>
+                </QButton>
               )}
               {tab === "categories" && (
-                <button
+                <QButton type="submit" variant="ghost"
                   onClick={() => {
                     setCategoryForm({
                       code: "",
@@ -1828,14 +1820,13 @@ export function RegulationsWorkspace({
                     });
                     setModal("category");
                   }}
-                  className="flex h-9 items-center justify-center gap-2 rounded-lg bg-[var(--q-primary)] px-4 text-[11px] font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.18)]"
+                  className="min-w-11 flex min-h-11 items-center justify-center gap-2 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary "
                 >
                   <Plus size={15} />
                   فئة جديدة
-                </button>
+                </QButton>
               )}
-            </div>
-          </div>
+            </div>} />
           <nav className="hidden">
             {(
               [
@@ -1867,39 +1858,39 @@ export function RegulationsWorkspace({
                 ],
               ] as const
             ).map(([key, label, description, Icon]) => (
-              <button
+              <QButton type="submit" variant="ghost"
                 key={key}
                 onClick={() => changeTab(key)}
-                className={`flex items-center gap-2 rounded-lg border p-2.5 text-right transition ${tab === key ? "border-[var(--q-primary)] bg-[var(--q-primary)] text-white shadow-[0_8px_18px_rgba(0,102,204,.16)]" : "border-[#e2eaf3] bg-[var(--q-bg)] text-[var(--q-text-2)] hover:border-[#9cc7ef] hover:bg-white"}`}
+                className={`min-w-11 flex items-center gap-2 rounded-q-control border p-2.5 text-right transition ${tab === key ? "border-q-primary bg-q-primary text-q-on-primary " : "border-q-border bg-q-bg text-q-text-2 hover:border-q-primary hover:bg-q-surface"}`}
               >
                 <span
-                  className={`grid h-8 w-8 place-items-center rounded-lg ${tab === key ? "bg-white/15" : "bg-white text-[var(--q-primary)]"}`}
+                  className={`grid h-8 w-8 place-items-center rounded-q-control ${tab === key ? "bg-q-surface/15" : "bg-q-surface text-q-primary"}`}
                 >
                   <Icon size={16} />
                 </span>
                 <span>
-                  <strong className="block text-[11px]">{label}</strong>
+                  <strong className="block text-q-caption">{label}</strong>
                   <span
-                    className={`mt-0.5 block text-[8px] ${tab === key ? "text-white/75" : "text-[#8493a6]"}`}
+                    className={`mt-0.5 block text-q-caption ${tab === key ? "text-q-on-primary/75" : "text-q-text-3"}`}
                   >
                     {description}
                   </span>
                 </span>
-              </button>
+              </QButton>
             ))}
           </nav>
-        </header>
+        </div>
 
         <div className="grid items-start gap-4 2xl:grid-cols-[230px_minmax(0,1fr)]">
           <RegulationsNavigation active={tab} onChange={changeTab} />
           <div className="min-w-0">
             {tab === "policies" && (
               <div className="grid gap-4">
-                <section className="overflow-hidden rounded-lg border border-[#d9e4ef] bg-white shadow-sm">
-                  <div className="border-b border-[#edf2f7] p-3">
+                <section className="overflow-hidden rounded-q-control border border-q-border bg-q-surface ">
+                  <div className="border-b border-q-border p-3">
                     <div className="relative">
                       <Search
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8b99aa]"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-q-text-3"
                         size={15}
                       />
                       <input
@@ -1909,33 +1900,33 @@ export function RegulationsWorkspace({
                         className={`${input} pr-10`}
                       />
                     </div>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[9px]">
-                      <div className="rounded-lg bg-[#f3f7fb] p-1.5">
-                        <strong className="block text-xs text-[var(--q-text)]">
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-center text-q-caption">
+                      <div className="rounded-q-control bg-q-surface-2 p-1.5">
+                        <strong className="block text-q-caption text-q-text">
                           {policies.length}
                         </strong>
-                        <span className="text-[var(--q-text-3)]">لائحة</span>
+                        <span className="text-q-text-3">لائحة</span>
                       </div>
-                      <div className="rounded-lg bg-[#f3f7fb] p-1.5">
-                        <strong className="block text-xs text-[var(--q-text)]">
+                      <div className="rounded-q-control bg-q-surface-2 p-1.5">
+                        <strong className="block text-q-caption text-q-text">
                           {policies.reduce(
                             (sum, policy) => sum + (policy.version_count ?? 0),
                             0,
                           )}
                         </strong>
-                        <span className="text-[var(--q-text-3)]">إصدار</span>
+                        <span className="text-q-text-3">إصدار</span>
                       </div>
-                      <div className="rounded-lg bg-[#fff7ed] p-1.5">
-                        <strong className="block text-xs text-[#ff7a00]">
+                      <div className="rounded-q-control bg-q-surface-2 p-1.5">
+                        <strong className="block text-q-caption text-q-link">
                           {visible.length}
                         </strong>
-                        <span className="text-[#9a6a35]">نتيجة</span>
+                        <span className="text-q-link">نتيجة</span>
                       </div>
                     </div>
                   </div>
                   <div className="min-h-[470px] overflow-x-auto">
                     <table className="w-full min-w-[820px] table-fixed text-right">
-                      <thead className="border-b border-[var(--q-border)] bg-[#f7f9fc] text-[9px] font-bold text-[var(--q-text-3)]">
+                      <thead className="border-b border-q-border bg-q-surface text-q-caption font-bold text-q-text-3">
                         <tr>
                           <th className="w-[34%] px-4 py-3">اللائحة</th>
                           <th className="w-[16%] px-4 py-3">النوع</th>
@@ -1949,26 +1940,26 @@ export function RegulationsWorkspace({
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[var(--q-surface-2)]">
+                      <tbody className="divide-y divide-q-surface-2">
                         {visible.map((p) => (
                           <tr
                             key={p.id}
-                            className="group transition hover:bg-[var(--q-bg)]"
+                            className="group transition hover:bg-q-bg"
                           >
                             <td className="px-4 py-3.5">
                               <Link
                                 href={`/admin/regulations/${p.id}`}
-                                className="flex min-w-0 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--q-primary)]"
+                                className="inline-flex min-h-11 min-w-11 items-center flex min-w-0 items-center gap-3 rounded-q-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-q-primary"
                               >
-                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--q-surface-2)] text-[var(--q-primary)] transition group-hover:bg-[var(--q-primary)] group-hover:text-white">
+                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-q-control bg-q-surface-2 text-q-primary transition group-hover:bg-q-primary group-hover:text-q-on-primary">
                                   <BookOpenCheck size={16} />
                                 </span>
                                 <span className="min-w-0">
-                                  <strong className="block truncate text-[11px] text-[#1c2b42] group-hover:text-[var(--q-primary)]">
+                                  <strong className="block truncate text-q-caption text-q-text group-hover:text-q-primary">
                                     {p.name_ar}
                                   </strong>
                                   <span
-                                    className="mt-1 block truncate font-mono text-[8px] text-[#8997a8]"
+                                    className="mt-1 block truncate font-mono text-q-caption text-q-text-3"
                                     dir="ltr"
                                   >
                                     {p.code}
@@ -1976,18 +1967,18 @@ export function RegulationsWorkspace({
                                 </span>
                               </Link>
                             </td>
-                            <td className="px-4 py-3.5 text-[10px] font-bold text-[var(--q-text-2)]">
+                            <td className="px-4 py-3.5 text-q-caption font-bold text-q-text-2">
                               {typeLabels[p.policy_type] ?? p.policy_type}
                             </td>
                             <td className="px-4 py-3.5">
                               <Badge value={p.status} />
                             </td>
                             <td className="px-4 py-3.5 text-center">
-                              <strong className="inline-flex min-w-8 justify-center rounded-lg bg-[#f1f5f9] px-2 py-1 text-[10px] text-[#31445d]">
+                              <strong className="inline-flex min-w-8 justify-center rounded-q-control bg-q-surface-2 px-2 py-1 text-q-caption text-q-text-2">
                                 {p.version_count ?? 0}
                               </strong>
                             </td>
-                            <td className="px-4 py-3.5 text-[9px] text-[var(--q-text-3)]">
+                            <td className="px-4 py-3.5 text-q-caption text-q-text-3">
                               {p.updated_at
                                 ? new Date(p.updated_at).toLocaleDateString(
                                     "ar-SA-u-nu-latn",
@@ -1998,7 +1989,7 @@ export function RegulationsWorkspace({
                               <Link
                                 href={`/admin/regulations/${p.id}`}
                                 aria-label={`فتح سجل اللائحة ${p.code}`}
-                                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d8e4ef] bg-white px-3 text-[9px] font-black text-[var(--q-primary)] transition hover:border-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
+                                className="inline-flex min-h-11 min-w-11 items-center inline-flex min-h-11 items-center gap-1.5 rounded-q-control border border-q-border bg-q-surface px-3 text-q-caption font-bold text-q-primary transition hover:border-q-primary hover:bg-q-surface-2"
                               >
                                 فتح <ChevronLeft size={12} />
                               </Link>
@@ -2009,7 +2000,7 @@ export function RegulationsWorkspace({
                           <tr>
                             <td
                               colSpan={6}
-                              className="px-4 py-16 text-center text-[11px] text-[#8291a4]"
+                              className="px-4 py-16 text-center text-q-caption text-q-text-3"
                             >
                               لا توجد لوائح مطابقة لعبارة البحث.
                             </td>
@@ -2026,13 +2017,13 @@ export function RegulationsWorkspace({
                       <div className="grid min-h-[640px] place-items-center p-8 text-center">
                         <div>
                           <Layers3
-                            className="mx-auto text-[#86a8c9]"
+                            className="mx-auto text-q-text-3"
                             size={34}
                           />
-                          <h2 className="mt-3 text-sm font-black text-[#24364e]">
+                          <h2 className="mt-3 text-q-ui font-bold text-q-text">
                             اختر لائحة لعرض مساحة العمل
                           </h2>
-                          <p className="mt-2 text-[11px] text-[#8291a4]">
+                          <p className="mt-2 text-q-caption text-q-text-3">
                             ستظهر دورة الإصدار والبنود والنطاقات وخطوة الاعتماد
                             هنا.
                           </p>
@@ -2040,32 +2031,32 @@ export function RegulationsWorkspace({
                       </div>
                     ) : (
                       <>
-                        <div className="grid gap-4 border-b border-[var(--q-surface-2)] bg-[var(--q-bg)] p-4 xl:grid-cols-[1fr_auto] xl:items-start">
+                        <div className="grid gap-4 border-b border-q-surface-2 bg-q-bg p-4 xl:grid-cols-[1fr_auto] xl:items-start">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <h2 className="text-lg font-black text-[var(--q-text)]">
+                              <h2 className="text-q-body font-bold text-q-text">
                                 {detail.name_ar}
                               </h2>
                               <Badge value={detail.status} />
                             </div>
-                            <p className="mt-0.5 text-[9px] text-[#8392a5]">
+                            <p className="mt-0.5 text-q-caption text-q-text-3">
                               {detail.code} ·{" "}
                               {typeLabels[detail.policy_type] ??
                                 detail.policy_type}
                             </p>
-                            <p className="mt-2 max-w-5xl text-[10px] leading-5 text-[#5f7085]">
+                            <p className="mt-2 max-w-5xl text-q-caption leading-5 text-q-text-2">
                               {detail.description || "لا يوجد وصف."}
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <Link
                               href={`/admin/regulations/${detail.id}`}
-                              className="flex h-9 items-center gap-2 rounded-lg bg-[var(--q-primary)] px-3 text-[10px] font-black text-white"
+                              className="inline-flex min-h-11 min-w-11 items-center flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-3 text-q-caption font-bold text-q-on-primary"
                             >
                               <BookOpenCheck size={13} />
                               فتح صفحة اللائحة
                             </Link>
-                            <button
+                            <QButton type="submit" variant="ghost"
                               onClick={() => {
                                 setEditingPolicy(detail);
                                 setPolicyForm({
@@ -2078,51 +2069,51 @@ export function RegulationsWorkspace({
                                 });
                                 setModal("policy");
                               }}
-                              className="flex h-9 items-center gap-2 rounded-lg border border-[var(--q-border)] bg-white px-3 text-[10px] font-bold text-[var(--q-text-2)] hover:border-[#9cc7ef] hover:text-[var(--q-primary)]"
+                              className="min-w-11 flex min-h-11 items-center gap-2 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-bold text-q-text-2 hover:border-q-primary hover:text-q-primary"
                             >
                               <Pencil size={13} />
                               تعديل بيانات اللائحة
-                            </button>
+                            </QButton>
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--q-surface-2)] p-3">
-                          <span className="text-[9px] font-bold text-[var(--q-text-3)]">
+                        <div className="flex flex-wrap items-center gap-2 border-b border-q-surface-2 p-3">
+                          <span className="text-q-caption font-bold text-q-text-3">
                             الإصدارات:
                           </span>
                           {detail.versions?.map((v) => (
-                            <button
+                            <QButton type="submit" variant="ghost"
                               key={v.id}
                               onClick={() => setSelectedVersionId(v.id)}
-                              className={`rounded-lg px-2.5 py-1.5 text-[9px] font-bold ${selectedVersion?.id === v.id ? "bg-[var(--q-text)] text-white" : "bg-[#f1f5f9] text-[#607287] hover:bg-[var(--q-surface-2)]"}`}
+                              className={`min-w-11 rounded-q-control px-2.5 py-1.5 text-q-ui font-bold ${selectedVersion?.id === v.id ? "bg-q-text text-q-on-primary" : "bg-q-surface-2 text-q-text-2 hover:bg-q-surface-2"}`}
                             >
                               v{v.version_label || v.version_no} ·{" "}
                               {legalLabels[v.legal_status]}
-                            </button>
+                            </QButton>
                           ))}
-                          <button
+                          <QButton type="submit" variant="ghost"
                             onClick={() => {
                               setVersionForm({ label: "", summary: "" });
                               setModal("version");
                             }}
-                            className="grid h-7 w-7 place-items-center rounded-lg border border-dashed border-[#8ebeea] bg-white text-[var(--q-primary)]"
+                            className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control border border-dashed border-q-primary bg-q-surface text-q-primary"
                             aria-label="إصدار جديد"
                           >
                             <Plus size={13} />
-                          </button>
+                          </QButton>
                         </div>
 
                         {selectedVersion && (
                           <div className="p-3">
-                            <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-[#e3edf7] bg-[var(--q-bg)] px-3 py-2 text-[9px] text-[#65768b]">
+                            <QCard className="p-0 mb-3 flex flex-wrap items-center gap-3 rounded-q-control border border-q-border bg-q-bg px-3 py-2 text-q-caption text-q-text-2">
                               <span className="flex items-center gap-2">
                                 <span>مرحلة الإصدار</span>
                                 <Badge value={selectedVersion.legal_status} />
                               </span>
-                              <span className="h-4 w-px bg-[#d9e4ef]" />
+                              <span className="h-4 w-px bg-q-surface-2" />
                               <span className="flex min-w-[220px] items-center gap-2">
                                 <span>الجاهزية</span>
-                                <strong className="text-[#24364e]">
+                                <strong className="text-q-text">
                                   {automationLabels[
                                     selectedVersion.automation_status
                                   ] ?? selectedVersion.automation_status}{" "}
@@ -2132,19 +2123,19 @@ export function RegulationsWorkspace({
                                     0}
                                   %
                                 </strong>
-                                <span className="h-1.5 w-20 overflow-hidden rounded-full bg-[#dfe9f3]">
+                                <span className="h-1.5 w-20 overflow-hidden rounded-full bg-q-surface-2">
                                   <span
-                                    className="block h-full rounded-full bg-[var(--q-primary)]"
+                                    className="block h-full rounded-full bg-q-primary"
                                     style={{
                                       width: `${selectedVersion.readiness_percent ?? selectedVersion.automation_readiness_pct ?? 0}%`,
                                     }}
                                   />
                                 </span>
                               </span>
-                              <span className="h-4 w-px bg-[#d9e4ef]" />
+                              <span className="h-4 w-px bg-q-surface-2" />
                               <span>
                                 السريان:{" "}
-                                <strong className="text-[#24364e]">
+                                <strong className="text-q-text">
                                   {selectedVersion.effective_from ||
                                     "لم يبدأ بعد"}{" "}
                                   —{" "}
@@ -2152,7 +2143,7 @@ export function RegulationsWorkspace({
                                     "مفتوح دون نهاية"}
                                 </strong>
                               </span>
-                            </div>
+                            </QCard>
 
                             <ApprovalChain
                               steps={lifecycleSteps.map((step, index) => ({
@@ -2183,10 +2174,10 @@ export function RegulationsWorkspace({
                             <section className="hidden">
                               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 <div>
-                                  <h3 className="text-[11px] font-black text-[var(--q-text)]">
+                                  <h3 className="text-q-caption font-bold text-q-text">
                                     دورة الاعتماد والتفعيل
                                   </h3>
-                                  <p className="mt-0.5 text-[8px] leading-4 text-[var(--q-text-3)]">
+                                  <p className="mt-0.5 text-q-caption leading-normal text-q-text-3">
                                     مسودة ← إرسال للمراجعة ← اعتماد من مستخدم
                                     آخر ← تفعيل بتاريخ نفاذ ← نافذة.
                                   </p>
@@ -2197,11 +2188,11 @@ export function RegulationsWorkspace({
                                 {approvalFlowSteps.map((step, index) => (
                                   <div
                                     key={step.label}
-                                    className={`relative rounded-lg border px-2.5 py-2 ${step.done ? "border-emerald-200 bg-emerald-50 text-emerald-800" : step.active ? "border-[#8ebeea] bg-[var(--q-surface-2)] text-[var(--q-primary)]" : "border-[var(--q-border)] bg-[var(--q-bg)] text-[var(--q-text-3)]"}`}
+                                    className={`relative rounded-q-control border px-2.5 py-2 ${step.done ? "border-q-border bg-q-success-soft text-q-success" : step.active ? "border-q-primary bg-q-surface-2 text-q-primary" : "border-q-border bg-q-bg text-q-text-3"}`}
                                   >
                                     <div className="flex items-center gap-2">
                                       <span
-                                        className={`grid h-5 w-5 place-items-center rounded-full text-[8px] font-black ${step.done ? "bg-emerald-600 text-white" : step.active ? "bg-[var(--q-primary)] text-white" : "bg-[#edf2f7] text-[var(--q-text-3)]"}`}
+                                        className={`grid h-5 w-5 place-items-center rounded-full text-q-caption font-bold ${step.done ? "bg-q-success text-q-on-primary" : step.active ? "bg-q-primary text-q-on-primary" : "bg-q-surface-2 text-q-text-3"}`}
                                       >
                                         {step.done ? (
                                           <Check size={10} />
@@ -2209,29 +2200,29 @@ export function RegulationsWorkspace({
                                           index + 1
                                         )}
                                       </span>
-                                      <strong className="text-[8px] leading-4">
+                                      <strong className="text-q-caption leading-normal">
                                         {step.label}
                                       </strong>
                                     </div>
-                                    <p className="mt-1 text-[7px] leading-3 opacity-80">
+                                    <p className="mt-1 text-q-caption leading-normal opacity-80">
                                       {step.description}
                                     </p>
                                   </div>
                                 ))}
                               </div>
-                              <div className="mt-3 grid gap-2 text-[8px] leading-4 text-[#53677f] lg:grid-cols-4">
-                                <span className="rounded-lg bg-[var(--q-bg)] px-2.5 py-2">
+                              <div className="mt-3 grid gap-2 text-q-caption leading-normal text-q-text-2 lg:grid-cols-4">
+                                <span className="rounded-q-control bg-q-bg px-2.5 py-2">
                                   لا يمكن اعتماد الإصدار من نفس المستخدم الذي
                                   أرسله؛ الباكند يرفض العملية تلقائيًا.
                                 </span>
-                                <span className="rounded-lg bg-[var(--q-bg)] px-2.5 py-2">
+                                <span className="rounded-q-control bg-q-bg px-2.5 py-2">
                                   لا يمكن التفعيل إلا بعد الاعتماد.
                                 </span>
-                                <span className="rounded-lg bg-[var(--q-bg)] px-2.5 py-2">
+                                <span className="rounded-q-control bg-q-bg px-2.5 py-2">
                                   لا يمكن التفعيل إذا المسار غير جاهز أو
                                   الجاهزية أقل من 100%.
                                 </span>
-                                <span className="rounded-lg bg-[var(--q-bg)] px-2.5 py-2">
+                                <span className="rounded-q-control bg-q-bg px-2.5 py-2">
                                   لا يمكن تعديل نسخة نافذة؛ أنشئ نسخة جديدة
                                   للتعديل.
                                 </span>
@@ -2241,21 +2232,21 @@ export function RegulationsWorkspace({
                             <section className="hidden">
                               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 <div>
-                                  <h3 className="text-[11px] font-black text-[var(--q-text)]">
+                                  <h3 className="text-q-caption font-bold text-q-text">
                                     تسلسل إكمال اللائحة
                                   </h3>
-                                  <p className="mt-0.5 text-[8px] leading-4 text-[var(--q-text-3)]">
+                                  <p className="mt-0.5 text-q-caption leading-normal text-q-text-3">
                                     اتبع الخطوات من بيانات اللائحة حتى التفعيل.
                                     كل مرحلة تفتح الإجراء المناسب لها.
                                   </p>
                                 </div>
-                                <span className="rounded-full bg-[var(--q-surface-2)] px-2.5 py-1 text-[8px] font-black text-[var(--q-primary)]">
+                                <QBadge className="rounded-full bg-q-surface-2 px-2.5 py-1 text-q-caption font-bold text-q-primary">
                                   {
                                     lifecycleSteps.filter((step) => step.done)
                                       .length
                                   }{" "}
                                   من {lifecycleSteps.length}
-                                </span>
+                                </QBadge>
                               </div>
                               <RegulationWizard
                                 steps={lifecycleSteps}
@@ -2268,34 +2259,34 @@ export function RegulationsWorkspace({
                             </section>
 
                             {selectedVersion.legal_status === "draft" && (
-                              <section className="mb-3 rounded-lg border border-[#cfe2f5] bg-white px-3 py-2 shadow-sm">
+                              <section className="mb-3 rounded-q-control border border-q-border bg-q-surface px-3 py-2 ">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                   <div>
-                                    <h3 className="text-[11px] font-black text-[var(--q-text)]">
+                                    <h3 className="text-q-caption font-bold text-q-text">
                                       رحلة تجهيز الإصدار
                                     </h3>
-                                    <p className="mt-0.5 text-[8px] leading-4 text-[var(--q-text-3)]">
+                                    <p className="mt-0.5 text-q-caption leading-normal text-q-text-3">
                                       أكمل المتطلبات بالترتيب قبل الإرسال.
                                     </p>
                                   </div>
-                                  <span className="rounded-full bg-[var(--q-surface-2)] px-2.5 py-1 text-[8px] font-black text-[var(--q-primary)]">
+                                  <QBadge className="rounded-full bg-q-surface-2 px-2.5 py-1 text-q-caption font-bold text-q-primary">
                                     {readinessCompleted} من{" "}
                                     {readinessChecks.length} مكتملة
-                                  </span>
+                                  </QBadge>
                                 </div>
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                   {readinessChecks.map((check, index) => (
-                                    <button
+                                    <QButton variant="ghost"
                                       key={check.label}
                                       type="button"
                                       onClick={() =>
                                         !check.done &&
                                         openReadinessAction(check.action)
                                       }
-                                      className={`group flex h-8 items-center gap-1.5 rounded-lg border px-2 text-right transition ${check.done ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-[var(--q-border)] bg-[var(--q-bg)] text-[var(--q-text-2)] hover:border-[var(--q-primary)] hover:bg-white"}`}
+                                      className={`min-w-11 group flex min-h-11 items-center gap-1.5 rounded-q-control border px-2 text-right transition ${check.done ? "border-q-border bg-q-success-soft text-q-success" : "border-q-border bg-q-bg text-q-text-2 hover:border-q-primary hover:bg-q-surface"}`}
                                     >
                                       <span
-                                        className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[8px] font-black ${check.done ? "bg-emerald-600 text-white" : "bg-[var(--q-surface-2)] text-[var(--q-primary)] group-hover:bg-[var(--q-primary)] group-hover:text-white"}`}
+                                        className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-q-caption font-bold ${check.done ? "bg-q-success text-q-on-primary" : "bg-q-surface-2 text-q-primary group-hover:bg-q-primary group-hover:text-q-on-primary"}`}
                                       >
                                         {check.done ? (
                                           <Check size={10} />
@@ -2303,14 +2294,14 @@ export function RegulationsWorkspace({
                                           index + 1
                                         )}
                                       </span>
-                                      <span className="text-[8px] font-black">
+                                      <span className="text-q-caption font-bold">
                                         {check.label}
                                       </span>
-                                    </button>
+                                    </QButton>
                                   ))}
                                 </div>
                                 {!canSubmitForReview && (
-                                  <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[9px] leading-5 text-amber-900">
+                                  <QCard className="p-0 mt-2 rounded-q-control border border-q-border bg-q-warning-soft px-3 py-2 text-q-caption leading-5 text-q-warning">
                                     <strong className="block">
                                       الإرسال للمراجعة مغلق مؤقتًا
                                     </strong>
@@ -2319,7 +2310,7 @@ export function RegulationsWorkspace({
                                       .map((check) => check.label)
                                       .join("، ") || "لا توجد متطلبات متبقية"}
                                     .
-                                  </div>
+                                  </QCard>
                                 )}
                               </section>
                             )}
@@ -2327,7 +2318,7 @@ export function RegulationsWorkspace({
                             <div className="mb-3 flex flex-wrap justify-end gap-2">
                               {selectedVersion.legal_status === "draft" && (
                                 <>
-                                  <button
+                                  <QButton type="submit" variant="ghost"
                                     disabled={!canSubmitForReview}
                                     onClick={() => setModal("review")}
                                     title={
@@ -2335,39 +2326,39 @@ export function RegulationsWorkspace({
                                         ? "معاينة الإصدار قبل الإرسال"
                                         : "أكمل متطلبات الجاهزية أولًا"
                                     }
-                                    className="flex h-8 items-center gap-1.5 rounded-lg bg-[var(--q-primary)] px-3 text-[9px] font-black text-white disabled:cursor-not-allowed disabled:bg-[#a8b8c9]"
+                                    className="min-w-11 flex min-h-11 items-center gap-1.5 rounded-q-control bg-q-primary px-3 text-q-ui font-bold text-q-on-primary disabled:cursor-not-allowed disabled:bg-q-surface-2"
                                   >
                                     <Send size={12} />
                                     معاينة وإرسال للمراجعة
-                                  </button>
-                                  <button
+                                  </QButton>
+                                  <QButton type="submit" variant="ghost"
                                     onClick={() => openReadinessAction("item")}
-                                    className="flex h-8 items-center gap-1.5 rounded-lg border border-[#cbd9e8] bg-white px-3 text-[9px] font-bold text-[#45627f] hover:border-[var(--q-primary)] hover:text-[var(--q-primary)]"
+                                    className="min-w-11 flex min-h-11 items-center gap-1.5 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-bold text-q-text-2 hover:border-q-primary hover:text-q-primary"
                                   >
                                     <Plus size={12} />
                                     إضافة بند
-                                  </button>
-                                  <button
+                                  </QButton>
+                                  <QButton type="submit" variant="ghost"
                                     onClick={() => openReadinessAction("scope")}
-                                    className="flex h-8 items-center gap-1.5 rounded-lg border border-[#cbd9e8] bg-white px-3 text-[9px] font-bold text-[#45627f] hover:border-[var(--q-primary)] hover:text-[var(--q-primary)]"
+                                    className="min-w-11 flex min-h-11 items-center gap-1.5 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-bold text-q-text-2 hover:border-q-primary hover:text-q-primary"
                                   >
                                     <Route size={12} />
                                     إضافة نطاق
-                                  </button>
+                                  </QButton>
                                 </>
                               )}
                               {selectedVersion.legal_status ===
                                 "under_review" && (
-                                <button
+                                <QButton type="submit" variant="ghost"
                                   onClick={() => setModal("approve")}
-                                  className="flex h-8 items-center gap-1.5 rounded-lg bg-[#087b5c] px-3 text-[9px] font-bold text-white"
+                                  className="min-w-11 flex min-h-11 items-center gap-1.5 rounded-q-control bg-q-success px-3 text-q-ui font-bold text-q-on-primary"
                                 >
                                   <ShieldCheck size={12} />
                                   اعتماد من مراجع مستقل
-                                </button>
+                                </QButton>
                               )}
                               {selectedVersion.legal_status === "approved" && (
-                                <button
+                                <QButton type="submit" variant="ghost"
                                   disabled={!canActivatePolicy}
                                   onClick={() =>
                                     canActivatePolicy
@@ -2385,93 +2376,93 @@ export function RegulationsWorkspace({
                                       ? "تحديد تاريخ النفاذ والتفعيل"
                                       : "لا يمكن التفعيل قبل جاهزية المسار 100%"
                                   }
-                                  className="flex h-8 items-center gap-1.5 rounded-lg bg-[var(--q-primary)] px-3 text-[9px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#a8b8c9]"
+                                  className="min-w-11 flex min-h-11 items-center gap-1.5 rounded-q-control bg-q-primary px-3 text-q-ui font-bold text-q-on-primary disabled:cursor-not-allowed disabled:bg-q-surface-2"
                                 >
                                   <Play size={12} />
                                   تحديد السريان والتفعيل
-                                </button>
+                                </QButton>
                               )}
                               {selectedVersion.legal_status === "effective" && (
-                                <button
+                                <QButton type="submit" variant="ghost"
                                   onClick={() => setModal("suspend")}
-                                  className="flex h-8 items-center gap-1.5 rounded-lg bg-[#bd3e35] px-3 text-[9px] font-bold text-white"
+                                  className="min-w-11 flex min-h-11 items-center gap-1.5 rounded-q-control bg-q-danger px-3 text-q-ui font-bold text-q-on-primary"
                                 >
                                   <AlertCircle size={12} />
                                   تعليق الإصدار النافذ
-                                </button>
+                                </QButton>
                               )}
                             </div>
 
                             {!canEditSelectedVersion && (
-                              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#dbe8f5] bg-[var(--q-bg)] px-3 py-2 text-[9px] leading-5 text-[#53677f]">
+                              <QCard className="p-0 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-q-control border border-q-border bg-q-bg px-3 py-2 text-q-caption leading-5 text-q-text-2">
                                 <span>
-                                  <strong className="text-[var(--q-text)]">
+                                  <strong className="text-q-text">
                                     هذا الإصدار مقفل للتحرير.
                                   </strong>{" "}
                                   {selectedVersion.legal_status === "effective"
                                     ? "النسخة النافذة لا تُعدّل مباشرة؛ أنشئ نسخة جديدة للتعديل الآمن."
                                     : "بعد الإرسال للمراجعة تصبح التعديلات على البنود والنطاقات مقفلة."}
                                 </span>
-                                <button
+                                <QButton type="submit" variant="ghost"
                                   onClick={() => {
                                     setVersionForm({ label: "", summary: "" });
                                     setModal("version");
                                   }}
-                                  className="h-7 rounded-lg border border-[#cbd9e8] bg-white px-3 text-[8px] font-black text-[var(--q-primary)] hover:border-[var(--q-primary)]"
+                                  className="min-w-11 min-h-11 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-bold text-q-primary hover:border-q-primary"
                                 >
                                   إنشاء نسخة جديدة
-                                </button>
-                              </div>
+                                </QButton>
+                              </QCard>
                             )}
 
                             <div className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)]">
-                              <div className="overflow-hidden rounded-lg border border-[var(--q-border)] bg-white">
-                                <div className="flex items-center justify-between border-b border-[var(--q-surface-2)] bg-[var(--q-bg)] px-3 py-2">
-                                  <h3 className="text-[11px] font-black text-[var(--q-text)]">
+                              <QCard className="p-0 overflow-hidden rounded-q-control border border-q-border bg-q-surface">
+                                <div className="flex items-center justify-between border-b border-q-surface-2 bg-q-bg px-3 py-2">
+                                  <h3 className="text-q-caption font-bold text-q-text">
                                     بنود اللائحة
                                   </h3>
-                                  <span className="text-[8px] font-bold text-[var(--q-text-3)]">
+                                  <span className="text-q-caption font-bold text-q-text-3">
                                     {selectedVersion.items.length} بند
                                   </span>
                                 </div>
-                                <div className="divide-y divide-[var(--q-surface-2)]">
+                                <div className="divide-y divide-q-surface-2">
                                   {selectedVersion.items.map((i) => (
                                     <article
                                       key={i.id}
                                       className="grid gap-2 px-3 py-2.5 lg:grid-cols-[minmax(180px,.8fr)_minmax(240px,1fr)_auto] lg:items-center"
                                     >
                                       <div>
-                                        <strong className="text-[10px] text-[#25364c]">
+                                        <strong className="text-q-caption text-q-text">
                                           {i.title_ar}
                                         </strong>
-                                        <span className="mt-0.5 block text-[8px] text-[#8392a5]">
+                                        <span className="mt-0.5 block text-q-caption text-q-text-3">
                                           {i.item_code} ·{" "}
                                           {governanceModeLabels[
                                             i.governance_mode
                                           ] ?? i.governance_mode}
                                         </span>
                                         <span
-                                          className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[8px] font-bold ${i.workflow_template_version_id ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                                          className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-q-caption font-bold ${i.workflow_template_version_id ? "bg-q-success-soft text-q-success" : "bg-q-warning-soft text-q-warning"}`}
                                         >
                                           {workflowVersionLabel(
                                             i.workflow_template_version_id,
                                           )}
                                         </span>
                                       </div>
-                                      <p className="line-clamp-2 text-[9px] leading-4 text-[#68798d]">
+                                      <p className="line-clamp-2 text-q-caption leading-normal text-q-text-2">
                                         {i.body_text || "لا يوجد نص مختصر."}
                                       </p>
                                       {selectedVersion.legal_status ===
                                         "draft" && (
                                         <div className="flex justify-end gap-1">
-                                          <button
+                                          <QButton type="submit" variant="ghost"
                                             aria-label={`تعديل ${i.title_ar}`}
                                             onClick={() => openItemEditor(i)}
-                                            className="rounded-md p-1 text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
+                                            className="min-w-11 rounded-q-control p-1 text-q-primary hover:bg-q-surface-2"
                                           >
                                             <Pencil size={12} />
-                                          </button>
-                                          <button
+                                          </QButton>
+                                          <QButton type="submit" variant="ghost"
                                             aria-label={`حذف ${i.title_ar}`}
                                             onClick={() =>
                                               removeRecord(
@@ -2480,49 +2471,49 @@ export function RegulationsWorkspace({
                                                 "تم حذف البند.",
                                               )
                                             }
-                                            className="rounded-md p-1 text-red-600 hover:bg-red-50"
+                                            className="min-w-11 rounded-q-control p-1 text-q-danger hover:bg-q-danger-soft"
                                           >
                                             <X size={12} />
-                                          </button>
+                                          </QButton>
                                         </div>
                                       )}
                                     </article>
                                   ))}
                                   {!selectedVersion.items.length && (
-                                    <p className="p-6 text-center text-[9px] text-[#8a98aa]">
+                                    <p className="p-6 text-center text-q-caption text-q-text-3">
                                       لم تُضف بنود بعد.
                                     </p>
                                   )}
                                 </div>
-                              </div>
-                              <div className="overflow-hidden rounded-lg border border-[var(--q-border)] bg-white">
-                                <div className="flex items-center justify-between border-b border-[var(--q-surface-2)] bg-[var(--q-bg)] px-3 py-2">
-                                  <h3 className="text-[11px] font-black text-[var(--q-text)]">
+                              </QCard>
+                              <QCard className="p-0 overflow-hidden rounded-q-control border border-q-border bg-q-surface">
+                                <div className="flex items-center justify-between border-b border-q-surface-2 bg-q-bg px-3 py-2">
+                                  <h3 className="text-q-caption font-bold text-q-text">
                                     نطاقات السريان
                                   </h3>
-                                  <span className="text-[8px] font-bold text-[var(--q-text-3)]">
+                                  <span className="text-q-caption font-bold text-q-text-3">
                                     {selectedVersion.scopes.length} نطاق
                                   </span>
                                 </div>
-                                <div className="divide-y divide-[var(--q-surface-2)]">
+                                <div className="divide-y divide-q-surface-2">
                                   {selectedVersion.scopes.map((s) => (
                                     <article
                                       key={s.id}
                                       className="flex items-center justify-between gap-3 px-3 py-2.5"
                                     >
                                       <div>
-                                        <strong className="text-[10px] text-[#25364c]">
+                                        <strong className="text-q-caption text-q-text">
                                           {scopeLabels[s.scope_type] ??
                                             s.scope_type}
                                         </strong>
-                                        <span className="mt-0.5 block text-[8px] text-[#8392a5]">
+                                        <span className="mt-0.5 block text-q-caption text-q-text-3">
                                           الأولوية {s.priority} ·{" "}
                                           {s.valid_from || "يبدأ فور التفعيل"}
                                         </span>
                                       </div>
                                       {selectedVersion.legal_status ===
                                         "draft" && (
-                                        <button
+                                        <QButton type="submit" variant="ghost"
                                           aria-label="حذف نطاق السريان"
                                           onClick={() =>
                                             removeRecord(
@@ -2531,20 +2522,20 @@ export function RegulationsWorkspace({
                                               "تم حذف النطاق.",
                                             )
                                           }
-                                          className="rounded-md p-1 text-red-600 hover:bg-red-50"
+                                          className="min-w-11 rounded-q-control p-1 text-q-danger hover:bg-q-danger-soft"
                                         >
                                           <X size={12} />
-                                        </button>
+                                        </QButton>
                                       )}
                                     </article>
                                   ))}
                                   {!selectedVersion.scopes.length && (
-                                    <p className="p-6 text-center text-[9px] text-[#8a98aa]">
+                                    <p className="p-6 text-center text-q-caption text-q-text-3">
                                       لم تُضف نطاقات بعد.
                                     </p>
                                   )}
                                 </div>
-                              </div>
+                              </QCard>
                             </div>
                           </div>
                         )}
@@ -2556,18 +2547,18 @@ export function RegulationsWorkspace({
             )}
 
             {tab === "classes" && (
-              <section className="rounded-lg border border-[#d9e4ef] bg-white p-4 shadow-sm">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--q-surface-2)] pb-3">
+              <section className="rounded-q-control border border-q-border bg-q-surface p-4 ">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-q-surface-2 pb-3">
                   <div>
-                    <h2 className="text-sm font-black text-[var(--q-text)]">
+                    <h2 className="text-q-ui font-bold text-q-text">
                       تصنيفات المجالس واللجان
                     </h2>
-                    <p className="mt-1 text-[10px] text-[var(--q-text-3)]">
+                    <p className="mt-1 text-q-caption text-q-text-3">
                       تعريف مستويات الحوكمة وتصنيفات المجالس (قسم، كلية، جامعة،
                       لجنة) وتسكين الوحدات عليها.
                     </p>
                   </div>
-                  <button
+                  <QButton type="submit" variant="ghost"
                     onClick={() => {
                       setClassForm({
                         code: "",
@@ -2578,36 +2569,36 @@ export function RegulationsWorkspace({
                       });
                       setModal("class");
                     }}
-                    className="flex h-9 items-center gap-2 rounded-lg bg-[var(--q-primary)] px-4 text-[11px] font-black text-white"
+                    className="min-w-11 flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary"
                   >
                     <Plus size={14} />
                     إضافة تصنيف مجلس
-                  </button>
+                  </QButton>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {references.classes.map((cls) => (
-                    <div
+                    <QCard
                       key={cls.id}
-                      className="rounded-xl border border-[var(--q-border)] bg-[var(--q-bg)] p-4 shadow-sm"
+                      className="p-0 rounded-q-control border border-q-border bg-q-bg p-4 "
                     >
                       <div className="flex items-center justify-between">
-                        <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#e7f2ff] text-[var(--q-primary)]">
+                        <span className="grid h-8 w-8 place-items-center rounded-q-control bg-q-surface-2 text-q-primary">
                           <Building2 size={16} />
                         </span>
-                        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[9px] font-black text-emerald-700">
+                        <QBadge className="rounded-full bg-q-success-soft px-2.5 py-0.5 text-q-caption font-bold text-q-success">
                           نشط
-                        </span>
+                        </QBadge>
                       </div>
-                      <h3 className="mt-3 text-xs font-black text-[var(--q-text)]">
+                      <h3 className="mt-3 text-q-caption font-bold text-q-text">
                         {cls.name_ar}
                       </h3>
-                      <p className="mt-0.5 text-[9px] text-[var(--q-text-3)]">
+                      <p className="mt-0.5 text-q-caption text-q-text-3">
                         {cls.code}
                       </p>
-                    </div>
+                    </QCard>
                   ))}
                   {!references.classes.length && (
-                    <p className="col-span-full p-8 text-center text-xs text-[var(--q-text-3)]">
+                    <p className="col-span-full p-8 text-center text-q-caption text-q-text-3">
                       لا توجد تصنيفات مجالس مسجلة.
                     </p>
                   )}
@@ -2616,18 +2607,18 @@ export function RegulationsWorkspace({
             )}
 
             {tab === "categories" && (
-              <section className="rounded-lg border border-[#d9e4ef] bg-white p-4 shadow-sm">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--q-surface-2)] pb-3">
+              <section className="rounded-q-control border border-q-border bg-q-surface p-4 ">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-q-surface-2 pb-3">
                   <div>
-                    <h2 className="text-sm font-black text-[var(--q-text)]">
+                    <h2 className="text-q-ui font-bold text-q-text">
                       فئات الموضوعات الأكاديمية والإدارية
                     </h2>
-                    <p className="mt-1 text-[10px] text-[var(--q-text-3)]">
+                    <p className="mt-1 text-q-caption text-q-text-3">
                       تصنيفات الموضوعات المنظورة في النظام لربطها تلقائياً
                       باللوائح ومسارات الاعتماد.
                     </p>
                   </div>
-                  <button
+                  <QButton type="submit" variant="ghost"
                     onClick={() => {
                       setCategoryForm({
                         code: "",
@@ -2637,36 +2628,36 @@ export function RegulationsWorkspace({
                       });
                       setModal("category");
                     }}
-                    className="flex h-9 items-center gap-2 rounded-lg bg-[var(--q-primary)] px-4 text-[11px] font-black text-white"
+                    className="min-w-11 flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary"
                   >
                     <Plus size={14} />
                     إضافة فئة موضوعات
-                  </button>
+                  </QButton>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {references.categories.map((cat) => (
-                    <div
+                    <QCard
                       key={cat.id}
-                      className="rounded-xl border border-[var(--q-border)] bg-[var(--q-bg)] p-4 shadow-sm"
+                      className="p-0 rounded-q-control border border-q-border bg-q-bg p-4 "
                     >
                       <div className="flex items-center justify-between">
-                        <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#e7f2ff] text-[var(--q-primary)]">
+                        <span className="grid h-8 w-8 place-items-center rounded-q-control bg-q-surface-2 text-q-primary">
                           <Tags size={16} />
                         </span>
-                        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[9px] font-black text-emerald-700">
+                        <QBadge className="rounded-full bg-q-success-soft px-2.5 py-0.5 text-q-caption font-bold text-q-success">
                           متاحة
-                        </span>
+                        </QBadge>
                       </div>
-                      <h3 className="mt-3 text-xs font-black text-[var(--q-text)]">
+                      <h3 className="mt-3 text-q-caption font-bold text-q-text">
                         {cat.name_ar}
                       </h3>
-                      <p className="mt-0.5 text-[9px] text-[var(--q-text-3)]">
+                      <p className="mt-0.5 text-q-caption text-q-text-3">
                         {cat.code}
                       </p>
-                    </div>
+                    </QCard>
                   ))}
                   {!references.categories.length && (
-                    <p className="col-span-full p-8 text-center text-xs text-[var(--q-text-3)]">
+                    <p className="col-span-full p-8 text-center text-q-caption text-q-text-3">
                       لا توجد فئات موضوعات مسجلة.
                     </p>
                   )}
@@ -2675,24 +2666,24 @@ export function RegulationsWorkspace({
             )}
 
             {tab === "workflows" && (
-              <section className="rounded-lg border border-[#d9e4ef] bg-white p-4 shadow-sm">
+              <section className="rounded-q-control border border-q-border bg-q-surface p-4 ">
                 <div className="mb-4 grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
                   <div>
-                    <h2 className="text-base font-black text-[var(--q-text)]">
+                    <h2 className="text-q-ui font-bold text-q-text">
                       مصمم قوالب المسارات
                     </h2>
-                    <p className="mt-1 text-[10px] leading-5 text-[var(--q-text-3)]">
+                    <p className="mt-1 text-q-caption leading-5 text-q-text-3">
                       صمّم المسار كرحلة مفهومة: بيانات، خطوات، جهات مسؤولة،
                       نتائج، انتقالات، ثم فحص وتفعيل.
                     </p>
                   </div>
-                  <button
+                  <QButton type="submit" variant="ghost"
                     onClick={() => setModal("workflow")}
-                    className="flex h-9 items-center gap-2 rounded-lg bg-[var(--q-primary)] px-4 text-[11px] font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.18)]"
+                    className="min-w-11 flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary "
                   >
                     <Plus size={14} />
                     قالب جديد
-                  </button>
+                  </QButton>
                 </div>
                 <div className="grid gap-3 xl:grid-cols-2">
                   {workflows.map((w) => {
@@ -2765,10 +2756,10 @@ export function RegulationsWorkspace({
                     return (
                       <article
                         key={w.id}
-                        className={`rounded-lg border p-3 transition ${selectedWorkflow?.id === w.id ? "border-[#7bb7ee] bg-[#f7fbff] xl:col-span-2" : "border-[var(--q-border)] bg-white hover:border-[#b7d4ef]"}`}
+                        className={`rounded-q-control border p-3 transition ${selectedWorkflow?.id === w.id ? "border-q-primary bg-q-surface xl:col-span-2" : "border-q-border bg-q-surface hover:border-q-primary"}`}
                       >
-                        <button
-                          className="w-full text-right"
+                        <QButton type="submit" variant="ghost"
+                          className="min-w-11 w-full text-right"
                           onClick={() =>
                             setSelectedWorkflow(
                               selectedWorkflow?.id === w.id ? null : w,
@@ -2776,12 +2767,12 @@ export function RegulationsWorkspace({
                           }
                         >
                           <div className="flex items-center justify-between gap-3">
-                            <span className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--q-surface-2)] text-[var(--q-primary)]">
+                            <span className="grid h-9 w-9 place-items-center rounded-q-control bg-q-surface-2 text-q-primary">
                               <Workflow size={17} />
                             </span>
                             <div className="flex items-center gap-2">
                               <span
-                                className={`rounded-full px-2.5 py-0.5 text-[8px] font-black ${version?.validation_status === "valid" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+                                className={`rounded-full px-2.5 py-0.5 text-q-caption font-bold ${version?.validation_status === "valid" ? "bg-q-success-soft text-q-success" : "bg-q-warning-soft text-q-warning"}`}
                               >
                                 {version?.validation_status === "valid"
                                   ? "تم الفحص"
@@ -2790,43 +2781,43 @@ export function RegulationsWorkspace({
                               <Badge value={version?.status ?? w.status} />
                             </div>
                           </div>
-                          <h3 className="mt-3 text-xs font-black text-[#203149]">
+                          <h3 className="mt-3 text-q-caption font-bold text-q-text">
                             {w.name_ar}
                           </h3>
-                          <p className="mt-0.5 text-[9px] text-[#8493a6]">
+                          <p className="mt-0.5 text-q-caption text-q-text-3">
                             {w.code} · {version?.steps.length ?? 0} خطوة ·{" "}
                             {version?.transitions.length ?? 0} انتقال
                           </p>
-                        </button>
+                        </QButton>
                         {selectedWorkflow?.id === w.id && version && (
                           <>
-                            <div className="my-4 rounded-lg border border-[#dce7f2] bg-white p-3">
+                            <QCard className="p-0 my-4 rounded-q-control border border-q-border bg-q-surface p-3">
                               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 <div>
-                                  <h3 className="text-[11px] font-black text-[var(--q-text)]">
+                                  <h3 className="text-q-caption font-bold text-q-text">
                                     رحلة إعداد المسار
                                   </h3>
-                                  <p className="mt-0.5 text-[9px] text-[var(--q-text-3)]">
+                                  <p className="mt-0.5 text-q-caption text-q-text-3">
                                     هذه المراحل تضمن أن المسار مفهوم وقابل
                                     للتشغيل قبل التفعيل.
                                   </p>
                                 </div>
-                                <span className="rounded-full bg-[var(--q-surface-2)] px-2.5 py-1 text-[9px] font-black text-[var(--q-primary)]">
+                                <QBadge className="rounded-full bg-q-surface-2 px-2.5 py-1 text-q-caption font-bold text-q-primary">
                                   {
                                     workflowChecks.filter((check) => check.done)
                                       .length
                                   }{" "}
                                   من {workflowChecks.length}
-                                </span>
+                                </QBadge>
                               </div>
                               <div className="grid gap-1.5 sm:grid-cols-3 xl:grid-cols-7">
                                 {workflowChecks.map((check, index) => (
                                   <div
                                     key={check.label}
-                                    className={`rounded-lg border p-2 text-right ${check.done ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-[#dce7f2] bg-[var(--q-bg)] text-[var(--q-text-2)]"}`}
+                                    className={`rounded-q-control border p-2 text-right ${check.done ? "border-q-border bg-q-success-soft text-q-success" : "border-q-border bg-q-bg text-q-text-2"}`}
                                   >
                                     <span
-                                      className={`mb-1 grid h-5 w-5 place-items-center rounded-full text-[8px] font-black ${check.done ? "bg-emerald-600 text-white" : "bg-[var(--q-surface-2)] text-[var(--q-primary)]"}`}
+                                      className={`mb-1 grid h-5 w-5 place-items-center rounded-full text-q-caption font-bold ${check.done ? "bg-q-success text-q-on-primary" : "bg-q-surface-2 text-q-primary"}`}
                                     >
                                       {check.done ? (
                                         <Check size={10} />
@@ -2834,20 +2825,20 @@ export function RegulationsWorkspace({
                                         index + 1
                                       )}
                                     </span>
-                                    <strong className="block text-[8px] leading-4">
+                                    <strong className="block text-q-caption leading-normal">
                                       {check.label}
                                     </strong>
                                   </div>
                                 ))}
                               </div>
-                            </div>
+                            </QCard>
                             <div className="mb-3 grid gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
-                              <section className="rounded-lg border border-[#dce7f2] bg-white p-3">
+                              <section className="rounded-q-control border border-q-border bg-q-surface p-3">
                                 <div className="mb-3 flex items-center justify-between">
-                                  <h3 className="text-[11px] font-black text-[var(--q-text)]">
+                                  <h3 className="text-q-caption font-bold text-q-text">
                                     خطوات المسار والجهة المسؤولة
                                   </h3>
-                                  <span className="text-[8px] font-bold text-[var(--q-text-3)]">
+                                  <span className="text-q-caption font-bold text-q-text-3">
                                     {orderedSteps.length} خطوات
                                   </span>
                                 </div>
@@ -2855,29 +2846,29 @@ export function RegulationsWorkspace({
                                   {orderedSteps.map((step, index) => (
                                     <article
                                       key={step.id}
-                                      className="rounded-lg border border-[var(--q-border)] bg-[var(--q-bg)] p-2.5"
+                                      className="rounded-q-control border border-q-border bg-q-bg p-2.5"
                                     >
                                       <div className="flex items-start justify-between gap-2">
-                                        <span className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--q-primary)] text-[10px] font-black text-white">
+                                        <span className="grid h-7 w-7 place-items-center rounded-q-control bg-q-primary text-q-caption font-bold text-q-on-primary">
                                           {index + 1}
                                         </span>
                                         <div className="flex flex-wrap justify-end gap-1">
                                           {step.is_initial && (
-                                            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[8px] font-bold text-blue-700">
+                                            <QBadge className="rounded-full bg-q-surface-2 px-2 py-0.5 text-q-caption font-bold text-q-link">
                                               بداية
-                                            </span>
+                                            </QBadge>
                                           )}
                                           {step.is_terminal && (
-                                            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[8px] font-bold text-emerald-700">
+                                            <QBadge className="rounded-full bg-q-success-soft px-2 py-0.5 text-q-caption font-bold text-q-success">
                                               نهاية
-                                            </span>
+                                            </QBadge>
                                           )}
                                         </div>
                                       </div>
-                                      <strong className="mt-2 block text-[11px] leading-5 text-[#263950]">
+                                      <strong className="mt-2 block text-q-caption leading-5 text-q-text">
                                         {step.name_ar}
                                       </strong>
-                                      <div className="mt-1 grid gap-1 text-[9px] text-[#63758b] sm:grid-cols-2">
+                                      <div className="mt-1 grid gap-1 text-q-caption text-q-text-2 sm:grid-cols-2">
                                         <span>
                                           {stepTypeLabels[step.step_type] ??
                                             step.step_type}{" "}
@@ -2888,7 +2879,7 @@ export function RegulationsWorkspace({
                                         </span>
                                         <span>
                                           الجهة:{" "}
-                                          <strong className="text-[#25364c]">
+                                          <strong className="text-q-text">
                                             {responsibilityTargetLabel(
                                               step.governance_unit_id,
                                               step.governance_class_id,
@@ -2901,7 +2892,7 @@ export function RegulationsWorkspace({
                                           (outcome) => (
                                             <span
                                               key={outcome}
-                                              className="rounded-md bg-[#eef4fa] px-2 py-0.5 text-[8px] font-bold text-[var(--q-text-2)]"
+                                              className="rounded-q-control bg-q-surface-2 px-2 py-0.5 text-q-caption font-bold text-q-text-2"
                                             >
                                               {outcomeLabels[outcome] ??
                                                 outcome}
@@ -2910,8 +2901,8 @@ export function RegulationsWorkspace({
                                         )}
                                       </div>
                                       {version.status === "draft" && (
-                                        <div className="mt-2 flex gap-2 border-t border-[#e7eef5] pt-2">
-                                          <button
+                                        <div className="mt-2 flex gap-2 border-t border-q-border pt-2">
+                                          <QButton type="submit" variant="ghost"
                                             onClick={() => {
                                               setEditingStepId(step.id);
                                               setStepForm({
@@ -2940,11 +2931,11 @@ export function RegulationsWorkspace({
                                               });
                                               setModal("step");
                                             }}
-                                            className="rounded-md px-2 py-1 text-[8px] font-bold text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
+                                            className="min-w-11 rounded-q-control px-2 py-1 text-q-ui font-bold text-q-primary hover:bg-q-surface-2"
                                           >
                                             تعديل
-                                          </button>
-                                          <button
+                                          </QButton>
+                                          <QButton type="submit" variant="ghost"
                                             onClick={async () => {
                                               if (
                                                 !confirm(
@@ -2965,23 +2956,23 @@ export function RegulationsWorkspace({
                                                 setSelectedWorkflow(null);
                                               }
                                             }}
-                                            className="rounded-md px-2 py-1 text-[8px] font-bold text-red-600 hover:bg-red-50"
+                                            className="min-w-11 rounded-q-control px-2 py-1 text-q-ui font-bold text-q-danger hover:bg-q-danger-soft"
                                           >
                                             حذف
-                                          </button>
+                                          </QButton>
                                         </div>
                                       )}
                                     </article>
                                   ))}
                                   {!orderedSteps.length && (
-                                    <p className="rounded-lg border border-dashed border-[#c8d8e8] p-6 text-center text-[10px] text-[#8291a4]">
+                                    <p className="rounded-q-control border border-dashed border-q-border p-6 text-center text-q-caption text-q-text-3">
                                       أضف أول خطوة للمسار.
                                     </p>
                                   )}
                                 </div>
                               </section>
-                              <section className="rounded-lg border border-[#dce7f2] bg-[var(--q-bg)] p-3">
-                                <h3 className="mb-3 text-[11px] font-black text-[var(--q-text)]">
+                              <section className="rounded-q-control border border-q-border bg-q-bg p-3">
+                                <h3 className="mb-3 text-q-caption font-bold text-q-text">
                                   ماذا يحدث بعد كل نتيجة؟
                                 </h3>
                                 <div className="space-y-2">
@@ -3000,13 +2991,13 @@ export function RegulationsWorkspace({
                                       return (
                                         <div
                                           key={`${step.id}-${outcome}`}
-                                          className={`rounded-lg border bg-white p-2.5 text-[9px] ${transition || step.is_terminal ? "border-[#dfe8f2]" : "border-amber-200"}`}
+                                          className={`rounded-q-control border bg-q-surface p-2.5 text-q-caption ${transition || step.is_terminal ? "border-q-border" : "border-q-border"}`}
                                         >
-                                          <strong className="block text-[#25364c]">
+                                          <strong className="block text-q-text">
                                             {step.name_ar}
                                           </strong>
-                                          <div className="mt-1 flex flex-wrap items-center gap-1 text-[var(--q-text-2)]">
-                                            <span className="rounded-md bg-[var(--q-surface-2)] px-2 py-0.5 font-bold text-[var(--q-primary)]">
+                                          <div className="mt-1 flex flex-wrap items-center gap-1 text-q-text-2">
+                                            <span className="rounded-q-control bg-q-surface-2 px-2 py-0.5 font-bold text-q-primary">
                                               {outcomeLabels[outcome] ??
                                                 outcome}
                                             </span>
@@ -3022,24 +3013,24 @@ export function RegulationsWorkspace({
                                     }),
                                   )}
                                   {!orderedSteps.length && (
-                                    <p className="p-6 text-center text-[10px] text-[#8291a4]">
+                                    <p className="p-6 text-center text-q-caption text-q-text-3">
                                       ستظهر نتائج كل خطوة بعد إضافتها.
                                     </p>
                                   )}
                                 </div>
                                 {missingTransitions.length > 0 && (
-                                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[9px] leading-5 text-amber-900">
+                                  <QCard className="p-0 mt-3 rounded-q-control border border-q-border bg-q-warning-soft p-2.5 text-q-caption leading-5 text-q-warning">
                                     <strong className="block">
                                       ينقص ربط النتائج التالية:
                                     </strong>
                                     {missingTransitions.join("، ")}
-                                  </div>
+                                  </QCard>
                                 )}
                               </section>
                             </div>
                             {version.status === "draft" && (
                               <div className="flex flex-wrap gap-2">
-                                <button
+                                <QButton type="submit" variant="ghost"
                                   onClick={() => {
                                     setEditingStepId(null);
                                     setStepForm({
@@ -3060,18 +3051,18 @@ export function RegulationsWorkspace({
                                     });
                                     setModal("step");
                                   }}
-                                  className="rounded-lg border border-[#cbd9e8] bg-white px-3 py-2 text-[9px] font-bold text-[#42637f] hover:border-[var(--q-primary)] hover:text-[var(--q-primary)]"
+                                  className="min-w-11 rounded-q-control border border-q-border bg-q-surface px-3 py-2 text-q-ui font-bold text-q-text-2 hover:border-q-primary hover:text-q-primary"
                                 >
                                   إضافة خطوة
-                                </button>
-                                <button
+                                </QButton>
+                                <QButton type="submit" variant="ghost"
                                   disabled={!version.steps.length}
                                   onClick={() => setModal("transition")}
-                                  className="rounded-lg border border-[#cbd9e8] bg-white px-3 py-2 text-[9px] font-bold text-[#42637f] disabled:opacity-40 hover:border-[var(--q-primary)] hover:text-[var(--q-primary)]"
+                                  className="min-w-11 rounded-q-control border border-q-border bg-q-surface px-3 py-2 text-q-ui font-bold text-q-text-2 disabled:opacity-40 hover:border-q-primary hover:text-q-primary"
                                 >
                                   تحديد ماذا يحدث بعد نتيجة
-                                </button>
-                                <button
+                                </QButton>
+                                <QButton type="submit" variant="ghost"
                                   disabled={!canActivateWorkflow}
                                   title={
                                     canActivateWorkflow
@@ -3095,10 +3086,10 @@ export function RegulationsWorkspace({
                                       setSelectedWorkflow(null);
                                     }
                                   }}
-                                  className="rounded-lg bg-[#087b5c] px-3 py-2 text-[9px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#a8b8c9]"
+                                  className="min-w-11 rounded-q-control bg-q-success px-3 py-2 text-q-ui font-bold text-q-on-primary disabled:cursor-not-allowed disabled:bg-q-surface-2"
                                 >
                                   فحص المسار وتفعيله
-                                </button>
+                                </QButton>
                               </div>
                             )}
                           </>
@@ -3107,9 +3098,9 @@ export function RegulationsWorkspace({
                     );
                   })}
                   {!workflows.length && (
-                    <div className="col-span-full grid min-h-56 place-items-center rounded-lg border border-dashed border-[#c8d8e8] bg-[var(--q-bg)] text-[11px] text-[#8291a4]">
+                    <QCard className="p-0 col-span-full grid min-h-56 place-items-center rounded-q-control border border-dashed border-q-border bg-q-bg text-q-caption text-q-text-3">
                       ابدأ بإنشاء أول قالب لمسار الاعتماد.
-                    </div>
+                    </QCard>
                   )}
                 </div>
               </section>
@@ -3117,11 +3108,11 @@ export function RegulationsWorkspace({
 
             {tab === "matcher" && (
               <section className="grid gap-5 lg:grid-cols-[420px_1fr]">
-                <div className="rounded-2xl border border-[var(--q-border)] bg-white p-5">
-                  <h2 className="text-sm font-black text-[#17283f]">
+                <QCard className="p-0 rounded-q-card border border-q-border bg-q-surface p-5">
+                  <h2 className="text-q-ui font-bold text-q-text">
                     محاكاة المطابقة
                   </h2>
-                  <p className="mt-1 text-[10px] leading-5 text-[var(--q-text-3)]">
+                  <p className="mt-1 text-q-caption leading-5 text-q-text-3">
                     اختبر اللوائح المؤهلة بنفس العقد المستخدم عند إنشاء الموضوع.
                   </p>
                   <div className="mt-5 space-y-4">
@@ -3195,25 +3186,25 @@ export function RegulationsWorkspace({
                         />
                       </Field>
                     </div>
-                    <button
+                    <QButton type="submit" variant="ghost"
                       disabled={
                         !matcherForm.unit || !matcherForm.category || busy
                       }
                       onClick={runMatcher}
-                      className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--q-primary)] text-xs font-bold text-white disabled:opacity-50"
+                      className="min-w-11 flex h-11 w-full items-center justify-center gap-2 rounded-q-control bg-q-primary text-q-ui font-bold text-q-on-primary disabled:opacity-50"
                     >
                       <FlaskConical size={16} />
                       تشغيل الاختبار
-                    </button>
+                    </QButton>
                   </div>
-                </div>
-                <div className="rounded-2xl border border-[var(--q-border)] bg-white p-5">
-                  <h2 className="text-sm font-black text-[#17283f]">
+                </QCard>
+                <QCard className="p-0 rounded-q-card border border-q-border bg-q-surface p-5">
+                  <h2 className="text-q-ui font-bold text-q-text">
                     نتيجة المحاكاة
                   </h2>
                   {matcherResult ? (
                     <div className="mt-4">
-                      <div className="mb-4 rounded-xl bg-[var(--q-surface-2)] p-4 text-xs text-[#295f8e]">
+                      <div className="mb-4 rounded-q-control bg-q-surface-2 p-4 text-q-caption text-q-text-2">
                         وجد المحرك{" "}
                         <strong>
                           {String(matcherResult.total ?? matcherItems.length)}
@@ -3225,21 +3216,21 @@ export function RegulationsWorkspace({
                           {matcherItems.map((item, index) => (
                             <article
                               key={`${nestedText(item, ["selection", "policy_id"], String(index))}-${index}`}
-                              className="rounded-xl border border-[#dce7f2] bg-[var(--q-bg)] p-4"
+                              className="rounded-q-control border border-q-border bg-q-bg p-4"
                             >
                               <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                  <span className="mb-1 inline-flex rounded-full bg-[var(--q-surface-2)] px-2.5 py-1 text-[9px] font-black text-[var(--q-primary)]">
+                                  <QBadge className="mb-1 inline-flex rounded-full bg-q-surface-2 px-2.5 py-1 text-q-caption font-bold text-q-primary">
                                     خيار {index + 1}
-                                  </span>
-                                  <h3 className="text-sm font-black text-[#17283f]">
+                                  </QBadge>
+                                  <h3 className="text-q-ui font-bold text-q-text">
                                     {nestedText(
                                       item,
                                       ["policy", "name_ar"],
                                       "لائحة مطابقة",
                                     )}
                                   </h3>
-                                  <p className="mt-1 text-[10px] text-[var(--q-text-3)]">
+                                  <p className="mt-1 text-q-caption text-q-text-3">
                                     {nestedText(item, ["policy", "code"])} ·
                                     الإصدار{" "}
                                     {nestedText(
@@ -3250,7 +3241,7 @@ export function RegulationsWorkspace({
                                   </p>
                                 </div>
                                 <span
-                                  className={`rounded-full px-3 py-1 text-[10px] font-black ${nestedText(item, ["automation_status"]) === "ready" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}
+                                  className={`rounded-full px-3 py-1 text-q-caption font-bold ${nestedText(item, ["automation_status"]) === "ready" ? "bg-q-success-soft text-q-success" : "bg-q-warning-soft text-q-warning"}`}
                                 >
                                   {nestedText(item, ["automation_status"]) ===
                                   "ready"
@@ -3258,12 +3249,12 @@ export function RegulationsWorkspace({
                                     : "تحتاج إعداد"}
                                 </span>
                               </div>
-                              <div className="mt-3 grid gap-2 text-[10px] sm:grid-cols-2">
-                                <div className="rounded-lg bg-white px-3 py-2">
-                                  <span className="block text-[var(--q-text-3)]">
+                              <div className="mt-3 grid gap-2 text-q-caption sm:grid-cols-2">
+                                <div className="rounded-q-control bg-q-surface px-3 py-2">
+                                  <span className="block text-q-text-3">
                                     البند المنطبق
                                   </span>
-                                  <strong className="mt-1 block text-[#263950]">
+                                  <strong className="mt-1 block text-q-text">
                                     {nestedText(
                                       item,
                                       ["item", "title_ar"],
@@ -3271,11 +3262,11 @@ export function RegulationsWorkspace({
                                     )}
                                   </strong>
                                 </div>
-                                <div className="rounded-lg bg-white px-3 py-2">
-                                  <span className="block text-[var(--q-text-3)]">
+                                <div className="rounded-q-control bg-q-surface px-3 py-2">
+                                  <span className="block text-q-text-3">
                                     نطاق السريان
                                   </span>
-                                  <strong className="mt-1 block text-[#263950]">
+                                  <strong className="mt-1 block text-q-text">
                                     {nestedText(
                                       item,
                                       ["scope", "type"],
@@ -3288,81 +3279,81 @@ export function RegulationsWorkspace({
                           ))}
                         </div>
                       ) : (
-                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-6 text-amber-900">
+                        <QCard className="p-0 rounded-q-control border border-q-border bg-q-warning-soft p-4 text-q-caption leading-6 text-q-warning">
                           لا توجد لائحة مطابقة لهذا السياق. يمكن طلب استثناء أو
                           إنشاء نطاق/بند مناسب.
-                        </div>
+                        </QCard>
                       )}
                     </div>
                   ) : (
-                    <div className="grid min-h-80 place-items-center text-center text-xs text-[#8291a4]">
+                    <div className="grid min-h-80 place-items-center text-center text-q-caption text-q-text-3">
                       <div>
                         <FlaskConical className="mx-auto mb-3" size={30} />
                         أدخل سياق الموضوع لتظهر نتيجة المطابقة وسببها.
                       </div>
                     </div>
                   )}
-                </div>
+                </QCard>
               </section>
             )}
 
             {tab === "exceptions" && (
-              <section className="overflow-hidden rounded-2xl border border-[var(--q-border)] bg-white">
-                <div className="flex items-center justify-between border-b border-[var(--q-surface-2)] p-5">
+              <section className="overflow-hidden rounded-q-card border border-q-border bg-q-surface">
+                <div className="flex items-center justify-between border-b border-q-surface-2 p-5">
                   <div>
-                    <h2 className="text-sm font-black text-[#17283f]">
+                    <h2 className="text-q-ui font-bold text-q-text">
                       مراجعة مسارات الموضوعات
                     </h2>
-                    <p className="mt-1 text-[10px] text-[var(--q-text-3)]">
+                    <p className="mt-1 text-q-caption text-q-text-3">
                       اعتمد المراحل المنفذة سابقًا، أو راجع المسارات المخصصة والاستثنائية كلٌ في قسمه.
                     </p>
                   </div>
                 </div>
-                <div className="border-b border-[var(--q-surface-2)] bg-gradient-to-l from-[#eef8ff] to-white p-5">
+                <div className="border-b border-q-surface-2 bg-gradient-to-l from-q-surface-2 to-white p-5">
                   <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-[10px] font-black text-[var(--q-primary)]">
+                      <p className="text-q-caption font-bold text-q-primary">
                         استكمال موضوعات قائمة
                       </p>
-                      <h3 className="mt-1 text-sm font-black text-[#17283f]">
+                      <h3 className="mt-1 text-q-ui font-bold text-q-text">
                         إثبات المجالس المنفذة خارج النظام
                       </h3>
-                      <p className="mt-1 text-[10px] leading-5 text-[var(--q-text-3)]">
+                      <p className="mt-1 text-q-caption leading-5 text-q-text-3">
                         تحقق من تاريخ كل مجلس وقراره ومحضره قبل تفعيل أول مرحلة
                         متبقية.
                       </p>
                     </div>
-                    <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black text-[var(--q-primary)] shadow-sm">
+                    <QBadge className="rounded-full bg-q-surface px-3 py-1.5 text-q-caption font-bold text-q-primary ">
                       {
                         priorRouteRequests.filter(
                           (item) => item.status === "submitted",
                         ).length
                       }{" "}
                       بانتظار التحقق
-                    </span>
+                    </QBadge>
                   </div>
                   <div className="grid gap-4 xl:grid-cols-2">
                     {reviewablePriorRouteRequests.map((request) => (
                       <article
                         key={request.id}
-                        className="overflow-hidden rounded-2xl border border-[#cfe0ef] bg-white shadow-[0_8px_22px_rgba(20,55,90,.06)]"
+                        className="overflow-hidden rounded-q-card border border-q-border bg-q-surface "
                       >
-                        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--q-surface-2)] p-4">
+                        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-q-surface-2 p-4">
                           <div className="min-w-0">
                             <Link
                               href={`/admin/topics/${request.topic_id}`}
-                              className="inline-flex items-center gap-1 text-[9px] font-black text-[var(--q-primary)] hover:underline"
+                              className="inline-flex min-h-11 min-w-11 items-center inline-flex items-center gap-1 text-q-caption font-bold text-q-primary hover:underline"
                             >
                               {request.topic_no || "موضوع قائم"}
                               <ChevronLeft size={12} />
                             </Link>
                             <Link
                               href={`/admin/topics/${request.topic_id}`}
-                              className="mt-1 block text-sm font-black text-[#17283f] hover:text-[var(--q-primary)] hover:underline"
+                              className="inline-flex min-h-11 min-w-11 items-center mt-1 block text-q-ui font-bold text-q-text hover:text-q-primary hover:underline"
                             >
                               {request.topic_title_ar}
                             </Link>
-                            <p className="mt-1 text-[9px] text-[var(--q-text-3)]">
+                            <p className="mt-1 text-q-caption text-q-text-3">
                               قدمه: {request.requester_name_ar}
                               {request.submitted_at
                                 ? ` · ${new Date(request.submitted_at).toLocaleDateString("ar-SA-u-nu-latn")}`
@@ -3376,18 +3367,18 @@ export function RegulationsWorkspace({
                             (step) => (
                               <li
                                 key={step.id}
-                                className="rounded-xl border border-[#e1e9f1] bg-[var(--q-bg)] p-3"
+                                className="rounded-q-control border border-q-border bg-q-bg p-3"
                               >
                                 <div className="flex items-start gap-3">
-                                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-600 text-[10px] font-black text-white">
+                                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-q-control bg-q-success text-q-caption font-bold text-q-on-primary">
                                     {step.display_sequence_no}
                                   </span>
                                   <div className="min-w-0 flex-1">
-                                    <strong className="text-[11px] text-[#24364e]">
+                                    <strong className="text-q-caption text-q-text">
                                       {step.responsible_unit_name_ar ||
                                         step.step_title}
                                     </strong>
-                                    <p className="mt-0.5 text-[9px] text-[var(--q-text-3)]">
+                                    <p className="mt-0.5 text-q-caption text-q-text-3">
                                       اجتماع واحد يغطي{" "}
                                       {step.covered_step_titles.length}{" "}
                                       {step.covered_step_titles.length === 1
@@ -3403,13 +3394,13 @@ export function RegulationsWorkspace({
                                     </p>
                                   </div>
                                 </div>
-                                <div className="mt-3 grid gap-2 rounded-lg bg-white p-2.5 text-[9px] leading-5 text-[var(--q-text-2)] sm:grid-cols-2">
+                                <div className="mt-3 grid gap-2 rounded-q-control bg-q-surface p-2.5 text-q-caption leading-5 text-q-text-2 sm:grid-cols-2">
                                   <p>
-                                    <b className="text-[#24364e]">القرار: </b>
+                                    <b className="text-q-text">القرار: </b>
                                     {step.decision_text}
                                   </p>
                                   <p>
-                                    <b className="text-[#24364e]">
+                                    <b className="text-q-text">
                                       سبب التسجيل:{" "}
                                     </b>
                                     {step.bypass_reason}
@@ -3422,7 +3413,7 @@ export function RegulationsWorkspace({
                                       href={attachment.file_url}
                                       target="_blank"
                                       rel="noreferrer"
-                                      className="rounded-lg border border-[#b9d8f2] bg-[#eef7ff] px-2.5 py-1.5 text-[9px] font-black text-[var(--q-primary)]"
+                                      className="inline-flex min-h-11 min-w-11 items-center rounded-q-control border border-q-primary bg-q-surface-2 px-2.5 py-1.5 text-q-caption font-bold text-q-primary"
                                     >
                                       عرض {attachment.file_name}
                                     </a>
@@ -3433,15 +3424,15 @@ export function RegulationsWorkspace({
                           )}
                         </ol>
                         {request.status === "submitted" && (
-                          <footer className="space-y-3 border-t border-[var(--q-surface-2)] bg-[var(--q-bg)] p-4">
+                          <footer className="space-y-3 border-t border-q-surface-2 bg-q-bg p-4">
                             {request.can_review === false && (
-                              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[10px] font-bold leading-5 text-amber-800">
+                              <QCard className="p-0 rounded-q-control border border-q-border bg-q-warning-soft p-3 text-q-caption font-bold leading-5 text-q-warning">
                                 {request.review_block_reason ||
                                   "هذا الطلب يحتاج مراجعًا مستقلًا لاعتماده."}
-                              </div>
+                              </QCard>
                             )}
                             <label className="block">
-                              <span className="mb-1.5 block text-[9px] font-black text-[var(--q-text-2)]">
+                              <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
                                 ملاحظة المراجع *
                               </span>
                               <textarea
@@ -3455,14 +3446,14 @@ export function RegulationsWorkspace({
                                   }))
                                 }
                                 placeholder="دوّن نتيجة فحص المحاضر والقرارات…"
-                                className="min-h-20 w-full rounded-xl border border-[#d7e2ec] bg-white p-3 text-[10px] leading-5"
+                                className="min-h-20 w-full rounded-q-control border border-q-border bg-q-surface p-3 text-q-caption leading-5"
                               />
-                              <span className="mt-1.5 block text-[9px] text-[var(--q-text-3)]">
+                              <span className="mt-1.5 block text-q-caption text-q-text-3">
                                 اكتب 5 أحرف على الأقل لتفعيل زري الاعتماد والرفض.
                               </span>
                             </label>
                             <div className="flex flex-wrap gap-2">
-                              <button
+                              <QButton type="submit" variant="ghost"
                                 disabled={
                                   request.can_review === false ||
                                   (priorRouteReviewComments[request.id]?.trim()
@@ -3471,11 +3462,11 @@ export function RegulationsWorkspace({
                                 onClick={() =>
                                   reviewPriorRouteRequest(request, true)
                                 }
-                                className="rounded-lg bg-emerald-600 px-4 py-2 text-[9px] font-black text-white disabled:bg-[#a8b8c9]"
+                                className="min-w-11 rounded-q-control bg-q-success px-4 py-2 text-q-ui font-bold text-q-on-primary disabled:bg-q-surface-2"
                               >
                                 اعتماد وبدء المرحلة التالية
-                              </button>
-                              <button
+                              </QButton>
+                              <QButton type="submit" variant="ghost"
                                 disabled={
                                   request.can_review === false ||
                                   (priorRouteReviewComments[request.id]?.trim()
@@ -3484,57 +3475,57 @@ export function RegulationsWorkspace({
                                 onClick={() =>
                                   reviewPriorRouteRequest(request, false)
                                 }
-                                className="rounded-lg bg-red-50 px-4 py-2 text-[9px] font-black text-red-700 disabled:text-[#a8b8c9]"
+                                className="min-w-11 rounded-q-control bg-q-danger-soft px-4 py-2 text-q-ui font-bold text-q-danger disabled:text-q-text-3"
                               >
                                 رفض الأدلة
-                              </button>
+                              </QButton>
                             </div>
                           </footer>
                         )}
                       </article>
                     ))}
                     {!reviewablePriorRouteRequests.length && (
-                      <div className="rounded-xl border border-dashed border-[#cfdce9] bg-white p-6 text-center text-[11px] text-[#8291a4] xl:col-span-2">
+                      <QCard className="p-0 rounded-q-control border border-dashed border-q-border bg-q-surface p-6 text-center text-q-caption text-q-text-3 xl:col-span-2">
                         لا توجد طلبات لاستكمال مسار سابق.
-                      </div>
+                      </QCard>
                     )}
                   </div>
                 </div>
-                <div className="border-b border-[var(--q-surface-2)] bg-[var(--q-bg)] p-5">
+                <div className="border-b border-q-surface-2 bg-q-bg p-5">
                   <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <h3 className="text-xs font-black text-[#17283f]">
+                      <h3 className="text-q-caption font-bold text-q-text">
                         مسارات الموضوعات المخصصة
                       </h3>
-                      <p className="mt-1 text-[10px] text-[var(--q-text-3)]">
+                      <p className="mt-1 text-q-caption text-q-text-3">
                         مسارات دائمة خاصة بموضوع واحد، منفصلة عن الاستثناءات
                         المؤقتة.
                       </p>
                     </div>
-                    <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black text-[var(--q-text-2)]">
+                    <QBadge className="rounded-full bg-q-surface px-3 py-1 text-q-caption font-bold text-q-text-2">
                       {
                         customRouteDrafts.filter(
                           (item) => item.status === "submitted",
                         ).length
                       }{" "}
                       بانتظار المراجعة
-                    </span>
+                    </QBadge>
                   </div>
                   <div className="grid gap-3 xl:grid-cols-2">
                     {customRouteDrafts.map((draft) => (
                       <article
                         key={draft.id}
-                        className="rounded-2xl border border-[var(--q-border)] bg-white p-4"
+                        className="rounded-q-card border border-q-border bg-q-surface p-4"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <p className="text-[10px] font-black text-[var(--q-primary)]">
+                            <p className="text-q-caption font-bold text-q-primary">
                               {draft.topic_title_ar}
                             </p>
-                            <h4 className="mt-1 text-sm font-black text-[#17283f]">
+                            <h4 className="mt-1 text-q-ui font-bold text-q-text">
                               {draft.name_ar}
                             </h4>
-                            <p className="mt-1 text-[10px] leading-5 text-[#6b7b8f]">
+                            <p className="mt-1 text-q-caption leading-5 text-q-text-3">
                               {draft.rationale}
                             </p>
                           </div>
@@ -3544,16 +3535,16 @@ export function RegulationsWorkspace({
                           {draft.steps.map((step) => (
                             <li
                               key={step.id}
-                              className="flex items-center gap-3 rounded-xl bg-[var(--q-bg)] px-3 py-2"
+                              className="flex items-center gap-3 rounded-q-control bg-q-bg px-3 py-2"
                             >
-                              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[var(--q-surface-2)] text-[10px] font-black text-[var(--q-primary)]">
+                              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-q-control bg-q-surface-2 text-q-caption font-bold text-q-primary">
                                 {step.sequence_no}
                               </span>
                               <span className="min-w-0">
-                                <strong className="block text-[10px] text-[#24364e]">
+                                <strong className="block text-q-caption text-q-text">
                                   {step.name_ar}
                                 </strong>
-                                <span className="mt-0.5 block text-[9px] text-[var(--q-text-3)]">
+                                <span className="mt-0.5 block text-q-caption text-q-text-3">
                                   {step.governance_unit_name_ar}
                                 </span>
                               </span>
@@ -3561,54 +3552,54 @@ export function RegulationsWorkspace({
                           ))}
                         </ol>
                         {draft.status === "submitted" && (
-                          <div className="mt-3 flex gap-2 border-t border-[var(--q-surface-2)] pt-3">
-                            <button
+                          <div className="mt-3 flex gap-2 border-t border-q-surface-2 pt-3">
+                            <QButton type="submit" variant="ghost"
                               onClick={() =>
                                 reviewCustomRouteDraft(draft, true)
                               }
-                              className="rounded-lg bg-emerald-600 px-3 py-2 text-[9px] font-bold text-white"
+                              className="min-w-11 rounded-q-control bg-q-success px-3 py-2 text-q-ui font-bold text-q-on-primary"
                             >
                               اعتماد وتشغيل
-                            </button>
-                            <button
+                            </QButton>
+                            <QButton type="submit" variant="ghost"
                               onClick={() =>
                                 reviewCustomRouteDraft(draft, false)
                               }
-                              className="rounded-lg bg-red-50 px-3 py-2 text-[9px] font-bold text-red-700"
+                              className="min-w-11 rounded-q-control bg-q-danger-soft px-3 py-2 text-q-ui font-bold text-q-danger"
                             >
                               رفض
-                            </button>
+                            </QButton>
                           </div>
                         )}
                       </article>
                     ))}
                     {!customRouteDrafts.length && (
-                      <div className="rounded-xl border border-dashed border-[#cfdce9] bg-white p-5 text-center text-[11px] text-[#8291a4] xl:col-span-2">
+                      <QCard className="p-0 rounded-q-control border border-dashed border-q-border bg-q-surface p-5 text-center text-q-caption text-q-text-3 xl:col-span-2">
                         لا توجد مسارات مخصصة بانتظار المراجعة.
-                      </div>
+                      </QCard>
                     )}
                   </div>
                 </div>
                 <div className="overflow-x-auto">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--q-surface-2)] p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-q-surface-2 p-5">
                     <div>
-                      <h3 className="text-xs font-black text-[#17283f]">
+                      <h3 className="text-q-caption font-bold text-q-text">
                         الاستثناءات المؤقتة
                       </h3>
-                      <p className="mt-1 text-[9px] text-[var(--q-text-3)]">
+                      <p className="mt-1 text-q-caption text-q-text-3">
                         هذا القسم فقط لطلب الخروج المؤقت عن المسار الأصلي، ولا يخص إثبات المجالس السابقة.
                       </p>
                     </div>
-                    <button
+                    <QButton type="submit" variant="ghost"
                       onClick={() => setModal("exception")}
-                      className="flex h-9 items-center gap-2 rounded-xl border border-[#bed7ef] bg-white px-4 text-[10px] font-bold text-[var(--q-primary)]"
+                      className="min-w-11 flex min-h-11 items-center gap-2 rounded-q-control border border-q-primary bg-q-surface px-4 text-q-ui font-bold text-q-primary"
                     >
                       <Plus size={14} />
                       إنشاء استثناء مؤقت
-                    </button>
+                    </QButton>
                   </div>
                   <table className="w-full min-w-[900px] text-right">
-                    <thead className="bg-[var(--q-bg)] text-[10px] text-[var(--q-text-3)]">
+                    <thead className="bg-q-bg text-q-caption text-q-text-3">
                       <tr>
                         <th className="p-4">الموضوع</th>
                         <th className="p-4">النوع</th>
@@ -3622,13 +3613,13 @@ export function RegulationsWorkspace({
                       {exceptions.map((e) => (
                         <tr
                           key={e.id}
-                          className="border-t border-[var(--q-surface-2)] text-[11px]"
+                          className="border-t border-q-surface-2 text-q-caption"
                         >
                           <td className="p-4">
-                            <strong className="text-[#2a3c54]">
+                            <strong className="text-q-text">
                               {e.topic_title_ar}
                             </strong>
-                            <span className="mt-1 block text-[9px] text-[#8997a8]">
+                            <span className="mt-1 block text-q-caption text-q-text-3">
                               {e.reason}
                             </span>
                           </td>
@@ -3645,18 +3636,18 @@ export function RegulationsWorkspace({
                           <td className="p-4">
                             {e.status === "pending" ? (
                               <div className="flex gap-2">
-                                <button
+                                <QButton type="submit" variant="ghost"
                                   onClick={() => reviewException(e, true)}
-                                  className="rounded-lg bg-emerald-600 px-3 py-2 text-[9px] font-bold text-white"
+                                  className="min-w-11 rounded-q-control bg-q-success px-3 py-2 text-q-ui font-bold text-q-on-primary"
                                 >
                                   اعتماد
-                                </button>
-                                <button
+                                </QButton>
+                                <QButton type="submit" variant="ghost"
                                   onClick={() => reviewException(e, false)}
-                                  className="rounded-lg bg-red-50 px-3 py-2 text-[9px] font-bold text-red-700"
+                                  className="min-w-11 rounded-q-control bg-q-danger-soft px-3 py-2 text-q-ui font-bold text-q-danger"
                                 >
                                   رفض
-                                </button>
+                                </QButton>
                               </div>
                             ) : (
                               "مكتملة"
@@ -3667,7 +3658,7 @@ export function RegulationsWorkspace({
                     </tbody>
                   </table>
                   {!exceptions.length && (
-                    <div className="grid min-h-64 place-items-center text-xs text-[#8291a4]">
+                    <div className="grid min-h-64 place-items-center text-q-caption text-q-text-3">
                       لا توجد طلبات استثناء.
                     </div>
                   )}
@@ -3903,13 +3894,13 @@ export function RegulationsWorkspace({
               </Field>
             </div>
 
-            <section className="mt-5 rounded-2xl border border-[#dce7f2] bg-[var(--q-bg)] p-4">
+            <section className="mt-5 rounded-q-card border border-q-border bg-q-bg p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-xs font-black text-[#21344d]">
+                  <h3 className="text-q-caption font-bold text-q-text">
                     متى ينطبق هذا البند؟
                   </h3>
-                  <p className="mt-1 text-[10px] leading-5 text-[var(--q-text-3)]">
+                  <p className="mt-1 text-q-caption leading-5 text-q-text-3">
                     حدد صفات الموضوع، وسيتولى النظام بناء شروط المطابقة
                     تلقائيًا.
                   </p>
@@ -3917,27 +3908,27 @@ export function RegulationsWorkspace({
               </div>
 
               <>
-                <div className="mt-4 rounded-xl border border-[#dce7f2] bg-white p-3">
-                  <span className="block text-[10px] font-black text-[#21344d]">
+                <QCard className="p-0 mt-4 rounded-q-control border border-q-border bg-q-surface p-3">
+                  <span className="block text-q-caption font-bold text-q-text">
                     ينطبق هذا البند عندما:
                   </span>
-                  <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
+                  <div className="mt-2 flex flex-wrap gap-2 text-q-caption">
                     {(["single", "all", "any"] as const).map((mode) => (
-                      <button
+                      <QButton variant="ghost"
                         type="button"
                         key={mode}
                         onClick={() => setMatchMode(mode)}
-                        className={`rounded-lg border px-3 py-2 font-bold transition ${matchMode === mode ? "border-[var(--q-primary)] bg-[var(--q-primary)] text-white" : "border-[var(--q-border)] bg-[var(--q-bg)] text-[var(--q-text-2)]"}`}
+                        className={`min-w-11 rounded-q-control border px-3 py-2 font-bold transition ${matchMode === mode ? "border-q-primary bg-q-primary text-q-on-primary" : "border-q-border bg-q-bg text-q-text-2"}`}
                       >
                         {mode === "single"
                           ? "شرط واحد"
                           : mode === "all"
                             ? "كل الشروط"
                             : "أي شرط"}
-                      </button>
+                      </QButton>
                     ))}
                   </div>
-                </div>
+                </QCard>
 
                 <div className="mt-3 space-y-2">
                   {matchConditions.map((condition, index) => {
@@ -3974,9 +3965,9 @@ export function RegulationsWorkspace({
                     const setValues = (values: string[]) =>
                       update({ values: values.filter(Boolean) });
                     return (
-                      <div
+                      <QCard
                         key={condition.id}
-                        className="rounded-xl border border-[#e1e9f2] bg-white p-3"
+                        className="p-0 rounded-q-control border border-q-border bg-q-surface p-3"
                       >
                         <div className="grid items-end gap-2 sm:grid-cols-[1fr_150px_36px]">
                           <Field label={`الشرط ${index + 1}`}>
@@ -3998,21 +3989,21 @@ export function RegulationsWorkspace({
                             </select>
                           </Field>
                           <Field label="نوع الشرط">
-                            <button
+                            <QButton variant="ghost"
                               type="button"
                               onClick={() =>
                                 update({ inverted: !condition.inverted })
                               }
-                              className={`h-9 w-full rounded-lg border px-3 text-[10px] font-bold ${condition.inverted ? "border-amber-300 bg-amber-50 text-amber-800" : "border-[var(--q-border)] bg-[var(--q-bg)] text-[var(--q-text-2)]"}`}
+                              className={`min-w-11 min-h-11 w-full rounded-q-control border px-3 text-q-ui font-bold ${condition.inverted ? "border-q-border bg-q-warning-soft text-q-warning" : "border-q-border bg-q-bg text-q-text-2"}`}
                             >
                               {condition.inverted
                                 ? "استثناء: لا يساوي"
                                 : condition.values.length > 1
                                   ? "أحد القيم"
                                   : "يساوي"}
-                            </button>
+                            </QButton>
                           </Field>
-                          <button
+                          <QButton variant="ghost"
                             type="button"
                             aria-label={`حذف الشرط ${index + 1}`}
                             onClick={() =>
@@ -4022,10 +4013,10 @@ export function RegulationsWorkspace({
                                 ),
                               )
                             }
-                            className="grid h-9 w-9 place-items-center rounded-lg text-red-600 hover:bg-red-50"
+                            className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control text-q-danger hover:bg-q-danger-soft"
                           >
                             <X size={15} />
-                          </button>
+                          </QButton>
                         </div>
                         <div className="mt-3">
                           {options ? (
@@ -4035,7 +4026,7 @@ export function RegulationsWorkspace({
                                   option.value,
                                 );
                                 return (
-                                  <button
+                                  <QButton variant="ghost"
                                     type="button"
                                     key={option.value}
                                     onClick={() =>
@@ -4047,10 +4038,10 @@ export function RegulationsWorkspace({
                                           : [...condition.values, option.value],
                                       )
                                     }
-                                    className={`rounded-lg border px-2.5 py-1.5 text-[9px] font-bold transition ${active ? "border-[var(--q-primary)] bg-[var(--q-surface-2)] text-[var(--q-primary)]" : "border-[var(--q-border)] bg-[var(--q-bg)] text-[var(--q-text-3)]"}`}
+                                    className={`min-w-11 rounded-q-control border px-2.5 py-1.5 text-q-ui font-bold transition ${active ? "border-q-primary bg-q-surface-2 text-q-primary" : "border-q-border bg-q-bg text-q-text-3"}`}
                                   >
                                     {option.label}
-                                  </button>
+                                  </QButton>
                                 );
                               })}
                             </div>
@@ -4069,17 +4060,17 @@ export function RegulationsWorkspace({
                             />
                           )}
                         </div>
-                      </div>
+                      </QCard>
                     );
                   })}
                 </div>
                 {!matchConditions.length && (
-                  <div className="mt-3 rounded-xl border border-dashed border-[#b9cbe0] bg-white p-4 text-center text-[10px] text-[var(--q-text-3)]">
+                  <QCard className="p-0 mt-3 rounded-q-control border border-dashed border-q-border bg-q-surface p-4 text-center text-q-caption text-q-text-3">
                     لا توجد شروط؛ سيطبق البند على جميع الموضوعات ضمن الفئة
                     والنطاق المحددين.
-                  </div>
+                  </QCard>
                 )}
-                <button
+                <QButton variant="ghost"
                   type="button"
                   onClick={() =>
                     setMatchConditions((items) => [
@@ -4087,13 +4078,13 @@ export function RegulationsWorkspace({
                       newMatchCondition(),
                     ])
                   }
-                  className="mt-3 flex h-9 items-center gap-2 rounded-xl border border-[#b9cbe0] bg-white px-3 text-[10px] font-bold text-[var(--q-primary)]"
+                  className="min-w-11 mt-3 flex min-h-11 items-center gap-2 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-bold text-q-primary"
                 >
                   <Plus size={14} />
                   إضافة شرط
-                </button>
+                </QButton>
                 {!!matchConditions.length && (
-                  <p className="mt-3 rounded-xl bg-blue-50 px-3 py-2 text-[10px] leading-5 text-blue-800">
+                  <p className="mt-3 rounded-q-control bg-q-surface-2 px-3 py-2 text-q-caption leading-5 text-q-link">
                     سيُطبّق البند عندما{" "}
                     {matchMode === "single"
                       ? "يتحقق الشرط الأول فقط"
@@ -4104,33 +4095,33 @@ export function RegulationsWorkspace({
                   </p>
                 )}
                 <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr]">
-                  <div className="rounded-xl border border-[#dce7f2] bg-white p-3">
-                    <h4 className="text-[11px] font-black text-[#21344d]">
+                  <QCard className="p-0 rounded-q-control border border-q-border bg-q-surface p-3">
+                    <h4 className="text-q-caption font-bold text-q-text">
                       ملخص الشروط التي سيطبقها النظام
                     </h4>
                     {criteriaSummary.length ? (
                       <div className="mt-3 space-y-2">
                         {criteriaSummary.map((summary, index) => (
-                          <div
+                          <QCard
                             key={`${summary}-${index}`}
-                            className="flex items-start gap-2 rounded-lg border border-[#e3edf7] bg-[var(--q-bg)] px-3 py-2 text-[10px] leading-5 text-[#395068]"
+                            className="p-0 flex items-start gap-2 rounded-q-control border border-q-border bg-q-bg px-3 py-2 text-q-caption leading-5 text-q-text-2"
                           >
-                            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--q-surface-2)] text-[9px] font-black text-[var(--q-primary)]">
+                            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-q-surface-2 text-q-caption font-bold text-q-primary">
                               {index + 1}
                             </span>
                             <span>{summary}</span>
-                          </div>
+                          </QCard>
                         ))}
                       </div>
                     ) : (
-                      <p className="mt-3 rounded-lg bg-[var(--q-bg)] px-3 py-2 text-[10px] leading-5 text-[var(--q-text-3)]">
+                      <p className="mt-3 rounded-q-control bg-q-bg px-3 py-2 text-q-caption leading-5 text-q-text-3">
                         لا توجد شروط محددة؛ سيطبق البند على جميع الموضوعات ضمن
                         الفئة والنطاق.
                       </p>
                     )}
-                  </div>
-                  <div className="rounded-xl border border-[#dce7f2] bg-white p-3">
-                    <h4 className="text-[11px] font-black text-[#21344d]">
+                  </QCard>
+                  <QCard className="p-0 rounded-q-control border border-q-border bg-q-surface p-3">
+                    <h4 className="text-q-caption font-bold text-q-text">
                       معاينة: هل هذا الموضوع يطابق؟
                     </h4>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -4244,7 +4235,7 @@ export function RegulationsWorkspace({
                       </Field>
                     </div>
                     <div
-                      className={`mt-3 rounded-xl px-3 py-2 text-[10px] font-black ${previewMatches === null ? "bg-slate-50 text-slate-600" : previewMatches ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
+                      className={`mt-3 rounded-q-control px-3 py-2 text-q-caption font-bold ${previewMatches === null ? "bg-q-neutral-soft text-q-text-2" : previewMatches ? "bg-q-success-soft text-q-success" : "bg-q-danger-soft text-q-danger"}`}
                     >
                       {previewMatches === null
                         ? "جارٍ التحقق عبر محرك المطابقة الفعلي…"
@@ -4252,7 +4243,7 @@ export function RegulationsWorkspace({
                           ? "نعم، هذا الموضوع يطابق شروط البند."
                           : "لا، هذا الموضوع لا يطابق شروط البند."}
                     </div>
-                  </div>
+                  </QCard>
                 </div>
               </>
             </section>
@@ -4382,45 +4373,45 @@ export function RegulationsWorkspace({
         )}
         {modal === "review" && selectedVersion && detail && (
           <Dialog title="مراجعة الإصدار قبل الإرسال" onClose={closeModal} wide>
-            <div className="rounded-2xl bg-[var(--q-bg)] p-5">
+            <div className="rounded-q-card bg-q-bg p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-bold text-[#ff7a00]">
+                  <p className="text-q-caption font-bold text-q-link">
                     ملخص الإصدار
                   </p>
-                  <h3 className="mt-1 text-base font-black text-[#17283f]">
+                  <h3 className="mt-1 text-q-ui font-bold text-q-text">
                     {detail.name_ar}
                   </h3>
-                  <p className="mt-1 text-[10px] text-[var(--q-text-3)]">
+                  <p className="mt-1 text-q-caption text-q-text-3">
                     الإصدار{" "}
                     {selectedVersion.version_label ||
                       selectedVersion.version_no}
                   </p>
                 </div>
-                <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-[10px] font-black text-emerald-800">
+                <QBadge className="rounded-full bg-q-success-soft px-3 py-1.5 text-q-caption font-bold text-q-success">
                   جاهز للمراجعة
-                </span>
+                </QBadge>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl bg-white p-4">
-                  <span className="text-[9px] text-[var(--q-text-3)]">البنود</span>
-                  <strong className="mt-1 block text-lg text-[#17283f]">
+                <div className="rounded-q-control bg-q-surface p-4">
+                  <span className="text-q-caption text-q-text-3">البنود</span>
+                  <strong className="mt-1 block text-q-body text-q-text">
                     {selectedVersion.items.length}
                   </strong>
                 </div>
-                <div className="rounded-xl bg-white p-4">
-                  <span className="text-[9px] text-[var(--q-text-3)]">
+                <div className="rounded-q-control bg-q-surface p-4">
+                  <span className="text-q-caption text-q-text-3">
                     نطاقات السريان
                   </span>
-                  <strong className="mt-1 block text-lg text-[#17283f]">
+                  <strong className="mt-1 block text-q-body text-q-text">
                     {selectedVersion.scopes.length}
                   </strong>
                 </div>
-                <div className="rounded-xl bg-white p-4">
-                  <span className="text-[9px] text-[var(--q-text-3)]">
+                <div className="rounded-q-control bg-q-surface p-4">
+                  <span className="text-q-caption text-q-text-3">
                     جاهزية التشغيل
                   </span>
-                  <strong className="mt-1 block text-lg text-[#087b5c]">
+                  <strong className="mt-1 block text-q-body text-q-success">
                     {selectedVersion.readiness_percent ??
                       selectedVersion.automation_readiness_pct ??
                       0}
@@ -4429,19 +4420,19 @@ export function RegulationsWorkspace({
                 </div>
               </div>
             </div>
-            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-[11px] leading-6 text-amber-900">
+            <QCard className="p-0 mt-4 rounded-q-card border border-q-border bg-q-warning-soft p-4 text-q-caption leading-6 text-q-warning">
               <strong className="block">ما الذي سيحدث بعد الإرسال؟</strong>
               سيُقفل تحرير هذه المسودة وتنتقل إلى مراجع مستقل. لا يستطيع منشئ
               الإصدار اعتماده بنفسه، ويمكن التفعيل فقط بعد اكتمال الاعتماد.
-            </div>
+            </QCard>
             <div className="mt-4 space-y-2">
               {readinessChecks.map((check) => (
                 <div
                   key={check.label}
-                  className="flex items-center gap-2 text-[10px] text-[var(--q-text-2)]"
+                  className="flex items-center gap-2 text-q-caption text-q-text-2"
                 >
                   <span
-                    className={`grid h-5 w-5 place-items-center rounded-full ${check.done ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-700"}`}
+                    className={`grid h-5 w-5 place-items-center rounded-full ${check.done ? "bg-q-success text-q-on-primary" : "bg-q-warning-soft text-q-warning"}`}
                   >
                     {check.done ? <Check size={11} /> : "!"}
                   </span>
@@ -4458,24 +4449,24 @@ export function RegulationsWorkspace({
         )}
         {modal === "approve" && selectedVersion && detail && (
           <Dialog title="اعتماد الإصدار" onClose={closeModal}>
-            <div className="rounded-xl border border-[#dbe8f5] bg-[var(--q-bg)] p-4">
-              <p className="text-[10px] font-bold text-[#ff7a00]">
+            <QCard className="p-0 rounded-q-control border border-q-border bg-q-bg p-4">
+              <p className="text-q-caption font-bold text-q-link">
                 اعتماد مستقل
               </p>
-              <h3 className="mt-1 text-sm font-black text-[var(--q-text)]">
+              <h3 className="mt-1 text-q-ui font-bold text-q-text">
                 {detail.name_ar} · v
                 {selectedVersion.version_label || selectedVersion.version_no}
               </h3>
-              <p className="mt-2 text-[10px] leading-5 text-[#63758a]">
+              <p className="mt-2 text-q-caption leading-5 text-q-text-2">
                 سيتم اعتماد الإصدار فقط إذا كان المستخدم الحالي ليس هو نفس من
                 أرسله للمراجعة. هذه القاعدة مفروضة من قاعدة البيانات وليست مجرد
                 تنبيه واجهة.
               </p>
-            </div>
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[10px] leading-5 text-amber-900">
+            </QCard>
+            <QCard className="p-0 mt-3 rounded-q-control border border-q-border bg-q-warning-soft p-3 text-q-caption leading-5 text-q-warning">
               بعد الاعتماد لا يتم تشغيل اللائحة تلقائيًا؛ يجب تحديد تاريخ النفاذ
               ثم التفعيل عندما تكون الجاهزية مكتملة.
-            </div>
+            </QCard>
             <Action
               busy={busy}
               disabled={!canApproveVersion}
@@ -4496,10 +4487,10 @@ export function RegulationsWorkspace({
               {activationBlockers.map((check) => (
                 <div
                   key={check.label}
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[9px] font-bold ${check.done ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}
+                  className={`flex items-center gap-2 rounded-q-control border px-3 py-2 text-q-caption font-bold ${check.done ? "border-q-border bg-q-success-soft text-q-success" : "border-q-border bg-q-warning-soft text-q-warning"}`}
                 >
                   <span
-                    className={`grid h-5 w-5 place-items-center rounded-full ${check.done ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-700"}`}
+                    className={`grid h-5 w-5 place-items-center rounded-full ${check.done ? "bg-q-success text-q-on-primary" : "bg-q-warning-soft text-q-warning"}`}
                   >
                     {check.done ? <Check size={10} /> : "!"}
                   </span>
@@ -4529,7 +4520,7 @@ export function RegulationsWorkspace({
                 />
               </Field>
             </div>
-            <div className="mt-4 rounded-xl bg-blue-50 p-3 text-[10px] leading-5 text-blue-800">
+            <div className="mt-4 rounded-q-control bg-q-surface-2 p-3 text-q-caption leading-5 text-q-link">
               عند التفعيل تصبح النسخة نافذة ومقفلة ضد التعديل. أي تغيير لاحق يتم
               عبر إنشاء نسخة جديدة.
             </div>
@@ -4620,8 +4611,8 @@ export function RegulationsWorkspace({
             wide
           >
             <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-              <section className="rounded-xl border border-[#e2eaf3] bg-[var(--q-bg)] p-4">
-                <h3 className="mb-3 text-xs font-black text-[var(--q-text)]">
+              <section className="rounded-q-control border border-q-border bg-q-bg p-4">
+                <h3 className="mb-3 text-q-caption font-bold text-q-text">
                   بيانات الخطوة
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -4676,8 +4667,8 @@ export function RegulationsWorkspace({
                 </div>
               </section>
 
-              <section className="rounded-xl border border-[#e2eaf3] bg-[var(--q-bg)] p-4">
-                <h3 className="mb-3 text-xs font-black text-[var(--q-text)]">
+              <section className="rounded-q-control border border-q-border bg-q-bg p-4">
+                <h3 className="mb-3 text-q-caption font-bold text-q-text">
                   المسؤولية
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -4748,44 +4739,44 @@ export function RegulationsWorkspace({
               </section>
             </div>
 
-            <section className="mt-4 rounded-xl border border-[#d8e8f8] bg-white p-4">
+            <section className="mt-4 rounded-q-control border border-q-border bg-q-surface p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <h3 className="text-xs font-black text-[var(--q-text)]">
+                  <h3 className="text-q-caption font-bold text-q-text">
                     النتائج الممكنة
                   </h3>
-                  <p className="mt-1 text-[9px] text-[var(--q-text-3)]">
+                  <p className="mt-1 text-q-caption text-q-text-3">
                     اختر النتائج التي يمكن أن تخرج بها هذه الخطوة، وسيستخدمها
                     النظام عند ربط الانتقالات.
                   </p>
                 </div>
-                <span className="rounded-full bg-[var(--q-surface-2)] px-2.5 py-1 text-[8px] font-black text-[var(--q-primary)]">
+                <QBadge className="rounded-full bg-q-surface-2 px-2.5 py-1 text-q-caption font-bold text-q-primary">
                   {selectedStepOutcomes.length} محددة
-                </span>
+                </QBadge>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {outcomeOptions.map((outcome) => {
                   const active = selectedStepOutcomes.includes(outcome);
                   return (
-                    <button
+                    <QButton variant="ghost"
                       type="button"
                       key={outcome}
                       onClick={() => toggleStepOutcome(outcome)}
-                      className={`flex h-8 items-center gap-2 rounded-lg border px-3 text-[9px] font-bold transition ${active ? "border-[var(--q-primary)] bg-[var(--q-primary)] text-white" : "border-[var(--q-border)] bg-[var(--q-bg)] text-[var(--q-text-2)] hover:border-[#9cc7ef]"}`}
+                      className={`min-w-11 flex min-h-11 items-center gap-2 rounded-q-control border px-3 text-q-ui font-bold transition ${active ? "border-q-primary bg-q-primary text-q-on-primary" : "border-q-border bg-q-bg text-q-text-2 hover:border-q-primary"}`}
                     >
                       <span
-                        className={`grid h-4 w-4 place-items-center rounded-full ${active ? "bg-white text-[var(--q-primary)]" : "bg-white text-transparent"}`}
+                        className={`grid h-4 w-4 place-items-center rounded-full ${active ? "bg-q-surface text-q-primary" : "bg-q-surface text-transparent"}`}
                       >
                         <Check size={10} />
                       </span>
                       {outcomeLabels[outcome]}
-                    </button>
+                    </QButton>
                   );
                 })}
               </div>
             </section>
 
-            <div className="mt-4 flex flex-wrap gap-3 rounded-xl bg-[var(--q-bg)] p-3 text-[11px] text-[#34465c]">
+            <div className="mt-4 flex flex-wrap gap-3 rounded-q-control bg-q-bg p-3 text-q-caption text-q-text-2">
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -4901,7 +4892,7 @@ export function RegulationsWorkspace({
                 </select>
               </Field>
             </div>
-            <div className="mt-4 rounded-xl bg-blue-50 p-3 text-[10px] leading-5 text-blue-800">
+            <div className="mt-4 rounded-q-control bg-q-surface-2 p-3 text-q-caption leading-5 text-q-link">
               مثال: عند موافقة مجلس القسم، انتقل إلى اعتماد مجلس الكلية.
             </div>
             <Action busy={busy} onClick={addTransition} label="حفظ الربط" />
@@ -5124,18 +5115,18 @@ export function RegulationsWorkspace({
             wide
           >
             <div className="space-y-4">
-              <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-[10px] leading-5 text-blue-900">
+              <QCard className="p-0 rounded-q-control border border-q-border bg-q-surface-2 p-3 text-q-caption leading-5 text-q-link">
                 <strong>
                   استيراد حزمة تشغيلية متكاملة (qarar.policy_import.v3)
                 </strong>
                 : قم بلصق نص ملف الـ JSON الذي يحتوي اللائحة وموادها وقوالب
                 المسارات والانتقالات، وسيقوم النظام بتعالجها وحل المراجع
                 تلقائياً.
-              </div>
+              </QCard>
               <Field label="محتوى ملف JSON">
                 <textarea
                   rows={12}
-                  className={`${textarea} font-mono text-[10px]`}
+                  className={`${textarea} font-mono text-q-ui`}
                   dir="ltr"
                   placeholder='{"schema_version": "qarar.policy_import.v3", ...}'
                   value={bundleJsonText}
@@ -5170,13 +5161,13 @@ function Action({
 }) {
   return (
     <div className="mt-5 flex justify-end">
-      <button
+      <QButton type="submit" variant="ghost"
         disabled={busy || disabled}
         onClick={onClick}
-        className={`flex h-9 items-center gap-2 rounded-lg px-4 text-[11px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 ${danger ? "bg-[#bd3e35]" : "bg-[var(--q-primary)]"}`}
+        className={`min-w-11 flex min-h-11 items-center gap-2 rounded-q-control px-4 text-q-ui font-bold text-q-on-primary disabled:cursor-not-allowed disabled:opacity-50 ${danger ? "bg-q-danger" : "bg-q-primary"}`}
       >
         {busy && <LoaderCircle className="animate-spin" size={14} />} {label}
-      </button>
+      </QButton>
     </div>
   );
 }
