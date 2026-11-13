@@ -1,7 +1,9 @@
 "use client";
+import { Dialog } from "@/shared/ui/dialog";
+import { Button } from "@/shared/ui/button";
 
 import { ChangeEvent, useEffect, useEffectEvent, useRef, useState } from "react";
-import { Camera, ImagePlus, LoaderCircle, ScanLine, X } from "lucide-react";
+import { Camera, ImagePlus, LoaderCircle } from "lucide-react";
 import { BrowserQRCodeReader, type IScannerControls } from "@zxing/browser";
 
 export function QrCheckInScanner({ onDetected, onClose }: {
@@ -76,26 +78,21 @@ export function QrCheckInScanner({ onDetected, onClose }: {
     }
   }
 
-  return <div className="fixed inset-0 z-[120] grid place-items-center bg-[#06182d]/75 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="مسح رمز الحضور">
-    <section className="w-full max-w-lg overflow-hidden rounded-[1.8rem] border border-white/15 bg-white shadow-2xl">
-      <header className="flex items-center justify-between bg-gradient-to-l from-[#087ee5] to-[#0a315f] px-5 py-4 text-white">
-        <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white/15"><ScanLine size={21} /></span><div><h2 className="text-sm font-black">مسح رمز الحضور</h2><p className="mt-0.5 text-[10px] text-blue-100">وجّه الكاميرا نحو الرمز المعروض في القاعة</p></div></div>
-        <button onClick={onClose} title="إغلاق الماسح" aria-label="إغلاق الماسح" className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 hover:bg-white/20"><X size={18} /></button>
-      </header>
+  return <Dialog title="مسح رمز الحضور" description="وجّه الكاميرا نحو الرمز المعروض في القاعة" size="md" scrollContent onClose={onClose}>
+
       <div className="p-5">
-        <div className="relative aspect-square overflow-hidden rounded-2xl bg-[#07192d]">
+        <div className="relative aspect-square overflow-hidden rounded-q-control bg-q-header">
           <video ref={videoRef} muted playsInline className="h-full w-full object-cover" />
-          <div className="pointer-events-none absolute inset-[14%] rounded-2xl border-2 border-white/80 shadow-[0_0_0_999px_rgba(2,15,30,.35)]" />
-          {cameraError && <div className="absolute inset-0 grid place-items-center bg-[#07192d] p-8 text-center"><div><Camera className="mx-auto text-[#61b7ff]" size={34} /><p className="mt-4 text-xs font-bold leading-6 text-white">{cameraError}</p></div></div>}
-          {submitting && <div className="absolute inset-0 grid place-items-center bg-[#07192d]/95 p-8 text-center"><div><LoaderCircle className="mx-auto animate-spin text-[#61b7ff]" size={38} /><p className="mt-4 text-xs font-black text-white">تم التقاط الرمز، جارٍ تسجيل حضورك…</p><p className="mt-2 text-[10px] text-blue-100">لا تغلق النافذة حتى يكتمل التحقق.</p></div></div>}
+          <div className="pointer-events-none absolute inset-[14%] rounded-q-control border-2 border-q-border/80 " />
+          {cameraError && <div className="absolute inset-0 grid place-items-center bg-q-header p-8 text-center"><div><Camera className="mx-auto text-q-link" size={34} /><p className="mt-4 text-q-caption font-bold leading-6 text-q-on-primary">{cameraError}</p></div></div>}
+          {submitting && <div className="absolute inset-0 grid place-items-center bg-q-scrim p-8 text-center"><div><LoaderCircle className="mx-auto animate-spin text-q-link" size={38} /><p className="mt-4 text-q-caption font-bold text-q-on-primary">تم التقاط الرمز، جارٍ تسجيل حضورك…</p><p className="mt-2 text-q-caption text-q-text-2">لا تغلق النافذة حتى يكتمل التحقق.</p></div></div>}
         </div>
-        {submissionError && <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-[11px] font-bold leading-5 text-red-800"><p>{submissionError}</p><button type="button" onClick={() => { processingRef.current = false; setSubmissionError(null); setCameraError("أغلق النافذة وافتح الماسح مجدداً، أو التقط صورة جديدة للرمز."); }} className="mt-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-[10px] font-black">المحاولة بصورة أخرى</button></div>}
-        <label className="mt-4 flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#b9d8f4] bg-[#eef7ff] text-xs font-black text-[#086fc8] hover:bg-[#e1f1ff]">
+        {submissionError && <div role="alert" className="mt-4 rounded-q-control border border-q-danger bg-q-danger-soft p-3 text-q-caption font-bold leading-5 text-q-danger"><p>{submissionError}</p><Button variant="secondary" type="button" onClick={() => { processingRef.current = false; setSubmissionError(null); setCameraError("أغلق النافذة وافتح الماسح مجدداً، أو التقط صورة جديدة للرمز."); }} className="mt-2 rounded-q-control border px-3 py-2 font-bold">المحاولة بصورة أخرى</Button></div>}
+        <label className="mt-4 flex h-12 cursor-pointer items-center justify-center gap-2 rounded-q-control border border-q-primary bg-q-surface-2 text-q-caption font-bold text-q-link hover:bg-q-surface-2">
           {imageBusy ? <LoaderCircle className="animate-spin" size={17} /> : <ImagePlus size={17} />}
           التقاط صورة للرمز
           <input type="file" accept="image/*" capture="environment" onChange={readImage} disabled={imageBusy || submitting} className="sr-only" />
         </label>
       </div>
-    </section>
-  </div>;
+  </Dialog>;
 }
