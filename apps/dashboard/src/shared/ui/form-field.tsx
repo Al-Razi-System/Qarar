@@ -17,18 +17,18 @@ export function FormField({
 }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-2 block text-[13px] font-bold text-[#22324b]">
+      <span className="mb-2 block text-q-caption font-bold text-q-text">
         {label}
       </span>
       <span
-        className={`flex h-12 items-center gap-3 rounded-xl border bg-white px-3.5 transition focus-within:border-[#0066cc] focus-within:ring-4 focus-within:ring-[#0066cc]/8 ${
-          error ? "border-red-400" : "border-[#dce5ef]"
+        className={`flex h-12 items-center gap-3 rounded-q-control border bg-q-surface px-3.5 transition focus-within:border-q-primary focus-within:ring-4 focus-within:ring-q-primary/10 ${
+          error ? "border-q-danger" : "border-q-border"
         }`}
       >
-        {icon && <span className="text-[#8190a4]">{icon}</span>}
+        {icon && <span className="text-q-text-3">{icon}</span>}
         <input
           suppressHydrationWarning
-          className="min-w-0 flex-1 bg-transparent text-sm text-[#0a1330] outline-none placeholder:text-[#9aa8b9]"
+          className="min-w-0 flex-1 bg-transparent text-q-ui text-q-text outline-none placeholder:text-q-text-3"
           type={type}
           dir={dir ?? (type === "email" || type === "password" ? "ltr" : undefined)}
           {...props}
@@ -36,8 +36,8 @@ export function FormField({
       </span>
       {(hint || error) && (
         <span
-          className={`mt-1.5 block text-[11px] ${
-            error ? "text-red-600" : "text-[#718096]"
+          className={`mt-1.5 block text-q-caption ${
+            error ? "text-q-danger" : "text-q-text-2"
           }`}
         >
           {error ?? hint}
