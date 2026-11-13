@@ -3,15 +3,11 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
 
-// The interface typeface is self-hosted from the files already shipped for the
-// minutes PDF, so no page ever depends on an external font service.
+// The interface typeface is Readex Pro, a variable font (weights 160–700) that covers Arabic and Latin.
+// It is self-hosted, so no page depends on an external font service. Official PDFs keep IBM Plex Sans Arabic.
 const qararSans = localFont({
-  src: [
-    { path: "../assets/fonts/IBMPlexSansArabic-Regular.ttf", weight: "400", style: "normal" },
-    { path: "../assets/fonts/IBMPlexSansArabic-Medium.ttf", weight: "500", style: "normal" },
-    { path: "../assets/fonts/IBMPlexSansArabic-SemiBold.ttf", weight: "600", style: "normal" },
-    { path: "../assets/fonts/IBMPlexSansArabic-Bold.ttf", weight: "700", style: "normal" },
-  ],
+  src: "../assets/fonts/ReadexPro-Variable.ttf",
+  weight: "160 700",
   variable: "--font-qarar",
   display: "swap",
 });
