@@ -1,5 +1,10 @@
 "use client";
 
+import { Card as QCard } from "@/shared/ui/card";
+import { Badge as QBadge } from "@/shared/ui/badge";
+
+import { Button as QButton } from "@/shared/ui/button";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -35,9 +40,9 @@ type Notice = { kind: "success" | "error"; text: string } | null;
 type LegislativeModel = PolicyVersion & { items: PolicyItem[] };
 
 const input =
-  "h-10 w-full rounded-xl border border-[var(--q-border)] bg-white px-3 text-[11px] text-[#263950] outline-none transition focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
+  "h-10 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-caption text-q-text outline-none transition focus:border-q-primary focus:ring-2 focus:ring-q-primary/10";
 const textarea =
-  "min-h-24 w-full rounded-xl border border-[var(--q-border)] bg-white p-3 text-[11px] leading-6 text-[#263950] outline-none transition focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
+  "min-h-24 w-full rounded-q-control border border-q-border bg-q-surface p-3 text-q-caption leading-6 text-q-text outline-none transition focus:border-q-primary focus:ring-2 focus:ring-q-primary/10";
 const tabLabels: Record<Tab, string> = {
   structure: "1. المادة المختارة",
   rules: "2. ماذا تنفذ المادة؟",
@@ -175,12 +180,12 @@ function Field({
   const isSystemIdentifier = label.includes("رمز القاعدة");
   return (
     <label className={isSystemIdentifier ? "hidden" : "block"}>
-      <span className="mb-1.5 block text-[10px] font-black text-[#344861]">
+      <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
         {label}
       </span>
       {children}
       {hint && (
-        <span className="mt-1 block text-[8px] leading-4 text-[var(--q-text-3)]">
+        <span className="mt-1 block text-q-caption leading-normal text-q-text-3">
           {hint}
         </span>
       )}
@@ -579,19 +584,19 @@ export function LegislativeModelWorkspace({
     <>
       <section
         id="legislative-model"
-        className="overflow-hidden rounded-2xl border border-[#d7e3ef] bg-white shadow-[0_12px_34px_rgba(15,42,72,.06)]"
+        className="overflow-hidden rounded-q-card border border-q-border bg-q-surface "
       >
-        <header className="border-b border-[#e6edf4] bg-[linear-gradient(135deg,#071b39_0%,#0066cc_72%,#1e88e5_100%)] px-5 py-5 text-white">
+        <header className="border-b border-q-border bg-q-header px-5 py-5 text-q-on-primary">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-[9px] font-black text-[#ffb46c]">
+              <p className="text-q-caption font-bold text-q-on-header">
                 العقل التشريعي والحوكمي
               </p>
-              <h2 className="mt-1 flex items-center gap-2 text-lg font-black">
+              <h2 className="mt-1 flex items-center gap-2 text-q-body font-bold">
                 <Scale size={20} />
                 النموذج التشريعي التنفيذي
               </h2>
-              <p className="mt-2 max-w-3xl text-[10px] leading-5 text-blue-100">
+              <p className="mt-2 max-w-3xl text-q-caption leading-5 text-q-on-header">
                 افصل النص الرسمي عن تفسيره الرقمي، وحدد الشروط والمتطلبات
                 والجهات والنتائج والمسارات مع إمكانية التتبع والمقارنة.
               </p>
@@ -599,7 +604,7 @@ export function LegislativeModelWorkspace({
             <div className="flex items-center gap-2">
               <select
                 aria-label="الإصدار التشريعي"
-                className="h-9 rounded-xl border border-white/20 bg-white/10 px-3 text-[10px] font-bold text-white outline-none"
+                className="h-11 rounded-q-control border border-q-surface/20 bg-q-surface/10 px-3 text-q-ui font-bold text-q-on-primary outline-none"
                 value={versionId}
                 onChange={(event) => {
                   setVersionId(event.target.value);
@@ -607,12 +612,12 @@ export function LegislativeModelWorkspace({
                   setComparison(null);
                 }}
               >
-                <option className="text-[var(--q-text)]" value="">
+                <option className="text-q-text" value="">
                   اختر إصدارًا
                 </option>
                 {policy.versions.map((version) => (
                   <option
-                    className="text-[var(--q-text)]"
+                    className="text-q-text"
                     key={version.id}
                     value={version.id}
                   >
@@ -621,13 +626,13 @@ export function LegislativeModelWorkspace({
                   </option>
                 ))}
               </select>
-              <button
+              <QButton type="submit" variant="ghost"
                 onClick={() => void loadModel()}
                 aria-label="تحديث النموذج"
-                className="grid h-9 w-9 place-items-center rounded-xl border border-white/20 bg-white/10"
+                className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control border border-q-surface/20 bg-q-surface/10"
               >
                 <RefreshCw size={14} className={busy ? "animate-spin" : ""} />
-              </button>
+              </QButton>
             </div>
           </div>
         </header>
@@ -635,35 +640,35 @@ export function LegislativeModelWorkspace({
           <nav
             aria-label="خطوات تحويل النص النظامي إلى قواعد"
             role="tablist"
-            className="flex gap-1 overflow-x-auto border-b border-[#e6edf4] bg-[var(--q-bg)] p-2"
+            className="flex gap-1 overflow-x-auto border-b border-q-border bg-q-bg p-2"
           >
             {(Object.keys(tabLabels) as Tab[]).map((value) => (
-              <button
+              <QButton variant="ghost"
                 key={value}
                 type="button"
                 onClick={() => setTab(value)}
                 role="tab"
                 aria-selected={tab === value}
                 title={tabGuides[value].description}
-                className={`whitespace-nowrap rounded-xl px-3 py-2 text-[9px] font-black transition ${tab === value ? "bg-[var(--q-primary)] text-white shadow" : "text-[#607287] hover:bg-white"}`}
+                className={`min-w-11 whitespace-nowrap rounded-q-control px-3 py-2 text-q-ui font-bold transition ${tab === value ? "bg-q-primary text-q-on-primary shadow" : "text-q-text-2 hover:bg-q-surface"}`}
               >
                 {tabLabels[value]}
-              </button>
+              </QButton>
             ))}
           </nav>
         )}
         {!rulesOnly && (
-          <div className="border-b border-[#dce8f2] bg-[#f3f9ff] px-4 py-3">
+          <div className="border-b border-q-border bg-q-surface px-4 py-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <strong className="text-[10px] font-black text-[#17466f]">
+                <strong className="text-q-caption font-bold text-q-text">
                   {tabGuides[tab].question}
                 </strong>
-                <p className="mt-1 max-w-3xl text-[9px] leading-5 text-[#5c7389]">
+                <p className="mt-1 max-w-3xl text-q-caption leading-5 text-q-text-2">
                   {tabGuides[tab].description}
                 </p>
               </div>
-              <span className="rounded-xl border border-[#cfe3f4] bg-white px-3 py-2 text-[8px] font-black text-[#356587]">
+              <span className="rounded-q-control border border-q-border bg-q-surface px-3 py-2 text-q-caption font-bold text-q-text-2">
                 {tabGuides[tab].result}
               </span>
             </div>
@@ -671,13 +676,13 @@ export function LegislativeModelWorkspace({
         )}
         {notice && (
           <div
-            className={`m-4 rounded-xl border px-4 py-3 text-[10px] ${notice.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}
+            className={`m-4 rounded-q-control border px-4 py-3 text-q-caption ${notice.kind === "success" ? "border-q-border bg-q-success-soft text-q-success" : "border-q-border bg-q-danger-soft text-q-danger"}`}
           >
             {notice.text}
           </div>
         )}
         {!model ? (
-          <div className="grid min-h-72 place-items-center text-[10px] text-[var(--q-text-3)]">
+          <div className="grid min-h-72 place-items-center text-q-caption text-q-text-3">
             <RefreshCw className="mb-2 animate-spin" />
             جاري تحميل النموذج التشريعي...
           </div>
@@ -685,30 +690,30 @@ export function LegislativeModelWorkspace({
           <div className="p-4">
             {tab === "structure" && (
               <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-                <aside className="rounded-xl border border-[var(--q-border)] bg-[var(--q-bg)]">
-                  <div className="border-b border-[#e8eef4] p-3">
-                    <h3 className="text-[11px] font-black text-[#21354d]">
+                <aside className="rounded-q-control border border-q-border bg-q-bg">
+                  <div className="border-b border-q-border p-3">
+                    <h3 className="text-q-caption font-bold text-q-text">
                       هيكل الوثيقة
                     </h3>
-                    <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
+                    <p className="mt-1 text-q-caption text-q-text-3">
                       باب ← فصل ← مادة ← فقرة ← إجراء
                     </p>
                   </div>
                   <div className="max-h-[680px] overflow-y-auto p-2">
                     {model.items.map((item) => (
-                      <button
+                      <QButton type="submit" variant="ghost"
                         key={item.id}
                         onClick={() => selectItemFromTree(item)}
                         style={{
                           paddingRight: `${12 + (item.parent_item_id ? 18 : 0)}px`,
                         }}
-                        className={`mb-1 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-right transition ${selectedItem?.id === item.id ? "bg-[var(--q-surface-2)] text-[var(--q-primary)]" : "text-[#40546b] hover:bg-white"}`}
+                        className={`min-w-11 mb-1 flex w-full items-center justify-between rounded-q-control px-3 py-2.5 text-right transition ${selectedItem?.id === item.id ? "bg-q-surface-2 text-q-primary" : "text-q-text-2 hover:bg-q-surface"}`}
                       >
                         <span>
-                          <strong className="block text-[9px]">
+                          <strong className="block text-q-caption">
                             {item.item_code} · {item.title_ar}
                           </strong>
-                          <small className="mt-1 block text-[7px] opacity-70">
+                          <small className="mt-1 block text-q-caption opacity-70">
                             {typeLabels[item.item_type] ?? item.item_type}
                             {item.source_page_from
                               ? ` · ص ${item.source_page_from}`
@@ -716,24 +721,24 @@ export function LegislativeModelWorkspace({
                           </small>
                         </span>
                         <ChevronLeft size={12} />
-                      </button>
+                      </QButton>
                     ))}
                   </div>
                 </aside>
                 <div className="space-y-4">
                   {selectedItem ? (
-                    <section className="rounded-xl border border-[var(--q-border)] p-4">
+                    <section className="rounded-q-control border border-q-border p-4">
                       <div className="mb-4 flex items-center justify-between">
                         <div>
-                          <h3 className="text-[12px] font-black text-[var(--q-text)]">
+                          <h3 className="text-q-caption font-bold text-q-text">
                             {selectedItem.title_ar}
                           </h3>
-                          <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
+                          <p className="mt-1 text-q-caption text-q-text-3">
                             النص الرسمي محفوظ دون استبداله بالتفسير التنفيذي.
                           </p>
                         </div>
                         <span
-                          className={`rounded-full px-2.5 py-1 text-[8px] font-black ${itemForm.requires_executable_rule ? "bg-orange-50 text-orange-700" : "bg-slate-100 text-slate-600"}`}
+                          className={`rounded-full px-2.5 py-1 text-q-caption font-bold ${itemForm.requires_executable_rule ? "bg-q-warning-soft text-q-warning" : "bg-q-neutral-soft text-q-text-2"}`}
                         >
                           {itemForm.requires_executable_rule
                             ? "تحتاج قاعدة تنفيذية"
@@ -849,7 +854,7 @@ export function LegislativeModelWorkspace({
                             }
                           />
                         </Field>
-                        <label className="flex h-10 items-center gap-2 self-end rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[#40546b]">
+                        <label className="flex h-10 items-center gap-2 self-end rounded-q-control border border-q-border px-3 text-q-caption font-bold text-q-text-2">
                           <input
                             disabled={!editable}
                             type="checkbox"
@@ -865,7 +870,7 @@ export function LegislativeModelWorkspace({
                         </label>
                       </div>
                       {editable && (
-                        <button
+                        <QButton type="submit" variant="ghost"
                           disabled={busy}
                           onClick={() =>
                             void execute(
@@ -895,30 +900,30 @@ export function LegislativeModelWorkspace({
                               "تم حفظ النص والبيانات القانونية للمادة.",
                             )
                           }
-                          className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--q-primary)] px-4 text-[9px] font-black text-white disabled:opacity-50"
+                          className="min-w-11 mt-4 inline-flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary disabled:opacity-50"
                         >
                           <Save size={13} />
                           حفظ بيانات المادة
-                        </button>
+                        </QButton>
                       )}
                     </section>
                   ) : (
-                    <section className="grid min-h-56 place-items-center rounded-xl border border-dashed border-[#cbd9e7] bg-[var(--q-bg)] p-8 text-center">
+                    <section className="grid min-h-56 place-items-center rounded-q-control border border-dashed border-q-border bg-q-bg p-8 text-center">
                       <div>
                         <FileText
-                          className="mx-auto mb-3 text-[#7da8cf]"
+                          className="mx-auto mb-3 text-q-text-3"
                           size={30}
                         />
-                        <h3 className="text-[12px] font-black text-[var(--q-text)]">
+                        <h3 className="text-q-caption font-bold text-q-text">
                           لم يُضف محتوى تشريعي بعد
                         </h3>
-                        <p className="mx-auto mt-2 max-w-md text-[9px] leading-5 text-[var(--q-text-3)]">
+                        <p className="mx-auto mt-2 max-w-md text-q-caption leading-5 text-q-text-3">
                           ابدأ بإضافة الفصل الأول من قسم إدارة الإصدار، ثم أضف
                           المواد واختر الفصل من حقل البند الأب.
                         </p>
                         <a
                           href="#policy-management"
-                          className="mt-4 inline-flex h-10 items-center rounded-xl bg-[var(--q-primary)] px-4 text-[9px] font-black text-white"
+                          className="inline-flex min-h-11 min-w-11 items-center mt-4 inline-flex min-h-11 items-center rounded-q-control bg-q-primary px-4 text-q-caption font-bold text-q-on-primary"
                         >
                           الانتقال إلى إضافة أول بند
                         </a>
@@ -927,8 +932,8 @@ export function LegislativeModelWorkspace({
                   )}
                   {model
                     ? false && (
-                        <section className="rounded-xl border border-[var(--q-border)] p-4">
-                          <h3 className="mb-4 text-[11px] font-black text-[var(--q-text)]">
+                        <section className="rounded-q-control border border-q-border p-4">
+                          <h3 className="mb-4 text-q-caption font-bold text-q-text">
                             بيانات الإصدار القانونية
                           </h3>
                           <div className="grid gap-3 md:grid-cols-3">
@@ -1049,7 +1054,7 @@ export function LegislativeModelWorkspace({
                             />
                           </Field>
                           {editable && (
-                            <button
+                            <QButton type="submit" variant="ghost"
                               disabled={busy}
                               onClick={() =>
                                 void execute(
@@ -1081,11 +1086,11 @@ export function LegislativeModelWorkspace({
                                   "تم حفظ بيانات الإصدار القانونية.",
                                 )
                               }
-                              className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--q-text)] px-4 text-[9px] font-black text-white"
+                              className="min-w-11 mt-4 inline-flex min-h-11 items-center gap-2 rounded-q-control bg-q-text px-4 text-q-ui font-bold text-q-on-primary"
                             >
                               <Save size={13} />
                               حفظ بيانات الإصدار
-                            </button>
+                            </QButton>
                           )}
                         </section>
                       )
@@ -1096,7 +1101,7 @@ export function LegislativeModelWorkspace({
 
             {tab === "rules" && selectedItem && (
               <div className="space-y-4">
-                <div className="grid gap-2 rounded-2xl border border-[#d7e7f4] bg-[#f7fbff] p-3 sm:grid-cols-4">
+                <QCard className="p-0 grid gap-2 rounded-q-card border border-q-border bg-q-surface p-3 sm:grid-cols-4">
                   {[
                     "1. متى تعمل القاعدة؟",
                     "2. ما الشرط المطلوب؟",
@@ -1105,84 +1110,84 @@ export function LegislativeModelWorkspace({
                   ].map((step) => (
                     <div
                       key={step}
-                      className="rounded-xl bg-white px-3 py-2 text-center text-[8px] font-black text-[#315d7f] shadow-sm"
+                      className="rounded-q-control bg-q-surface px-3 py-2 text-center text-q-caption font-bold text-q-text-2 "
                     >
                       {step}
                     </div>
                   ))}
-                </div>
+                </QCard>
                 {!rulesOnly && (
-                  <aside className="min-w-0 rounded-2xl border border-[#dbe6f0] bg-white p-4 shadow-[0_10px_28px_rgba(25,67,110,.05)]">
+                  <aside className="min-w-0 rounded-q-card border border-q-border bg-q-surface p-4 ">
                     <div className="mb-3 flex items-center justify-between">
                       <div>
-                        <h3 className="text-[11px] font-black text-[var(--q-text)]">
+                        <h3 className="text-q-caption font-bold text-q-text">
                           قواعد المادة
                         </h3>
-                        <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
+                        <p className="mt-1 text-q-caption text-q-text-3">
                           {selectedItem.title_ar}
                         </p>
                       </div>
                       {editable && selectedItemCanHaveRules && (
-                        <button
+                        <QButton type="submit" variant="ghost"
                           onClick={() => setRuleForm(emptyRule(selectedItem))}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--q-primary)] px-3 text-[9px] font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.18)]"
+                          className="min-w-11 inline-flex min-h-11 items-center gap-1.5 rounded-q-control bg-q-primary px-3 text-q-ui font-bold text-q-on-primary "
                           aria-label="إضافة قاعدة"
                         >
                           <Plus size={14} />
                           إضافة قاعدة
-                        </button>
+                        </QButton>
                       )}
                     </div>
                     {selectedItemCanHaveRules && (
-                      <div className="mb-3 rounded-xl bg-[var(--q-surface-2)] px-3 py-2 text-[8px] font-bold text-[#295f8e]">
+                      <div className="mb-3 rounded-q-control bg-q-surface-2 px-3 py-2 text-q-caption font-bold text-q-text-2">
                         هذه المادة تدعم أكثر من قاعدة تنفيذية. القواعد الحالية:{" "}
                         {selectedItem.rules?.length ?? 0}.
                       </div>
                     )}
                     {!selectedItemCanHaveRules && (
-                      <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[9px] leading-5 text-amber-800">
+                      <QCard className="p-0 mb-3 rounded-q-control border border-q-border bg-q-warning-soft p-3 text-q-caption leading-5 text-q-warning">
                         اختر مادة أو فقرة أو إجراءً من القائمة أدناه. الأبواب
                         والفصول تُستخدم للتنظيم فقط ولا تحمل قواعد تشغيلية
                         مباشرة.
-                      </div>
+                      </QCard>
                     )}
-                    <div className="mb-3 border-t border-[var(--q-surface-2)] pt-3">
-                      <p className="mb-2 text-[8px] font-black text-[#607287]">
+                    <div className="mb-3 border-t border-q-surface-2 pt-3">
+                      <p className="mb-2 text-q-caption font-bold text-q-text-2">
                         البنود القابلة للتنفيذ
                       </p>
-                      <div className="max-h-40 space-y-1 overflow-x-hidden overflow-y-auto rounded-xl border border-[#e8eef4] bg-[var(--q-bg)] p-2">
+                      <QCard className="p-0 max-h-40 space-y-1 overflow-x-hidden overflow-y-auto rounded-q-control border border-q-border bg-q-bg p-2">
                         {model.items.map((item) => (
-                          <button
+                          <QButton type="submit" variant="ghost"
                             key={item.id}
                             onClick={() => setSelectedItemId(item.id)}
                             style={{
                               paddingRight: `${10 + (itemDepthById.get(item.id) ?? 0) * 18}px`,
                             }}
-                            className={`w-full min-w-0 border-r-2 rounded-lg py-2.5 pl-2 text-right text-[9px] transition ${item.id === selectedItem.id ? "border-[var(--q-primary)] bg-[var(--q-surface-2)] font-black text-[var(--q-primary)]" : executableItemTypes.has(item.item_type) ? "border-[#c9deef] text-[var(--q-text-2)] hover:bg-[#f7fafc]" : "border-transparent text-[var(--q-text-3)] hover:bg-[#f7fafc]"}`}
+                            className={`min-w-11 w-full min-w-0 border-r-2 rounded-q-control py-2.5 pl-2 text-right text-q-ui transition ${item.id === selectedItem.id ? "border-q-primary bg-q-surface-2 font-bold text-q-primary" : executableItemTypes.has(item.item_type) ? "border-q-border text-q-text-2 hover:bg-q-surface" : "border-transparent text-q-text-3 hover:bg-q-surface"}`}
                           >
                             {item.item_code} · {item.title_ar}
-                          </button>
+                          </QButton>
                         ))}
-                      </div>
+                      </QCard>
                     </div>
                     <div className="space-y-2">
                       {(selectedItem.rules ?? []).map((rule) => (
-                        <button
+                        <QButton type="submit" variant="ghost"
                           key={rule.id}
                           onClick={() => editRule(rule)}
-                          className={`w-full rounded-xl border p-3 text-right ${ruleForm?.id === rule.id ? "border-[#7ab8f5] bg-[var(--q-surface-2)]" : "border-[var(--q-border)]"}`}
+                          className={`min-w-11 w-full rounded-q-control border p-3 text-right ${ruleForm?.id === rule.id ? "border-q-primary bg-q-surface-2" : "border-q-border"}`}
                         >
-                          <strong className="text-[9px] text-[#263950]">
+                          <strong className="text-q-caption text-q-text">
                             {rule.name_ar}
                           </strong>
-                          <span className="mt-1 block text-[7px] text-[var(--q-text-3)]">
+                          <span className="mt-1 block text-q-caption text-q-text-3">
                             {rule.rule_code} ·{" "}
                             {ruleTypeLabels[rule.rule_type] ?? rule.rule_type}
                           </span>
-                        </button>
+                        </QButton>
                       ))}
                       {!selectedItem.rules?.length && (
-                        <div className="rounded-xl border border-dashed border-[#cfdae5] p-6 text-center text-[8px] text-[var(--q-text-3)]">
+                        <div className="rounded-q-control border border-dashed border-q-border p-6 text-center text-q-caption text-q-text-3">
                           <Gavel className="mx-auto mb-2" size={20} />
                           لا توجد قواعد تنفيذية لهذه المادة.
                         </div>
@@ -1195,25 +1200,25 @@ export function LegislativeModelWorkspace({
                     selectedItemCanHaveRules &&
                     !ruleForm &&
                     editable && (
-                      <div className="mb-4 flex justify-center rounded-2xl border border-[#dbe7f2] bg-[var(--q-bg)] p-6">
-                        <button
+                      <QCard className="p-0 mb-4 flex justify-center rounded-q-card border border-q-border bg-q-bg p-6">
+                        <QButton variant="ghost"
                           type="button"
                           onClick={() => setRuleForm(emptyRule(selectedItem))}
-                          className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--q-primary)] px-5 text-[10px] font-black text-white shadow-[0_10px_22px_rgba(0,102,204,.2)]"
+                          className="min-w-11 inline-flex h-11 items-center gap-2 rounded-q-control bg-q-primary px-5 text-q-ui font-bold text-q-on-primary "
                         >
                           <Plus size={15} />
                           إنشاء قاعدة جديدة للمادة
-                        </button>
-                      </div>
+                        </QButton>
+                      </QCard>
                     )}
                   {!selectedItemCanHaveRules ? (
-                    <div className="grid min-h-96 place-items-center rounded-xl border border-dashed border-[#cfdae5] bg-[var(--q-bg)] p-8 text-center text-[9px] text-[var(--q-text-3)]">
+                    <QCard className="p-0 grid min-h-96 place-items-center rounded-q-control border border-dashed border-q-border bg-q-bg p-8 text-center text-q-caption text-q-text-3">
                       <div>
                         <Gavel
-                          className="mx-auto mb-3 text-[#7da8cf]"
+                          className="mx-auto mb-3 text-q-text-3"
                           size={30}
                         />
-                        <strong className="block text-[12px] text-[#40546b]">
+                        <strong className="block text-q-caption text-q-text-2">
                           حدد بندًا تنفيذيًا لإنشاء قاعدة
                         </strong>
                         <span className="mt-2 block">
@@ -1221,12 +1226,12 @@ export function LegislativeModelWorkspace({
                           مصدرها القانوني واضحًا وقابلًا للتدقيق.
                         </span>
                       </div>
-                    </div>
+                    </QCard>
                   ) : !ruleForm && !rulesOnly ? (
-                    <div className="grid min-h-96 place-items-center rounded-xl border border-dashed border-[#cfdae5] text-center text-[9px] text-[var(--q-text-3)]">
+                    <div className="grid min-h-96 place-items-center rounded-q-control border border-dashed border-q-border text-center text-q-caption text-q-text-3">
                       <div>
                         <ListChecks className="mx-auto mb-3" size={30} />
-                        <strong className="block text-[11px] text-[#40546b]">
+                        <strong className="block text-q-caption text-q-text-2">
                           اختر قاعدة أو أنشئ قاعدة جديدة
                         </strong>
                         <span className="mt-1 block">
@@ -1278,39 +1283,39 @@ export function LegislativeModelWorkspace({
 
             {tab === "references" && selectedItem && (
               <div className="space-y-4">
-                <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-[9px] leading-6 text-blue-900">
+                <QCard className="p-0 rounded-q-control border border-q-border bg-q-surface-2 px-4 py-3 text-q-caption leading-6 text-q-link">
                   <strong>تنبيه مهم:</strong> الإحالة هنا علاقة بين نصوص
                   قانونية، مثل «مستند إلى» أو «يلغي». نقل موضوع من مجلس إلى مجلس
                   آخر يُضبط داخل القاعدة التنفيذية ومسار الاعتماد، وليس في هذا
                   التبويب.
-                </div>
+                </QCard>
                 <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-                  <section className="rounded-xl border border-[var(--q-border)] p-4">
-                    <h3 className="text-[11px] font-black text-[var(--q-text)]">
+                  <section className="rounded-q-control border border-q-border p-4">
+                    <h3 className="text-q-caption font-bold text-q-text">
                       الإحالات القانونية للمادة
                     </h3>
                     <div className="mt-3 space-y-2">
                       {(selectedItem.references ?? []).map((reference) => (
                         <article
                           key={reference.id}
-                          className="flex items-start justify-between rounded-xl border border-[#e4ebf2] p-3"
+                          className="flex items-start justify-between rounded-q-control border border-q-border p-3"
                         >
                           <div>
-                            <span className="rounded-full bg-[var(--q-surface-2)] px-2 py-1 text-[7px] font-black text-[var(--q-primary)]">
+                            <QBadge className="rounded-full bg-q-surface-2 px-2 py-1 text-q-caption font-bold text-q-primary">
                               {referenceLabels[reference.reference_type] ??
                                 reference.reference_type}
-                            </span>
-                            <strong className="mt-2 block text-[9px] text-[#263950]">
+                            </QBadge>
+                            <strong className="mt-2 block text-q-caption text-q-text">
                               {reference.citation_text ||
                                 reference.external_reference ||
                                 "إحالة داخلية"}
                             </strong>
-                            <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
+                            <p className="mt-1 text-q-caption text-q-text-3">
                               {reference.notes}
                             </p>
                           </div>
                           {editable && (
-                            <button
+                            <QButton type="submit" variant="ghost"
                               onClick={() =>
                                 void execute(
                                   () =>
@@ -1321,22 +1326,22 @@ export function LegislativeModelWorkspace({
                                 )
                               }
                               aria-label="حذف الإحالة"
-                              className="text-red-600"
+                              className="min-w-11 text-q-danger"
                             >
                               <Trash2 size={13} />
-                            </button>
+                            </QButton>
                           )}
                         </article>
                       ))}
                       {!selectedItem.references?.length && (
-                        <p className="rounded-xl border border-dashed p-6 text-center text-[8px] text-[var(--q-text-3)]">
+                        <p className="rounded-q-control border border-dashed p-6 text-center text-q-caption text-q-text-3">
                           لا توجد إحالات مسجلة.
                         </p>
                       )}
                     </div>
                   </section>
-                  <section className="rounded-xl border border-[var(--q-border)] p-4">
-                    <h3 className="text-[11px] font-black text-[var(--q-text)]">
+                  <section className="rounded-q-control border border-q-border p-4">
+                    <h3 className="text-q-caption font-bold text-q-text">
                       إضافة إحالة
                     </h3>
                     <div className="mt-4 space-y-3">
@@ -1402,7 +1407,7 @@ export function LegislativeModelWorkspace({
                         />
                       </Field>
                       {editable && (
-                        <button
+                        <QButton type="submit" variant="ghost"
                           disabled={
                             busy ||
                             (!referenceForm.external_reference &&
@@ -1444,11 +1449,11 @@ export function LegislativeModelWorkspace({
                               }),
                             )
                           }
-                          className="h-10 w-full rounded-xl bg-[var(--q-primary)] text-[9px] font-black text-white disabled:opacity-50"
+                          className="min-w-11 min-h-11 w-full rounded-q-control bg-q-primary text-q-ui font-bold text-q-on-primary disabled:opacity-50"
                         >
                           <Link2 className="ml-1 inline" size={13} />
                           حفظ الإحالة
-                        </button>
+                        </QButton>
                       )}
                     </div>
                   </section>
@@ -1471,7 +1476,7 @@ export function LegislativeModelWorkspace({
             )}
 
             {tab === "readiness" && (
-              <section className="rounded-xl border border-[var(--q-border)] p-4">
+              <section className="rounded-q-control border border-q-border p-4">
                 <div className="mb-4 grid gap-2 sm:grid-cols-3">
                   <ReadinessStep
                     number="1"
@@ -1491,67 +1496,67 @@ export function LegislativeModelWorkspace({
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h3 className="flex items-center gap-2 text-[12px] font-black text-[var(--q-text)]">
-                      <ShieldCheck size={17} className="text-emerald-600" />
+                    <h3 className="flex items-center gap-2 text-q-caption font-bold text-q-text">
+                      <ShieldCheck size={17} className="text-q-success" />
                       فحص اكتمال الإصدار
                     </h3>
-                    <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
+                    <p className="mt-1 text-q-caption text-q-text-3">
                       يتحقق من النصوص والنطاقات والقواعد والصلاحيات والمسارات
                       والمصدر.
                     </p>
                   </div>
-                  <button
+                  <QButton type="submit" variant="ghost"
                     disabled={busy}
                     onClick={() => void runReadiness()}
-                    className="h-10 rounded-xl bg-[var(--q-primary)] px-4 text-[9px] font-black text-white"
+                    className="min-w-11 min-h-11 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary"
                   >
                     {busy ? "جارٍ الفحص..." : "تشغيل الفحص"}
-                  </button>
+                  </QButton>
                 </div>
                 {readiness ? (
                   <div className="mt-5 grid gap-4 lg:grid-cols-[220px_1fr]">
                     <div
-                      className={`grid place-items-center rounded-2xl p-6 text-center ${readiness.ready ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}
+                      className={`grid place-items-center rounded-q-card p-6 text-center ${readiness.ready ? "bg-q-success-soft text-q-success" : "bg-q-warning-soft text-q-warning"}`}
                     >
-                      <strong className="text-4xl">{readiness.score}%</strong>
-                      <span className="mt-2 text-[9px] font-black">
+                      <strong className="text-q-h1">{readiness.score}%</strong>
+                      <span className="mt-2 text-q-caption font-bold">
                         {readiness.ready ? "جاهز للمراجعة" : "يحتاج استكمال"}
                       </span>
-                      <small className="mt-2 text-[8px]">
+                      <small className="mt-2 text-q-caption">
                         {readiness.items_ready} من {readiness.items_total} بند
                         مكتمل
                       </small>
                     </div>
                     <div className="space-y-2">
                       {readiness.errors.map((item) => (
-                        <div
+                        <QCard
                           key={item.code}
-                          className="flex gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-[9px] text-red-800"
+                          className="p-0 flex gap-2 rounded-q-control border border-q-border bg-q-danger-soft p-3 text-q-caption text-q-danger"
                         >
                           <AlertTriangle size={14} />
                           <div>
                             <strong>{item.code}</strong>
                             <p className="mt-1">{item.message}</p>
                           </div>
-                        </div>
+                        </QCard>
                       ))}
                       {readiness.warnings.map((item) => (
-                        <div
+                        <QCard
                           key={item.code}
-                          className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[9px] text-amber-800"
+                          className="p-0 flex gap-2 rounded-q-control border border-q-border bg-q-warning-soft p-3 text-q-caption text-q-warning"
                         >
                           <AlertTriangle size={14} />
                           <div>
                             <strong>{item.code}</strong>
                             <p className="mt-1">{item.message}</p>
                           </div>
-                        </div>
+                        </QCard>
                       ))}
                       {readiness.ready && !readiness.warnings.length && (
-                        <div className="flex gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-[9px] text-emerald-800">
+                        <QCard className="p-0 flex gap-2 rounded-q-control border border-q-border bg-q-success-soft p-4 text-q-caption text-q-success">
                           <CheckCircle2 size={16} />
                           اكتملت جميع متطلبات النموذج التشريعي.
-                        </div>
+                        </QCard>
                       )}
                     </div>
                   </div>
@@ -1584,26 +1589,26 @@ export function LegislativeModelWorkspace({
                       }
                       ready={Boolean(model.source_document_hash)}
                     />
-                    <div className="md:col-span-3 rounded-xl border border-dashed border-[#b9cee0] bg-[var(--q-bg)] p-6 text-center">
+                    <QCard className="p-0 md:col-span-3 rounded-q-control border border-dashed border-q-border bg-q-bg p-6 text-center">
                       <ShieldCheck
-                        className="mx-auto text-[#6d9bc3]"
+                        className="mx-auto text-q-text-3"
                         size={28}
                       />
-                      <strong className="mt-3 block text-[11px] text-[#29425f]">
+                      <strong className="mt-3 block text-q-caption text-q-text">
                         الفحص متاح ولا توجد نتيجة محفوظة بعد
                       </strong>
-                      <p className="mt-2 text-[9px] text-[var(--q-text-3)]">
+                      <p className="mt-2 text-q-caption text-q-text-3">
                         اضغط «تشغيل الفحص» للحصول على قائمة دقيقة بالأخطاء
                         والتحذيرات والمتطلبات الناقصة.
                       </p>
-                    </div>
+                    </QCard>
                   </div>
                 )}
               </section>
             )}
 
             {tab === "compare" && (policy.versions?.length ?? 0) > 1 && (
-              <section className="rounded-xl border border-[var(--q-border)] p-4">
+              <section className="rounded-q-control border border-q-border p-4">
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="min-w-[260px] flex-1">
                     <Field label="قارن الإصدار الحالي مع">
@@ -1624,14 +1629,14 @@ export function LegislativeModelWorkspace({
                       </select>
                     </Field>
                   </div>
-                  <button
+                  <QButton type="submit" variant="ghost"
                     disabled={!compareVersionId || busy}
                     onClick={() => void runComparison()}
-                    className="h-10 rounded-xl bg-[var(--q-primary)] px-4 text-[9px] font-black text-white disabled:opacity-50"
+                    className="min-w-11 min-h-11 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary disabled:opacity-50"
                   >
                     <FileDiff className="ml-1 inline" size={14} />
                     تشغيل المقارنة
-                  </button>
+                  </QButton>
                 </div>
                 {comparison ? (
                   <div className="mt-5 grid gap-4 lg:grid-cols-3">
@@ -1658,7 +1663,7 @@ export function LegislativeModelWorkspace({
                     />
                   </div>
                 ) : (
-                  <p className="mt-5 rounded-xl border border-dashed p-8 text-center text-[9px] text-[var(--q-text-3)]">
+                  <p className="mt-5 rounded-q-control border border-dashed p-8 text-center text-q-caption text-q-text-3">
                     اختر إصدارًا سابقًا ثم شغّل المقارنة لعرض المواد المضافة
                     والمعدلة والملغاة.
                   </p>
@@ -1684,119 +1689,119 @@ export function LegislativeModelWorkspace({
       </section>
       {ruleDrawerOpen && selectedItem && selectedItemCanHaveRules && (
         <div
-          className="fixed inset-0 z-50 bg-[#081630]/45 backdrop-blur-sm"
+          className="fixed inset-0 z-50 bg-q-header/45 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-label="إدارة قواعد المادة"
         >
           <aside
-            className="ml-auto flex h-full w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl"
+            className="ml-auto flex h-full w-full max-w-xl flex-col overflow-hidden bg-q-surface shadow-2xl"
             dir="rtl"
           >
-            <header className="flex items-start justify-between gap-4 border-b border-[#e5edf4] bg-[linear-gradient(135deg,var(--q-text),var(--q-primary))] px-5 py-5 text-white">
+            <header className="flex items-start justify-between gap-4 border-b border-q-border bg-q-header px-5 py-5 text-q-on-primary">
               <div>
-                <p className="text-[10px] font-black text-[#ffb46c]">
+                <p className="text-q-caption font-bold text-q-on-header">
                   إدارة تشريعية
                 </p>
-                <h3 className="mt-1 text-base font-black">
+                <h3 className="mt-1 text-q-ui font-bold">
                   قواعد المادة: {selectedItem.title_ar}
                 </h3>
-                <p className="mt-1 text-[10px] text-white/75">
+                <p className="mt-1 text-q-caption text-q-on-primary/75">
                   يمكن للمادة الواحدة أن تحتوي عدة قواعد مستقلة، لكل منها شروط
                   ومتطلبات وصلاحيات ونتائج.
                 </p>
               </div>
-              <button
+              <QButton type="submit" variant="ghost"
                 onClick={() => setRuleDrawerOpen(false)}
-                className="grid h-9 w-9 place-items-center rounded-xl border border-white/20 bg-white/10 text-lg"
+                className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control border border-q-surface/20 bg-q-surface/10 text-q-body"
                 aria-label="إغلاق لوحة قواعد المادة"
               >
                 ×
-              </button>
+              </QButton>
             </header>
             <div className="flex-1 overflow-y-auto p-5">
-              <div className="mb-4 flex items-center justify-between rounded-2xl border border-[#dce9f5] bg-[var(--q-bg)] p-4">
+              <QCard className="p-0 mb-4 flex items-center justify-between rounded-q-card border border-q-border bg-q-bg p-4">
                 <div>
-                  <p className="text-[10px] font-black text-[var(--q-primary)]">
+                  <p className="text-q-caption font-bold text-q-primary">
                     {selectedItem.item_code}
                   </p>
-                  <p className="mt-1 text-xs font-bold text-[#203952]">
+                  <p className="mt-1 text-q-caption font-bold text-q-text">
                     {selectedItem.rules?.length ?? 0} قاعدة مرتبطة بهذه المادة
                   </p>
                 </div>
                 {editable && (
-                  <button
+                  <QButton type="submit" variant="ghost"
                     onClick={() => {
                       setRuleForm(emptyRule(selectedItem));
                       setTab("rules");
                       setRuleDrawerOpen(false);
                     }}
-                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--q-primary)] px-4 text-[10px] font-black text-white"
+                    className="min-w-11 inline-flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary"
                   >
                     <Plus size={15} /> إنشاء قاعدة
-                  </button>
+                  </QButton>
                 )}
-              </div>
+              </QCard>
               <div className="space-y-3">
                 {(selectedItem.rules ?? []).map((rule) => (
                   <article
                     key={rule.id}
-                    className="rounded-2xl border border-[#e2eaf2] p-4"
+                    className="rounded-q-card border border-q-border p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h4 className="text-xs font-black text-[#1e3854]">
+                        <h4 className="text-q-caption font-bold text-q-text">
                           {rule.name_ar}
                         </h4>
-                        <p className="mt-1 text-[10px] text-[var(--q-text-3)]">
+                        <p className="mt-1 text-q-caption text-q-text-3">
                           {ruleTypeLabels[rule.rule_type] ?? rule.rule_type} ·
                           أولوية {rule.priority}
                         </p>
                         {rule.description && (
-                          <p className="mt-2 text-[11px] leading-6 text-[#526f8b]">
+                          <p className="mt-2 text-q-caption leading-6 text-q-text-2">
                             {rule.description}
                           </p>
                         )}
                       </div>
                       {editable && (
-                        <button
+                        <QButton type="submit" variant="ghost"
                           onClick={() => {
                             editRule(rule);
                             setTab("rules");
                             setRuleDrawerOpen(false);
                           }}
-                          className="shrink-0 rounded-lg border border-[#c9def1] px-3 py-2 text-[10px] font-black text-[var(--q-primary)]"
+                          className="min-w-11 shrink-0 rounded-q-control border border-q-border px-3 py-2 text-q-ui font-bold text-q-primary"
                         >
                           تحرير
-                        </button>
+                        </QButton>
                       )}
                     </div>
                   </article>
                 ))}
                 {!selectedItem.rules?.length && (
-                  <div className="rounded-2xl border border-dashed border-[#bdd5e8] bg-[var(--q-bg)] p-8 text-center">
-                    <Gavel className="mx-auto text-[#83a5c5]" size={28} />
-                    <h4 className="mt-3 text-xs font-black text-[#29435e]">
+                  <QCard className="p-0 rounded-q-card border border-dashed border-q-border bg-q-bg p-8 text-center">
+                    <Gavel className="mx-auto text-q-text-3" size={28} />
+                    <h4 className="mt-3 text-q-caption font-bold text-q-text">
                       لا توجد قواعد لهذه المادة بعد
                     </h4>
-                    <p className="mt-2 text-[11px] leading-6 text-[var(--q-text-3)]">
+                    <p className="mt-2 text-q-caption leading-6 text-q-text-3">
                       أنشئ القاعدة الأولى لتحديد الشروط والمتطلبات والجهات
                       المخولة والقرارات والمسار.
                     </p>
-                  </div>
+                  </QCard>
                 )}
               </div>
             </div>
-            <footer className="border-t border-[#e5edf4] bg-[var(--q-bg)] p-4">
-              <button
+            <footer className="border-t border-q-border bg-q-bg p-4">
+              <QButton type="submit" variant="ghost"
                 onClick={() => {
                   setTab("rules");
                   setRuleDrawerOpen(false);
                 }}
-                className="w-full rounded-xl border border-[#cbddeb] px-4 py-3 text-[11px] font-black text-[#365572]"
+                className="min-w-11 w-full rounded-q-control border border-q-border px-4 py-3 text-q-ui font-bold text-q-text-2"
               >
                 فتح مساحة القواعد الكاملة
-              </button>
+              </QButton>
             </footer>
           </aside>
         </div>
@@ -1815,23 +1820,23 @@ function DiffList({
   items: string[];
 }) {
   const colors = {
-    emerald: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    amber: "border-amber-200 bg-amber-50 text-amber-800",
-    red: "border-red-200 bg-red-50 text-red-800",
+    emerald: "border-q-border bg-q-success-soft text-q-success",
+    amber: "border-q-border bg-q-warning-soft text-q-warning",
+    red: "border-q-border bg-q-danger-soft text-q-danger",
   };
   return (
-    <div className={`rounded-xl border p-4 ${colors[color]}`}>
-      <strong className="text-[10px]">
+    <div className={`rounded-q-control border p-4 ${colors[color]}`}>
+      <strong className="text-q-caption">
         {title} ({items.length})
       </strong>
       <div className="mt-3 space-y-2">
         {items.map((item) => (
-          <div key={item} className="rounded-lg bg-white/70 p-2 text-[8px]">
+          <div key={item} className="rounded-q-control bg-q-surface/70 p-2 text-q-caption">
             {item}
           </div>
         ))}
         {!items.length && (
-          <p className="text-[8px] opacity-70">لا توجد تغييرات.</p>
+          <p className="text-q-caption opacity-70">لا توجد تغييرات.</p>
         )}
       </div>
     </div>
@@ -1849,15 +1854,15 @@ function ReadinessPreview({
 }) {
   return (
     <div
-      className={`rounded-xl border p-4 ${ready ? "border-emerald-200 bg-emerald-50/60" : "border-amber-200 bg-amber-50/60"}`}
+      className={`rounded-q-control border p-4 ${ready ? "border-q-border bg-q-success-soft/60" : "border-q-border bg-q-warning-soft/60"}`}
     >
       <span
-        className={`text-[8px] font-black ${ready ? "text-emerald-700" : "text-amber-700"}`}
+        className={`text-q-caption font-bold ${ready ? "text-q-success" : "text-q-warning"}`}
       >
         {ready ? "مكتمل" : "يحتاج استكمال"}
       </span>
-      <strong className="mt-2 block text-[10px] text-[#29425f]">{label}</strong>
-      <p className="mt-1 text-[8px] text-[var(--q-text-3)]">{value}</p>
+      <strong className="mt-2 block text-q-caption text-q-text">{label}</strong>
+      <p className="mt-1 text-q-caption text-q-text-3">{value}</p>
     </div>
   );
 }
@@ -1878,48 +1883,48 @@ function WorkspaceEmptyState({
   steps: string[];
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#dbe6f0] bg-white">
+    <section className="overflow-hidden rounded-q-card border border-q-border bg-q-surface">
       <div className="grid gap-6 p-6 lg:grid-cols-[1fr_340px] lg:items-center">
         <div className="flex items-start gap-4">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-q-card bg-q-surface-2 text-q-primary">
             <Icon size={22} />
           </span>
           <div>
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[8px] font-black text-amber-700">
+            <QBadge className="rounded-full bg-q-warning-soft px-2.5 py-1 text-q-caption font-bold text-q-warning">
               متطلب سابق غير مكتمل
-            </span>
-            <h3 className="mt-3 text-base font-black text-[#14233a]">
+            </QBadge>
+            <h3 className="mt-3 text-q-ui font-bold text-q-text">
               {title}
             </h3>
-            <p className="mt-2 max-w-2xl text-[10px] leading-6 text-[#66798f]">
+            <p className="mt-2 max-w-2xl text-q-caption leading-6 text-q-text-2">
               {description}
             </p>
             <a
               href={actionHref}
-              className="mt-4 inline-flex h-10 items-center rounded-xl bg-[var(--q-primary)] px-4 text-[9px] font-black text-white shadow-[0_8px_18px_rgba(0,102,204,.16)]"
+              className="inline-flex min-h-11 min-w-11 items-center mt-4 inline-flex min-h-11 items-center rounded-q-control bg-q-primary px-4 text-q-caption font-bold text-q-on-primary "
             >
               {actionLabel}
             </a>
           </div>
         </div>
-        <div className="rounded-xl border border-[#e0e9f2] bg-[var(--q-bg)] p-4">
-          <strong className="text-[9px] text-[#29425f]">
+        <QCard className="p-0 rounded-q-control border border-q-border bg-q-bg p-4">
+          <strong className="text-q-caption text-q-text">
             ما الذي يجب فعله؟
           </strong>
           <ol className="mt-3 space-y-2">
             {steps.map((step, index) => (
               <li
                 key={step}
-                className="flex gap-2 text-[8px] leading-5 text-[#66798f]"
+                className="flex gap-2 text-q-caption leading-5 text-q-text-2"
               >
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white font-black text-[var(--q-primary)] shadow-sm">
+                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-q-surface font-bold text-q-primary ">
                   {index + 1}
                 </span>
                 {step}
               </li>
             ))}
           </ol>
-        </div>
+        </QCard>
       </div>
     </section>
   );
@@ -2068,37 +2073,37 @@ function RuleEditor({
     return `تطبّق القاعدة عندما يكون ${subject} ${operator} ${value}؛ وإذا لم يتحقق الشرط: ${failure}.`;
   }
   return (
-    <section className="space-y-4 rounded-xl border border-[var(--q-border)] p-4">
+    <section className="space-y-4 rounded-q-control border border-q-border p-4">
       {!form.id && form.code.endsWith("-rule") && (
-        <div className="rounded-2xl border border-[#d8e8f8] bg-[var(--q-bg)] p-4">
+        <QCard className="p-0 rounded-q-card border border-q-border bg-q-bg p-4">
           <div className="mb-3">
-            <strong className="text-[11px] text-[var(--q-text)]">
+            <strong className="text-q-caption text-q-text">
               ابدأ بقالب قاعدة
             </strong>
-            <p className="mt-1 text-[8px] text-[var(--q-text-3)]">
+            <p className="mt-1 text-q-caption text-q-text-3">
               اختر النمط الأقرب ثم عدّل الحقول؛ لا تحتاج إلى كتابة إعدادات تقنية
               من البداية.
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {ruleTemplates.map((template) => (
-              <button
+              <QButton variant="ghost"
                 key={template.id}
                 type="button"
                 disabled={!editable}
                 onClick={() => applyTemplate(template)}
-                className={`rounded-xl border p-3 text-right transition ${form.rule_type === template.ruleType ? "border-[#79b8f5] bg-[var(--q-surface-2)]" : "border-[var(--q-border)] bg-white hover:border-[#9bc9f6]"}`}
+                className={`min-w-11 rounded-q-control border p-3 text-right transition ${form.rule_type === template.ruleType ? "border-q-primary bg-q-surface-2" : "border-q-border bg-q-surface hover:border-q-primary"}`}
               >
-                <strong className="block text-[9px] text-[#24405e]">
+                <strong className="block text-q-caption text-q-text">
                   {template.title}
                 </strong>
-                <span className="mt-1 block text-[8px] leading-4 text-[var(--q-text-3)]">
+                <span className="mt-1 block text-q-caption leading-normal text-q-text-3">
                   {template.description}
                 </span>
-              </button>
+              </QButton>
             ))}
           </div>
-        </div>
+        </QCard>
       )}
       <div className="grid gap-3 md:grid-cols-3">
         <Field label="رمز القاعدة">
@@ -2185,7 +2190,7 @@ function RuleEditor({
           />
         </Field>
       </div>
-      <label className="flex items-center gap-2 rounded-xl bg-[var(--q-surface-2)] p-3 text-[9px] font-bold text-[#295f8e]">
+      <label className="flex items-center gap-2 rounded-q-control bg-q-surface-2 p-3 text-q-caption font-bold text-q-text-2">
         <input
           disabled={!editable}
           type="checkbox"
@@ -2194,7 +2199,7 @@ function RuleEditor({
         />
         تحتاج هذه القاعدة إلى مسار اعتماد
       </label>
-      <section className="grid gap-3 rounded-2xl border border-[#d8e8f8] bg-[var(--q-bg)] p-4 md:grid-cols-2">
+      <section className="grid gap-3 rounded-q-card border border-q-border bg-q-bg p-4 md:grid-cols-2">
         <Field
           label="متى تعمل القاعدة؟"
           hint="هذا إعداد عام؛ أما الحالات التفصيلية فتُضاف في قسم الشروط."
@@ -2232,29 +2237,29 @@ function RuleEditor({
           </select>
         </Field>
       </section>
-      <section className="rounded-2xl border border-[#d8e8f8] bg-[var(--q-bg)] p-4">
-        <h4 className="text-[11px] font-black text-[var(--q-text)]">
+      <section className="rounded-q-card border border-q-border bg-q-bg p-4">
+        <h4 className="text-q-caption font-bold text-q-text">
           كيف تُبنى القاعدة؟
         </h4>
         <div className="mt-3 grid gap-2 md:grid-cols-4">
-          <div className="rounded-xl bg-white p-3 text-[8px] leading-5 text-[#607287]">
-            <strong className="block text-[var(--q-primary)]">1. الشرط</strong>متى تُطبق
+          <div className="rounded-q-control bg-q-surface p-3 text-q-caption leading-5 text-q-text-2">
+            <strong className="block text-q-primary">1. الشرط</strong>متى تُطبق
             القاعدة؟ مثال: عندما يكون الطلب جديدًا.
           </div>
-          <div className="rounded-xl bg-white p-3 text-[8px] leading-5 text-[#607287]">
-            <strong className="block text-[var(--q-primary)]">2. المتطلب</strong>ما الذي
+          <div className="rounded-q-control bg-q-surface p-3 text-q-caption leading-5 text-q-text-2">
+            <strong className="block text-q-primary">2. المتطلب</strong>ما الذي
             يجب تقديمه؟ مثال: محضر اجتماع أو مستند إثبات.
           </div>
-          <div className="rounded-xl bg-white p-3 text-[8px] leading-5 text-[#607287]">
-            <strong className="block text-[var(--q-primary)]">3. الجهة</strong>من يراجع
+          <div className="rounded-q-control bg-q-surface p-3 text-q-caption leading-5 text-q-text-2">
+            <strong className="block text-q-primary">3. الجهة</strong>من يراجع
             أو يعتمد أو ينفذ؟ اختر المجلس أو الوحدة المختصة.
           </div>
-          <div className="rounded-xl bg-white p-3 text-[8px] leading-5 text-[#607287]">
-            <strong className="block text-[var(--q-primary)]">4. القرار</strong>ما
+          <div className="rounded-q-control bg-q-surface p-3 text-q-caption leading-5 text-q-text-2">
+            <strong className="block text-q-primary">4. القرار</strong>ما
             النتيجة المتاحة؟ موافقة، رفض، إعادة للاستكمال أو إحالة.
           </div>
         </div>
-        <p className="mt-3 text-[8px] text-[var(--q-text-3)]">
+        <p className="mt-3 text-q-caption text-q-text-3">
           أضف فقط ما تحتاجه القاعدة؛ ليست كل القواعد بحاجة إلى جميع الأقسام.
         </p>
       </section>
@@ -2278,16 +2283,16 @@ function RuleEditor({
             : undefined
         }
       >
-        <div className="rounded-xl border border-[#d8e8f8] bg-[var(--q-bg)] p-3">
-          <p className="text-[9px] font-black text-[#29425f]">
+        <QCard className="p-0 rounded-q-control border border-q-border bg-q-bg p-3">
+          <p className="text-q-caption font-bold text-q-text">
             متى نطبّق هذه القاعدة؟
           </p>
-          <p className="mt-1 text-[8px] leading-5 text-[var(--q-text-3)]">
+          <p className="mt-1 text-q-caption leading-5 text-q-text-3">
             اختر حالة جاهزة أو أضف شرطًا مخصصًا. الشرط اختياري؛ أضفه فقط عندما
             تعتمد القاعدة على حالة محددة.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button
+            <QButton variant="ghost"
               type="button"
               disabled={!editable}
               onClick={() =>
@@ -2298,11 +2303,11 @@ function RuleEditor({
                   failure_action: "return_for_completion",
                 })
               }
-              className="rounded-lg border border-[#cfe2f5] bg-white px-3 py-2 text-[8px] font-bold text-[var(--q-primary)]"
+              className="min-w-11 rounded-q-control border border-q-border bg-q-surface px-3 py-2 text-q-ui font-bold text-q-primary"
             >
               يتطلب محضر اجتماع
-            </button>
-            <button
+            </QButton>
+            <QButton variant="ghost"
               type="button"
               disabled={!editable}
               onClick={() =>
@@ -2313,11 +2318,11 @@ function RuleEditor({
                   failure_action: "block",
                 })
               }
-              className="rounded-lg border border-[#cfe2f5] bg-white px-3 py-2 text-[8px] font-bold text-[var(--q-primary)]"
+              className="min-w-11 rounded-q-control border border-q-border bg-q-surface px-3 py-2 text-q-ui font-bold text-q-primary"
             >
               يتحقق النصاب
-            </button>
-            <button
+            </QButton>
+            <QButton variant="ghost"
               type="button"
               disabled={!editable}
               onClick={() =>
@@ -2328,12 +2333,12 @@ function RuleEditor({
                   failure_action: "return_for_completion",
                 })
               }
-              className="rounded-lg border border-[#cfe2f5] bg-white px-3 py-2 text-[8px] font-bold text-[var(--q-primary)]"
+              className="min-w-11 rounded-q-control border border-q-border bg-q-surface px-3 py-2 text-q-ui font-bold text-q-primary"
             >
               حضور لا يقل عن 67%
-            </button>
+            </QButton>
           </div>
-        </div>
+        </QCard>
         <RowLegend
           labels={[
             "رمز الشرط",
@@ -2346,9 +2351,9 @@ function RuleEditor({
         {form.conditions.map((row, index) => (
           <div
             key={index}
-            className="grid gap-2 rounded-xl bg-[var(--q-bg)] p-3 md:grid-cols-6"
+            className="grid gap-2 rounded-q-control bg-q-bg p-3 md:grid-cols-6"
           >
-            <p className="col-span-full rounded-lg bg-white px-3 py-2 text-[9px] leading-5 text-[#40546b]">
+            <p className="col-span-full rounded-q-control bg-q-surface px-3 py-2 text-q-caption leading-5 text-q-text-2">
               {conditionSummary(row)}
             </p>
             <input
@@ -2440,12 +2445,12 @@ function RuleEditor({
               <option value="request_exception">طلب استثناء</option>
             </select>
             {editable && (
-              <button
+              <QButton type="submit" variant="ghost"
                 onClick={() => removeRow("conditions", index)}
-                className="text-red-600"
+                className="min-w-11 text-q-danger"
               >
                 <Trash2 size={13} />
-              </button>
+              </QButton>
             )}
           </div>
         ))}
@@ -2482,7 +2487,7 @@ function RuleEditor({
         {form.requirements.map((row, index) => (
           <div
             key={index}
-            className="grid gap-2 rounded-xl bg-[var(--q-bg)] p-3 md:grid-cols-6"
+            className="grid gap-2 rounded-q-control bg-q-bg p-3 md:grid-cols-6"
           >
             <input
               disabled={!editable}
@@ -2538,7 +2543,7 @@ function RuleEditor({
                 <option key={value}>{value}</option>
               ))}
             </select>
-            <label className="flex items-center gap-2 text-[8px]">
+            <label className="flex items-center gap-2 text-q-caption">
               <input
                 disabled={!editable}
                 type="checkbox"
@@ -2552,12 +2557,12 @@ function RuleEditor({
               إلزامي
             </label>
             {editable && (
-              <button
+              <QButton type="submit" variant="ghost"
                 onClick={() => removeRow("requirements", index)}
-                className="text-red-600"
+                className="min-w-11 text-q-danger"
               >
                 <Trash2 size={13} />
-              </button>
+              </QButton>
             )}
           </div>
         ))}
@@ -2594,7 +2599,7 @@ function RuleEditor({
         {form.authorities.map((row, index) => (
           <div
             key={index}
-            className="grid gap-2 rounded-xl bg-[var(--q-bg)] p-3 md:grid-cols-6"
+            className="grid gap-2 rounded-q-control bg-q-bg p-3 md:grid-cols-6"
           >
             <select
               disabled={!editable}
@@ -2686,7 +2691,7 @@ function RuleEditor({
               }
               placeholder="permission.code"
             />
-            <label className="flex items-center gap-2 text-[8px]">
+            <label className="flex items-center gap-2 text-q-caption">
               <input
                 disabled={!editable}
                 type="checkbox"
@@ -2700,12 +2705,12 @@ function RuleEditor({
               نهائية
             </label>
             {editable && (
-              <button
+              <QButton type="submit" variant="ghost"
                 onClick={() => removeRow("authorities", index)}
-                className="text-red-600"
+                className="min-w-11 text-q-danger"
               >
                 <Trash2 size={13} />
-              </button>
+              </QButton>
             )}
           </div>
         ))}
@@ -2742,7 +2747,7 @@ function RuleEditor({
         {form.actions.map((row, index) => (
           <div
             key={index}
-            className="grid gap-2 rounded-xl bg-[var(--q-bg)] p-3 md:grid-cols-6"
+            className="grid gap-2 rounded-q-control bg-q-bg p-3 md:grid-cols-6"
           >
             <input
               disabled={!editable}
@@ -2782,7 +2787,7 @@ function RuleEditor({
                 <option key={value}>{value}</option>
               ))}
             </select>
-            <label className="flex items-center gap-2 text-[8px]">
+            <label className="flex items-center gap-2 text-q-caption">
               <input
                 disabled={!editable}
                 type="checkbox"
@@ -2793,7 +2798,7 @@ function RuleEditor({
               />
               نهائية
             </label>
-            <label className="flex items-center gap-2 text-[8px]">
+            <label className="flex items-center gap-2 text-q-caption">
               <input
                 disabled={!editable}
                 type="checkbox"
@@ -2807,12 +2812,12 @@ function RuleEditor({
               تحتاج سببًا
             </label>
             {editable && (
-              <button
+              <QButton type="submit" variant="ghost"
                 onClick={() => removeRow("actions", index)}
-                className="text-red-600"
+                className="min-w-11 text-q-danger"
               >
                 <Trash2 size={13} />
-              </button>
+              </QButton>
             )}
           </div>
         ))}
@@ -2839,7 +2844,7 @@ function RuleEditor({
           {form.workflow_bindings.map((row, index) => (
             <div
               key={index}
-              className="grid gap-2 rounded-xl bg-[var(--q-bg)] p-3 md:grid-cols-4"
+              className="grid gap-2 rounded-q-control bg-q-bg p-3 md:grid-cols-4"
             >
               <select
                 disabled={!editable}
@@ -2885,36 +2890,36 @@ function RuleEditor({
                 }
               />
               {editable && (
-                <button
+                <QButton type="submit" variant="ghost"
                   onClick={() => removeRow("workflow_bindings", index)}
-                  className="text-red-600"
+                  className="min-w-11 text-q-danger"
                 >
                   <Trash2 size={13} />
-                </button>
+                </QButton>
               )}
             </div>
           ))}
         </RuleRows>
       )}
       {editable && (
-        <div className="flex flex-wrap gap-2 border-t border-[#e8eef4] pt-4">
-          <button
+        <div className="flex flex-wrap gap-2 border-t border-q-border pt-4">
+          <QButton type="submit" variant="ghost"
             disabled={busy || !form.name_ar || !form.code}
             onClick={onSave}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--q-primary)] px-5 text-[9px] font-black text-white disabled:opacity-50"
+            className="min-w-11 inline-flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-5 text-q-ui font-bold text-q-on-primary disabled:opacity-50"
           >
             <Save size={13} />
             حفظ القاعدة كاملة
-          </button>
+          </QButton>
           {onRemove && (
-            <button
+            <QButton type="submit" variant="ghost"
               disabled={busy}
               onClick={onRemove}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-red-200 px-4 text-[9px] font-black text-red-700"
+              className="min-w-11 inline-flex min-h-11 items-center gap-2 rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-danger"
             >
               <Trash2 size={13} />
               حذف القاعدة
-            </button>
+            </QButton>
           )}
         </div>
       )}
@@ -2924,7 +2929,7 @@ function RuleEditor({
 
 function RowLegend({ labels }: { labels: string[] }) {
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-1 px-2 text-[8px] font-black text-[var(--q-text-3)] md:grid-cols-5">
+    <div className="grid grid-cols-2 gap-x-3 gap-y-1 px-2 text-q-caption font-bold text-q-text-3 md:grid-cols-5">
       {labels
         .filter((label) => !label.includes("رمز"))
         .map((label) => (
@@ -2944,17 +2949,17 @@ function ReadinessStep({
   text: string;
 }) {
   return (
-    <div className="flex items-start gap-2 rounded-xl border border-[#dce8f2] bg-[var(--q-bg)] p-3">
-      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--q-primary)] text-[8px] font-black text-white">
+    <QCard className="p-0 flex items-start gap-2 rounded-q-control border border-q-border bg-q-bg p-3">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-q-primary text-q-caption font-bold text-q-on-primary">
         {number}
       </span>
       <div>
-        <strong className="text-[9px] font-black text-[#294863]">
+        <strong className="text-q-caption font-bold text-q-text-2">
           {title}
         </strong>
-        <p className="mt-1 text-[8px] leading-5 text-[#6d8092]">{text}</p>
+        <p className="mt-1 text-q-caption leading-5 text-q-text-3">{text}</p>
       </div>
-    </div>
+    </QCard>
   );
 }
 
@@ -2970,20 +2975,20 @@ function RuleRows({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-[var(--q-border)]">
-      <header className="flex items-center justify-between border-b border-[#e8eef4] bg-[var(--q-bg)] px-3 py-2.5">
-        <h4 className="flex items-center gap-2 text-[9px] font-black text-[#30445c]">
+    <section className="rounded-q-control border border-q-border">
+      <header className="flex items-center justify-between border-b border-q-border bg-q-bg px-3 py-2.5">
+        <h4 className="flex items-center gap-2 text-q-caption font-bold text-q-text-2">
           {icon}
           {title}
         </h4>
         {onAdd && (
-          <button
+          <QButton type="submit" variant="ghost"
             onClick={onAdd}
-            className="inline-flex items-center gap-1 rounded-lg bg-[var(--q-surface-2)] px-2 py-1.5 text-[8px] font-black text-[var(--q-primary)]"
+            className="min-w-11 inline-flex items-center gap-1 rounded-q-control bg-q-surface-2 px-2 py-1.5 text-q-ui font-bold text-q-primary"
           >
             <Plus size={11} />
             إضافة
-          </button>
+          </QButton>
         )}
       </header>
       <div className="space-y-2 p-3">{children}</div>
