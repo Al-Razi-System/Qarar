@@ -53,6 +53,15 @@ const eslintConfig = defineConfig([
       "src/features/performance/ui/**/*.tsx",
       "src/app/(dashboard)/admin/performance/**/*.tsx",
       "src/app/(dashboard)/admin/page.tsx",
+      // Parallel visual migration batch A.
+      "src/features/councils/ui/**/*.tsx",
+      "src/features/manage-users/ui/**/*.tsx",
+      "src/features/delegations/ui/**/*.tsx",
+      "src/features/approvals/ui/**/*.tsx",
+      "src/app/(dashboard)/admin/councils/**/*.tsx",
+      "src/app/(dashboard)/admin/organizational-units/**/*.tsx",
+      "src/app/(dashboard)/admin/users/**/*.tsx",
+      "src/app/(dashboard)/admin/delegations/**/*.tsx",
     ],
     ignores: [
       "src/shared/ui/form-field.tsx",

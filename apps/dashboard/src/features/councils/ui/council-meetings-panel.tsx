@@ -60,10 +60,10 @@ export function CouncilMeetingsPanel({ council, detail, archived, onEditPlan }: 
   const finished = (meetings ?? []).filter((meeting) => FINISHED.includes(meeting.status)).sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
   const shownCurrent = current.slice(0, 6);
 
-  return <div className="grid gap-4 bg-[var(--q-bg)] p-5">
-    <section aria-label="خطة الاجتماعات" className="rounded-2xl border border-[var(--q-border)] bg-white p-4">
+  return <div className="grid gap-4 bg-q-bg p-5">
+    <section aria-label="خطة الاجتماعات" className="rounded-q-card border border-q-border bg-q-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="m-0 flex items-center gap-2 text-sm font-black text-[#1b314b]"><Settings2 size={16} aria-hidden="true" />خطة الاجتماعات</h3>
+        <h3 className="m-0 flex items-center gap-2 text-q-ui font-black text-q-text-2"><Settings2 size={16} aria-hidden="true" />خطة الاجتماعات</h3>
         {!archived && (plan || detail?.can_create_meeting_plan) && <Button variant="secondary" onClick={onEditPlan}>{plan ? "تعديل الخطة" : "إنشاء خطة اجتماعات"}</Button>}
       </div>
       {plan ? <dl className="m-0 mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -74,16 +74,16 @@ export function CouncilMeetingsPanel({ council, detail, archived, onEditPlan }: 
       </dl> : <InlineMessage tone="warning" className="mt-3">لا توجد خطة اجتماعات لهذا المجلس، ولذلك لا تظهر له اجتماعات في قائمة الاجتماعات.{detail?.can_create_meeting_plan ? " أنشئ الخطة ليولّد النظام اجتماعاته." : ""}</InlineMessage>}
     </section>
 
-    <section aria-label="اجتماعات المجلس" className="rounded-2xl border border-[var(--q-border)] bg-white p-4">
+    <section aria-label="اجتماعات المجلس" className="rounded-q-card border border-q-border bg-q-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="m-0 flex items-center gap-2 text-sm font-black text-[#1b314b]"><CalendarClock size={16} aria-hidden="true" />الاجتماعات {meetings ? `(${meetings.length})` : ""}</h3>
-        <Link href={`/admin/meetings?council=${encodeURIComponent(council.id)}`} className="inline-flex items-center gap-1 text-xs font-bold text-[var(--q-primary)]"><ExternalLink size={13} aria-hidden="true" />فتحها في صفحة الاجتماعات</Link>
+        <h3 className="m-0 flex items-center gap-2 text-q-ui font-black text-q-text-2"><CalendarClock size={16} aria-hidden="true" />الاجتماعات {meetings ? `(${meetings.length})` : ""}</h3>
+        <Link href={`/admin/meetings?council=${encodeURIComponent(council.id)}`} className="inline-flex items-center gap-1 text-q-caption font-bold text-q-primary"><ExternalLink size={13} aria-hidden="true" />فتحها في صفحة الاجتماعات</Link>
       </div>
       {error && <InlineMessage tone="error" className="mt-3">{error}<Button variant="secondary" onClick={load}>إعادة المحاولة</Button></InlineMessage>}
-      {!error && meetings === null && <p role="status" className="m-0 mt-3 text-xs text-[#7c8da0]">جارٍ تحميل الاجتماعات…</p>}
-      {meetings && meetings.length === 0 && <p className="m-0 mt-3 flex items-center gap-2 text-xs text-[#7c8da0]"><CalendarPlus size={15} aria-hidden="true" />لا اجتماعات لهذا المجلس بعد.</p>}
+      {!error && meetings === null && <p role="status" className="m-0 mt-3 text-q-caption text-q-text-2">جارٍ تحميل الاجتماعات…</p>}
+      {meetings && meetings.length === 0 && <p className="m-0 mt-3 flex items-center gap-2 text-q-caption text-q-text-2"><CalendarPlus size={15} aria-hidden="true" />لا اجتماعات لهذا المجلس بعد.</p>}
       {shownCurrent.length > 0 && <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">{shownCurrent.map((meeting) => <MeetingRow key={meeting.id} meeting={meeting} />)}</ul>}
-      {current.length > shownCurrent.length && <p className="m-0 mt-2 text-xs text-[#7c8da0]">و{current.length - shownCurrent.length} اجتماعات قادمة أخرى في صفحة الاجتماعات.</p>}
+      {current.length > shownCurrent.length && <p className="m-0 mt-2 text-q-caption text-q-text-2">و{current.length - shownCurrent.length} اجتماعات قادمة أخرى في صفحة الاجتماعات.</p>}
       {finished.length > 0 && <div className="mt-4">
         <Button variant="ghost" onClick={() => setShowFinished(!showFinished)} aria-expanded={showFinished}>{showFinished ? "إخفاء" : "عرض"} الاجتماعات المنتهية ({finished.length})</Button>
         {showFinished && <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0">{finished.slice(0, 12).map((meeting) => <MeetingRow key={meeting.id} meeting={meeting} />)}</ul>}
@@ -93,12 +93,12 @@ export function CouncilMeetingsPanel({ council, detail, archived, onEditPlan }: 
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl bg-[#f4f8fc] p-3"><dt className="text-[11px] text-[#7c8da0]">{label}</dt><dd className="m-0 mt-1 text-xs font-bold text-[#1b314b]">{value}</dd></div>;
+  return <div className="rounded-q-control bg-q-surface-2 p-3"><dt className="text-q-caption text-q-text-2">{label}</dt><dd className="m-0 mt-1 text-q-caption font-bold text-q-text-2">{value}</dd></div>;
 }
 
 function MeetingRow({ meeting }: { meeting: CouncilMeeting }) {
-  return <li><Link href={`/admin/meetings/${meeting.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e5edf4] px-3 py-2.5 hover:border-[#b8d1e9] hover:bg-[#f5f9fd]">
-    <span className="min-w-0"><strong className="block text-xs text-[#172a42]">{meeting.title_ar}</strong><span className="text-[11px] text-[#7c8da0]">{whenOf(meeting)}{meeting.meeting_no ? ` · ${meeting.meeting_no}` : ""}</span></span>
+  return <li><Link href={`/admin/meetings/${meeting.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-q-control border border-q-border px-3 py-2.5 hover:border-q-border hover:bg-q-surface-2">
+    <span className="min-w-0"><strong className="block text-q-caption text-q-text-2">{meeting.title_ar}</strong><span className="text-q-caption text-q-text-2">{whenOf(meeting)}{meeting.meeting_no ? ` · ${meeting.meeting_no}` : ""}</span></span>
     <Badge tone={meetingStatusTone[meeting.status] ?? "neutral"}>{meetingStatusLabels[meeting.status] ?? "اجتماع"}</Badge>
   </Link></li>;
 }

@@ -84,7 +84,7 @@ export function CouncilFormDialog({ options: initialOptions, mode = "create", in
           </div>}
         </section>
       </div>
-      <footer className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-3 border-t border-q-border bg-q-surface-2 px-4 py-4 sm:px-6">{error && <div role="alert" className="w-full rounded-q-control border border-q-danger bg-q-danger-soft p-3 text-q-ui font-bold text-q-danger">{error}</div>}<button type="button" disabled={saving} onClick={onClose} className="h-10 rounded-q-control border border-q-border px-5 text-q-ui font-bold text-q-text-2">إلغاء</button><Button type="submit" pending={saving} pendingLabel="جارٍ الحفظ…">{saving ? "جارٍ الحفظ…" : mode === "create" ? <span className="inline-flex items-center gap-2"><CalendarDays size={15}/>إنشاء المجلس</span> : "حفظ التعديلات"}</Button></footer>
+      <footer className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-3 border-t border-q-border bg-q-surface-2 px-4 py-4 sm:px-6">{error && <div role="alert" className="w-full rounded-q-control border border-q-danger bg-q-danger-soft p-3 text-q-ui font-bold text-q-danger">{error}</div>}<button type="button" disabled={saving} onClick={onClose} className="h-11 rounded-q-control border border-q-border px-5 text-q-ui font-bold text-q-text-2">إلغاء</button><Button type="submit" pending={saving} pendingLabel="جارٍ الحفظ…">{saving ? "جارٍ الحفظ…" : mode === "create" ? <span className="inline-flex items-center gap-2"><CalendarDays size={15}/>إنشاء المجلس</span> : "حفظ التعديلات"}</Button></footer>
     </form>
   </div>;
 }

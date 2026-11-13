@@ -40,17 +40,17 @@ export function InlineUnitTypeEditor({ onCreated, onBusyChange, onClose }: Props
     }
   }
 
-  return <div className="mt-3 space-y-3 rounded-xl border border-blue-100 bg-blue-50/50 p-3" role="group" aria-label="إضافة نوع الوحدة">
-      <label className="block text-sm font-bold text-slate-700">اسم النوع الجديد
+  return <div className="mt-3 space-y-3 rounded-q-control border border-q-primary bg-q-surface-2/50 p-3" role="group" aria-label="إضافة نوع الوحدة">
+      <label className="block text-q-ui font-bold text-q-text-2">اسم النوع الجديد
         <input autoFocus maxLength={100} disabled={saving} value={name} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => {
           if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); void save(); }
-        }} className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="مثال: كلية، قسم، عمادة" />
+        }} className="mt-2 min-h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui outline-none focus:border-q-primary focus:ring-2 focus:ring-q-focus" placeholder="مثال: كلية، قسم، عمادة" />
       </label>
-      <p className="text-xs leading-6 text-slate-500">نوع عام مثل «كلية»، وليس اسم جهة مثل «كلية الحاسوب».</p>
-      {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      <p className="text-q-caption leading-6 text-q-text-2">نوع عام مثل «كلية»، وليس اسم جهة مثل «كلية الحاسوب».</p>
+      {error && <p role="alert" className="rounded-q-control border border-q-danger bg-q-danger-soft p-3 text-q-ui text-q-danger">{error}</p>}
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={saving} onClick={() => void save()} className="min-h-10 rounded-lg bg-[var(--q-primary)] px-4 text-sm font-bold text-white disabled:opacity-50">{saving ? "جارٍ حفظ النوع…" : "حفظ النوع"}</button>
-        <button type="button" disabled={saving} onClick={onClose} className="min-h-10 rounded-lg border bg-white px-4 text-sm">إلغاء إضافة النوع</button>
+        <button type="button" disabled={saving} onClick={() => void save()} className="min-h-11 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary disabled:opacity-50">{saving ? "جارٍ حفظ النوع…" : "حفظ النوع"}</button>
+        <button type="button" disabled={saving} onClick={onClose} className="min-h-11 rounded-q-control border bg-q-surface px-4 text-q-ui">إلغاء إضافة النوع</button>
       </div>
   </div>;
 }

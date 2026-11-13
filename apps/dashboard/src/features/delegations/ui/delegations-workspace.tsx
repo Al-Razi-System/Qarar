@@ -2,7 +2,11 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, Plus, UserCheck, X } from "lucide-react";
+import { Clock, Plus, UserCheck } from "lucide-react";
+import { Button } from "@/shared/ui/button";
+import { Card } from "@/shared/ui/card";
+import { Dialog } from "@/shared/ui/dialog";
+import { InlineMessage } from "@/shared/ui/inline-message";
 
 export function DelegationsWorkspace() {
   const [isOpen, setIsOpen] = useState(false);
@@ -45,130 +49,90 @@ export function DelegationsWorkspace() {
 
   return (
     <div className="space-y-6">
-      {notice && (
-        <div
-          className={`rounded-xl border p-4 text-xs font-bold ${
-            notice.type === "success"
-              ? "border-[#bfe9d9] bg-[#ecfaf4] text-[#167957]"
-              : "border-red-200 bg-red-50 text-red-700"
-          }`}
-        >
-          {notice.text}
-        </div>
-      )}
+      {notice && <InlineMessage tone={notice.type}>{notice.text}</InlineMessage>}
 
-      <div className="flex items-center justify-between rounded-2xl border border-[var(--q-border)] bg-white p-6 shadow-[0_3px_16px_rgba(24,48,80,.035)]">
+      <Card className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-base font-black text-[var(--q-text)]">
+          <h2 className="text-q-body font-black text-q-text">
             إدارة التفويض المؤقت والإنابة
           </h2>
-          <p className="mt-1 text-xs text-[var(--q-text-3)]">
+          <p className="mt-1 text-q-caption text-q-text-3">
             تفويض صلاحيات مجلس أو لجنة لمستخدم آخر عند الإجازات والتغطية المؤقتة (حتى 90 يوماً كأقصى حد).
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-[var(--q-primary)] px-4 py-2.5 text-xs font-bold text-white shadow-[0_4px_14px_rgba(0,102,204,.25)] hover:bg-[#0055b3]"
-        >
+        <Button onClick={() => setIsOpen(true)}>
           <Plus size={16} /> تفويض جديد
-        </button>
-      </div>
+        </Button>
+      </Card>
 
-      <div className="rounded-2xl border border-[var(--q-border)] bg-white p-8 text-center shadow-[0_3px_16px_rgba(24,48,80,.035)]">
-        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#edf5fd] text-[var(--q-primary)]">
+      <Card className="p-8 text-center">
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-q-card bg-q-surface-2 text-q-primary">
           <UserCheck size={24} />
         </span>
-        <h3 className="mt-4 text-sm font-black text-[#1c2b42]">
+        <h3 className="mt-4 text-q-ui font-black text-q-text">
           لا توجد تفويضات نشطة حالياً
         </h3>
-        <p className="mt-1 text-xs text-[#7c8da0]">
+        <p className="mt-1 text-q-caption text-q-text-2">
           استخدم زر "تفويض جديد" لتسديد إنابة لمجلس محدد وتأطيرها بمهلة زمنية حوكمية.
         </p>
-      </div>
+      </Card>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#081630]/55 p-4 backdrop-blur-sm">
-          <form
-            onSubmit={handleCreate}
-            className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl"
-          >
-            <div className="flex items-center justify-between border-b border-[#e7edf3] px-6 py-5">
-              <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e7f2ff] text-[var(--q-primary)]">
-                  <Clock size={20} />
-                </span>
-                <div>
-                  <h2 className="text-base font-black text-[var(--q-text)]">
-                    إنشاء تفويض مؤقت / إنابة
-                  </h2>
-                  <p className="text-xs text-[var(--q-text-3)]">
-                    منح صلاحية العضوية لمستخدم بديل لفترة زمنية محددة.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="text-[#73849a] hover:text-[var(--q-text)]"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="grid gap-4 p-6">
+        <Dialog title="إنشاء تفويض مؤقت / إنابة" description="منح صلاحية العضوية لمستخدم بديل لفترة زمنية محددة." onClose={() => setIsOpen(false)} closeDisabled={isSubmitting} footer={<><Button variant="secondary" disabled={isSubmitting} onClick={() => setIsOpen(false)}>إلغاء</Button><Button type="submit" form="delegation-form" pending={isSubmitting} pendingLabel="جارٍ الحفظ…">اعتماد التفويض</Button></>}>
+          <form id="delegation-form" onSubmit={handleCreate} className="grid gap-4">
+            <span className="grid h-11 w-11 place-items-center rounded-q-control bg-q-surface-2 text-q-primary"><Clock size={20} /></span>
               <label>
-                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
+                <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
                   معرف العضوية الأصيلة (Source Membership UUID) *
                 </span>
                 <input
                   required
                   name="source_membership_id"
                   placeholder="أدخل UUID الخاص بعضوية الأصيل"
-                  className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-xs outline-none focus:border-[var(--q-primary)]"
+                  className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-caption outline-none focus:border-q-primary"
                 />
               </label>
 
               <label>
-                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
+                <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
                   المستخدم البديل / المفوض إليه (User UUID) *
                 </span>
                 <input
                   required
                   name="delegated_to_user_id"
                   placeholder="أدخل UUID للمستخدم البديل"
-                  className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-xs outline-none focus:border-[var(--q-primary)]"
+                  className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-caption outline-none focus:border-q-primary"
                 />
               </label>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label>
-                  <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
+                  <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
                     تاريخ ووقت البداية *
                   </span>
                   <input
                     required
                     type="datetime-local"
                     name="starts_at"
-                    className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-xs outline-none focus:border-[var(--q-primary)]"
+                    className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-caption outline-none focus:border-q-primary"
                   />
                 </label>
 
                 <label>
-                  <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
+                  <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
                     تاريخ ووقت النهاية (حتى 90 يوماً) *
                   </span>
                   <input
                     required
                     type="datetime-local"
                     name="ends_at"
-                    className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-xs outline-none focus:border-[var(--q-primary)]"
+                    className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-caption outline-none focus:border-q-primary"
                   />
                 </label>
               </div>
 
               <label>
-                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
+                <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
                   سبب التفويض / التبرير الحوكمي *
                 </span>
                 <textarea
@@ -176,29 +140,11 @@ export function DelegationsWorkspace() {
                   name="reason"
                   rows={3}
                   placeholder="مثال: تغطية إجازة سنوية لرئيس القسم..."
-                  className="w-full rounded-xl border border-[var(--q-border)] p-3 text-xs outline-none focus:border-[var(--q-primary)]"
+                  className="w-full rounded-q-control border border-q-border p-3 text-q-caption outline-none focus:border-q-primary"
                 />
               </label>
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-[#e7edf3] bg-[#fbfcfe] px-6 py-4">
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                disabled={isSubmitting}
-                className="h-10 rounded-xl border border-[var(--q-border)] px-4 text-xs font-bold text-[var(--q-text-2)]"
-              >
-                إلغاء
-              </button>
-              <button
-                disabled={isSubmitting}
-                className="h-10 rounded-xl bg-[var(--q-primary)] px-5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(0,102,204,.18)] disabled:opacity-60"
-              >
-                {isSubmitting ? "جارٍ الحفظ…" : "اعتماد التفويض"}
-              </button>
-            </div>
           </form>
-        </div>
+        </Dialog>
       )}
     </div>
   );

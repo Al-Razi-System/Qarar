@@ -5,5 +5,5 @@ import { PageHeader } from "@/shared/ui/page-header";
 export const metadata: Metadata = { title: "التفويضات والإنابة" };
 
 export default function DelegationsPage() {
-  return <div className="mx-auto max-w-[1480px]"><PageHeader title="التفويضات والإنابة" description="إدارة ومتابعة التفويضات الزمنية المؤقتة لصلاحيات العضويات في المجالس واللجان." meta={<span className="inline-flex rounded-full bg-[#fff5e9] px-3 py-1.5 text-[10px] font-bold text-[#a75b13]">صلاحيات مؤقتة · تاريخ بداية ونهاية · سجل تدقيق</span>} /><DelegationsWorkspace /></div>;
+  return <div className="mx-auto max-w-[1480px]"><PageHeader title="التفويضات والإنابة" description="إدارة ومتابعة التفويضات الزمنية المؤقتة لصلاحيات العضويات في المجالس واللجان." meta={<span className="inline-flex rounded-full bg-q-warning-soft px-3 py-1.5 text-q-caption font-bold text-q-warning">صلاحيات مؤقتة · تاريخ بداية ونهاية · سجل تدقيق</span>} /><DelegationsWorkspace /></div>;
 }
