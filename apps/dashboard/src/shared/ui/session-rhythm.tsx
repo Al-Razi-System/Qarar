@@ -63,11 +63,14 @@ export function RhythmLegend({ className }: { className?: string }) {
 /**
  * A council's sessions as one mark each: held, held late (with a tail as long as the delay), not held,
  * or still to come. `summary` says the same thing in words; the compact form relies on it.
+ * With `onSelect`, each session of the full rhythm is a button that picks it.
  */
-export function SessionRhythm({ sessions, summary, variant = "compact", className }: {
+export function SessionRhythm({ sessions, summary, variant = "compact", selectedKey, onSelect, className }: {
   sessions: ReadonlyArray<RhythmSession>;
   summary: string;
   variant?: "compact" | "full";
+  selectedKey?: string | null;
+  onSelect?: (key: string) => void;
   className?: string;
 }) {
   if (variant === "compact") {
@@ -79,17 +82,26 @@ export function SessionRhythm({ sessions, summary, variant = "compact", classNam
   }
   return (
     <div className={cn("overflow-x-auto", className)}>
-      <ol aria-label={summary} className="m-0 flex min-w-max list-none p-0">
-        {sessions.map((session) => (
-          <li key={session.key} className="relative flex w-24 shrink-0 flex-col items-center gap-2 py-1">
+      <ol aria-label={summary} className="m-0 flex min-w-full list-none p-0">
+        {sessions.map((session) => {
+          const selected = selectedKey === session.key;
+          const body = <>
             <span className="text-q-caption text-q-text-3">{session.heading}</span>
             <span className="relative flex h-9 w-full items-center justify-center">
               <span aria-hidden="true" className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-q-surface-2" />
               <span className="relative"><Mark outcome={session.outcome} lateDays={session.lateDays} large /></span>
             </span>
             <span className={cn("px-1 text-center text-q-caption", captionStyle[session.outcome])}>{session.caption}</span>
-          </li>
-        ))}
+          </>;
+          const box = "flex w-full flex-col items-center gap-2 py-2";
+          return (
+            <li key={session.key} className="min-w-24 flex-1">
+              {onSelect && session.outcome !== "upcoming"
+                ? <button type="button" aria-pressed={selected} onClick={() => onSelect(session.key)} className={cn(box, "cursor-pointer rounded-q-control border-0 bg-transparent font-sans hover:bg-q-bg", selected && "bg-q-surface-2 hover:bg-q-surface-2")}>{body}</button>
+                : <div className={box}>{body}</div>}
+            </li>
+          );
+        })}
       </ol>
     </div>
   );

@@ -163,3 +163,16 @@ export function executorsText({ people, units }: CouncilRow["decision_stats"]["e
   const parts = [people > 0 ? (people === 1 ? "شخص واحد" : `${people} أشخاص`) : null, units > 0 ? (units === 1 ? "جهة واحدة" : `${units} جهات`) : null].filter(Boolean);
   return parts.length > 0 ? parts.join(" و") : "لا أحد بعد";
 }
+
+export type Activity = {
+  topics: Array<{ id: string; topic_no: string | null; title_ar: string; governance_source: string; agenda_status: string; meeting_id: string; meeting_title_ar: string; meeting_date: string; decision_no: string | null; outcome_kind: string | null; link: string }>;
+  decisions: Array<{ id: string; decision_no: string | null; decision_text: string; outcome_kind: string; type_name_ar: string | null; issued_at: string; meeting_id: string | null; meeting_title_ar: string | null; topic_title_ar: string | null; tasks: number; tasks_done: number; link: string | null }>;
+  tasks: Array<{ id: string; action_no: string | null; title_ar: string; status: string; due_date: string | null; overdue: boolean; assignee_name_ar: string | null; assignee_unit_ar: string | null; decision_no: string | null; meeting_id: string | null; link: string }>;
+};
+
+export const outcomeLabel = (kind: string | null) => (kind ? outcome[kind]?.label ?? "غير مصنف" : "—");
+export const isGoverned = (source: string) => source === "regulated";
+export const governanceLabel = (source: string) => ({ regulated: "محوكم", custom: "مباشر", exception: "باستثناء" } as Record<string, string>)[source] ?? "قديم بلا مسار";
+export const agendaLabel = (status: string) => (status === "discussed" ? "نوقش" : status === "pending" ? "لم يُناقش بعد" : "في الجدول");
+export const taskDone = (status: string) => status === "completed" || status === "closed";
+export const taskStatusLabel = (status: string) => ({ new: "جديد", in_progress: "قيد التنفيذ", submitted: "بانتظار التحقق", completed: "منجز", closed: "مغلق", overdue: "متأخر" } as Record<string, string>)[status] ?? "قيد التنفيذ";

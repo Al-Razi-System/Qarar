@@ -29,7 +29,7 @@ export function SegmentedControl<T extends string>({ label, options, value, onCh
             disabled={disabled}
             onClick={() => { if (!selected) onChange(option.value); }}
             className={cn(
-              "min-h-11 flex-1 rounded-q-control px-3 font-sans text-q-ui font-bold transition-colors disabled:cursor-not-allowed",
+              "min-h-11 flex-1 whitespace-nowrap rounded-q-control px-4 font-sans text-q-ui font-semibold transition-colors disabled:cursor-not-allowed",
               selected ? "bg-q-primary text-q-on-primary" : "bg-transparent text-q-text hover:bg-q-surface",
             )}
           >

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(26);
+select plan(30);
 
 -- "Today" as the contracts see it, and the academic year that contains it.
 create temporary table clock as
@@ -97,14 +97,15 @@ insert into qarar_governance.oversight_violations(organization_id,rule_code,coun
 ('61000000-0000-0000-0000-000000000001','task_overdue','61000000-0000-0000-0000-000000000501','action_item',gen_random_uuid(),'A-2 متأخرة','/admin/tasks',now()-interval '2 days',now());
 set local session_replication_role = origin;
 
-create temporary table seen(who text primary key, overview jsonb, council jsonb);
+create temporary table seen(who text primary key, overview jsonb, council jsonb, activity jsonb);
 grant all on seen to public;
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"61000000-0000-0000-0000-000000000101","role":"authenticated"}';
 insert into seen select 'amal', api_v2.get_my_oversight_overview_v2((select y from clock)),
-  api_v2.get_council_performance_v2('61000000-0000-0000-0000-000000000501', (select y from clock));
+  api_v2.get_council_performance_v2('61000000-0000-0000-0000-000000000501', (select y from clock)),
+  api_v2.get_council_activity_v2('61000000-0000-0000-0000-000000000501', (select y from clock));
 set local "request.jwt.claims"='{"sub":"61000000-0000-0000-0000-000000000102","role":"authenticated"}';
-insert into seen select 'walid', api_v2.get_my_oversight_overview_v2((select y from clock)), null;
+insert into seen select 'walid', api_v2.get_my_oversight_overview_v2((select y from clock)), null, null;
 reset role;
 
 create temporary view a as select c from seen, jsonb_array_elements(overview->'councils') c where who='amal' and c->>'name_ar'='مجلس الكلية';
@@ -147,14 +148,28 @@ select is((select jsonb_build_object('held', (s->>'held_on')::date, 'present', (
   (select jsonb_build_object('held', t-24, 'present', 1, 'recorded', 2, 'minutes', null) from clock), 'each session shows when it was held, who attended and its minutes');
 select is((select jsonb_array_length(council->'violations') from seen where who='amal'), 1, 'the council page lists what needs follow-up now');
 
+select is((select jsonb_agg(t->>'title_ar' order by t->>'title_ar') from seen, jsonb_array_elements(activity->'topics') t where who='amal'),
+  '["خطة الكلية","موضوع قديم","موضوع مباشر"]'::jsonb, 'activity lists the topics on the agendas of sessions that were not cancelled');
+select is((select jsonb_build_object('src', t->>'governance_source', 'agenda', t->>'agenda_status', 'decision', t->>'decision_no', 'outcome', t->>'outcome_kind')
+    from seen, jsonb_array_elements(activity->'topics') t where who='amal' and t->>'title_ar'='موضوع مباشر'),
+  '{"src":"custom","agenda":"discussed","decision":"D-2","outcome":"approval"}'::jsonb, 'each topic shows how it was governed, whether it was discussed, and what was decided');
+select is((select jsonb_agg(jsonb_build_object('no', d->>'decision_no', 'tasks', (d->>'tasks')::int, 'done', (d->>'tasks_done')::int) order by d->>'decision_no')
+    from seen, jsonb_array_elements(activity->'decisions') d where who='amal'),
+  '[{"no":"D-1","tasks":3,"done":1},{"no":"D-2","tasks":1,"done":1},{"no":"D-3","tasks":0,"done":0}]'::jsonb, 'activity lists issued decisions with how many of their tasks are done');
+select is((select jsonb_agg(jsonb_build_object('no', k->>'action_no', 'overdue', (k->>'overdue')::boolean, 'who', k->>'assignee_name_ar', 'unit', k->>'assignee_unit_ar') order by k->>'action_no')
+    from seen, jsonb_array_elements(activity->'tasks') k where who='amal'),
+  '[{"no":"A-1","overdue":false,"who":"أمل","unit":null},{"no":"A-2","overdue":true,"who":"أمل","unit":null},{"no":"A-3","overdue":false,"who":"أمل","unit":null},{"no":"A-5","overdue":false,"who":"وليد","unit":"مجلس القسم"}]'::jsonb,
+  'activity lists tasks with who executes them and which are late, without cancelled ones');
+
 select is((select (overview->'summary'->>'total')::int from seen where who='walid'), 0, 'a plain member follows nothing and sees no council');
 set local role authenticated;
 set local "request.jwt.claims"='{"sub":"61000000-0000-0000-0000-000000000102","role":"authenticated"}';
-select throws_ok($$select api_v2.get_council_performance_v2('61000000-0000-0000-0000-000000000501')$$, '42501', null,
+select throws_ok($$select api_v2.get_council_performance_v2('61000000-0000-0000-0000-000000000501'), api_v2.get_council_activity_v2('61000000-0000-0000-0000-000000000501')$$, '42501', null,
   'a council outside what I lead or follow is refused');
 reset role;
 select ok(not has_function_privilege('anon','api_v2.get_my_oversight_overview_v2(date)','execute')
   and not has_function_privilege('anon','api_v2.get_council_performance_v2(uuid,date)','execute')
+  and not has_function_privilege('anon','api_v2.get_council_activity_v2(uuid,date)','execute')
   and not has_function_privilege('authenticated','qarar_governance.oversight_council_rows_v2(uuid,uuid[],date)','execute'),
   'only signed-in users reach the contracts, and only through api_v2');
 

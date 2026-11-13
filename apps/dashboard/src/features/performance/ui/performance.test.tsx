@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { academicYearLabel, councilMetrics, days, rhythmSentence, type CouncilPerformance, type CouncilRow, type Overview } from "../model/performance";
+import { academicYearLabel, councilMetrics, days, rhythmSentence, type Activity, type CouncilPerformance, type CouncilRow, type Overview } from "../model/performance";
 import { CouncilPerformanceView } from "./council-performance";
 import { OversightOverview } from "./oversight-overview";
 
@@ -146,6 +146,63 @@ describe("CouncilPerformanceView", () => {
       .toEqual(["محوكمة بمسار معتمد9", "مباشرة بلا مسار2", "قديمة بلا مسار1"]);
     expect(topics).toHaveTextContent("غير محوكمة3 من 12");
     expect(topics).toHaveTextContent("نوقشت10 من 12");
+  });
+
+  const activity: Activity = {
+    topics: [
+      { id: "t1", topic_no: "T-1", title_ar: "خطة القسم", governance_source: "regulated", agenda_status: "discussed", meeting_id: "m1", meeting_title_ar: "الجلسة الأولى", meeting_date: "2026-09-13", decision_no: "D-1", outcome_kind: "approval", link: "/admin/topics/t1" },
+      { id: "t2", topic_no: null, title_ar: "طلب عاجل", governance_source: "custom", agenda_status: "pending", meeting_id: "m2", meeting_title_ar: "الجلسة الثانية", meeting_date: "2026-10-17", decision_no: null, outcome_kind: null, link: "/admin/topics/t2" },
+    ],
+    decisions: [{ id: "d1", decision_no: "D-1", decision_text: "اعتماد الخطة", outcome_kind: "approval", type_name_ar: null, issued_at: "2026-09-13T10:00:00Z", meeting_id: "m1", meeting_title_ar: "الجلسة الأولى", topic_title_ar: "خطة القسم", tasks: 2, tasks_done: 1, link: "/admin/meetings/m1" }],
+    tasks: [
+      { id: "k1", action_no: "A-1", title_ar: "تحديث التوصيف", status: "in_progress", due_date: "2026-11-01", overdue: true, assignee_name_ar: "د. سامي", assignee_unit_ar: null, decision_no: "D-1", meeting_id: "m1", link: "/admin/tasks?task=k1" },
+      { id: "k2", action_no: "A-2", title_ar: "رفع التقرير", status: "completed", due_date: "2026-10-01", overdue: false, assignee_name_ar: null, assignee_unit_ar: "قسم الجرافيكس", decision_no: "D-1", meeting_id: "m1", link: "/admin/tasks?task=k2" },
+    ],
+  };
+  const tableRows = () => within(screen.getByRole("table")).getAllByRole("row").slice(1);
+
+  it("opens the topics, decisions and tasks behind the figures, each row linking to its record", async () => {
+    render(<CouncilPerformanceView data={data} activity={activity} />);
+    await userEvent.click(screen.getByRole("radio", { name: "الموضوعات 2" }));
+    expect(tableRows()).toHaveLength(2);
+    expect(tableRows()[0]).toHaveTextContent("خطة القسم");
+    expect(tableRows()[0]).toHaveTextContent("محوكم");
+    expect(tableRows()[0]).toHaveTextContent("موافقة");
+    expect(tableRows()[1]).toHaveTextContent("لم يصدر قرار");
+    expect(screen.getByRole("link", { name: "خطة القسم" })).toHaveAttribute("href", "/admin/topics/t1");
+
+    await userEvent.click(screen.getByRole("radio", { name: "القرارات 1" }));
+    expect(tableRows()[0]).toHaveTextContent("اعتماد الخطة");
+    await userEvent.click(screen.getByRole("button", { name: "تكليفات D-1" }));
+    expect(tableRows()).toHaveLength(2);
+    expect(tableRows()[0]).toHaveTextContent("د. سامي");
+    expect(tableRows()[0]).toHaveTextContent("متأخر");
+    expect(tableRows()[1]).toHaveTextContent("قسم الجرافيكس");
+    await userEvent.click(screen.getByRole("radio", { name: "متأخرة" }));
+    expect(tableRows()).toHaveLength(1);
+  });
+
+  it("jumps from a figure to its list already filtered, and from a session to what happened in it", async () => {
+    render(<CouncilPerformanceView data={data} activity={activity} />);
+    await userEvent.click(within(screen.getByRole("region", { name: "الموضوعات في جدول المجلس" })).getByRole("button", { name: "3 من 12" }));
+    expect(screen.getByRole("radio", { name: "غير محوكمة" })).toBeChecked();
+    expect(tableRows()).toHaveLength(1);
+    expect(tableRows()[0]).toHaveTextContent("طلب عاجل");
+
+    await userEvent.click(within(screen.getByRole("list", { name: /إيقاع الانعقاد/ })).getAllByRole("button")[0]);
+    expect(screen.getByText("تعرض ما يخص:")).toHaveTextContent("الجلسة الأولى");
+    expect(screen.getByText("لا موضوعات بهذه التصفية.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("radio", { name: "الكل" }));
+    expect(tableRows()[0]).toHaveTextContent("خطة القسم");
+    await userEvent.click(screen.getByRole("button", { name: "عرض كل الجلسات" }));
+    expect(tableRows()).toHaveLength(2);
+  });
+
+  it("keeps the sessions usable and says so when the details could not be loaded", async () => {
+    render(<CouncilPerformanceView data={data} />);
+    expect(tableRows()).toHaveLength(3);
+    await userEvent.click(screen.getByRole("radio", { name: "الموضوعات 0" }));
+    expect(screen.getByText(/تعذر تحميل التفاصيل الآن/)).toBeInTheDocument();
   });
 
   it("lists what needs follow-up now with a link, or says nothing is open", () => {

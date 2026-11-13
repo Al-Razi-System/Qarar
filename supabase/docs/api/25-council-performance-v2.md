@@ -44,6 +44,16 @@ minutes_approved_on, decisions, link}`. `violations` lists the council's open vi
 
 Errors: `42501` when the council is outside what the caller leads or follows; `P0002` when it does not exist.
 
+## `POST /rest/v1/rpc/get_council_activity_v2`
+
+Same body, scope and errors as `get_council_performance_v2`. Returns the records behind the figures:
+
+| Key | Rows |
+|---|---|
+| `topics` | one per agenda listing in the year's non-cancelled sessions: `{id, topic_no, title_ar, governance_source, agenda_status, meeting_id, meeting_title_ar, meeting_date, decision_no, outcome_kind, link}` |
+| `decisions` | issued decisions: `{id, decision_no, decision_text, outcome_kind, type_name_ar, issued_at, meeting_id, meeting_title_ar, topic_title_ar, tasks, tasks_done, link}` |
+| `tasks` | non-cancelled tasks of those decisions, open first: `{id, action_no, title_ar, status, due_date, overdue, assignee_name_ar, assignee_unit_ar, decision_no, meeting_id, link}` |
+
 ## Session outcome
 
 The due day is the end of the planned window (`planned_window_end`), or `scheduled_date` for an unplanned session; it

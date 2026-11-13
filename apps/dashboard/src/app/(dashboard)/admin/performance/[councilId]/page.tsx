@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { academicYearLabel, type CouncilPerformance } from "@/features/performance/model/performance";
+import { academicYearLabel, type Activity, type CouncilPerformance } from "@/features/performance/model/performance";
 import { CouncilPerformanceView } from "@/features/performance/ui/council-performance";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -21,7 +21,11 @@ export default async function CouncilPerformancePage({ params, searchParams }: {
 }) {
   const { councilId } = await params;
   const year = academicYearParam((await searchParams).year);
-  const result = await loadPerformance<CouncilPerformance>("get_council_performance_v2", { p_council_id: councilId, p_academic_year: year });
+  const body = { p_council_id: councilId, p_academic_year: year };
+  const [result, details] = await Promise.all([
+    loadPerformance<CouncilPerformance>("get_council_performance_v2", body),
+    loadPerformance<Activity>("get_council_activity_v2", body),
+  ]);
   const back = <Link href="/admin/performance" className="inline-flex min-h-11 items-center text-q-ui font-semibold text-q-link hover:underline">المتابعة والأداء</Link>;
 
   if (!("data" in result)) {
@@ -44,7 +48,7 @@ export default async function CouncilPerformancePage({ params, searchParams }: {
         {back}{council.parent_name_ar && <><span aria-hidden="true">/</span><span>{council.parent_name_ar}</span></>}
       </nav>
       <PageHeader title={council.name_ar} description={`أداء المجلس في العام الجامعي ${academicYearLabel(start)}.`} />
-      <CouncilPerformanceView data={result.data} />
+      <CouncilPerformanceView data={result.data} activity={"data" in details ? details.data : null} />
     </div>
   );
 }
