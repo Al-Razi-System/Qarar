@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Badge } from "@/shared/ui/badge";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
 import { RhythmLegend, SessionRhythm } from "@/shared/ui/session-rhythm";
-import { compactRhythm, days, percent, rhythmSentence, stateLabel, stateTone, type CouncilState, type Overview } from "../model/performance";
+import { ExportButton } from "./export-button";
+import { overviewCsv, compactRhythm, days, percent, rhythmSentence, stateLabel, stateTone, type CouncilState, type Overview } from "../model/performance";
 
 type Filter = "all" | CouncilState;
 const cell = "px-3 py-3.5 align-top";
@@ -32,7 +33,7 @@ export function OversightOverview({ data }: { data: Overview }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl label="تصفية المجالس حسب الحالة" options={options} value={filter} onChange={setFilter} className="flex-wrap" />
-        <RhythmLegend />
+        <div className="flex flex-wrap items-center gap-4"><RhythmLegend /><ExportButton filename={`متابعة-المجالس-${data.academic_year_start}`} rows={() => overviewCsv(rows)} /></div>
       </div>
       <section aria-label="المجالس" className="overflow-hidden rounded-q-card border border-q-border bg-q-surface">
         <div className="overflow-x-auto">

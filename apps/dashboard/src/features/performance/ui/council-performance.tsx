@@ -6,7 +6,8 @@ import { Badge } from "@/shared/ui/badge";
 import { MetricStrip } from "@/shared/ui/metric-strip";
 import { RhythmLegend, SessionRhythm } from "@/shared/ui/session-rhythm";
 import { ShareBar } from "@/shared/ui/share-bar";
-import { councilMetrics, decisionShares, executorsText, fullRhythm, rhythmSentence, shortDate, stateLabel, stateTone, topicShares, type Activity, type CouncilPerformance } from "../model/performance";
+import { ExportButton } from "./export-button";
+import { councilCsv, councilMetrics, decisionShares, executorsText, fullRhythm, rhythmSentence, shortDate, stateLabel, stateTone, topicShares, type Activity, type CouncilPerformance } from "../model/performance";
 import { CouncilExplorer, initialView, type ExplorerView } from "./council-explorer";
 
 const panel = "rounded-q-card border border-q-border bg-q-surface";
@@ -30,6 +31,7 @@ export function CouncilPerformanceView({ data, activity = null }: { data: Counci
         <Badge tone={stateTone[council.state]}>{stateLabel[council.state]}</Badge>
         {council.chair_name_ar && <span>يرأسه {council.chair_name_ar}</span>}
         <Link href={`/admin/performance/people?council=${council.id}`} className="font-semibold text-q-link hover:underline">عدد الأعضاء: {council.member_count}</Link>
+        <span className="ms-auto"><ExportButton label="تصدير التقرير" filename={`تقرير-${council.name_ar}-${data.academic_year_start}`} rows={() => councilCsv(data, activity)} /></span>
       </div>
 
       <section aria-labelledby="rhythm-title" className={`${panel} flex flex-col gap-4 p-5`}>

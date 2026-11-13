@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Badge } from "@/shared/ui/badge";
 import { MetricStrip } from "@/shared/ui/metric-strip";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
-import { peopleMetrics, percent, personReasons, personStateLabel, personStateTone, type PeopleFollowUp, type PersonState } from "../model/performance";
+import { ExportButton } from "./export-button";
+import { peopleCsv, peopleMetrics, percent, personReasons, personStateLabel, personStateTone, type PeopleFollowUp, type PersonState } from "../model/performance";
 
 type StateFilter = "all" | PersonState;
 const cell = "px-3 py-3.5 align-top";
@@ -38,6 +39,7 @@ export function PeopleFollowUpView({ data, initialCouncilId = "" }: { data: Peop
               {data.councils.map((council) => <option key={council.id} value={council.id}>{council.name_ar}</option>)}
             </select>
           </label>
+          <ExportButton filename={`متابعة-الأعضاء-${data.academic_year_start}`} rows={() => peopleCsv(rows)} />
         </div>
         {rows.length === 0 ? <p className="m-0 border-t border-q-border p-6 text-q-ui text-q-text-2">لا أعضاء بهذه التصفية.</p> : (
           <div className="overflow-x-auto">

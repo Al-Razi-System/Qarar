@@ -1,3 +1,4 @@
+import type { CsvCell } from "@/shared/lib/csv";
 import type { Metric } from "@/shared/ui/metric-strip";
 import type { RhythmSession, SessionOutcome } from "@/shared/ui/session-rhythm";
 import type { Share } from "@/shared/ui/share-bar";
@@ -250,3 +251,47 @@ export function peopleMetrics({ summary }: PeopleFollowUp): Metric[] {
       ratio: summary.tasks > 0 ? summary.tasks_done / summary.tasks : null, target: targets.tasks, tone: summary.tasks_overdue > 0 ? "accent" : "primary" },
   ];
 }
+
+const outcomeWord: Record<SessionOutcome, string> = { on_time: "في موعدها", late: "متأخرة", missed: "لم تنعقد", overdue: "لم تنعقد بعد", cancelled: "ملغاة أو مؤجلة", upcoming: "قادمة" };
+const ratio = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : null);
+
+export const overviewCsv = (councils: CouncilRow[]): CsvCell[][] => [
+  ["المجلس", "الوحدة", "الحالة", "جلسات مستحقة", "في موعدها", "متأخرة", "لم تنعقد", "نسبة الحضور %", "متوسط اعتماد المحضر (يوم)", "محاضر معلّقة",
+    "القرارات", "تحتاج تنفيذًا", "نُفّذت", "الموضوعات", "غير محوكمة", "التكليفات", "المنجزة", "المتأخرة", "تجاوزات مفتوحة"],
+  ...councils.map((c) => [c.name_ar, c.parent_name_ar, stateLabel[c.state], c.sessions.due, c.sessions.on_time, c.sessions.late, c.sessions.missed + c.sessions.overdue,
+    ratio(c.attendance.present, c.attendance.recorded), c.minutes.avg_days, c.minutes.pending, c.decision_stats.total, c.decision_stats.needs_execution, c.decision_stats.executed,
+    c.topics.total, c.topics.ungoverned, c.tasks.total, c.tasks.done, c.tasks.overdue, c.violations.open]),
+];
+
+/** One council's report: its summary, then each list under its own heading. */
+export function councilCsv(data: CouncilPerformance, activity: Activity | null): CsvCell[][] {
+  const { council } = data;
+  const rows: CsvCell[][] = [
+    ["تقرير أداء المجلس", council.name_ar], ["العام الجامعي", academicYearLabel(data.academic_year_start)], ["الحالة", stateLabel[council.state]],
+    ["الرئيس", council.chair_name_ar], ["عدد الأعضاء", council.member_count], [],
+    ...overviewCsv([council]), [],
+    ["الجلسات"], ["الجلسة", "الموعد المخطط", "آخر موعد", "تاريخ الانعقاد", "النتيجة", "أيام التأخير", "الحاضرون", "المسجَّلون", "اعتماد المحضر", "القرارات"],
+    ...data.sessions.map((x) => [x.title_ar, x.planned_on, x.due_on, x.held_on, outcomeWord[x.outcome], x.late_days, x.present, x.recorded, x.minutes_approved_on, x.decisions]),
+  ];
+  if (!activity) return rows;
+  return [...rows, [],
+    ["الموضوعات"], ["الرقم", "الموضوع", "الجلسة", "تاريخ الجلسة", "الحوكمة", "في الجلسة", "رقم القرار", "النتيجة"],
+    ...activity.topics.map((x) => [x.topic_no, x.title_ar, x.meeting_title_ar, x.meeting_date, governanceLabel(x.governance_source), agendaLabel(x.agenda_status), x.decision_no, x.decision_no ? outcomeLabel(x.outcome_kind) : null]), [],
+    ["القرارات"], ["الرقم", "نص القرار", "الموضوع", "النتيجة", "النوع", "الجلسة", "تاريخ الصدور", "التكليفات", "المنجز منها"],
+    ...activity.decisions.map((x) => [x.decision_no, x.decision_text, x.topic_title_ar, outcomeLabel(x.outcome_kind), x.type_name_ar, x.meeting_title_ar, x.issued_at.slice(0, 10), x.tasks, x.tasks_done]), [],
+    ["التكليفات"], ["الرقم", "التكليف", "المكلَّف", "الجهة", "الموعد", "الحالة", "متأخر", "رقم القرار"],
+    ...activity.tasks.map((x) => [x.action_no, x.title_ar, x.assignee_name_ar, x.assignee_unit_ar, x.due_date, taskStatusLabel(x.status), x.overdue ? "نعم" : "لا", x.decision_no]),
+  ];
+}
+
+export const topicsCsv = (topics: TopicRow[]): CsvCell[][] => [
+  ["الرقم", "الموضوع", "التصنيف", "الحوكمة", "الحالة", "يقف عند", "أيام الانتظار", "العمر (يوم)", "مراحل المسار", "المنجز منها", "مرات الإدراج", "رقم القرار", "النتيجة", "التكليفات", "المنجز منها"],
+  ...topics.map((x) => [x.topic_no, x.title_ar, x.category_name_ar, governanceLabel(x.governance_source), topicStateLabel[x.state], x.at_council_name_ar, x.waiting_days, x.age_days,
+    x.steps_total, x.steps_done, x.listed_count, x.decision_no, x.decision_no ? outcomeLabel(x.outcome_kind) : null, x.tasks, x.tasks_done]),
+];
+
+export const peopleCsv = (people: PersonRow[]): CsvCell[][] => [
+  ["العضو", "المجالس", "الحالة", "سبب المتابعة", "حضر", "من جلسات", "صوّت", "من جولات", "وقّع محاضر", "من محاضر", "محاضر تنتظره", "التكليفات", "المنجزة", "المتأخرة", "موضوعات قدّمها"],
+  ...people.map((x) => [x.full_name_ar, x.councils.map((c) => `${c.name_ar} (${c.role_name_ar})`).join("؛ "), personStateLabel[x.state], personReasons(x).join("؛ "),
+    x.attendance.present, x.attendance.recorded, x.votes.voted, x.votes.eligible, x.minutes.signed, x.minutes.total, x.minutes.pending, x.tasks.total, x.tasks.done, x.tasks.overdue, x.topics_submitted]),
+];

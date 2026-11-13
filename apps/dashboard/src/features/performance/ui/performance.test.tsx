@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { academicYearLabel, councilMetrics, days, rhythmSentence, type Activity, type CouncilPerformance, type CouncilRow, type Overview } from "../model/performance";
+import { academicYearLabel, councilCsv, councilMetrics, days, overviewCsv, rhythmSentence, type Activity, type CouncilPerformance, type CouncilRow, type Overview } from "../model/performance";
 import { CouncilPerformanceView } from "./council-performance";
 import { OversightOverview } from "./oversight-overview";
 
@@ -55,6 +55,22 @@ describe("performance wording", () => {
 
   it("names the academic year by both calendar years", () => {
     expect(academicYearLabel("2026-09-01")).toBe("2026–2027");
+  });
+});
+
+describe("report export", () => {
+  it("writes one row per council with the figures the table shows", () => {
+    const [header, row] = overviewCsv([graphics]);
+    expect(header).toHaveLength(row.length);
+    expect(row.slice(0, 8)).toEqual(["مجلس قسم الجرافيكس", "كلية الحاسبات", "يحتاج متابعة", 3, 1, 1, 1, 83]);
+  });
+
+  it("writes a council report with its sessions, and the lists only when they were loaded", () => {
+    const report = councilCsv({ academic_year_start: "2026-09-01", council: { ...graphics, chair_name_ar: "د. أحمد", member_count: 9 }, sessions: [], violations: [] }, null);
+    expect(report[0]).toEqual(["تقرير أداء المجلس", "مجلس قسم الجرافيكس"]);
+    expect(report[1]).toEqual(["العام الجامعي", "2026–2027"]);
+    expect(report.some((row) => row[0] === "الجلسات")).toBe(true);
+    expect(report.some((row) => row[0] === "التكليفات")).toBe(false);
   });
 });
 
