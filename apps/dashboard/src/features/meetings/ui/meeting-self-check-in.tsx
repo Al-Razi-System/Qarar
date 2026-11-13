@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/shared/ui/button";
 
 import { FormEvent, useEffect, useState } from "react";
 import { CheckCircle2, Fingerprint, LoaderCircle } from "lucide-react";
@@ -44,13 +45,13 @@ export function MeetingSelfCheckIn() {
     } finally { setBusy(false); }
   }
 
-  return <form onSubmit={submit} className="mx-auto max-w-lg rounded-3xl border border-[var(--q-border)] bg-white p-6 shadow-sm">
-    <div className="mb-5 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-50 text-[var(--q-primary)]"><Fingerprint size={22} /></span><div><h2 className="text-base font-black text-[var(--q-text)]">تسجيل الحضور الذاتي</h2><p className="text-[11px] text-[var(--q-text-3)]">يجب تسجيل الدخول بالحساب المدعو إلى الاجتماع.</p></div></div>
+  return <form onSubmit={submit} className="mx-auto max-w-lg rounded-q-control border border-q-border bg-q-surface p-6 ">
+    <div className="mb-5 flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-q-control bg-q-surface-2 text-q-primary"><Fingerprint size={22} /></span><div><h2 className="text-q-body font-bold text-q-text">تسجيل الحضور الذاتي</h2><p className="text-q-caption text-q-text-3">يجب تسجيل الدخول بالحساب المدعو إلى الاجتماع.</p></div></div>
     <div className="space-y-4">
-      <label className="block"><span className="mb-1 block text-xs font-bold">معرف الاجتماع</span><input required value={meetingId} onChange={(event) => setMeetingId(event.target.value)} className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-xs" /></label>
-      <label className="block"><span className="mb-1 block text-xs font-bold">رمز الحضور</span><input required value={token} onChange={(event) => setToken(event.target.value)} autoComplete="one-time-code" className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-xs tracking-widest" /></label>
-      {message && <div className={`rounded-xl border p-3 text-xs font-bold ${message.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>{message.text}</div>}
-      <button disabled={busy} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[var(--q-primary)] text-xs font-black text-white disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={16} /> : <CheckCircle2 size={16} />} تسجيل الحضور</button>
+      <label className="block"><span className="mb-1 block text-q-caption font-bold">معرف الاجتماع</span><input required value={meetingId} onChange={(event) => setMeetingId(event.target.value)} className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-caption" /></label>
+      <label className="block"><span className="mb-1 block text-q-caption font-bold">رمز الحضور</span><input required value={token} onChange={(event) => setToken(event.target.value)} autoComplete="one-time-code" className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-caption tracking-widest" /></label>
+      {message && <div className={`rounded-q-control border p-3 text-q-caption font-bold ${message.ok ? "border-q-success bg-q-success-soft text-q-success" : "border-q-danger bg-q-danger-soft text-q-danger"}`}>{message.text}</div>}
+      <Button variant="primary" type="submit" disabled={busy} className="flex h-11 w-full items-center justify-center gap-2 rounded-q-control font-bold disabled:opacity-50">{busy ? <LoaderCircle className="animate-spin" size={16} /> : <CheckCircle2 size={16} />} تسجيل الحضور</Button>
     </div>
   </form>;
 }
