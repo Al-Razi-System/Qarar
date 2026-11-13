@@ -21,6 +21,7 @@ const eslintConfig = defineConfig([
     // names the components written before the standards; it may only shrink.
     // Add a feature folder here when its screens are migrated to the standards.
     files: [
+      "src/app/(auth)/**/*.tsx", "src/features/auth/**/*.tsx", "src/features/authentication/**/*.tsx", "src/features/sso/**/*.tsx", "src/app/(dashboard)/admin/sso/**/*.tsx",
       "src/shared/ui/**/*.tsx",
       "src/features/permissions/ui/permission-matrix.tsx",
       "src/app/(dashboard)/admin/permissions/**/*.tsx",

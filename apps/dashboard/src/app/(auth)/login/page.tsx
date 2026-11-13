@@ -20,7 +20,7 @@ export default async function LoginPage() {
 
   return (
     <>
-      <section className="relative hidden overflow-hidden bg-[var(--q-primary)] lg:block">
+      <section className="relative hidden overflow-hidden bg-q-primary lg:block">
         <Image
           src="/brand/qarar-auth-cover.png"
           alt=""
@@ -28,28 +28,29 @@ export default async function LoginPage() {
           priority
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#071b46]/88 via-[#005fc8]/10 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 p-14 text-white xl:p-20">
-          <div className="mb-6 flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs backdrop-blur-md">
-            <ShieldCheck size={16} className="text-[#ff9a32]" />
-            بيئة رقمية موثوقة وآمنة
-          </div>
-          <h1 className="max-w-xl text-4xl font-black leading-[1.45] xl:text-5xl">
+        <div className="absolute inset-0 bg-gradient-to-t from-q-header/88 via-q-primary/10 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 p-14 text-q-on-primary xl:p-20">
+
+          <h1 className="max-w-xl text-q-h1 font-bold leading-[1.45] xl:text-q-h1">
             حوكمة أكثر وضوحًا،
             <br />
             وقرارات أكثر أثرًا.
           </h1>
-          <p className="mt-5 max-w-lg text-sm leading-7 text-white/75">
+          <div className="mt-6 flex w-fit items-center gap-2 rounded-full border border-q-on-primary/20 bg-q-surface/10 px-4 py-2 text-q-caption backdrop-blur-md">
+            <ShieldCheck size={16} className="text-q-on-primary" />
+            بيئة رقمية موثوقة وآمنة
+          </div>
+          <p className="mt-5 max-w-lg text-q-ui leading-7 text-q-on-primary/75">
             مساحة موحدة لإدارة أعمال المجالس واللجان، من جدول الأعمال وحتى
             متابعة تنفيذ القرارات.
           </p>
-          <div className="mt-9 flex gap-8 text-xs text-white/80">
+          <div className="mt-9 flex gap-8 text-q-caption text-q-on-primary/80">
             <span className="flex items-center gap-2">
-              <BadgeCheck size={17} className="text-[#ff9a32]" />
+              <BadgeCheck size={17} className="text-q-on-primary" />
               سجل تدقيق متكامل
             </span>
             <span className="flex items-center gap-2">
-              <ShieldCheck size={17} className="text-[#ff9a32]" />
+              <ShieldCheck size={17} className="text-q-on-primary" />
               صلاحيات محكومة
             </span>
           </div>
@@ -60,23 +61,24 @@ export default async function LoginPage() {
         <div className="min-w-0 w-full max-w-[430px]">
           <FullLogo />
           <div className="mt-10">
-            <p className="mb-2 text-xs font-bold text-[#ff7a00]">مرحبًا بعودتك</p>
-            <h2 className="text-3xl font-black tracking-tight text-[var(--q-text)]">
+
+            <h2 className="text-q-h1 font-bold tracking-tight text-q-text">
               تسجيل الدخول إلى قرار
             </h2>
-            <p className="mt-3 text-sm leading-6 text-[#6c7d91]">
+            <p className="mb-2 text-q-caption font-bold text-q-link">مرحبًا بعودتك</p>
+            <p className="mt-3 text-q-ui leading-6 text-q-text-2">
               استخدم بيانات حسابك المؤسسي للوصول إلى مساحة العمل.
             </p>
           </div>
           <LoginForm />
-          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-[#7f8fa3]">
+          <div className="mt-8 flex items-center justify-center gap-2 text-q-caption text-q-text-2">
             <Headphones size={15} />
             تحتاج مساعدة؟{" "}
-            <a href="#" className="font-bold text-[var(--q-primary)]">
+            <a href="#" className="inline-flex min-h-11 items-center font-bold text-q-link">
               تواصل مع الدعم
             </a>
           </div>
-          <p className="mt-8 text-center text-[10px] leading-5 text-[#9aa8b9]">
+          <p className="mt-8 text-center text-q-caption leading-5 text-q-text-2">
             بالدخول إلى المنصة، أنت توافق على سياسة الاستخدام والخصوصية.
             <br />© 2026 قرار. جميع الحقوق محفوظة.
           </p>

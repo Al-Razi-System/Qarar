@@ -1,4 +1,7 @@
 "use client";
+import { Card } from "@/shared/ui/card";
+import { InlineMessage } from "@/shared/ui/inline-message";
+import { Button } from "@/shared/ui/button";
 
 import { useState } from "react";
 import { Globe, KeyRound, Layers, Plus, ShieldCheck, X } from "lucide-react";
@@ -45,150 +48,147 @@ export function SsoWorkspace() {
   return (
     <div className="space-y-6">
       {notice && (
-        <div
-          className={`rounded-xl border p-4 text-xs font-bold ${
-            notice.type === "success"
-              ? "border-[#bfe9d9] bg-[#ecfaf4] text-[#167957]"
-              : "border-red-200 bg-red-50 text-red-700"
-          }`}
-        >
+        <InlineMessage tone={notice.type === "success" ? "success" : "error"}>
           {notice.text}
-        </div>
+        </InlineMessage>
       )}
 
       <div className="grid gap-6 md:grid-cols-3">
-        <div className="rounded-2xl border border-[var(--q-border)] bg-white p-6 shadow-[0_3px_16px_rgba(24,48,80,.035)]">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e7f2ff] text-[var(--q-primary)]">
+        <Card className="p-6">
+          <span className="grid h-10 w-10 place-items-center rounded-q-control bg-q-surface-2 text-q-primary">
             <ShieldCheck size={20} />
           </span>
-          <h3 className="mt-4 text-sm font-black text-[var(--q-text)]">
+          <h3 className="mt-4 text-q-ui font-bold text-q-text">
             موفري الدخول الموحد (SSO Providers)
           </h3>
-          <p className="mt-1 text-xs text-[var(--q-text-3)]">
+          <p className="mt-1 text-q-caption text-q-text-3">
             إعداد الاتصال مع Microsoft Entra ID أو SAML 2.0.
           </p>
-          <button
+          <Button
             type="button"
             onClick={() => setModal("provider")}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--q-primary)] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#0055b3]"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-q-control bg-q-primary px-4 py-2.5 text-q-caption font-bold text-q-on-primary hover:bg-q-primary-hover"
           >
             <Plus size={16} /> تهيئة موفر SSO
-          </button>
-        </div>
+          </Button>
+        </Card>
 
-        <div className="rounded-2xl border border-[var(--q-border)] bg-white p-6 shadow-[0_3px_16px_rgba(24,48,80,.035)]">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#eef8f1] text-[#16835f]">
+        <Card className="p-6">
+          <span className="grid h-10 w-10 place-items-center rounded-q-control bg-q-success-soft text-q-success">
             <Globe size={20} />
           </span>
-          <h3 className="mt-4 text-sm font-black text-[var(--q-text)]">
+          <h3 className="mt-4 text-q-ui font-bold text-q-text">
             النطاقات المؤسسية (بانتظار التحقق)
           </h3>
-          <p className="mt-1 text-xs text-[var(--q-text-3)]">
+          <p className="mt-1 text-q-caption text-q-text-3">
             الدخول الموحد متوقف مؤقتًا؛ يُسجل النطاق في وضع معلّق ولا يُفعّل قبل تحقق موثوق من ملكيته.
           </p>
-          <button
+          <Button
             type="button"
+            variant="secondary"
             disabled
             title="يتطلب هذا الإجراء خدمة تحقق موثوقة من ملكية النطاق."
-            className="mt-4 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-[var(--q-border)] bg-[#f6f8fa] px-4 py-2.5 text-xs font-bold text-[#8493a6]"
+            className="mt-4 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-q-control border border-q-border bg-q-surface px-4 py-2.5 text-q-caption font-bold text-q-text-2"
           >
             <Globe size={16} /> التحقق الخلفي مطلوب
-          </button>
-        </div>
+          </Button>
+        </Card>
 
-        <div className="rounded-2xl border border-[var(--q-border)] bg-white p-6 shadow-[0_3px_16px_rgba(24,48,80,.035)]">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#fff2e8] text-[#ff7a00]">
+        <Card className="p-6">
+          <span className="grid h-10 w-10 place-items-center rounded-q-control bg-q-surface-2 text-q-link">
             <Layers size={20} />
           </span>
-          <h3 className="mt-4 text-sm font-black text-[var(--q-text)]">
+          <h3 className="mt-4 text-q-ui font-bold text-q-text">
             ربط مجموعات الـ Active Directory
           </h3>
-          <p className="mt-1 text-xs text-[var(--q-text-3)]">
+          <p className="mt-1 text-q-caption text-q-text-3">
             مزامنة أدوار ومجالس قرار تلقائياً بحسب مجموعات الـ IdP.
           </p>
-          <button
+          <Button
             type="button"
+            variant="secondary"
             disabled
             title="تفعيل مزامنة المجموعات متوقف إلى أن يثبت مصدر مجموعات IdP موثوق."
-            className="mt-4 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-[var(--q-border)] bg-[#f6f8fa] px-4 py-2.5 text-xs font-bold text-[#8493a6]"
+            className="mt-4 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-q-control border border-q-border bg-q-surface px-4 py-2.5 text-q-caption font-bold text-q-text-2"
           >
             <Layers size={16} /> التفعيل قيد الحوكمة
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
 
       {modal === "provider" && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#081630]/55 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-q-scrim/55 p-4 backdrop-blur-sm">
           <form
             onSubmit={handleProviderSubmit}
-            className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl"
+            className="w-full max-w-lg overflow-hidden rounded-q-card bg-q-surface shadow-2xl"
           >
-            <div className="flex items-center justify-between border-b border-[#e7edf3] px-6 py-5">
+            <div className="flex items-center justify-between border-b border-q-border px-6 py-5">
               <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e7f2ff] text-[var(--q-primary)]">
+                <span className="grid h-10 w-10 place-items-center rounded-q-control bg-q-surface-2 text-q-primary">
                   <KeyRound size={20} />
                 </span>
                 <div>
-                  <h2 className="text-base font-black text-[var(--q-text)]">
+                  <h2 className="text-q-ui font-bold text-q-text">
                     تهيئة موفر SSO جديد
                   </h2>
-                  <p className="text-xs text-[var(--q-text-3)]">
+                  <p className="text-q-caption text-q-text-3">
                     ربط مزود الهوية الخارجي لحسابات المؤسسة.
                   </p>
                 </div>
               </div>
-              <button
+              <Button
                 type="button"
                 onClick={() => setModal(null)}
-                className="text-[#73849a] hover:text-[var(--q-text)]"
+                variant="ghost"
+                className="h-11 w-11 px-0 text-q-text-2 hover:text-q-text"
               >
                 <X size={20} />
-              </button>
+              </Button>
             </div>
 
             <div className="grid gap-4 p-6">
               <label>
-                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
+                <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
                   اسم موفر الخدمة *
                 </span>
                 <input
                   required
                   name="provider_name"
                   placeholder="مثال: University Entra ID"
-                  className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-xs outline-none focus:border-[var(--q-primary)]"
+                  className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-caption outline-none focus:border-q-primary"
                 />
               </label>
 
               <label>
-                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
+                <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
                   Entity ID الخارجي
                 </span>
                 <input
                   name="entity_id"
                   placeholder="https://login.microsoftonline.com/..."
-                  className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-xs outline-none focus:border-[var(--q-primary)]"
+                  className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-caption outline-none focus:border-q-primary"
                 />
               </label>
 
               <label>
-                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
+                <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
                   رابط الـ Metadata
                 </span>
                 <input
                   name="metadata_url"
                   placeholder="https://login.example.com/federationmetadata.xml"
-                  className="h-11 w-full rounded-xl border border-[var(--q-border)] px-3 text-xs outline-none focus:border-[var(--q-primary)]"
+                  className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-caption outline-none focus:border-q-primary"
                 />
               </label>
 
               <label>
-                <span className="mb-1.5 block text-xs font-bold text-[var(--q-text-2)]">
+                <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
                   وضع التزويد (Provisioning Mode) *
                 </span>
                 <select
                   name="provisioning_mode"
                   defaultValue="invited_only"
-                  className="h-11 w-full rounded-xl border border-[var(--q-border)] bg-white px-3 text-xs outline-none focus:border-[var(--q-primary)]"
+                  className="h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-caption outline-none focus:border-q-primary"
                 >
                   <option value="invited_only">المستخدمون المدعوون فقط (MANDATORY FOR PRODUCTION)</option>
                   <option value="jit">التزويد التلقائي (Just-In-Time - JIT)</option>
@@ -197,21 +197,22 @@ export function SsoWorkspace() {
               </label>
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-[#e7edf3] bg-[#fbfcfe] px-6 py-4">
-              <button
+            <div className="flex justify-end gap-3 border-t border-q-border bg-q-surface px-6 py-4">
+              <Button
                 type="button"
                 onClick={() => setModal(null)}
                 disabled={isSubmitting}
-                className="h-10 rounded-xl border border-[var(--q-border)] px-4 text-xs font-bold text-[var(--q-text-2)]"
+                variant="secondary"
+                className="min-h-11 rounded-q-control border border-q-border px-4 text-q-caption font-bold text-q-text-2"
               >
                 إلغاء
-              </button>
-              <button
+              </Button>
+              <Button type="submit"
                 disabled={isSubmitting}
-                className="h-10 rounded-xl bg-[var(--q-primary)] px-5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(0,102,204,.18)] disabled:opacity-60"
+                className="min-h-11 rounded-q-control bg-q-primary px-5 text-q-caption font-bold text-q-on-primary disabled:opacity-60"
               >
                 {isSubmitting ? "جارٍ الحفظ…" : "حفظ الموفر"}
-              </button>
+              </Button>
             </div>
           </form>
         </div>

@@ -1,4 +1,6 @@
 "use client";
+import { InlineMessage } from "@/shared/ui/inline-message";
+import { Button } from "@/shared/ui/button";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -21,8 +23,8 @@ export function ForgotPasswordForm() {
   }
   return <form onSubmit={submit} className="mt-8 space-y-5">
     <FormField label="البريد الإلكتروني" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-    {message && <p role="status" className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">{message}</p>}
-    <button disabled={busy} className="h-12 w-full rounded-xl bg-[var(--q-primary)] font-bold text-white disabled:opacity-60">{busy ? "جارٍ الإرسال..." : "إرسال رابط الاستعادة"}</button>
-    <Link href="/login" className="block text-center text-sm font-bold text-[var(--q-primary)]">العودة لتسجيل الدخول</Link>
+    {message && <InlineMessage tone="info" className="">{message}</InlineMessage>}
+    <Button type="submit" disabled={busy} className="h-12 w-full rounded-q-control bg-q-primary font-bold text-q-on-primary disabled:opacity-60">{busy ? "جارٍ الإرسال..." : "إرسال رابط الاستعادة"}</Button>
+    <Link href="/login" className="flex min-h-11 items-center justify-center text-center text-q-ui font-bold text-q-primary">العودة لتسجيل الدخول</Link>
   </form>;
 }

@@ -1,4 +1,6 @@
 "use client";
+import { InlineMessage } from "@/shared/ui/inline-message";
+import { Button } from "@/shared/ui/button";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -60,9 +62,9 @@ export function MfaForm() {
   const verifiedFactors = factors.filter((factor) => factor.status === "verified");
   const hasIncompleteFactor = factors.some((factor) => factor.status === "unverified");
   return <div className="mt-8 space-y-5">
-    {!verifiedFactors.length && !enrollment && <><p className="text-sm text-slate-600">{hasIncompleteFactor ? "يوجد إعداد تحقق غير مكتمل. أنشئ رمزًا جديدًا لإكمال الربط." : "هذا حساب حساس. اربطه بتطبيق مصادقة قبل المتابعة."}</p><button onClick={enroll} className="h-12 w-full rounded-xl bg-[var(--q-primary)] font-bold text-white">{hasIncompleteFactor ? "إعادة إنشاء رمز الإعداد" : "إعداد تطبيق المصادقة"}</button></>}
-    {enrollment?.totp && <div className="rounded-xl border bg-white p-4 text-center">{enrollment.totp.qr_code && <Image unoptimized alt="رمز إعداد المصادقة" src={enrollment.totp.qr_code} width={192} height={192} className="mx-auto" />}<p className="mt-2 break-all font-mono text-xs" dir="ltr">{enrollment.totp.secret}</p></div>}
-    {(verifiedFactors.length > 0 || enrollment?.id) && <form onSubmit={verify} className="space-y-4"><label className="block text-sm font-bold">رمز التحقق المكون من 6 أرقام<input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ""))} className="mt-2 h-12 w-full rounded-xl border px-4 text-center text-xl tracking-[.5em]" /></label><button className="h-12 w-full rounded-xl bg-[var(--q-primary)] font-bold text-white">تحقق ومتابعة</button></form>}
-    {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    {!verifiedFactors.length && !enrollment && <><p className="text-q-ui text-q-text-2">{hasIncompleteFactor ? "يوجد إعداد تحقق غير مكتمل. أنشئ رمزًا جديدًا لإكمال الربط." : "هذا حساب حساس. اربطه بتطبيق مصادقة قبل المتابعة."}</p><Button type="submit" onClick={enroll} className="h-12 w-full rounded-q-control bg-q-primary font-bold text-q-on-primary">{hasIncompleteFactor ? "إعادة إنشاء رمز الإعداد" : "إعداد تطبيق المصادقة"}</Button></>}
+    {enrollment?.totp && <div className="rounded-q-control border border-q-border bg-q-surface p-4 text-center">{enrollment.totp.qr_code && <Image unoptimized alt="رمز إعداد المصادقة" src={enrollment.totp.qr_code} width={192} height={192} className="mx-auto" />}<p className="mt-2 break-all font-mono text-q-caption" dir="ltr">{enrollment.totp.secret}</p></div>}
+    {(verifiedFactors.length > 0 || enrollment?.id) && <form onSubmit={verify} className="space-y-4"><label className="block text-q-ui font-bold">رمز التحقق المكون من 6 أرقام<input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ""))} className="mt-2 h-12 w-full rounded-q-control border border-q-border bg-q-surface px-4 text-center text-q-h3 tracking-[.5em]" /></label><Button type="submit" className="h-12 w-full rounded-q-control bg-q-primary font-bold text-q-on-primary">تحقق ومتابعة</Button></form>}
+    {error && <InlineMessage tone="error" className="">{error}</InlineMessage>}
   </div>;
 }
