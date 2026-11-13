@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 // The interface typeface is Readex Pro, a variable font (weights 160–700) that covers Arabic and Latin.
-// It is self-hosted, so no page depends on an external font service. Official PDFs keep IBM Plex Sans Arabic.
+// It is self-hosted, so no page depends on an external font service. Official PDFs and the invitation image use its static Regular and Bold files.
 const qararSans = localFont({
   src: "../assets/fonts/ReadexPro-Variable.ttf",
   weight: "160 700",

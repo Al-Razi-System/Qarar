@@ -7,8 +7,8 @@ import { invitationQrDataUri, renderMeetingInvitationSvg, type MeetingInvitation
 export async function meetingInvitationPng(snapshot: MeetingInvitationSnapshot) {
   const logo = await readFile(path.join(process.cwd(), "public/brand/razi-university.jpg"));
   const fontFiles = [
-    path.join(process.cwd(), "src/assets/fonts/IBMPlexSansArabic-Regular.ttf"),
-    path.join(process.cwd(), "src/assets/fonts/IBMPlexSansArabic-Bold.ttf"),
+    path.join(process.cwd(), "src/assets/fonts/ReadexPro-Regular.ttf"),
+    path.join(process.cwd(), "src/assets/fonts/ReadexPro-Bold.ttf"),
   ];
   const svg = renderMeetingInvitationSvg(
     snapshot,

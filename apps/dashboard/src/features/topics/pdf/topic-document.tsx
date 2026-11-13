@@ -5,8 +5,8 @@ import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/
 Font.register({
   family: "QararArabic",
   fonts: [
-    { src: path.join(process.cwd(), "src/assets/fonts/IBMPlexSansArabic-Regular.ttf"), fontWeight: 400 },
-    { src: path.join(process.cwd(), "src/assets/fonts/IBMPlexSansArabic-Bold.ttf"), fontWeight: 700 },
+    { src: path.join(process.cwd(), "src/assets/fonts/ReadexPro-Regular.ttf"), fontWeight: 400 },
+    { src: path.join(process.cwd(), "src/assets/fonts/ReadexPro-Bold.ttf"), fontWeight: 700 },
   ],
 });
 Font.registerHyphenationCallback((word) => [word]);
