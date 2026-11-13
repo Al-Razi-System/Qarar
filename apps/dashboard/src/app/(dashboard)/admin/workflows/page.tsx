@@ -13,5 +13,5 @@ export default async function WorkflowsPage() {
     if (error instanceof QararApiError && error.code === "42501") failure = "ليست لديك صلاحية إدارة المسارات.";
   }
   if (data) return <RouteDesigner initialData={data} />;
-  return <section dir="rtl" className="rounded-2xl border border-slate-200 bg-white p-8"><h1 className="text-xl font-bold">مسارات الموضوعات</h1><p role="alert" className="mt-4 text-sm text-slate-600">{failure}</p></section>;
+  return <section dir="rtl" className="rounded-q-card border border-q-border bg-q-surface p-8"><h1 className="text-q-h3 font-bold">مسارات الموضوعات</h1><p role="alert" className="mt-4 text-q-ui text-q-text-2">{failure}</p></section>;
 }
