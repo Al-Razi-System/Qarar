@@ -1,4 +1,7 @@
 "use client";
+import { Card } from "@/shared/ui/card";
+import { InlineMessage } from "@/shared/ui/inline-message";
+import { Button } from "@/shared/ui/button";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { LockKeyhole } from "lucide-react";
@@ -29,19 +32,19 @@ export function TemporaryPasswordForm() {
     } catch { setUncertain(true); setError("انقطع الاتصال قبل تأكيد النتيجة. جرّب تسجيل الدخول بالكلمة الجديدة قبل إعادة التغيير."); }
     finally { busy.current = false; setPending(false); }
   }
-  return <div className="rounded-3xl border border-[var(--q-border)] bg-white p-6 shadow-sm sm:p-9" dir="rtl">
-    <span className="mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-[var(--q-surface-2)] text-[var(--q-primary)]"><LockKeyhole size={26}/></span>
-    <h1 className="text-2xl font-black text-[var(--q-text)]">كلمة مرور خاصة بك</h1>
-    <p className="mt-3 text-sm leading-7 text-[var(--q-text-2)]">استبدل كلمة المرور المؤقتة قبل استخدام قرار. بعد الحفظ، ستُلغى الجلسات المؤقتة وتدخل بالكلمة الجديدة.</p>
-    {success ? <div className="mt-6"><p role="status" className="rounded-xl bg-[var(--q-surface-2)] p-4 text-sm leading-7 text-[#315b80]">{success}</p><Link href="/login" className="mt-5 block rounded-xl bg-[var(--q-primary)] px-5 py-3 text-center font-bold text-white">تسجيل الدخول بالكلمة الجديدة</Link></div> : <form method="post" onSubmit={submit} className="mt-6 space-y-5">
+  return <Card className="p-6 sm:p-9" dir="rtl">
+    <span className="mb-5 grid h-14 w-14 place-items-center rounded-q-card bg-q-surface-2 text-q-primary"><LockKeyhole size={26}/></span>
+    <h1 className="text-q-h2 font-bold text-q-text">كلمة مرور خاصة بك</h1>
+    <p className="mt-3 text-q-ui leading-7 text-q-text-2">استبدل كلمة المرور المؤقتة قبل استخدام قرار. بعد الحفظ، ستُلغى الجلسات المؤقتة وتدخل بالكلمة الجديدة.</p>
+    {success ? <div className="mt-6"><InlineMessage tone="success" className="">{success}</InlineMessage><Link href="/login" className="mt-5 block rounded-q-control bg-q-primary px-5 py-3 text-center font-bold text-q-on-primary">تسجيل الدخول بالكلمة الجديدة</Link></div> : <form method="post" onSubmit={submit} className="mt-6 space-y-5">
       <fieldset disabled={pending || uncertain} className="min-w-0 space-y-5">
         <FormField label="كلمة المرور الحالية" type="password" autoComplete="current-password" value={currentPassword} onChange={e => setCurrent(e.target.value)} required />
-        <div><FormField label="كلمة المرور الجديدة" type="password" autoComplete="new-password" aria-describedby="new-password-policy" value={password} onChange={e => setPassword(e.target.value)} minLength={12} maxLength={128} required /><p id="new-password-policy" className="mt-2 text-xs leading-6 text-[#718096]">12 حرفًا على الأقل، تشمل حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.</p></div>
+        <div><FormField label="كلمة المرور الجديدة" type="password" autoComplete="new-password" aria-describedby="new-password-policy" value={password} onChange={e => setPassword(e.target.value)} minLength={12} maxLength={128} required /><p id="new-password-policy" className="mt-2 text-q-caption leading-6 text-q-text-2">12 حرفًا على الأقل، تشمل حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.</p></div>
         <FormField label="تأكيد كلمة المرور الجديدة" type="password" autoComplete="new-password" value={confirmation} onChange={e => setConfirmation(e.target.value)} required />
-        <button disabled={pending || uncertain} className="w-full rounded-xl bg-[var(--q-primary)] px-5 py-3 font-bold text-white disabled:opacity-50">{pending ? "جارٍ استبدال كلمة المرور…" : "حفظ كلمة المرور الجديدة"}</button>
+        <Button type="submit" disabled={pending || uncertain} className="w-full rounded-q-control bg-q-primary px-5 py-3 font-bold text-q-on-primary disabled:opacity-50">{pending ? "جارٍ استبدال كلمة المرور…" : "حفظ كلمة المرور الجديدة"}</Button>
       </fieldset>
-      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-700">{error}</p>}
-      <Link href="/login" className="block text-center text-sm font-bold text-[var(--q-primary)]">العودة لتسجيل الدخول</Link>
+      {error && <InlineMessage tone="error" className="">{error}</InlineMessage>}
+      <Link href="/login" className="flex min-h-11 items-center justify-center text-center text-q-ui font-bold text-q-primary">العودة لتسجيل الدخول</Link>
     </form>}
-  </div>;
+  </Card>;
 }
