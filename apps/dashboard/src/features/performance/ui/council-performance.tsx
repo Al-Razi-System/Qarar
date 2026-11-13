@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Badge } from "@/shared/ui/badge";
 import { MetricStrip } from "@/shared/ui/metric-strip";
 import { RhythmLegend, SessionRhythm } from "@/shared/ui/session-rhythm";
-import { councilMetrics, days, fullRhythm, outcomeCaption, rhythmSentence, shortDate, stateLabel, stateTone, type CouncilPerformance, type SessionRow } from "../model/performance";
+import { ShareBar } from "@/shared/ui/share-bar";
+import { councilMetrics, days, decisionShares, executorsText, topicShares, fullRhythm, outcomeCaption, rhythmSentence, shortDate, stateLabel, stateTone, type CouncilPerformance, type SessionRow } from "../model/performance";
 
 const cell = "px-3 py-3.5 align-top";
 const head = "px-3 py-2.5 text-start font-semibold";
@@ -29,6 +30,7 @@ function minutesText(session: SessionRow) {
 /** One council in full: its rhythm, four indicators against target, every session, and what needs follow-up now. */
 export function CouncilPerformanceView({ data }: { data: CouncilPerformance }) {
   const { council, sessions, violations } = data;
+  const { decision_stats: decisions, topics } = council;
   const sentence = rhythmSentence(council.sessions, council.marks);
   // Newest first in the ledger: the follower acts on the latest sessions.
   const ledger = sessions.filter((session) => session.outcome !== "upcoming").slice().reverse();
@@ -39,7 +41,6 @@ export function CouncilPerformanceView({ data }: { data: CouncilPerformance }) {
         <Badge tone={stateTone[council.state]}>{stateLabel[council.state]}</Badge>
         {council.chair_name_ar && <span>يرأسه {council.chair_name_ar}</span>}
         <span>عدد الأعضاء: {council.member_count}</span>
-        <span>قرارات هذا العام: {council.decisions}</span>
       </div>
 
       <section aria-labelledby="rhythm-title" className={`${panel} flex flex-col gap-4 p-5`}>
@@ -54,6 +55,49 @@ export function CouncilPerformanceView({ data }: { data: CouncilPerformance }) {
       </section>
 
       <MetricStrip label="مؤشرات المجلس" metrics={councilMetrics(council)} />
+
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <section aria-labelledby="decisions-title" className={`${panel} flex flex-col gap-4 p-5`}>
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 id="decisions-title" className="m-0 text-q-h3 font-semibold text-q-text">القرارات الصادرة</h2>
+            <span className="text-q-h3 font-semibold text-q-text">{decisions.total}</span>
+          </div>
+          {decisions.total === 0 ? <p className="m-0 text-q-ui text-q-text-2">لم يصدر المجلس قرارًا في هذا العام الجامعي.</p> : <>
+            <ShareBar label="القرارات حسب نتيجتها" shares={decisionShares(decisions)} />
+            {decisions.by_type.length > 0 && (
+              <p className="m-0 text-q-ui text-q-text-2">
+                حسب النوع: {decisions.by_type.map((type) => `${type.name_ar} ${type.count}`).join("، ")}{decisions.untyped > 0 ? `، بلا نوع ${decisions.untyped}` : ""}.
+              </p>
+            )}
+            <dl className="m-0 grid gap-x-6 gap-y-3 border-t border-q-border pt-4 sm:grid-cols-3">
+              <div><dt className="text-q-caption text-q-text-3">تحتاج تنفيذًا</dt><dd className="m-0 text-q-ui font-semibold text-q-text">{decisions.needs_execution} من {decisions.total}</dd></div>
+              <div>
+                <dt className="text-q-caption text-q-text-3">نُفّذت كاملة</dt>
+                <dd className="m-0 text-q-ui font-semibold text-q-text">{decisions.executed} من {decisions.needs_execution}</dd>
+                {decisions.overdue_execution > 0 && <dd className="m-0 text-q-caption text-q-accent-text">{decisions.overdue_execution} تأخر تنفيذها</dd>}
+              </div>
+              <div><dt className="text-q-caption text-q-text-3">المنفّذون</dt><dd className="m-0 text-q-ui font-semibold text-q-text">{executorsText(decisions.executors)}</dd></div>
+            </dl>
+          </>}
+        </section>
+
+        <section aria-labelledby="topics-title" className={`${panel} flex flex-col gap-4 p-5`}>
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 id="topics-title" className="m-0 text-q-h3 font-semibold text-q-text">الموضوعات في جدول المجلس</h2>
+            <span className="text-q-h3 font-semibold text-q-text">{topics.total}</span>
+          </div>
+          {topics.total === 0 ? <p className="m-0 text-q-ui text-q-text-2">لم يُدرج موضوع في جلسات هذا العام الجامعي.</p> : <>
+            <ShareBar label="الموضوعات حسب مصدر حوكمتها" shares={topicShares(topics)} />
+            <dl className="m-0 grid gap-x-6 gap-y-3 border-t border-q-border pt-4 sm:grid-cols-2">
+              <div>
+                <dt className="text-q-caption text-q-text-3">غير محوكمة</dt>
+                <dd className={`m-0 text-q-ui font-semibold ${topics.ungoverned > 0 ? "text-q-accent-text" : "text-q-text"}`}>{topics.ungoverned} من {topics.total}</dd>
+              </div>
+              <div><dt className="text-q-caption text-q-text-3">نوقشت</dt><dd className="m-0 text-q-ui font-semibold text-q-text">{topics.discussed} من {topics.total}</dd></div>
+            </dl>
+          </>}
+        </section>
+      </div>
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,1.2fr)]">
         <section aria-labelledby="ledger-title" className={`${panel} overflow-hidden`}>

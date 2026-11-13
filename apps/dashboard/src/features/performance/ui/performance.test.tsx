@@ -15,6 +15,12 @@ const graphics: CouncilRow = {
   ],
   next_due: "2026-12-13", attendance: { present: 15, recorded: 18 }, minutes: { avg_days: 4, pending: 1 },
   tasks: { total: 8, done: 5, overdue: 1 }, decisions: 10, violations: { open: 1, escalated: 0 },
+  decision_stats: {
+    total: 10, untyped: 7, needs_execution: 6, executed: 4, overdue_execution: 1,
+    by_outcome: [{ kind: "approval", count: 7 }, { kind: "postponement", count: 2 }, { kind: "rejection", count: 1 }],
+    by_type: [{ name_ar: "توصية", count: 3 }], executors: { people: 4, units: 1 },
+  },
+  topics: { total: 12, regulated: 9, direct: 2, exception: 0, legacy: 1, ungoverned: 3, discussed: 10 },
 };
 const college: CouncilRow = {
   ...graphics, id: "c2", name_ar: "مجلس الكلية", parent_name_ar: null, state: "regular",
@@ -61,6 +67,8 @@ describe("OversightOverview", () => {
     expect(row).toHaveTextContent("83%");
     expect(row).toHaveTextContent("1 بانتظار الاعتماد");
     expect(row).toHaveTextContent("5 من 8");
+    expect(row).toHaveTextContent("نُفّذ 4 من 6");
+    expect(row).toHaveTextContent("3 غير محوكمة");
     expect(within(row).getByText("يحتاج متابعة")).toBeInTheDocument();
   });
 
@@ -117,6 +125,27 @@ describe("CouncilPerformanceView", () => {
     expect(rows[1]).toHaveTextContent("لم يُعتمد بعد");
     expect(rows[2]).toHaveTextContent("اعتُمد بعد 3 أيام");
     expect(within(rows[2]).getByRole("link", { name: "الجلسة الأولى" })).toHaveAttribute("href", "/admin/meetings/m1");
+  });
+
+  it("breaks decisions down by outcome and type, with how many were executed and by whom", () => {
+    render(<CouncilPerformanceView data={data} />);
+    const decisions = screen.getByRole("region", { name: "القرارات الصادرة" });
+    const outcomes = within(decisions).getByRole("list", { name: "القرارات حسب نتيجتها" });
+    expect(within(outcomes).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["موافقة7", "تأجيل2", "رفض1"]);
+    expect(decisions).toHaveTextContent("حسب النوع: توصية 3، بلا نوع 7.");
+    expect(decisions).toHaveTextContent("تحتاج تنفيذًا6 من 10");
+    expect(decisions).toHaveTextContent("نُفّذت كاملة4 من 6");
+    expect(decisions).toHaveTextContent("1 تأخر تنفيذها");
+    expect(decisions).toHaveTextContent("4 أشخاص وجهة واحدة");
+  });
+
+  it("separates governed topics from ungoverned ones", () => {
+    render(<CouncilPerformanceView data={data} />);
+    const topics = screen.getByRole("region", { name: "الموضوعات في جدول المجلس" });
+    expect(within(within(topics).getByRole("list")).getAllByRole("listitem").map((item) => item.textContent))
+      .toEqual(["محوكمة بمسار معتمد9", "مباشرة بلا مسار2", "قديمة بلا مسار1"]);
+    expect(topics).toHaveTextContent("غير محوكمة3 من 12");
+    expect(topics).toHaveTextContent("نوقشت10 من 12");
   });
 
   it("lists what needs follow-up now with a link, or says nothing is open", () => {

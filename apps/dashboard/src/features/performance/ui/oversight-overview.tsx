@@ -36,13 +36,15 @@ export function OversightOverview({ data }: { data: Overview }) {
       </div>
       <section aria-label="المجالس" className="overflow-hidden rounded-q-card border border-q-border bg-q-surface">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse text-q-ui">
+          <table className="w-full min-w-[1040px] border-collapse text-q-ui">
             <thead>
               <tr className="bg-q-surface-2 text-q-text">
                 <th scope="col" className={`${head} ps-6`}>المجلس</th>
                 <th scope="col" className={head}>إيقاع الانعقاد</th>
                 <th scope="col" className={head}>الحضور</th>
                 <th scope="col" className={head}>اعتماد المحضر</th>
+                <th scope="col" className={head}>القرارات</th>
+                <th scope="col" className={head}>الموضوعات</th>
                 <th scope="col" className={head}>التكليفات</th>
                 <th scope="col" className={`${head} pe-6`}>الحالة</th>
               </tr>
@@ -64,6 +66,14 @@ export function OversightOverview({ data }: { data: Overview }) {
                     <td className={cell}>
                       {council.minutes.avg_days == null ? "—" : days(Math.round(council.minutes.avg_days))}
                       {council.minutes.pending > 0 && <div className="text-q-caption text-q-accent-text">{council.minutes.pending} بانتظار الاعتماد</div>}
+                    </td>
+                    <td className={cell}>
+                      {council.decision_stats.total > 0 ? council.decision_stats.total : "—"}
+                      {council.decision_stats.needs_execution > 0 && <div className="text-q-caption text-q-text-3">نُفّذ {council.decision_stats.executed} من {council.decision_stats.needs_execution}</div>}
+                    </td>
+                    <td className={cell}>
+                      {council.topics.total > 0 ? council.topics.total : "—"}
+                      {council.topics.ungoverned > 0 && <div className="text-q-caption text-q-accent-text">{council.topics.ungoverned} غير محوكمة</div>}
                     </td>
                     <td className={cell}>
                       {council.tasks.total > 0 ? `${council.tasks.done} من ${council.tasks.total}` : "—"}

@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(22);
+select plan(26);
 
 -- "Today" as the contracts see it, and the academic year that contains it.
 create temporary table clock as
@@ -71,10 +71,25 @@ select '61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000
 insert into qarar_minutes.meeting_minutes(organization_id,meeting_id,status,approved_at)
 select '61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000907','approved',
   ((c.t-14)::timestamp + interval '12 hours') at time zone 'Asia/Riyadh' from clock c;
-insert into qarar_topics.topics(id,organization_id,topic_no,title_ar,submitted_by_user_id,status,current_unit_id) values
-('61000000-0000-0000-0000-000000000801','61000000-0000-0000-0000-000000000001','T-1','خطة الكلية','61000000-0000-0000-0000-000000000102','listed','61000000-0000-0000-0000-000000000501');
+insert into qarar_topics.topics(id,organization_id,topic_no,title_ar,submitted_by_user_id,status,current_unit_id,governance_source) values
+('61000000-0000-0000-0000-000000000801','61000000-0000-0000-0000-000000000001','T-1','خطة الكلية','61000000-0000-0000-0000-000000000102','listed','61000000-0000-0000-0000-000000000501','regulated'),
+('61000000-0000-0000-0000-000000000802','61000000-0000-0000-0000-000000000001','T-2','موضوع مباشر','61000000-0000-0000-0000-000000000102','listed','61000000-0000-0000-0000-000000000501','custom'),
+('61000000-0000-0000-0000-000000000803','61000000-0000-0000-0000-000000000001','T-3','موضوع قديم','61000000-0000-0000-0000-000000000102','listed','61000000-0000-0000-0000-000000000501',null);
+insert into qarar_meetings.agenda_items(organization_id,meeting_id,agenda_order,topic_id,agenda_status) values
+('61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000901',1,'61000000-0000-0000-0000-000000000801','discussed'),
+('61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000901',2,'61000000-0000-0000-0000-000000000802','discussed'),
+('61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000902',1,'61000000-0000-0000-0000-000000000803','pending'),
+('61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000905',1,'61000000-0000-0000-0000-000000000802','pending');
+insert into qarar_decisions.decision_types(id,organization_id,code,name_ar) values
+('61000000-0000-0000-0000-000000000931','61000000-0000-0000-0000-000000000001','rec161','توصية');
 insert into qarar_decisions.decisions(id,organization_id,decision_no,topic_id,meeting_id,governance_unit_id,decision_text,decision_status,issued_by_user_id,issued_at) values
-('61000000-0000-0000-0000-000000000941','61000000-0000-0000-0000-000000000001','D-1','61000000-0000-0000-0000-000000000801','61000000-0000-0000-0000-000000000901','61000000-0000-0000-0000-000000000501','اعتماد','approved','61000000-0000-0000-0000-000000000103',now());
+('61000000-0000-0000-0000-000000000941','61000000-0000-0000-0000-000000000001','D-1','61000000-0000-0000-0000-000000000801','61000000-0000-0000-0000-000000000901','61000000-0000-0000-0000-000000000501','اعتماد','approved','61000000-0000-0000-0000-000000000103',now()),
+('61000000-0000-0000-0000-000000000942','61000000-0000-0000-0000-000000000001','D-2','61000000-0000-0000-0000-000000000802','61000000-0000-0000-0000-000000000901','61000000-0000-0000-0000-000000000501','اعتماد ثانٍ','closed','61000000-0000-0000-0000-000000000103',now()),
+('61000000-0000-0000-0000-000000000943','61000000-0000-0000-0000-000000000001','D-3','61000000-0000-0000-0000-000000000802','61000000-0000-0000-0000-000000000902','61000000-0000-0000-0000-000000000501','رفض','rejected','61000000-0000-0000-0000-000000000103',now()),
+('61000000-0000-0000-0000-000000000944','61000000-0000-0000-0000-000000000001','D-4','61000000-0000-0000-0000-000000000803','61000000-0000-0000-0000-000000000902','61000000-0000-0000-0000-000000000501','مسودة','draft','61000000-0000-0000-0000-000000000103',now());
+update qarar_decisions.decisions set outcome_kind='rejection', decision_type_id='61000000-0000-0000-0000-000000000931' where id='61000000-0000-0000-0000-000000000943';
+insert into qarar_execution.action_items(organization_id,action_no,decision_id,topic_id,title_ar,status,due_date,assigned_user_id,assigned_unit_id) values
+('61000000-0000-0000-0000-000000000001','A-5','61000000-0000-0000-0000-000000000942','61000000-0000-0000-0000-000000000802','منجزة لجهة','completed',current_date-3,'61000000-0000-0000-0000-000000000102','61000000-0000-0000-0000-000000000502');
 insert into qarar_execution.action_items(organization_id,action_no,decision_id,topic_id,title_ar,status,due_date,assigned_user_id)
 select '61000000-0000-0000-0000-000000000001',no,'61000000-0000-0000-0000-000000000941','61000000-0000-0000-0000-000000000801',title,status,c.t+due,'61000000-0000-0000-0000-000000000101'
 from clock c, (values ('A-1','منجزة','completed',-9),('A-2','متأخرة','new',-2),('A-3','جارية','in_progress',5),('A-4','ملغاة','cancelled',-1)) v(no,title,status,due);
@@ -107,7 +122,7 @@ select is((select (c->'marks'->3->>'late_days')::int from a), 4, 'a session not 
 select is((select c->>'state' from a), 'stalled', 'two due sessions in a row not held make the council stalled');
 select is((select c->'attendance' from a), '{"present":3,"recorded":5}'::jsonb, 'late arrivals count as present and pending records are not counted');
 select is((select c->'minutes' from a), '{"avg_days":3.0,"pending":1}'::jsonb, 'minutes: days from the session to approval, and held sessions still without approved minutes');
-select is((select c->'tasks' from a), '{"total":3,"done":1,"overdue":1}'::jsonb, 'tasks come through the council''s decisions, cancelled ones excluded');
+select is((select c->'tasks' from a), '{"total":4,"done":2,"overdue":1}'::jsonb, 'tasks come through the council''s decisions, cancelled ones excluded');
 select is((select c->'violations' from a), '{"open":1,"escalated":0}'::jsonb, 'open violations are counted with those escalated');
 select is((select (c->>'next_due')::date from a), (select t+20 from clock), 'the next due session is shown');
 select ok((select (c->>'leads')::boolean and (c->>'follows')::boolean from a), 'the row says whether I lead and whether I follow the council');
@@ -115,6 +130,14 @@ select is((select c->>'state' from seen, jsonb_array_elements(overview->'council
   'attention', 'one session past its due day needs attention without being stalled');
 select is((select c->>'state' from seen, jsonb_array_elements(overview->'councils') c where who='amal' and c->>'name_ar'='مجلس خامل'),
   'inactive', 'a council that is not active is never reported as stalled');
+
+select is((select (c->'decision_stats') - 'by_outcome'::text - 'by_type'::text from a),
+  '{"total":3,"untyped":2,"needs_execution":2,"executed":1,"overdue_execution":1,"executors":{"people":2,"units":1}}'::jsonb,
+  'decisions: issued ones only, how many needed execution, were executed or are late, and who executes them');
+select is((select c->'decision_stats'->'by_outcome' from a), '[{"kind":"approval","count":2},{"kind":"rejection","count":1}]'::jsonb, 'decisions are split by outcome, most frequent first');
+select is((select c->'decision_stats'->'by_type' from a), '[{"name_ar":"توصية","count":1}]'::jsonb, 'decisions are split by their type when one is set');
+select is((select c->'topics' from a), '{"total":3,"regulated":1,"direct":1,"exception":0,"legacy":1,"ungoverned":2,"discussed":2}'::jsonb,
+  'topics the council handled are counted once each, governed apart from ungoverned');
 
 select is((select jsonb_build_object('chair', council->'council'->>'chair_name_ar', 'members', (council->'council'->>'member_count')::int) from seen where who='amal'),
   '{"chair":"أمل","members":2}'::jsonb, 'the council page names the chair and counts active members');

@@ -30,6 +30,8 @@ Council object:
 | `tasks` | `{total, done, overdue}` of tasks created in the year from the council's decisions, cancelled excluded |
 | `decisions` | decisions issued in the year's sessions |
 | `violations` | `{open, escalated}` |
+| `decision_stats` | `{total, by_outcome:[{kind,count}], by_type:[{name_ar,count}], untyped, needs_execution, executed, overdue_execution, executors:{people,units}}` over issued decisions (`approved`, `sent_to_execution`, `under_follow_up`, `closed`, `rejected`) of the year. A decision needs execution when it has a non-cancelled task, and is executed when all of them are `completed` or `closed` |
+| `topics` | `{total, regulated, direct, exception, legacy, ungoverned, discussed}`: distinct topics on the agendas of the year's sessions, by `governance_source` (`custom` = direct, empty = legacy); `ungoverned` = all but `regulated` |
 
 ## `POST /rest/v1/rpc/get_council_performance_v2`
 
@@ -59,5 +61,6 @@ is the same day the `meeting_cycle_missed` rule uses. Days are taken in `Asia/Ri
 ## Composition
 
 `qarar_meetings.council_sessions_v2` classifies sessions, `qarar_attendance.meeting_attendance_v2` counts attendance and
-`qarar_iam.council_profile_v2` gives the chair and member count; `qarar_governance` assembles them. The three
+`qarar_iam.council_profile_v2` gives the chair and member count, `qarar_decisions.council_decisions_v2` lists issued
+decisions with their type names; `qarar_governance` assembles them. The four
 cross-module calls are registered in `module_function_execute_allowlist`. No tables are added and nothing is written.

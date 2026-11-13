@@ -1,5 +1,6 @@
 import type { Metric } from "@/shared/ui/metric-strip";
 import type { RhythmSession, SessionOutcome } from "@/shared/ui/session-rhythm";
+import type { Share } from "@/shared/ui/share-bar";
 
 export type CouncilState = "stalled" | "attention" | "regular" | "inactive";
 
@@ -18,6 +19,12 @@ export type CouncilRow = {
   tasks: { total: number; done: number; overdue: number };
   decisions: number;
   violations: { open: number; escalated: number };
+  decision_stats: {
+    total: number; untyped: number; needs_execution: number; executed: number; overdue_execution: number;
+    by_outcome: Array<{ kind: string; count: number }>; by_type: Array<{ name_ar: string; count: number }>;
+    executors: { people: number; units: number };
+  };
+  topics: { total: number; regulated: number; direct: number; exception: number; legacy: number; ungoverned: number; discussed: number };
 };
 
 export type Overview = {
@@ -133,4 +140,26 @@ export function councilMetrics(row: CouncilRow): Metric[] {
       ratio: done, target: targets.tasks, tone: tasks.overdue > 0 ? "accent" : "primary",
     },
   ];
+}
+
+const outcome: Record<string, { label: string; tone: Share["tone"] }> = {
+  approval: { label: "موافقة", tone: "primary" }, rejection: { label: "رفض", tone: "danger" }, postponement: { label: "تأجيل", tone: "accent" },
+  referral: { label: "إحالة", tone: "link" }, return: { label: "إعادة", tone: "warning" }, undecided: { label: "بلا حسم", tone: "muted" },
+};
+
+/** Decisions split by what the council decided. An outcome the product does not name yet is shown as «غير مصنف». */
+export const decisionShares = (stats: CouncilRow["decision_stats"]): Share[] =>
+  stats.by_outcome.map(({ kind, count }) => ({ key: kind, count, label: outcome[kind]?.label ?? "غير مصنف", tone: outcome[kind]?.tone ?? "muted" }));
+
+/** Topics the council handled, governed ones apart from the three kinds that bypass a governed route. */
+export const topicShares = (topics: CouncilRow["topics"]): Share[] => [
+  { key: "regulated", label: "محوكمة بمسار معتمد", count: topics.regulated, tone: "primary" },
+  { key: "direct", label: "مباشرة بلا مسار", count: topics.direct, tone: "accent" },
+  { key: "exception", label: "باستثناء", count: topics.exception, tone: "warning" },
+  { key: "legacy", label: "قديمة بلا مسار", count: topics.legacy, tone: "muted" },
+];
+
+export function executorsText({ people, units }: CouncilRow["decision_stats"]["executors"]) {
+  const parts = [people > 0 ? (people === 1 ? "شخص واحد" : `${people} أشخاص`) : null, units > 0 ? (units === 1 ? "جهة واحدة" : `${units} جهات`) : null].filter(Boolean);
+  return parts.length > 0 ? parts.join(" و") : "لا أحد بعد";
 }
