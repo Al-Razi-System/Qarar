@@ -1,4 +1,6 @@
 "use client";
+import { InlineMessage } from "@/shared/ui/inline-message";
+import { Button } from "@/shared/ui/button";
 
 import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
@@ -72,7 +74,7 @@ export function LoginForm() {
         onChange={(event) => setEmail(event.target.value)}
         required
       />
-      <div className="relative">
+      <div className="relative [&_input]:pl-11">
         <FormField
           label="كلمة المرور"
           name="password"
@@ -84,47 +86,43 @@ export function LoginForm() {
           onChange={(event) => setPassword(event.target.value)}
           required
         />
-        <button
+        <Button
           suppressHydrationWarning
+          variant="ghost"
           type="button"
           onClick={() => setShowPassword((value) => !value)}
-          className="absolute bottom-3 left-3 text-[#7a899d] hover:text-[var(--q-primary)]"
+          className="absolute bottom-0.5 left-1 h-11 w-11 px-0 text-q-text-3 hover:text-q-primary"
           aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
         >
           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-        </button>
+        </Button>
       </div>
-      <div className="flex items-center justify-between text-xs">
-        <label className="flex cursor-pointer items-center gap-2 text-[var(--q-text-2)]">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 text-q-caption">
+        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-q-text-2">
           <input
             suppressHydrationWarning
             type="checkbox"
-            className="h-4 w-4 rounded border-[#cbd7e5] accent-[var(--q-primary)]"
+            className="h-4 w-4 rounded-q-control border-q-border accent-q-primary"
           />
           تذكرني على هذا الجهاز
         </label>
-        <Link href="/forgot-password" className="font-bold text-[var(--q-primary)] hover:underline">
+        <Link href="/forgot-password" className="inline-flex min-h-11 items-center font-bold text-q-link hover:underline">
           نسيت كلمة المرور؟
         </Link>
       </div>
       {error && (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700"
-        >
-          {error}
-        </p>
+        <InlineMessage tone="error">{error}</InlineMessage>
       )}
-      <button
+      <Button
         suppressHydrationWarning
         type="submit"
         disabled={!ready || isSubmitting}
-        className="h-12 w-full rounded-xl bg-gradient-to-l from-[var(--q-primary)] to-[#1e88e5] text-sm font-bold text-white shadow-[0_10px_25px_rgba(0,102,204,.2)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(0,102,204,.28)] disabled:cursor-wait disabled:opacity-70"
+        className="h-12 w-full rounded-q-control bg-q-primary text-q-ui font-bold text-q-on-primary transition  disabled:cursor-wait disabled:opacity-70"
       >
         {!ready ? "جارٍ تجهيز تسجيل الدخول…" : isSubmitting ? "جارٍ التحقق..." : "تسجيل الدخول"}
-      </button>
+      </Button>
       </fieldset>
-      <noscript><p role="alert" className="mt-3 text-sm text-red-700">فعّل JavaScript في المتصفح لتسجيل الدخول بأمان.</p></noscript>
+      <noscript><InlineMessage tone="error" className="mt-3">فعّل JavaScript في المتصفح لتسجيل الدخول بأمان.</InlineMessage></noscript>
     </form>
   );
 }
