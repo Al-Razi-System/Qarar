@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { academicYearLabel, type Overview } from "@/features/performance/model/performance";
+import { SectionNav } from "@/features/performance/ui/section-nav";
 import { OversightOverview } from "@/features/performance/ui/oversight-overview";
 import { InlineMessage } from "@/shared/ui/inline-message";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -19,6 +20,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
   const summary = data?.summary;
   return (
     <div>
+      <SectionNav current="councils" />
       <PageHeader
         title="المتابعة والأداء"
         description={summary && summary.total > 0

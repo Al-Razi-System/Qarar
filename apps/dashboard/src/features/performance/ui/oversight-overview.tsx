@@ -73,7 +73,7 @@ export function OversightOverview({ data }: { data: Overview }) {
                     </td>
                     <td className={cell}>
                       {council.topics.total > 0 ? council.topics.total : "—"}
-                      {council.topics.ungoverned > 0 && <div className="text-q-caption text-q-accent-text">{council.topics.ungoverned} غير محوكمة</div>}
+                      {council.topics.ungoverned > 0 && <Link href={`/admin/performance/topics?council=${council.id}&governance=ungoverned`} className="block text-q-caption font-semibold text-q-accent-text hover:underline">{council.topics.ungoverned} غير محوكمة</Link>}
                     </td>
                     <td className={cell}>
                       {council.tasks.total > 0 ? `${council.tasks.done} من ${council.tasks.total}` : "—"}

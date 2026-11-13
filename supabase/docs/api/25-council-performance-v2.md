@@ -54,6 +54,22 @@ Same body, scope and errors as `get_council_performance_v2`. Returns the records
 | `decisions` | issued decisions: `{id, decision_no, decision_text, outcome_kind, type_name_ar, issued_at, meeting_id, meeting_title_ar, topic_title_ar, tasks, tasks_done, link}` |
 | `tasks` | non-cancelled tasks of those decisions, open first: `{id, action_no, title_ar, status, due_date, overdue, assignee_name_ar, assignee_unit_ar, decision_no, meeting_id, link}` |
 
+## `POST /rest/v1/rpc/get_my_topics_follow_up_v2`
+
+Body: `{"p_academic_year": "2026-09-01" | null}`. A topic is in scope when it stands at, was listed by, or was decided
+by a council the caller leads or follows. Returns every unfinished topic plus finished ones created in the year (500 rows
+at most, stalled first).
+
+| Key | Content |
+|---|---|
+| `summary` | `{total, in_progress, stalled, returned, finished, ungoverned, avg_days_to_finish, avg_waiting_days}` |
+| `by_council` | open topics by the council they stand at: `{id, name_ar, open, stalled, longest_wait}` |
+| `by_category` | `{name_ar, total, finished, avg_days_to_finish}` |
+| `topics` | `{id, topic_no, title_ar, category_name_ar, governance_source, state, status, at_council_id, at_council_name_ar, waiting_days, age_days, created_on, steps_total, steps_done, listed_count, decision_no, outcome_kind, tasks, tasks_done, link}` |
+
+`state`: `finished` (status `approved`/`rejected`/`closed` or a completed route), `stalled` (an open `topic_stalled`
+violation), `returned`, else `in_progress`. A topic stands at the council of its active route step, else its current unit.
+
 ## Session outcome
 
 The due day is the end of the planned window (`planned_window_end`), or `scheduled_date` for an unplanned session; it

@@ -176,3 +176,36 @@ export const governanceLabel = (source: string) => ({ regulated: "محوكم", c
 export const agendaLabel = (status: string) => (status === "discussed" ? "نوقش" : status === "pending" ? "لم يُناقش بعد" : "في الجدول");
 export const taskDone = (status: string) => status === "completed" || status === "closed";
 export const taskStatusLabel = (status: string) => ({ new: "جديد", in_progress: "قيد التنفيذ", submitted: "بانتظار التحقق", completed: "منجز", closed: "مغلق", overdue: "متأخر" } as Record<string, string>)[status] ?? "قيد التنفيذ";
+
+export type TopicState = "stalled" | "returned" | "in_progress" | "finished";
+export type TopicRow = {
+  id: string; topic_no: string | null; title_ar: string; category_name_ar: string | null; governance_source: string; state: TopicState;
+  at_council_id: string | null; at_council_name_ar: string | null; waiting_days: number | null; age_days: number; created_on: string;
+  steps_total: number; steps_done: number; listed_count: number; decision_no: string | null; outcome_kind: string | null;
+  tasks: number; tasks_done: number; link: string;
+};
+export type TopicsFollowUp = {
+  academic_year_start: string;
+  summary: { total: number; in_progress: number; stalled: number; returned: number; finished: number; ungoverned: number; avg_days_to_finish: number | null; avg_waiting_days: number | null };
+  by_council: Array<{ id: string; name_ar: string; open: number; stalled: number; longest_wait: number }>;
+  by_category: Array<{ name_ar: string; total: number; finished: number; avg_days_to_finish: number | null }>;
+  topics: TopicRow[];
+};
+
+export const topicStateLabel: Record<TopicState, string> = { stalled: "متوقف", returned: "مُعاد", in_progress: "قيد المعالجة", finished: "محسوم" };
+export const topicStateTone: Record<TopicState, "danger" | "warning" | "info" | "success"> = { stalled: "danger", returned: "warning", in_progress: "info", finished: "success" };
+
+export function topicsMetrics({ summary }: TopicsFollowUp): Metric[] {
+  const open = summary.total - summary.finished;
+  return [
+    { label: "قيد المعالجة الآن", value: String(open), note: summary.stalled > 0 ? `${summary.stalled} منها متوقف` : "لا موضوعات متوقفة",
+      ratio: open > 0 ? summary.stalled / open : null, tone: "accent" },
+    { label: "متوسط الانتظار الحالي", value: summary.avg_waiting_days == null ? "—" : days(Math.round(summary.avg_waiting_days)), note: "يُعد الموضوع متوقفًا بعد 30 يومًا",
+      ratio: summary.avg_waiting_days == null ? null : summary.avg_waiting_days / 60, target: 0.5, tone: (summary.avg_waiting_days ?? 0) > 30 ? "accent" : "primary" },
+    { label: "حُسم", value: summary.total > 0 ? `${summary.finished} من ${summary.total}` : "—",
+      note: summary.avg_days_to_finish == null ? "لم يُحسم موضوع بعد" : `متوسط مدة الحسم ${days(Math.round(summary.avg_days_to_finish))}`,
+      ratio: summary.total > 0 ? summary.finished / summary.total : null },
+    { label: "غير محوكمة", value: summary.total > 0 ? `${summary.ungoverned} من ${summary.total}` : "—", note: "مباشرة أو باستثناء أو قديمة بلا مسار",
+      ratio: summary.total > 0 ? summary.ungoverned / summary.total : null, tone: "accent" },
+  ];
+}
