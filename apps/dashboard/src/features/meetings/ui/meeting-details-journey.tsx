@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useEffectEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -184,7 +183,8 @@ export function MeetingDetailsJourney({ meetingId }: { meetingId: string }) {
     {lateCycleMessage(meeting, localDateKey()) && <InlineMessage tone="warning">{lateCycleMessage(meeting, localDateKey())}{meeting.capabilities?.can_manage && <> <Link href={`/admin/meetings?manage=${meeting.id}`} className="font-bold text-q-link underline">تحديد الموعد الجديد</Link></>}</InlineMessage>}
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,.7fr)]">
       <Card live={meeting.status === "in_progress"}>
-        <p className="text-q-caption font-bold text-q-live">{viewingCurrent ? "المرحلة الحالية" : "مرحلة مكتملة للقراءة"}</p><h2 className="mt-1 text-q-h2 font-bold">{selected.label}</h2><p className="mt-2 text-q-ui leading-7 text-q-text-2">{selected.description}</p>
+        <h2 className="mt-1 text-q-h2 font-bold">{selected.label}</h2>
+<p className="text-q-caption font-bold text-q-text-2">{viewingCurrent ? "المرحلة الحالية" : "مرحلة مكتملة للقراءة"}</p><p className="mt-2 text-q-ui leading-7 text-q-text-2">{selected.description}</p>
         {meeting.schedule_exception_reason && <InlineMessage tone="warning" className="mt-4"><strong>منعقد خارج موعد الدورة.</strong> السبب: {meeting.schedule_exception_reason}</InlineMessage>}
         <div className="mt-5 grid gap-3 sm:grid-cols-2"><Fact icon={CalendarDays} label="الموعد" value={meetingScheduleLabel(meeting)}/><Fact icon={Clock} label="الوقت" value={meetingTimeLabel(meeting)}/><Fact icon={MapPin} label="المكان" value={meetingLocationLabel(meeting)}/><Fact icon={ListChecks} label="جدول الأعمال" value={`${meeting.agenda_items?.length ?? 0} بند`}/></div>
         <StageReadingSummary stage={selected.key} meeting={meeting} viewingCurrent={viewingCurrent}/>

@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 
 import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
@@ -221,7 +220,7 @@ function Week({ week, mode, month, items, todayKey, onOpen, onShowDay, open, onT
       const shown = mode === "month" ? dated.slice(0, MAX_IN_DAY) : dated;
       return <div key={`e-${dateKey(day)}`} role="cell" aria-label={`${dayLabel(day, { weekday: "long", day: "numeric", month: "long" })}: ${dated.length ? `${dated.length} اجتماع` : "لا اجتماعات"}`} className="relative flex min-w-0 flex-col gap-1 px-1 pb-2 pt-1" style={{ gridColumn: index + 1, gridRow: lanes.length + 2 }}>
         {shown.map((meeting) => <MeetingLine key={meeting.id} meeting={meeting} todayKey={todayKey} onOpen={onOpen} detailed={mode === "week"}/>)}
-        {dated.length > shown.length && <button type="button" onClick={() => onShowDay?.(day)} disabled={!onShowDay} className="min-h-11 rounded-q-control px-2 text-start text-q-caption font-bold text-q-link hover:bg-q-surface-2 disabled:cursor-default disabled:hover:bg-transparent">+ {dated.length - shown.length} أخرى</button>}
+        {dated.length > shown.length && <Button variant="ghost" type="button" onClick={() => onShowDay?.(day)} disabled={!onShowDay} className="min-h-11 rounded-q-control px-2 text-start font-bold disabled:cursor-default disabled:hover:bg-transparent">+ {dated.length - shown.length} أخرى</Button>}
       </div>;
     })}
   </div>;
@@ -230,8 +229,8 @@ function Week({ week, mode, month, items, todayKey, onOpen, onShowDay, open, onT
 function MeetingLine({ meeting, todayKey, onOpen, detailed = false }: { meeting: Meeting; todayKey: string; onOpen: (id: string) => void; detailed?: boolean }) {
   const tone = toneOf(meeting, todayKey);
   const time = timeOf(meeting);
-  return <button type="button" onClick={() => onOpen(meeting.id)} aria-label={describe(meeting, tone)} title={describe(meeting, tone)}
-    className={cn("group flex w-full min-w-0 items-stretch gap-2 overflow-hidden rounded-q-control text-start transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-q-primary", tone.fill, tone.dashed && "border border-dashed border-q-border-strong", detailed ? "min-h-11 py-2 pe-2" : "min-h-11 py-1 pe-2")}>
+  return <Button variant="ghost" type="button" onClick={() => onOpen(meeting.id)} aria-label={describe(meeting, tone)} title={describe(meeting, tone)}
+    className={cn("flex min-h-11 w-full min-w-0 gap-2 rounded-q-control border border-dashed border-q-border-strong bg-q-surface px-2 py-1 text-start transition-colors hover:bg-q-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-q-primary", detailed ? "items-start py-2" : "items-center")}>
     <span aria-hidden="true" className={cn("w-1 shrink-0 rounded-full", tone.accent)}/>
     <span className="flex min-w-0 flex-1 flex-col">
       <span className="flex min-w-0 items-baseline gap-1.5">
@@ -246,14 +245,14 @@ function MeetingLine({ meeting, todayKey, onOpen, detailed = false }: { meeting:
         </span>
       </>}
     </span>
-  </button>;
+  </Button>;
 }
 
 /** Many councils waiting for their day in the same window: one bar naming a few, that opens to all. */
 function WindowGroupBar({ entry, open, onToggle, detailed = false }: { entry: WindowEntry; open: boolean; onToggle: (key: string) => void; detailed?: boolean }) {
   const councils = entry.meetings.map((meeting) => councilOf(meeting) ?? meeting.title_ar);
   const preview = councils.slice(0, 2).join("، ") + (councils.length > 2 ? ` و${councils.length - 2} غيرها` : "");
-  return <button type="button" aria-expanded={open} onClick={() => onToggle(entry.key)}
+  return <Button variant="ghost" type="button" aria-expanded={open} onClick={() => onToggle(entry.key)}
     className={cn("flex min-h-11 w-full min-w-0 items-center gap-2 rounded-q-control border border-dashed border-q-border-strong bg-q-surface-2 px-2 py-1 text-start transition-colors hover:bg-q-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-q-primary", detailed && "py-2")}>
     <CalendarDays size={14} aria-hidden="true" className="shrink-0 text-q-text-2"/>
     <span className="min-w-0 flex-1 truncate text-q-caption text-q-text">
@@ -261,18 +260,18 @@ function WindowGroupBar({ entry, open, onToggle, detailed = false }: { entry: Wi
       <span className="text-q-text-2"> · {preview}</span>
     </span>
     <span className="shrink-0 text-q-caption font-bold text-q-link">{open ? "إخفاء" : "عرضها"}</span>
-  </button>;
+  </Button>;
 }
 
 function WindowBar({ meeting, todayKey, onOpen, detailed = false }: { meeting: Meeting; todayKey: string; onOpen: (id: string) => void; detailed?: boolean }) {
   const tone = toneOf(meeting, todayKey);
-  return <button type="button" onClick={() => onOpen(meeting.id)} aria-label={describe(meeting, tone)} title={describe(meeting, tone)}
+  return <Button variant="ghost" type="button" onClick={() => onOpen(meeting.id)} aria-label={describe(meeting, tone)} title={describe(meeting, tone)}
     className={cn("flex min-h-11 w-full min-w-0 gap-2 rounded-q-control border border-dashed border-q-border-strong bg-q-surface px-2 py-1 text-start transition-colors hover:bg-q-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-q-primary", detailed ? "items-start py-2" : "items-center")}>
     <CalendarDays size={14} aria-hidden="true" className={cn("shrink-0 text-q-text-2", detailed && "mt-1")}/>
     {detailed
       ? <span className="flex min-w-0 flex-col"><span className="text-q-caption font-bold text-q-text">{meetingCompactTitle(meeting)}</span><span className="text-q-caption text-q-text-2">يوم الانعقاد لم يُحدد · خلال {windowLabel(meeting)}</span></span>
       : <><span className="min-w-0 truncate text-q-caption font-bold text-q-text">{meetingCompactTitle(meeting)}</span><span className="shrink-0 text-q-caption text-q-text-2">لم يُحدد يومه</span></>}
-  </button>;
+  </Button>;
 }
 
 function datedOn(items: Meeting[], key: string) {

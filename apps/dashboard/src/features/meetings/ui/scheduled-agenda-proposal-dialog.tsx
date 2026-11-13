@@ -1,5 +1,4 @@
 "use client";
-
 import { useRef, useState } from "react";
 import { FileText, Paperclip, Trash2 } from "lucide-react";
 import type { ScheduledAgendaSuggestion } from "../model/meeting";
@@ -141,7 +140,7 @@ export function ScheduledAgendaProposalDialog({ meetingId, unitId, item, onClose
     <section className="rounded-q-card border border-q-border p-4">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-q-ui font-bold">المرفقات</h3><p className="mt-1 text-q-caption text-q-text-2">تم اختيار {files.length} من الحد الأدنى {required}.</p></div><Button variant="secondary" disabled={pending} onClick={() => fileInput.current?.click()}><Paperclip size={17}/>اختيار ملفات</Button></div>
       <input ref={fileInput} aria-label="مرفقات الموضوع" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.docx" disabled={pending} className="sr-only" onChange={(event) => { pickFiles(event.target.files); event.target.value = ""; }}/>
-      {files.length > 0 && <ul className="mt-4 space-y-2">{files.map(({ id, file }) => <li key={id} className="flex min-w-0 items-center justify-between gap-3 rounded-q-control bg-q-surface-2 p-3"><span className="min-w-0 break-all text-q-caption text-q-text">{file.name}</span><button type="button" disabled={pending} onClick={() => setFiles((current) => current.filter((entry) => entry.id !== id))} aria-label={`إزالة ${file.name}`} className="grid h-11 w-11 shrink-0 place-items-center rounded-q-control text-q-danger hover:bg-q-danger-soft disabled:text-q-text-3"><Trash2 size={17}/></button></li>)}</ul>}
+      {files.length > 0 && <ul className="mt-4 space-y-2">{files.map(({ id, file }) => <li key={id} className="flex min-w-0 items-center justify-between gap-3 rounded-q-control bg-q-surface-2 p-3"><span className="min-w-0 break-all text-q-caption text-q-text">{file.name}</span><Button variant="danger" type="button" disabled={pending} onClick={() => setFiles((current) => current.filter((entry) => entry.id !== id))} aria-label={`إزالة ${file.name}`} className="grid h-11 w-11 shrink-0 place-items-center rounded-q-control "><Trash2 size={17}/></Button></li>)}</ul>}
     </section>
 
     {!ready && <InlineMessage tone="warning">أكمل عنوانًا واضحًا ووصفًا من 10 أحرف على الأقل{required > files.length ? `، وارفع ${required - files.length} من المرفقات المطلوبة` : ""} قبل الإدراج.</InlineMessage>}

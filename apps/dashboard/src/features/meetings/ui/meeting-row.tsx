@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/shared/ui/button";
 
 import { ChevronLeft, Clock, Hash, ListChecks, MapPin, Users } from "lucide-react";
 import type { Meeting } from "../model/meeting";
@@ -48,7 +49,7 @@ export function MeetingRow({ meeting, today, onOpen }: { meeting: Meeting; today
   const items = meeting.agenda_item_count ?? meeting.agenda_count ?? 0;
   const session = sessionNumberLabel(meeting);
   const where = meeting.location_details || meeting.location_type ? meetingLocationLabel(meeting) : null;
-  return <button type="button" onClick={onOpen} className="group flex w-full items-center gap-4 px-4 py-3 text-start transition-colors hover:bg-q-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-q-primary">
+  return <Button variant="ghost" type="button" onClick={onOpen} className="group flex w-full items-center gap-4 px-4 py-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-q-primary">
     <DateTile meeting={meeting} missed={missed}/>
     <span className="flex min-w-0 flex-1 flex-col gap-1">
       <span className="text-q-ui font-bold text-q-text">{meeting.title_ar}</span>
@@ -66,5 +67,5 @@ export function MeetingRow({ meeting, today, onOpen }: { meeting: Meeting; today
       <Badge tone={missed ? "warning" : meetingStatusTone[meeting.status] ?? "neutral"}>{statusLabel}</Badge>
       <ChevronLeft size={18} aria-hidden="true" className="hidden text-q-text-3 transition-transform group-hover:-translate-x-0.5 sm:block"/>
     </span>
-  </button>;
+  </Button>;
 }

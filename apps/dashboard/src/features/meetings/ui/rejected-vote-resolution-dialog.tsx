@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { ArrowDownToLine, ShieldX } from "lucide-react";
 import { Button } from "@/shared/ui/button";
@@ -55,7 +54,7 @@ export function RejectedVoteResolutionDialog({
         لن يُغلق البند أو الجلسة قبل اختيار أحد القرارين. سيظهر القرار في المحضر ورحلة الموضوع.
       </InlineMessage>
       <div className="grid gap-3 sm:grid-cols-2">
-        <button
+        <Button variant="ghost"
           type="button"
           aria-pressed={resolution === "final_reject"}
           onClick={() => setResolution("final_reject")}
@@ -71,8 +70,8 @@ export function RejectedVoteResolutionDialog({
           <span className="mt-1 block text-q-caption leading-6 text-q-text-2">
             تثبيت عدم الموافقة كقرار نهائي لهذه الرحلة.
           </span>
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost"
           type="button"
           aria-pressed={resolution === "return_previous"}
           onClick={() => setResolution("return_previous")}
@@ -90,7 +89,7 @@ export function RejectedVoteResolutionDialog({
           <span className="mt-1 block text-q-caption leading-6 text-q-text-2">
             فتح دورة جديدة لدى الجهة السابقة مع حفظ التصويت والسجل الحالي.
           </span>
-        </button>
+        </Button>
       </div>
       {resolution === "return_previous" && (
         <label className="grid gap-2 text-q-ui font-bold text-q-text">

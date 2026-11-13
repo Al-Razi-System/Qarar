@@ -12,7 +12,7 @@ export function ScheduledAgendaSuggestions({ items, onPrepare }: { items: Schedu
       <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="text-q-ui font-bold text-q-text">{item.title_ar}</h4>{item.timing_status === "overdue" && <span className="rounded-full bg-q-warning-soft px-2 py-1 text-q-caption font-bold text-q-warning">متأخر عن دورته</span>}</div>
       {item.reference_number && <p className="mt-1 text-q-caption text-q-text-2">مرجع الاستحقاق: <bdi>{item.reference_number}</bdi></p>}
       <p className="mt-2 text-q-caption text-q-text-2">فترة المناقشة: <time dateTime={item.available_from}>{item.due_on !== item.available_from ? windowRangeLabel(item.available_from, item.due_on) : dayLabel(item.available_from)}</time></p>
-      {item.required_attachment_count > 0 && <p className="mt-2 flex items-center gap-1.5 text-q-caption font-bold text-q-link"><Paperclip size={14}/>المرفقات المطلوبة قبل الإدراج: {item.required_attachment_count} على الأقل</p>}
+      {item.required_attachment_count > 0 && <p className="mt-2 flex items-center gap-1.5 text-q-caption font-bold text-q-text-2"><Paperclip size={14}/>المرفقات المطلوبة قبل الإدراج: {item.required_attachment_count} على الأقل</p>}
       <Button className="mt-4" variant="secondary" onClick={() => onPrepare(item)} aria-label={`استكمال وإدراج ${item.title_ar}`}>استكمال البيانات والمرفقات</Button>
     </article>)}</div>
   </section>;
