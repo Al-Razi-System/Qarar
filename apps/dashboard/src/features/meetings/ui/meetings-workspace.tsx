@@ -1,5 +1,4 @@
 "use client";
-
 import { useDeferredValue, useEffect, useEffectEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -71,7 +70,6 @@ const meetingGroups = [
   { key: "cancelled", label: "الملغاة", description: "اجتماعات أُلغي انعقادها", statuses: ["cancelled"] },
 ] as const;
 
-
 const filterField = "h-11 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-normal text-q-text outline-none focus:border-q-primary focus:ring-2 focus:ring-q-primary/20";
 
 function groupedMeetings(meetings: Meeting[], today: string) {
@@ -108,6 +106,21 @@ function agendaLockMessage(status: string) {
 export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { initialMeetingId?: string; initialCouncilId?: string }) {
   const router = useRouter();
   const focused = Boolean(initialMeetingId);
+  const [confirmation, setConfirmation] = useState<{ message: string; input: boolean } | null>(null);
+  const [confirmationValue, setConfirmationValue] = useState("");
+  const confirmationResolve = useRef<((value: string | null) => void) | null>(null);
+  function requestConfirmation(message: string, input = false) {
+    setConfirmationValue("");
+    setConfirmation({ message, input });
+    return new Promise<string | null>((resolve) => { confirmationResolve.current = resolve; });
+  }
+  function finishConfirmation(value: string | null) {
+    const resolve = confirmationResolve.current;
+    confirmationResolve.current = null;
+    setConfirmation(null);
+    resolve?.(value);
+  }
+  useEffect(() => () => { confirmationResolve.current?.(null); }, []);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [series, setSeries] = useState<MeetingSeries[]>([]);
   const [total, setTotal] = useState(0);
@@ -384,7 +397,7 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
     setDetailLoading(true); setNotice(null);
     try {
       const needsReason = toStatus === "cancelled";
-      const reason = needsReason ? window.prompt("أدخل سبب الإلغاء (5 أحرف على الأقل):") : null;
+      const reason = needsReason ? await requestConfirmation("أدخل سبب الإلغاء (5 أحرف على الأقل):", true) : null;
       if (needsReason && (!reason || reason.trim().length < 5)) { setDetailLoading(false); return false; }
       await rpc("transition_meeting", {
         p_meeting_id: selected.id,
@@ -487,7 +500,7 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
   }
 
   async function removeAgendaItem(agendaItemId: string) {
-    if (!selected || !window.confirm("هل تريد إزالة الموضوع من جدول الأعمال؟")) return;
+    if (!selected || !(await requestConfirmation("هل تريد إزالة الموضوع من جدول الأعمال؟"))) return;
     if (!isAgendaEditable(selected.status)) {
       setNotice({ kind: "error", text: "لا يمكن تعديل جدول الأعمال بعد بدء الاجتماع." });
       return;
@@ -681,7 +694,15 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
 
   return (
     <div className="space-y-5">
-      {focused && <div className="flex flex-wrap items-center justify-between gap-3 rounded-q-card border border-q-border bg-q-surface p-4"><div><p className="text-q-caption font-bold text-q-live">إعداد الاجتماع</p><h2 className="mt-1 text-q-h2 font-bold text-q-text">إدارة جدول الأعمال</h2><p className="mt-1 text-q-ui text-q-text-2">أضف الموضوعات المقترحة أو أنشئ موضوعاً مباشراً لهذا الاجتماع.</p></div><Link href="/admin/meetings" className="inline-flex min-h-11 items-center rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link"><ChevronLeft size={18}/>كل الاجتماعات</Link></div>}
+      {confirmation && <Dialog title={confirmation.message} onClose={() => finishConfirmation(null)} footer={<>
+        <Button variant="secondary" onClick={() => finishConfirmation(null)}>إلغاء</Button>
+        <Button onClick={() => finishConfirmation(confirmation.input ? confirmationValue : "confirmed")}>تأكيد</Button>
+      </>}>
+        {confirmation.input && <input autoFocus aria-label={confirmation.message} value={confirmationValue} onChange={(event) => setConfirmationValue(event.target.value)} className="min-h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui text-q-text" />}
+      </Dialog>}
+
+      {focused && <div className="flex flex-wrap items-center justify-between gap-3 rounded-q-card border border-q-border bg-q-surface p-4"><div><h2 className="mt-1 text-q-h2 font-bold text-q-text">إدارة جدول الأعمال</h2>
+<p className="text-q-caption font-bold text-q-text-2">إعداد الاجتماع</p><p className="mt-1 text-q-ui text-q-text-2">أضف الموضوعات المقترحة أو أنشئ موضوعاً مباشراً لهذا الاجتماع.</p></div><Link href="/admin/meetings" className="inline-flex min-h-11 items-center rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-link"><ChevronLeft size={18}/>كل الاجتماعات</Link></div>}
       {loadError && (
         <div className="space-y-2">
           <InlineMessage tone="error">{loadError}</InlineMessage>
@@ -745,11 +766,11 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
             ? Object.entries(stageCounts).filter(([stage]) => stage !== "future").reduce((sum, [, value]) => sum + value, 0)
             : stageCounts[group.key] ?? 0;
           const active = activeGroup === group.key;
-          return <button key={group.key} type="button" aria-pressed={active} onClick={() => { setActiveGroup(group.key); setSelected(null); }}
+          return <Button variant="ghost" key={group.key} type="button" aria-pressed={active} onClick={() => { setActiveGroup(group.key); setSelected(null); }}
             className={cn("inline-flex min-h-11 shrink-0 items-center gap-2 rounded-q-control border px-4 font-sans text-q-ui font-bold transition-colors", active ? "border-q-primary bg-q-primary text-q-on-primary" : "border-q-border bg-q-surface text-q-text hover:bg-q-surface-2", !count && !active && "text-q-text-3")}>
             {group.label}
             <span className={cn("min-w-6 rounded-full px-1.5 text-center text-q-caption", active ? "bg-q-on-primary/20" : "bg-q-surface-2 text-q-text-2")}>{count}</span>
-          </button>;
+          </Button>;
         })}
       </nav>}
 
@@ -761,10 +782,10 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
             <ChevronLeft size={18} aria-hidden="true" className="shrink-0 text-q-text-2 transition-transform group-open:-rotate-90"/>
           </summary>
           <ul className="m-0 list-none divide-y divide-q-border border-t border-q-border p-0">{item.occurrences.map((occurrence) => <li key={occurrence.meeting_id}>
-            <button type="button" onClick={() => router.push(`/admin/meetings/${occurrence.meeting_id}`)} className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-start hover:bg-q-surface-2">
+            <Button variant="ghost" type="button" onClick={() => router.push(`/admin/meetings/${occurrence.meeting_id}`)} className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-start ">
               <span className="text-q-caption font-bold text-q-text">الاجتماع {occurrence.occurrence_number} · {occurrence.scheduled_date}</span>
               <Badge tone={statusTone[occurrence.status] ?? "neutral"}>{statusLabels[occurrence.status] ?? "اجتماع"}</Badge>
-            </button>
+            </Button>
           </li>)}</ul>
         </details>)}</div>
       </Card>}
@@ -801,7 +822,7 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
         </div>
 
         {/* Detail Panel */}
-        {selected ? <div className={cn("scroll-mt-5 overflow-hidden rounded-q-card border border-q-border bg-white", !focused && "xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto")}>
+        {selected ? <div className={cn("scroll-mt-5 overflow-hidden rounded-q-card border border-q-border bg-q-surface", !focused && "xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto")}>
           {detailLoading ? (
             <div className="grid min-h-[400px] place-items-center"><LoaderCircle className="animate-spin text-q-link" size={28} /></div>
           ) : (
@@ -846,12 +867,12 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
                 {["draft", "scheduled"].includes(selected.status) && selected.capabilities?.can_manage && <Button variant="secondary" onClick={openEditModal}><Clock size={18} /> موعد الجلسة ومكانها</Button>}
                 {(["waiting_for_minutes", "waiting_for_approval", "closed", "archived"].includes(selected.status)) && <Link href={`/admin/meetings/${selected.id}/minutes`} className="flex items-center gap-1.5 rounded-q-control bg-q-primary px-4 py-2.5 text-q-caption font-bold text-q-on-primary "><FileText size={14} />{["closed", "archived"].includes(selected.status) ? "عرض المحضر النهائي والتواقيع" : "فتح مساحة المحضر والمصادقات"}</Link>}
                 {(selected.capabilities?.can_schedule || (selected.status === "draft" && selected.capabilities?.can_manage && selected.schedule_date_confirmed === false)) && <div><Button pending={detailLoading} disabled={selected.schedule_date_confirmed === false} onClick={() => transitionMeeting("scheduled")}><Play size={14}/>جدولة</Button>{selected.schedule_date_confirmed === false && <p className="mt-2 text-q-caption text-q-text-2">حدد يوم الاجتماع ووقتي البداية والنهاية من تعديل الاجتماع أولاً.</p>}</div>}
-                {selected.status === "scheduled" && <>{selected.capabilities?.can_send_invitations && <button onClick={() => setInvitationModal(true)} disabled={detailLoading || !readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : selected.invitation_summary?.prepared ? "عرض الدعوة المجهزة" : "تجهيز دعوات أعضاء المجلس"} className="flex items-center gap-1.5 rounded-q-control border border-q-border px-3 py-2 text-q-caption font-bold text-q-link disabled:opacity-40"><Users size={14} /> {selected.invitation_summary?.prepared ? "عرض الدعوة" : "تجهيز الدعوات"}</button>}{selected.capabilities?.can_prepare_session && <Button variant="secondary" disabled={detailLoading || !readiness?.ready} onClick={() => setPreparationConfirmationOpen(true)}>اعتماد جدول الأعمال وتجهيز الاجتماع للبدء</Button>}</>}
+                {selected.status === "scheduled" && <>{selected.capabilities?.can_send_invitations && <Button variant="secondary" type="submit" onClick={() => setInvitationModal(true)} disabled={detailLoading || !readiness?.ready} title={!readiness?.ready ? "أكمل متطلبات الجاهزية أولاً" : selected.invitation_summary?.prepared ? "عرض الدعوة المجهزة" : "تجهيز دعوات أعضاء المجلس"} className="flex items-center gap-1.5 rounded-q-control border px-3 py-2 font-bold disabled:opacity-40"><Users size={14} /> {selected.invitation_summary?.prepared ? "عرض الدعوة" : "تجهيز الدعوات"}</Button>}{selected.capabilities?.can_prepare_session && <Button variant="secondary" disabled={detailLoading || !readiness?.ready} onClick={() => setPreparationConfirmationOpen(true)}>اعتماد جدول الأعمال وتجهيز الاجتماع للبدء</Button>}</>}
                 {selected.capabilities?.can_start_session && <Button variant="success" pending={startSessionPending} pendingLabel="جارٍ التحقق من الموعد…" onClick={() => void openLiveSession()}><Play size={14} /> فتح الجلسة الحية</Button>}
                 {selected.status === "in_progress" && <Link href={`/admin/meetings/${selected.id}/live`} className="flex items-center gap-1.5 rounded-q-control bg-q-success px-3 py-2 text-q-caption font-bold text-q-on-primary"><Play size={14} /> متابعة الجلسة الحية</Link>}
                 {selected.status === "waiting_for_minutes" && <span className="rounded-q-control bg-q-warning-soft px-3 py-2 text-q-caption font-bold text-q-warning">أكمل المحضر وأرسله للمصادقة من القسم أعلاه.</span>}
-                {selected.capabilities?.can_cancel && <button onClick={() => void transitionMeeting("cancelled")} className="rounded-q-control border border-q-danger px-3 py-2 text-q-caption font-bold text-q-danger">إلغاء الاجتماع</button>}
-                {selected.capabilities?.can_archive && <button onClick={() => void transitionMeeting("archived")} className="rounded-q-control border border-q-border px-3 py-2 text-q-caption font-bold text-q-text-2">أرشفة الاجتماع</button>}
+                {selected.capabilities?.can_cancel && <Button variant="secondary" type="submit" onClick={() => void transitionMeeting("cancelled")} className="rounded-q-control border px-3 py-2 font-bold ">إلغاء الاجتماع</Button>}
+                {selected.capabilities?.can_archive && <Button variant="secondary" type="submit" onClick={() => void transitionMeeting("archived")} className="rounded-q-control border px-3 py-2 font-bold ">أرشفة الاجتماع</Button>}
               </div>
             </div>
           )}
@@ -929,13 +950,13 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
       )}
       {createModal && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-q-scrim p-4" role="dialog" aria-modal="true" aria-label="إنشاء اجتماع جديد">
-          <form onSubmit={handleCreate} className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-q-card bg-white shadow-2xl">
+          <form onSubmit={handleCreate} className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-q-card bg-q-surface shadow-2xl">
             <div className="flex items-center justify-between border-b border-q-border px-6 py-5">
               <div className="flex items-center gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-q-control bg-q-surface-2 text-q-link"><Calendar size={20} /></span>
                 <div><h2 className="text-q-h3 font-bold text-q-text">إنشاء اجتماع جديد</h2><p className="text-q-caption text-q-text-2">حدد بيانات الاجتماع وموعده ومكانه.</p></div>
               </div>
-              <button type="button" onClick={() => setCreateModal(false)} className="text-q-text-2 hover:text-q-text"><X size={20} /></button>
+              <Button variant="ghost" type="button" onClick={() => setCreateModal(false)} className=" "><X size={20} /></Button>
             </div>
             <div className="grid overflow-y-auto gap-4 p-6">
               {notice?.kind === "error" && <p role="alert" className="rounded-q-control border border-q-danger bg-q-danger-soft p-3 text-q-ui text-q-danger">{notice.text}</p>}
@@ -943,31 +964,31 @@ export function MeetingsWorkspace({ initialMeetingId, initialCouncilId }: { init
               <MeetingQuorumField disabled={creating}/>
               <fieldset className="grid gap-3 rounded-q-card border border-q-border p-4">
                 <legend className="px-2 text-q-ui font-bold text-q-text">حوكمة جدول الأعمال</legend>
-                <label className="flex cursor-pointer items-start gap-3 rounded-q-control border border-q-border bg-q-surface p-3 has-[:checked]:border-q-primary has-[:checked]:bg-q-primary-soft">
+                <label className="flex cursor-pointer items-start gap-3 rounded-q-control border border-q-border bg-q-surface p-3 has-[:checked]:border-q-primary has-[:checked]:bg-q-surface-2">
                   <input type="radio" name="governance_mode" value="governed" defaultChecked className="mt-1 h-5 w-5 accent-q-primary"/>
                   <span><strong className="block text-q-ui text-q-text">اجتماع محكوم</strong><span className="mt-1 block text-q-caption leading-6 text-q-text-2">يعرض الموضوعات الواردة عبر مسارات المجالس، ويمكن للرئيس أيضاً إضافة موضوع مباشر خاص بالاجتماع.</span></span>
                 </label>
-                <label className="flex cursor-pointer items-start gap-3 rounded-q-control border border-q-border bg-q-surface p-3 has-[:checked]:border-q-primary has-[:checked]:bg-q-primary-soft">
+                <label className="flex cursor-pointer items-start gap-3 rounded-q-control border border-q-border bg-q-surface p-3 has-[:checked]:border-q-primary has-[:checked]:bg-q-surface-2">
                   <input type="radio" name="governance_mode" value="custom" className="mt-1 h-5 w-5 accent-q-primary"/>
                   <span><strong className="block text-q-ui text-q-text">اجتماع غير محكوم</strong><span className="mt-1 block text-q-caption leading-6 text-q-text-2">جدول أعمال مستقل يبنيه الرئيس من موضوعات مباشرة، من دون لائحة أو تصنيف أو مسار اعتماد.</span></span>
                 </label>
               </fieldset>
-              <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">المجلس أو الجهة *</span><select required name="governance_unit_id" disabled={meetingOptionsLoading || !(meetingOptions?.meeting_units?.length)} className="h-11 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui outline-none focus:border-q-primary disabled:cursor-not-allowed disabled:bg-q-surface-2"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الجهات…" : meetingOptions?.meeting_units?.length ? "اختر المجلس أو الجهة" : "لا توجد جهة متاحة ضمن صلاحياتك"}</option>{meetingOptions?.meeting_units?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name_ar}{unit.status === "inactive" ? " — غير مفعّل" : ""}</option>)}</select><small className="mt-1 block text-q-caption text-q-text-2">تظهر الجهات التي تملك صلاحية إنشاء اجتماع فيها فقط، وتُميّز الجهة غير المفعّلة صراحةً.</small></label>
-              <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">نوع الاجتماع *</span><select required name="meeting_type_id" value={selectedMeetingTypeId} onChange={(event) => { const meetingTypeId = event.target.value; setSelectedMeetingTypeId(meetingTypeId); const meetingType = meetingOptions?.meeting_types?.find((type) => type.id === meetingTypeId); if (meetingType?.name_ar.includes("دوري")) setRecurring(true); }} disabled={meetingOptionsLoading || !(meetingOptions?.meeting_types?.length)} className="h-11 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui outline-none focus:border-q-primary disabled:cursor-not-allowed disabled:bg-q-surface-2"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الأنواع…" : meetingOptions?.meeting_types?.length ? "اختر نوع الاجتماع" : "لا توجد أنواع اجتماعات نشطة"}</option>{meetingOptions?.meeting_types?.map((type) => <option key={type.id} value={type.id}>{type.name_ar}</option>)}</select><small className="mt-1 block text-q-caption text-q-text-2">عند اختيار «اجتماع دوري» ستظهر إعدادات دورة الانعقاد تلقائياً.</small></label>
+              <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">المجلس أو الجهة *</span><select required name="governance_unit_id" disabled={meetingOptionsLoading || !(meetingOptions?.meeting_units?.length)} className="h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui outline-none focus:border-q-primary disabled:cursor-not-allowed disabled:bg-q-surface-2"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الجهات…" : meetingOptions?.meeting_units?.length ? "اختر المجلس أو الجهة" : "لا توجد جهة متاحة ضمن صلاحياتك"}</option>{meetingOptions?.meeting_units?.map((unit) => <option key={unit.id} value={unit.id}>{unit.name_ar}{unit.status === "inactive" ? " — غير مفعّل" : ""}</option>)}</select><small className="mt-1 block text-q-caption text-q-text-2">تظهر الجهات التي تملك صلاحية إنشاء اجتماع فيها فقط، وتُميّز الجهة غير المفعّلة صراحةً.</small></label>
+              <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">نوع الاجتماع *</span><select required name="meeting_type_id" value={selectedMeetingTypeId} onChange={(event) => { const meetingTypeId = event.target.value; setSelectedMeetingTypeId(meetingTypeId); const meetingType = meetingOptions?.meeting_types?.find((type) => type.id === meetingTypeId); if (meetingType?.name_ar.includes("دوري")) setRecurring(true); }} disabled={meetingOptionsLoading || !(meetingOptions?.meeting_types?.length)} className="h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui outline-none focus:border-q-primary disabled:cursor-not-allowed disabled:bg-q-surface-2"><option value="">{meetingOptionsLoading ? "جارٍ تحميل الأنواع…" : meetingOptions?.meeting_types?.length ? "اختر نوع الاجتماع" : "لا توجد أنواع اجتماعات نشطة"}</option>{meetingOptions?.meeting_types?.map((type) => <option key={type.id} value={type.id}>{type.name_ar}</option>)}</select><small className="mt-1 block text-q-caption text-q-text-2">عند اختيار «اجتماع دوري» ستظهر إعدادات دورة الانعقاد تلقائياً.</small></label>
               <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">عنوان الاجتماع *</span><input required name="title_ar" placeholder="مثال: الاجتماع الثالث لمجلس القسم" className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-ui outline-none focus:border-q-primary" /></label>
-              <label className={`flex cursor-pointer items-center justify-between rounded-q-card border p-4 transition ${recurring ? "border-q-primary bg-q-surface-2 ring-2 ring-q-primary/20" : "border-q-border bg-q-surface-2"}`}><span><strong className="block text-q-caption text-q-text-2">تفعيل التكرار التلقائي</strong><small className="mt-1 block text-q-caption text-q-text-2">ينشئ النظام جميع مواعيد الدورة ويربطها في سلسلة واحدة.</small></span><span className={`relative h-6 w-11 rounded-full transition ${recurring ? "bg-q-primary" : "bg-q-neutral-soft"}`}><input aria-label="تفعيل الاجتماع الدوري" type="checkbox" checked={recurring} onChange={(event) => setRecurring(event.target.checked)} className="sr-only"/><span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${recurring ? "right-6" : "right-1"}`}/></span></label>
-              {recurring && <div className="grid gap-3 rounded-q-card border border-q-border bg-q-surface-2 p-4 sm:grid-cols-3"><label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">دورة الاجتماع</span><select name="frequency" value={recurrenceFrequency} onChange={(event) => setRecurrenceFrequency(event.target.value as MeetingSeries["frequency"])} className="h-10 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui"><option value="weekly">أسبوعية</option><option value="monthly">شهرية</option><option value="quarterly">ربعية (كل 3 أشهر)</option><option value="semiannual">نصف سنوية (كل 6 أشهر)</option><option value="annual">سنوية</option><option value="custom">مخصصة</option></select></label>{recurrenceFrequency === "custom" ? <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">التكرار كل كم يوم؟</span><input name="interval_count" type="number" min="1" max="365" defaultValue="14" className="h-10 w-full rounded-q-control border border-q-border px-3 text-q-ui" /></label> : <input type="hidden" name="interval_count" value="1"/>}<label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">عدد الاجتماعات</span><input name="occurrence_count" type="number" min="2" max="36" defaultValue="6" className="h-10 w-full rounded-q-control border border-q-border px-3 text-q-ui" /></label><p className="self-end text-q-caption leading-5 text-q-text-2">سيبدأ التكرار من تاريخ أول اجتماع، ويمكن تعديل كل موعد لاحقاً قبل انعقاده.</p></div>}
+              <label className={`flex cursor-pointer items-center justify-between rounded-q-card border p-4 transition ${recurring ? "border-q-primary bg-q-surface-2 ring-2 ring-q-primary/20" : "border-q-border bg-q-surface-2"}`}><span><strong className="block text-q-caption text-q-text-2">تفعيل التكرار التلقائي</strong><small className="mt-1 block text-q-caption text-q-text-2">ينشئ النظام جميع مواعيد الدورة ويربطها في سلسلة واحدة.</small></span><span className={`relative h-6 w-11 rounded-full transition ${recurring ? "bg-q-primary" : "bg-q-neutral-soft"}`}><input aria-label="تفعيل الاجتماع الدوري" type="checkbox" checked={recurring} onChange={(event) => setRecurring(event.target.checked)} className="sr-only"/><span className={`absolute top-1 h-4 w-4 rounded-full bg-q-surface shadow transition ${recurring ? "right-6" : "right-1"}`}/></span></label>
+              {recurring && <div className="grid gap-3 rounded-q-card border border-q-border bg-q-surface-2 p-4 sm:grid-cols-3"><label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">دورة الاجتماع</span><select name="frequency" value={recurrenceFrequency} onChange={(event) => setRecurrenceFrequency(event.target.value as MeetingSeries["frequency"])} className="h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui"><option value="weekly">أسبوعية</option><option value="monthly">شهرية</option><option value="quarterly">ربعية (كل 3 أشهر)</option><option value="semiannual">نصف سنوية (كل 6 أشهر)</option><option value="annual">سنوية</option><option value="custom">مخصصة</option></select></label>{recurrenceFrequency === "custom" ? <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">التكرار كل كم يوم؟</span><input name="interval_count" type="number" min="1" max="365" defaultValue="14" className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-ui" /></label> : <input type="hidden" name="interval_count" value="1"/>}<label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">عدد الاجتماعات</span><input name="occurrence_count" type="number" min="2" max="36" defaultValue="6" className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-ui" /></label><p className="self-end text-q-caption leading-5 text-q-text-2">سيبدأ التكرار من تاريخ أول اجتماع، ويمكن تعديل كل موعد لاحقاً قبل انعقاده.</p></div>}
               <div className="grid gap-4 sm:grid-cols-3">
                 <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">التاريخ *</span><input required type="date" name="scheduled_date" className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-ui outline-none focus:border-q-primary" /></label>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">نوع المكان</span><select name="location_type" defaultValue="onsite" className="h-11 w-full rounded-q-control border border-q-border bg-white px-3 text-q-ui outline-none focus:border-q-primary"><option value="onsite">حضوري</option><option value="online">افتراضي</option><option value="hybrid">مختلط</option></select></label>
+                <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">نوع المكان</span><select name="location_type" defaultValue="onsite" className="h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui outline-none focus:border-q-primary"><option value="onsite">حضوري</option><option value="online">افتراضي</option><option value="hybrid">مختلط</option></select></label>
                 <label><span className="mb-1.5 block text-q-caption font-bold text-q-text-2">تفاصيل المكان</span><input name="location_details" placeholder="مثال: قاعة A-201" className="h-11 w-full rounded-q-control border border-q-border px-3 text-q-ui outline-none focus:border-q-primary" /></label>
               </div>
             </div>
             <div className="flex justify-end gap-3 border-t border-q-border bg-q-surface-2 px-6 py-4">
-              <button type="button" onClick={() => setCreateModal(false)} disabled={creating} className="h-10 rounded-q-control border border-q-border px-4 text-q-caption font-bold text-q-text-2">إلغاء</button>
-              <button disabled={creating || meetingOptionsLoading || !(meetingOptions?.meeting_units?.length) || !(meetingOptions?.meeting_types?.length)} className="h-10 rounded-q-control bg-q-primary px-5 text-q-caption font-bold text-q-on-primary disabled:opacity-60">{creating ? "جارٍ الإنشاء…" : "إنشاء الاجتماع"}</button>
+              <Button variant="secondary" type="button" onClick={() => setCreateModal(false)} disabled={creating} className="h-10 rounded-q-control border px-4 font-bold ">إلغاء</Button>
+              <Button variant="primary" type="submit" disabled={creating || meetingOptionsLoading || !(meetingOptions?.meeting_units?.length) || !(meetingOptions?.meeting_types?.length)} className="min-h-11 rounded-q-control px-5 font-bold disabled:opacity-60">{creating ? "جارٍ الإنشاء…" : "إنشاء الاجتماع"}</Button>
             </div>
           </form>
         </div>
