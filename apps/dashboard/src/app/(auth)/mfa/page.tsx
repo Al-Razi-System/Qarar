@@ -8,7 +8,7 @@ export default async function MfaPage() {
 
   return (
     <section className="col-span-full mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
-      <h1 className="text-3xl font-black">التحقق متعدد العوامل</h1>
+      <h1 className="text-q-h1 font-bold">التحقق متعدد العوامل</h1>
       <MfaForm />
     </section>
   );
