@@ -1,8 +1,11 @@
 "use client";
 
+import { Button as QButton } from "@/shared/ui/button";
+
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { TopicStagePolicyEditor, defaultStagePolicies, type TopicStagePolicy, type PolicyStage } from "./topic-stage-policy-editor";
-import { GovernancePageHeader } from "@/shared/ui/governance-page-header";
+import Link from "next/link";
+import { PageHeader } from "@/shared/ui/page-header";
 import styles from "./topic-types-workspace.module.css";
 import { TopicTypesList, type TopicTypeDetail } from "./topic-types-list";
 import { initialRequirements, requirementsError, requirementsPayload, scheduleNames, seasonalDatesFromConfig, type NamedOption, type Requirements } from "../model/topic-type-requirements";
@@ -49,11 +52,11 @@ const baseRejectionLabels = { complete: "إنهاء الموضوع بالرفض"
 function Choice({ selected, title, description, onClick }: {
   selected: boolean; title: string; description: string; onClick: () => void;
 }) {
-  return <button type="button" onClick={onClick} aria-pressed={selected}
+  return <QButton variant="ghost" type="button" onClick={onClick} aria-pressed={selected}
     className={styles.choice}>
     <span className={styles.choiceMark}>{selected && <Check size={14}/>}</span>
     <span><strong>{title}</strong><small>{description}</small></span>
-  </button>;
+  </QButton>;
 }
 
 const subscribeReady = () => () => {};
@@ -196,20 +199,18 @@ export function TopicTypesWorkspace() {
   }
 
   return <section className={styles.workspace} dir="rtl">
-    <GovernancePageHeader current="types" id="topic-types-title" title={creating ? "إعداد تصنيف موضوع" : "تصنيفات الموضوعات"}
-      description="حدّد هوية الموضوع ومساره وسياسة القرار، ليستخدمها مقدّم الموضوع دون إعدادات تقنية."
-      actions={creating ? <button type="button" disabled={saveState === "saving"} onClick={close}><X size={17}/>إغلاق المسودة</button> : <button type="button" disabled={!ready} onClick={beginCreating}><CirclePlus size={18}/>إنشاء نوع موضوع</button>} />
+    <div id="topic-types-title"><PageHeader title={creating ? "إعداد تصنيف موضوع" : "تصنيفات الموضوعات"} description="حدّد هوية الموضوع ومساره وسياسة القرار، ليستخدمها مقدّم الموضوع دون إعدادات تقنية." actions={creating ? <QButton variant="ghost" type="button" disabled={saveState === "saving"} onClick={close}><X size={17}/>إغلاق المسودة</QButton> : <QButton variant="ghost" type="button" disabled={!ready} onClick={beginCreating}><CirclePlus size={18}/>إنشاء نوع موضوع</QButton>} /><nav aria-label="إعدادات الحوكمة" className="mb-6 flex flex-wrap gap-2 border-b border-q-border pb-3"><Link href="/admin/regulations/library" className="inline-flex min-h-11 min-w-11 items-center inline-flex min-h-11 items-center rounded-q-control px-4 text-q-ui font-semibold text-q-text-2 hover:bg-q-surface-2">اللوائح والبنود</Link><Link href="/admin/workflows" className="inline-flex min-h-11 min-w-11 items-center inline-flex min-h-11 items-center rounded-q-control px-4 text-q-ui font-semibold text-q-text-2 hover:bg-q-surface-2">مسارات الموضوعات</Link><Link href="/admin/governance-model" aria-current="page" className="inline-flex min-h-11 min-w-11 items-center inline-flex min-h-11 items-center rounded-q-control px-4 text-q-ui font-semibold bg-q-surface-2 text-q-link">تصنيفات الموضوعات</Link></nav></div>
     {!creating ? <TopicTypesList onEdit={beginEditing} initialBundleId={lastSavedId}/> : <>
       <nav className={styles.progress} aria-label="خطوات إعداد نوع الموضوع">
         <p className={styles.mobileProgress}>الخطوة {step + 1} من {steps.length} · {steps[step].title}</p>
-        <ol>{steps.map((item,index)=><li key={item.title}><button type="button" aria-current={index===step?"step":undefined} disabled={(!editing&&index>step)||saveState==="saving"||saveState==="success"} onClick={()=>setStep(index)}><span>{index<step?<Check size={16}/>:index+1}</span><div><strong>{item.title}</strong><small>{item.hint}</small></div></button></li>)}</ol>
+        <ol>{steps.map((item,index)=><li key={item.title}><QButton variant="ghost" type="button" aria-current={index===step?"step":undefined} disabled={(!editing&&index>step)||saveState==="saving"||saveState==="success"} onClick={()=>setStep(index)}><span>{index<step?<Check size={16}/>:index+1}</span><div><strong>{item.title}</strong><small>{item.hint}</small></div></QButton></li>)}</ol>
       </nav>
       <div className={styles.layout}>
         <div className={styles.panel}>
           <fieldset className={styles.fields} disabled={saveState==="saving"||saveState==="success"}>
           {step===0 && <div>
             <div className={styles.panelTitle}><span>01 / الهوية</span><h2>ما نوع الموضوع؟</h2><p>اختر مجاله واكتب اسمًا واضحًا يعبّر عن الإجراء المطلوب.</p></div>
-            <fieldset className={styles.classifications}><legend>مجال الموضوع</legend><div>{classificationOptions.map(item=><button key={item.code} type="button" onClick={()=>{update("classification",item.name_ar);update("classificationCode",item.code)}} aria-pressed={draft.classificationCode===item.code}>{item.name_ar}{draft.classificationCode===item.code&&<Check size={16}/>}</button>)}</div>{errors.classification&&<p role="alert" className={styles.errorText}>{errors.classification}</p>}</fieldset>
+            <fieldset className={styles.classifications}><legend>مجال الموضوع</legend><div>{classificationOptions.map(item=><QButton variant="ghost" key={item.code} type="button" onClick={()=>{update("classification",item.name_ar);update("classificationCode",item.code)}} aria-pressed={draft.classificationCode===item.code}>{item.name_ar}{draft.classificationCode===item.code&&<Check size={16}/>}</QButton>)}</div>{errors.classification&&<p role="alert" className={styles.errorText}>{errors.classification}</p>}</fieldset>
             <label className={styles.nameField}>اسم نوع الموضوع<input maxLength={300} value={draft.name} onChange={event=>update("name",event.target.value)} placeholder="مثال: اعتماد برنامج أكاديمي" aria-invalid={Boolean(errors.name)}/>{errors.name&&<span role="alert" className={styles.errorText}>{errors.name}</span>}<small>مثال آخر: إقرار خطة الاختبارات أو اعتماد نتائج الفصل الدراسي.</small></label>
             <TopicTypeScopeEditor value={requirements} onChange={updateRequirements} councils={options.councils ?? []} classes={options.council_classes ?? []} loading={optionsState === "loading"}/>
             {errors.requirements && <p role="alert" className={styles.errorText}>{errors.requirements}</p>}
@@ -217,7 +218,7 @@ export function TopicTypesWorkspace() {
           {step===1 && <div>
             <div className={styles.panelTitle}><span>02 / الرحلة</span><h2>ما مسار الحوكمة؟</h2><p>اختر ترتيب المجالس، ثم حدّد عمل كل مجلس ونتيجة القرار لهذا التصنيف.</p></div>
             {optionsState==="loading"&&<p role="status" className={styles.notice}>جارٍ تحميل المسارات المتاحة…</p>}
-            {optionsState==="error"&&<div role="alert" className={styles.error}>{saveMessage}<button type="button" className={styles.secondary} onClick={()=>{setSaveMessage("");setOptionsState("loading");setOptionsAttempt(value=>value+1)}}>إعادة المحاولة</button></div>}
+            {optionsState==="error"&&<div role="alert" className={styles.error}>{saveMessage}<QButton variant="ghost" type="button" className={styles.secondary} onClick={()=>{setSaveMessage("");setOptionsState("loading");setOptionsAttempt(value=>value+1)}}>إعادة المحاولة</QButton></div>}
             {optionsState==="ready"&&options.workflow_versions.length===0&&<p role="alert" className={styles.notice}>لا يوجد مسار متاح. أنشئ مسارًا ونشّطه أولًا من «مسارات الموضوعات».</p>}
             <div className={styles.choices}>{options.workflow_versions.map(item=><Choice key={item.id} selected={draft.workflowVersionId===item.id} title={item.name_ar} description={item.steps.length+" مراحل"} onClick={()=>update("workflowVersionId",item.id)}/>)}</div>
             {errors.workflowVersionId&&<p role="alert" className={styles.errorText}>{errors.workflowVersionId}</p>}
@@ -239,9 +240,9 @@ export function TopicTypesWorkspace() {
           </div>}
           </fieldset>
           {saveState!=="idle"&&<div role={saveState==="error"?"alert":"status"} className={saveState==="error"?styles.error:styles.success}><strong>{saveState==="saving"?"جارٍ حفظ المسودة…":saveState==="success"?"تم الحفظ":"تعذر الحفظ"}</strong><p>{saveMessage}</p>{savedReference&&<bdi>{savedReference}</bdi>}</div>}
-          {saveState==="success"&&<div className={styles.savedActions}><p>المرفقات المطلوبة: {requirements.requiredAttachmentCount || "لا توجد"}{requirements.requiredAttachmentCount ? " على الأقل" : ""}. يمكنك الآن تنشيط التصنيف بنفسك.</p><button type="button" className={styles.primary} onClick={close}>عرض التصنيف وتنشيطه<ArrowLeft size={17}/></button></div>}
-          {editing&&step<3&&saveState!=="success"&&<div className={styles.quickSave}><button type="button" className={styles.primary} onClick={save} disabled={saveState==="saving"||Boolean(saveBlocker)}>حفظ التعديلات<FileCheck2 size={17}/></button><small>{saveBlocker || "احفظ التغيير قبل العودة؛ ثم نشّطه ليُستخدم في الموضوعات الجديدة."}</small></div>}
-          <footer className={styles.footer}><button type="button" className={styles.secondary} disabled={step===0||saveState==="saving"||saveState==="success"} onClick={()=>setStep(value=>Math.max(0,value-1))}><ArrowRight size={17}/>السابق</button>{step<steps.length-1?<button type="button" className={styles.primary} onClick={next}>التالي<ArrowLeft size={17}/></button>:<button type="button" className={styles.primary} onClick={save} disabled={saveState==="saving"||saveState==="success"||!selectedWorkflow}><FileCheck2 size={17}/>{saveState==="saving"?"جارٍ الحفظ…":saveState==="success"?"تم الحفظ":"حفظ المسودة"}</button>}</footer>
+          {saveState==="success"&&<div className={styles.savedActions}><p>المرفقات المطلوبة: {requirements.requiredAttachmentCount || "لا توجد"}{requirements.requiredAttachmentCount ? " على الأقل" : ""}. يمكنك الآن تنشيط التصنيف بنفسك.</p><QButton variant="ghost" type="button" className={styles.primary} onClick={close}>عرض التصنيف وتنشيطه<ArrowLeft size={17}/></QButton></div>}
+          {editing&&step<3&&saveState!=="success"&&<div className={styles.quickSave}><QButton variant="ghost" type="button" className={styles.primary} onClick={save} disabled={saveState==="saving"||Boolean(saveBlocker)}>حفظ التعديلات<FileCheck2 size={17}/></QButton><small>{saveBlocker || "احفظ التغيير قبل العودة؛ ثم نشّطه ليُستخدم في الموضوعات الجديدة."}</small></div>}
+          <footer className={styles.footer}><QButton variant="ghost" type="button" className={styles.secondary} disabled={step===0||saveState==="saving"||saveState==="success"} onClick={()=>setStep(value=>Math.max(0,value-1))}><ArrowRight size={17}/>السابق</QButton>{step<steps.length-1?<QButton variant="ghost" type="button" className={styles.primary} onClick={next}>التالي<ArrowLeft size={17}/></QButton>:<QButton variant="ghost" type="button" className={styles.primary} onClick={save} disabled={saveState==="saving"||saveState==="success"||!selectedWorkflow}><FileCheck2 size={17}/>{saveState==="saving"?"جارٍ الحفظ…":saveState==="success"?"تم الحفظ":"حفظ المسودة"}</QButton>}</footer>
         </div>
         <aside className={styles.summary} aria-label="ملخص التصنيف"><div className={styles.summaryHeading}><Tags size={18}/><h2>ملخص التصنيف</h2><span>مسودة</span></div><h3>{draft.name||"اسم نوع الموضوع"}</h3><p>{draft.classification||"اختر مجال الموضوع"}</p><dl>{[["النطاق",scopeLabel],["المسار",selectedWorkflow?.name_ar||"لم يُحدد بعد"],["عند القبول",selectedWorkflow?.layout_only?"حسب سياسة كل مجلس":acceptanceLabels[draft.acceptance]],["عند الرفض",selectedWorkflow?.layout_only?"حسب سياسة كل مجلس":rejectionLabels[draft.rejection]],["التوقيت",scheduleNames[requirements.scheduleKind]]].map(([key,value])=><div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl>{savedReference&&<div className={styles.summaryReference}><small>مرجع نوع الموضوع</small><bdi>{savedReference}</bdi></div>}</aside>
       </div>
