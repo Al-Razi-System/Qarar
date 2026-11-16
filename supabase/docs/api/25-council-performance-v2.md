@@ -30,7 +30,7 @@ Council object:
 | `tasks` | `{total, done, overdue}` of tasks created in the year from the council's decisions, cancelled excluded |
 | `decisions` | decisions issued in the year's sessions |
 | `violations` | `{open, escalated}` |
-| `decision_stats` | `{total, by_outcome:[{kind,count}], by_type:[{name_ar,count}], untyped, needs_execution, executed, overdue_execution, executors:{people,units}}` over issued decisions (`approved`, `sent_to_execution`, `under_follow_up`, `closed`, `rejected`) of the year. A decision needs execution when it has a non-cancelled task, and is executed when all of them are `completed` or `closed` |
+| `decision_stats` | `{total, by_outcome:[{kind,count}], by_type:[{name_ar,count}], untyped, needs_execution, executed, overdue_execution, executors:{people,units}}` over issued decisions (`approved`, `sent_to_execution`, `under_follow_up`, `closed`, `rejected`) of the year. `by_type` groups by the classification of the topic's type (falling back to the decision's own type). A decision needs execution when it has a non-cancelled task, and is executed when all of them are `completed` or `closed` |
 | `topics` | `{total, regulated, direct, exception, legacy, ungoverned, discussed}`: distinct topics on the agendas of the year's sessions, by `governance_source` (`custom` = direct, empty = legacy); `ungoverned` = all but `regulated` |
 
 ## `POST /rest/v1/rpc/get_council_performance_v2`
