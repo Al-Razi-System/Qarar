@@ -151,7 +151,7 @@ describe("CouncilPerformanceView", () => {
     const decisions = screen.getByRole("region", { name: "القرارات الصادرة" });
     const outcomes = within(decisions).getByRole("list", { name: "القرارات حسب نتيجتها" });
     expect(within(outcomes).getAllByRole("listitem").map((item) => item.textContent)).toEqual(["موافقة7", "تأجيل2", "رفض1"]);
-    expect(decisions).toHaveTextContent("حسب النوع: توصية 3، بلا نوع 7.");
+    expect(decisions).toHaveTextContent("حسب تصنيف الموضوع: توصية 3، بلا تصنيف 7.");
     expect(decisions).toHaveTextContent("تحتاج تنفيذًا6 من 10");
     expect(decisions).toHaveTextContent("نُفّذت كاملة4 من 6");
     expect(decisions).toHaveTextContent("1 تأخر تنفيذها");

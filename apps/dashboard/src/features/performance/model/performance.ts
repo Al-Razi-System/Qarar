@@ -318,7 +318,7 @@ export function councilReport(data: CouncilPerformance, activity: Activity | nul
       columns: [col("الرقم", 18), col("الموضوع", 44), col("الجلسة", 34), col("تاريخ الجلسة", 14), col("الحوكمة", 16, (v) => (v === "محوكم" ? null : "warn")), col("في الجلسة", 15), col("رقم القرار", 18), col("النتيجة", 12)],
       rows: activity.topics.map((x) => [x.topic_no, x.title_ar, x.meeting_title_ar, x.meeting_date, governanceLabel(x.governance_source), agendaLabel(x.agenda_status), x.decision_no, x.decision_no ? outcomeLabel(x.outcome_kind) : null]) },
     { name: "القرارات", title: `قرارات ${council.name_ar}`, empty: "لم يصدر قرار.",
-      columns: [col("الرقم", 18), col("نص القرار", 60), col("الموضوع", 36), col("النتيجة", 12), col("النوع", 14), col("الجلسة", 34), col("تاريخ الصدور", 14), col("التكليفات", 10), col("المنجز منها", 11)],
+      columns: [col("الرقم", 18), col("نص القرار", 60), col("الموضوع", 36), col("النتيجة", 12), col("تصنيف الموضوع", 16), col("الجلسة", 34), col("تاريخ الصدور", 14), col("التكليفات", 10), col("المنجز منها", 11)],
       rows: activity.decisions.map((x) => [x.decision_no, x.decision_text, x.topic_title_ar, outcomeLabel(x.outcome_kind), x.type_name_ar, x.meeting_title_ar, x.issued_at.slice(0, 10), x.tasks, x.tasks_done]) },
     { name: "التكليفات", title: `تكليفات ${council.name_ar}`, empty: "لا تكليفات.",
       columns: [col("الرقم", 18), col("التكليف", 44), col("المكلَّف", 26), col("الجهة", 26), col("الموعد", 14), col("الحالة", 16, (v) => (v === "متأخر" ? "bad" : v === "منجز" || v === "مغلق" ? "good" : null)), col("رقم القرار", 18)],

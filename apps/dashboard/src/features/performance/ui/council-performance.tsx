@@ -62,7 +62,7 @@ export function CouncilPerformanceView({ data, activity = null }: { data: Counci
             <ShareBar label="القرارات حسب نتيجتها" shares={decisionShares(decisions)} />
             {decisions.by_type.length > 0 && (
               <p className="m-0 text-q-ui text-q-text-2">
-                حسب النوع: {decisions.by_type.map((type) => `${type.name_ar} ${type.count}`).join("، ")}{decisions.untyped > 0 ? `، بلا نوع ${decisions.untyped}` : ""}.
+                حسب تصنيف الموضوع: {decisions.by_type.map((type) => `${type.name_ar} ${type.count}`).join("، ")}{decisions.untyped > 0 ? `، بلا تصنيف ${decisions.untyped}` : ""}.
               </p>
             )}
             <dl className="m-0 grid gap-x-6 gap-y-3 border-t border-q-border pt-4 sm:grid-cols-3">

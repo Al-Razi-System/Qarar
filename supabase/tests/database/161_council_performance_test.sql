@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap;
-select plan(31);
+select plan(32);
 
 -- "Today" as the contracts see it, and the academic year that contains it.
 create temporary table clock as
@@ -89,6 +89,13 @@ insert into qarar_decisions.decisions(id,organization_id,decision_no,topic_id,me
 ('61000000-0000-0000-0000-000000000942','61000000-0000-0000-0000-000000000001','D-2','61000000-0000-0000-0000-000000000802','61000000-0000-0000-0000-000000000901','61000000-0000-0000-0000-000000000501','اعتماد ثانٍ','closed','61000000-0000-0000-0000-000000000103',now()),
 ('61000000-0000-0000-0000-000000000943','61000000-0000-0000-0000-000000000001','D-3','61000000-0000-0000-0000-000000000802','61000000-0000-0000-0000-000000000902','61000000-0000-0000-0000-000000000501','رفض','rejected','61000000-0000-0000-0000-000000000103',now()),
 ('61000000-0000-0000-0000-000000000944','61000000-0000-0000-0000-000000000001','D-4','61000000-0000-0000-0000-000000000803','61000000-0000-0000-0000-000000000902','61000000-0000-0000-0000-000000000501','مسودة','draft','61000000-0000-0000-0000-000000000103',now());
+insert into qarar_governance.topic_classifications_v2(reference_number,id,organization_id,code,name_ar,created_by_user_id) values
+('TCL-161','61000000-0000-0000-0000-000000000a01','61000000-0000-0000-0000-000000000001','academic161','أكاديمي','61000000-0000-0000-0000-000000000103');
+insert into qarar_governance.topic_types_v2(reference_number,id,organization_id,code,name_ar,created_by_user_id) values
+('TYP-161','61000000-0000-0000-0000-000000000a02','61000000-0000-0000-0000-000000000001','plan161','خطة دراسية','61000000-0000-0000-0000-000000000103');
+insert into qarar_governance.topic_type_versions_v2(reference_number,id,organization_id,topic_type_id,classification_id,version_no,acceptance_finality,rejection_finality,created_by_user_id) values
+('TVR-161','61000000-0000-0000-0000-000000000a03','61000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000a02','61000000-0000-0000-0000-000000000a01',1,'complete','complete','61000000-0000-0000-0000-000000000103');
+update qarar_topics.topics set topic_type_version_id='61000000-0000-0000-0000-000000000a03', typed_creation_request='{}' where id='61000000-0000-0000-0000-000000000801';
 update qarar_decisions.decisions set outcome_kind='rejection', decision_type_id='61000000-0000-0000-0000-000000000931' where id='61000000-0000-0000-0000-000000000943';
 insert into qarar_execution.action_items(organization_id,action_no,decision_id,topic_id,title_ar,status,due_date,assigned_user_id,assigned_unit_id) values
 ('61000000-0000-0000-0000-000000000001','A-5','61000000-0000-0000-0000-000000000942','61000000-0000-0000-0000-000000000802','منجزة لجهة','completed',current_date-3,'61000000-0000-0000-0000-000000000102','61000000-0000-0000-0000-000000000502');
@@ -137,10 +144,10 @@ select is((select c->>'state' from seen, jsonb_array_elements(overview->'council
   'inactive', 'a council that is not active is never reported as stalled');
 
 select is((select (c->'decision_stats') - 'by_outcome'::text - 'by_type'::text from a),
-  '{"total":3,"untyped":2,"needs_execution":2,"executed":1,"overdue_execution":1,"executors":{"people":2,"units":1}}'::jsonb,
+  '{"total":3,"untyped":1,"needs_execution":2,"executed":1,"overdue_execution":1,"executors":{"people":2,"units":1}}'::jsonb,
   'decisions: issued ones only, how many needed execution, were executed or are late, and who executes them');
 select is((select c->'decision_stats'->'by_outcome' from a), '[{"kind":"approval","count":2},{"kind":"rejection","count":1}]'::jsonb, 'decisions are split by outcome, most frequent first');
-select is((select c->'decision_stats'->'by_type' from a), '[{"name_ar":"توصية","count":1}]'::jsonb, 'decisions are split by their type when one is set');
+select is((select c->'decision_stats'->'by_type' from a), '[{"name_ar":"أكاديمي","count":1},{"name_ar":"توصية","count":1}]'::jsonb, 'a decision takes the classification of its topic, else its own decision type');
 select is((select c->'topics' from a), '{"total":3,"regulated":1,"direct":1,"exception":0,"legacy":1,"ungoverned":2,"discussed":2}'::jsonb,
   'topics the council handled are counted once each, governed apart from ungoverned');
 
@@ -160,6 +167,10 @@ select is((select jsonb_build_object('src', t->>'governance_source', 'agenda', t
 select is((select jsonb_agg(jsonb_build_object('no', d->>'decision_no', 'tasks', (d->>'tasks')::int, 'done', (d->>'tasks_done')::int) order by d->>'decision_no')
     from seen, jsonb_array_elements(activity->'decisions') d where who='amal'),
   '[{"no":"D-1","tasks":3,"done":1},{"no":"D-2","tasks":1,"done":1},{"no":"D-3","tasks":0,"done":0}]'::jsonb, 'activity lists issued decisions with how many of their tasks are done');
+select is((select jsonb_agg(jsonb_build_object('no', d->>'decision_no', 'classification', d->>'type_name_ar') order by d->>'decision_no')
+    from seen, jsonb_array_elements(activity->'decisions') d where who='amal'),
+  '[{"no":"D-1","classification":"أكاديمي"},{"no":"D-2","classification":null},{"no":"D-3","classification":"توصية"}]'::jsonb,
+  'activity exposes the topic classification and keeps the legacy decision type only as a fallback');
 select is((select jsonb_agg(jsonb_build_object('no', k->>'action_no', 'overdue', (k->>'overdue')::boolean, 'who', k->>'assignee_name_ar', 'unit', k->>'assignee_unit_ar') order by k->>'action_no')
     from seen, jsonb_array_elements(activity->'tasks') k where who='amal'),
   '[{"no":"A-1","overdue":false,"who":"أمل","unit":null},{"no":"A-2","overdue":true,"who":"أمل","unit":null},{"no":"A-3","overdue":false,"who":"أمل","unit":null},{"no":"A-5","overdue":false,"who":"وليد","unit":"مجلس القسم"}]'::jsonb,
