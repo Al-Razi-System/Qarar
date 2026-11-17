@@ -1,5 +1,7 @@
 "use client";
 
+import { Card as QCard } from "@/shared/ui/card";
+
 import { useState } from "react";
 import { Building2, FileBadge, Save, UserRound } from "lucide-react";
 import { regulationsRpc, type PolicyAuthoringReferences } from "../../api/regulations-client";
@@ -63,10 +65,10 @@ export function PolicyIdentityPanel({
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
-      <section className="rounded-2xl border border-[var(--q-border)] bg-white p-5 shadow-sm sm:p-6">
-        <div className="mb-5 flex items-start gap-3 border-b border-[#ebf0f5] pb-4">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--q-surface-2)] text-[var(--q-primary)]"><FileBadge size={18} /></span>
-          <div><h3 className="text-sm font-black text-[#1b3049]">هوية اللائحة وملكيتها</h3><p className="mt-1 text-[9px] leading-5 text-[#718398]">هذه البيانات تعرّف السجل الرئيسي، ولا تغير نصوص الإصدارات المنشورة.</p></div>
+      <section className="rounded-q-card border border-q-border bg-q-surface p-5 sm:p-6">
+        <div className="mb-5 flex items-start gap-3 border-b border-q-border pb-4">
+          <span className="grid h-10 w-10 place-items-center rounded-q-control bg-q-surface-2 text-q-primary"><FileBadge size={18} /></span>
+          <div><h3 className="text-q-ui font-bold text-q-text">هوية اللائحة وملكيتها</h3><p className="mt-1 text-q-caption leading-5 text-q-text-3">هذه البيانات تعرّف السجل الرئيسي، ولا تغير نصوص الإصدارات المنشورة.</p></div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <AuthoringField label="الاسم بالعربية" required><input className={authoringInput} value={form.name_ar} onChange={(event) => setForm({ ...form, name_ar: event.target.value })} /></AuthoringField>
@@ -84,12 +86,12 @@ export function PolicyIdentityPanel({
         <InfoCard icon={<FileBadge size={16} />} label="رمز اللائحة" value={policy.code} />
         <InfoCard icon={<UserRound size={16} />} label="المالك الحالي" value={String(references.users.find((user) => user.id === form.owner_user_id)?.name_ar ?? "غير محدد")} />
         <InfoCard icon={<Building2 size={16} />} label="الجهة المالكة" value={String(references.units.find((unit) => unit.id === form.owner_governance_unit_id)?.name_ar ?? "غير محددة")} />
-        <div className="rounded-2xl border border-[#f0ddc9] bg-[#fff9f3] p-4 text-[9px] leading-6 text-[#76533a]">رمز اللائحة ثابت بعد الإنشاء لأنه يُستخدم في التكاملات وسجل التدقيق. أنشئ لائحة جديدة إذا كان المطلوب كياناً نظامياً مختلفاً.</div>
+        <QCard className="p-0 rounded-q-card border border-q-border bg-q-surface-2 p-4 text-q-caption leading-6 text-q-text-2">رمز اللائحة ثابت بعد الإنشاء لأنه يُستخدم في التكاملات وسجل التدقيق. أنشئ لائحة جديدة إذا كان المطلوب كياناً نظامياً مختلفاً.</QCard>
       </aside>
     </div>
   );
 }
 
 function InfoCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return <div className="rounded-2xl border border-[var(--q-border)] bg-white p-4 shadow-sm"><span className="flex items-center gap-2 text-[9px] font-black text-[var(--q-text-3)]">{icon}{label}</span><strong dir={label === "رمز اللائحة" ? "ltr" : undefined} className="mt-2 block break-words text-[11px] leading-5 text-[#223950]">{value}</strong></div>;
+  return <QCard className="p-0 rounded-q-card border border-q-border bg-q-surface p-4 "><span className="flex items-center gap-2 text-q-caption font-bold text-q-text-3">{icon}{label}</span><strong dir={label === "رمز اللائحة" ? "ltr" : undefined} className="mt-2 block break-words text-q-caption leading-5 text-q-text">{value}</strong></QCard>;
 }

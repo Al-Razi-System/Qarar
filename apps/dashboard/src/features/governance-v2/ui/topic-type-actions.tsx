@@ -1,4 +1,7 @@
 "use client";
+
+import { InlineMessage } from "@/shared/ui/inline-message";
+import { Button as QButton } from "@/shared/ui/button";
 import { useRef, useState } from "react";
 import styles from "./topic-types-list.module.css";
 export type TypeActions = Partial<Record<"begin_edit" | "submit" | "approve" | "activate" | "enable" | "disable" | "request_changes", boolean>>;
@@ -34,9 +37,9 @@ export function TopicTypeActions({ bundleId, lockVersion, actions, reasons, onCh
   const visible = (["begin_edit", "activate", "enable", "disable"] as (keyof TypeActions)[]).filter(action => actions[action] || (action === "activate" && reasons.length > 0 && !actions.begin_edit && !actions.disable && !actions.enable));
   return <section className={styles.actionPanel} aria-label="إجراءات التصنيف">
     <h3>إجراءات التصنيف</h3>
-    <div className={styles.actionButtons}>{visible.map(action => <button type="button" key={action} disabled={pending || !actions[action]} onClick={() => void act(action)}>{labels[action]}</button>)}</div>
+    <div className={styles.actionButtons}>{visible.map(action => <QButton variant="ghost" type="button" key={action} disabled={pending || !actions[action]} onClick={() => void act(action)}>{labels[action]}</QButton>)}</div>
     {pending && <p role="status">جارٍ تنفيذ العملية…</p>}
-    {notice && <p role={notice.error ? "alert" : "status"}>{notice.text}</p>}
+    {notice && <InlineMessage tone={notice.error ? "error" : "success"}>{notice.text}</InlineMessage>}
     {reasons.length > 0 && <ul>{reasons.map((reason, index) => <li key={index}>{reason}</li>)}</ul>}
     {(actions.disable || actions.enable) && <p>التعطيل يمنع تقديم موضوعات جديدة؛ لا يوقف الموضوعات والقرارات الجارية.</p>}
     {actions.begin_edit && <p>عدّل الإعدادات ثم نشّط التعديل بنفسك؛ تبقى الموضوعات السابقة محفوظة.</p>}

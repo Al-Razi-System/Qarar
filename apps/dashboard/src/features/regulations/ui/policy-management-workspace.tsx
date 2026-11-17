@@ -1,5 +1,10 @@
 "use client";
 
+import { Card as QCard } from "@/shared/ui/card";
+import { Badge as QBadge } from "@/shared/ui/badge";
+
+import { Button as QButton } from "@/shared/ui/button";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -60,9 +65,9 @@ type References = {
 };
 
 const input =
-  "h-10 w-full rounded-xl border border-[var(--q-border)] bg-white px-3 text-[11px] outline-none focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
+  "h-10 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-caption outline-none focus:border-q-primary focus:ring-2 focus:ring-q-primary/10";
 const textarea =
-  "min-h-24 w-full rounded-xl border border-[var(--q-border)] bg-white p-3 text-[11px] leading-5 outline-none focus:border-[var(--q-primary)] focus:ring-2 focus:ring-[var(--q-primary)]/10";
+  "min-h-24 w-full rounded-q-control border border-q-border bg-q-surface p-3 text-q-caption leading-5 outline-none focus:border-q-primary focus:ring-2 focus:ring-q-primary/10";
 const legalLabels: Record<string, string> = {
   draft: "مسودة",
   under_review: "قيد المراجعة",
@@ -130,12 +135,12 @@ function Field({
   if (label.includes("JSON")) return null;
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[10px] font-black text-[#344861]">
+      <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">
         {label}
       </span>
       {children}
       {hint && (
-        <span className="mt-1 block text-[8px] leading-4 text-[#8392a5]">
+        <span className="mt-1 block text-q-caption leading-normal text-q-text-3">
           {hint}
         </span>
       )}
@@ -156,7 +161,7 @@ function Modal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-[#071526]/55 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-q-header/55 p-4 backdrop-blur-sm"
       onMouseDown={onClose}
     >
       <section
@@ -164,18 +169,18 @@ function Modal({
         aria-modal="true"
         aria-label={title}
         onMouseDown={(event) => event.stopPropagation()}
-        className={`max-h-[92vh] w-full overflow-y-auto rounded-2xl bg-white shadow-2xl ${wide ? "max-w-4xl" : "max-w-xl"}`}
+        className={`max-h-[92vh] w-full overflow-y-auto rounded-q-card bg-q-surface shadow-2xl ${wide ? "max-w-4xl" : "max-w-xl"}`}
       >
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e8eef4] bg-white/95 px-5 py-4 backdrop-blur">
-          <h2 className="text-sm font-black text-[#14233a]">{title}</h2>
-          <button
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-q-border bg-q-surface/95 px-5 py-4 backdrop-blur">
+          <h2 className="text-q-ui font-bold text-q-text">{title}</h2>
+          <QButton variant="ghost"
             type="button"
             onClick={onClose}
             aria-label="إغلاق"
-            className="grid h-8 w-8 place-items-center rounded-lg bg-[#f1f5f9] text-[var(--q-text-3)]"
+            className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control bg-q-surface-2 text-q-text-3"
           >
             <X size={15} />
-          </button>
+          </QButton>
         </header>
         <div className="p-5">{children}</div>
       </section>
@@ -784,16 +789,16 @@ export function PolicyManagementWorkspace({
       <div
         key={item.id}
         className="relative"
-        style={{ marginRight: `${depth * 22}px` }}
+        style={{ marginRight: `min(${depth * 22}px, 12%)` }}
       >
         {depth > 0 && (
-          <span className="absolute -right-[13px] top-0 h-7 w-3 border-b border-r border-[#c9d9e8]" />
+          <span className="absolute -right-[13px] top-0 h-7 w-3 border-b border-r border-q-border" />
         )}
         <article
-          className={`group rounded-xl border transition ${depth === 0 ? "border-[#d7e5f1] bg-white shadow-sm" : "border-[#e5edf4] bg-[var(--q-bg)]"}`}
+          className={`group rounded-q-control border transition ${depth === 0 ? "border-q-border bg-q-surface " : "border-q-border bg-q-bg"}`}
         >
-          <div className="flex items-start gap-2 p-3">
-            <button
+          <div className="flex flex-wrap items-start gap-2 p-3">
+            <QButton variant="ghost"
               type="button"
               aria-label={
                 hasChildren
@@ -804,7 +809,7 @@ export function PolicyManagementWorkspace({
               }
               disabled={!hasChildren}
               onClick={() => toggleItemChildren(item.id)}
-              className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg ${hasChildren ? "bg-[var(--q-surface-2)] text-[var(--q-primary)] hover:bg-[#dceeff]" : "bg-[#f3f6f9] text-[#a6b4c2]"}`}
+              className={`min-w-11 mt-0.5 grid min-h-11 min-w-11 shrink-0 place-items-center rounded-q-control ${hasChildren ? "bg-q-surface-2 text-q-primary hover:bg-q-surface-2" : "bg-q-surface-2 text-q-text-3"}`}
             >
               {hasChildren ? (
                 <ChevronDown
@@ -818,23 +823,23 @@ export function PolicyManagementWorkspace({
               ) : (
                 <FolderTree size={13} />
               )}
-            </button>
-            <div className="min-w-0 flex-1">
+            </QButton>
+            <div className="min-w-0 flex-1 basis-40">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[var(--q-surface-2)] px-2 py-0.5 text-[7px] font-black text-[var(--q-primary)]">
+                <QBadge className="rounded-full bg-q-surface-2 px-2 py-0.5 text-q-caption font-bold text-q-primary">
                   {typeLabel[item.item_type] ?? item.item_type}
-                </span>
-                <strong className="text-[10px] text-[var(--q-text)]">
+                </QBadge>
+                <strong className="text-q-caption text-q-text">
                   {item.title_ar}
                 </strong>
               </div>
-              <p className="mt-1 line-clamp-2 text-[8px] leading-4 text-[#75869a]">
+              <p className="mt-1 line-clamp-2 text-q-caption leading-normal text-q-text-3">
                 {item.body_text || "لا يوجد نص محفوظ لهذا البند."}
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-[7px] text-[#8998aa]">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-q-caption text-q-text-3">
                 <code
                   dir="ltr"
-                  className="rounded bg-[#f1f5f9] px-1.5 py-0.5 text-[#526b86]"
+                  className="rounded-q-control bg-q-surface-2 px-1.5 py-0.5 text-q-text-2"
                 >
                   {item.item_code}
                 </code>
@@ -843,37 +848,37 @@ export function PolicyManagementWorkspace({
               </div>
             </div>
             {selectedVersion?.legal_status === "draft" && (
-              <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition group-hover:opacity-100 sm:opacity-60">
+              <div className="flex flex-wrap shrink-0 items-center gap-0.5 opacity-100 transition group-hover:opacity-100 sm:opacity-60">
                 {["article", "clause", "procedure"].includes(
                   item.item_type,
                 ) && (
-                  <button
+                  <QButton variant="ghost"
                     type="button"
                     aria-label={`إدارة قواعد ${item.title_ar}`}
                     title="القواعد والتنفيذات"
                     onClick={() => openRules(item)}
-                    className="rounded-lg p-2 text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
+                    className="min-w-11 rounded-q-control p-2 text-q-primary hover:bg-q-surface-2"
                   >
                     <Gavel size={13} />
-                  </button>
+                  </QButton>
                 )}
-                <button
+                <QButton variant="ghost"
                   type="button"
                   aria-label={`إضافة عنصر فرعي إلى ${item.title_ar}`}
                   title="إضافة عنصر فرعي"
                   onClick={() => void addChildItem(item)}
-                  className="rounded-lg p-2 text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
+                  className="min-w-11 rounded-q-control p-2 text-q-primary hover:bg-q-surface-2"
                 >
                   <Plus size={13} />
-                </button>
-                <button
+                </QButton>
+                <QButton type="submit" variant="ghost"
                   aria-label={`تعديل ${item.title_ar}`}
                   onClick={() => editItem(item)}
-                  className="rounded-lg p-2 text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
+                  className="min-w-11 rounded-q-control p-2 text-q-primary hover:bg-q-surface-2"
                 >
                   <Pencil size={13} />
-                </button>
-                <button
+                </QButton>
+                <QButton type="submit" variant="ghost"
                   aria-label={`حذف ${item.title_ar}`}
                   onClick={() =>
                     remove(
@@ -882,16 +887,16 @@ export function PolicyManagementWorkspace({
                       "تم حذف البند.",
                     )
                   }
-                  className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                  className="min-w-11 rounded-q-control p-2 text-q-danger hover:bg-q-danger-soft"
                 >
                   <Trash2 size={13} />
-                </button>
+                </QButton>
               </div>
             )}
           </div>
         </article>
         {hasChildren && !isCollapsed && (
-          <div className="mr-3 mt-2 space-y-2 border-r border-[#d9e5ef] pr-3">
+          <div className="mr-3 mt-2 space-y-2 border-r border-q-border pr-3">
             {children.map((child) =>
               renderTreeNode(child, depth + 1, [...ancestry, item.id]),
             )}
@@ -906,7 +911,7 @@ export function PolicyManagementWorkspace({
       {notice && (
         <div
           role="status"
-          className={`flex items-center gap-2 rounded-xl border p-3 text-[10px] font-bold ${notice.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}
+          className={`flex items-center gap-2 rounded-q-control border p-3 text-q-caption font-bold ${notice.kind === "success" ? "border-q-border bg-q-success-soft text-q-success" : "border-q-border bg-q-danger-soft text-q-danger"}`}
         >
           {notice.kind === "success" ? (
             <Check size={15} />
@@ -917,89 +922,89 @@ export function PolicyManagementWorkspace({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-[#d9e4ef] bg-white shadow-sm">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e8eef4] bg-[var(--q-bg)] p-4">
+      <QCard className="p-0 overflow-hidden rounded-q-card border border-q-border bg-q-surface ">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-q-border bg-q-bg p-4">
           <div>
-            <p className="text-[9px] font-black text-[#f17822]">
+            <p className="text-q-caption font-bold text-q-link">
               مساحة التنفيذ
             </p>
-            <h2 className="mt-1 text-sm font-black text-[#14233a]">
+            <h2 className="mt-1 text-q-ui font-bold text-q-text">
               إدارة الإصدار الحالي
             </h2>
-            <p className="mt-1 text-[9px] text-[var(--q-text-3)]">
+            <p className="mt-1 text-q-caption text-q-text-3">
               نفّذ البنود والنطاقات والإجراءات من هذه الصفحة دون العودة إلى دليل
               اللوائح.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
+            <QButton type="submit" variant="ghost"
               onClick={() => openStage("attachment")}
-              className="h-9 rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[var(--q-text-2)]"
+              className="min-w-11 min-h-11 rounded-q-control border border-q-border px-3 text-q-ui font-bold text-q-text-2"
             >
               <Paperclip className="ml-1 inline" size={12} />
               المرفقات
-            </button>
-            <button
+            </QButton>
+            <QButton type="submit" variant="ghost"
               onClick={() => openStage("policy")}
-              className="h-9 rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[var(--q-text-2)]"
+              className="min-w-11 min-h-11 rounded-q-control border border-q-border px-3 text-q-ui font-bold text-q-text-2"
             >
               <Pencil className="ml-1 inline" size={12} />
               تعديل البيانات
-            </button>
-            <button
+            </QButton>
+            <QButton type="submit" variant="ghost"
               onClick={() => openStage("legal")}
-              className="h-9 rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[var(--q-text-2)]"
+              className="min-w-11 min-h-11 rounded-q-control border border-q-border px-3 text-q-ui font-bold text-q-text-2"
             >
               <FileText className="ml-1 inline" size={12} />
               بيانات الإصدار
-            </button>
-            <button
+            </QButton>
+            <QButton type="submit" variant="ghost"
               onClick={() => openStage("scope")}
-              className="h-9 rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[var(--q-text-2)]"
+              className="min-w-11 min-h-11 rounded-q-control border border-q-border px-3 text-q-ui font-bold text-q-text-2"
             >
               <Route className="ml-1 inline" size={12} />
               نطاقات التطبيق
-            </button>
-            <button
+            </QButton>
+            <QButton type="submit" variant="ghost"
               onClick={() => openStage("review")}
-              className="h-9 rounded-xl border border-[var(--q-border)] px-3 text-[9px] font-bold text-[var(--q-text-2)]"
+              className="min-w-11 min-h-11 rounded-q-control border border-q-border px-3 text-q-ui font-bold text-q-text-2"
             >
               <ShieldCheck className="ml-1 inline" size={12} />
               الجاهزية والاعتماد
-            </button>
+            </QButton>
             {canDeleteSelectedVersion && (
-              <button
+              <QButton variant="ghost"
                 type="button"
                 disabled={busy}
                 onClick={() => void removeEmptyVersion()}
-                className="h-9 rounded-xl border border-red-200 px-3 text-[9px] font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                className="min-w-11 min-h-11 rounded-q-control border border-q-border px-3 text-q-ui font-bold text-q-danger hover:bg-q-danger-soft disabled:opacity-50"
               >
                 <Trash2 className="ml-1 inline" size={12} />
                 حذف الإصدار الفارغ
-              </button>
+              </QButton>
             )}
-            <button
+            <QButton type="submit" variant="ghost"
               onClick={() => openStage("version")}
-              className="h-9 rounded-xl bg-[var(--q-primary)] px-3 text-[9px] font-black text-white"
+              className="min-w-11 min-h-11 rounded-q-control bg-q-primary px-3 text-q-ui font-bold text-q-on-primary"
             >
               <Plus className="ml-1 inline" size={12} />
               إصدار جديد
-            </button>
+            </QButton>
           </div>
         </header>
-        <div className="flex gap-2 overflow-x-auto border-b border-[var(--q-surface-2)] p-3">
+        <div className="flex gap-2 overflow-x-auto border-b border-q-surface-2 p-3">
           {policy.versions?.map((version) => (
-            <button
+            <QButton type="submit" variant="ghost"
               key={version.id}
               onClick={() => {
                 setSelectedVersionId(version.id);
                 void openStage("legal");
               }}
-              className={`shrink-0 rounded-xl px-3 py-2 text-[9px] font-black ${selectedVersion?.id === version.id ? "bg-[#0a1830] text-white" : "bg-[#f1f5f9] text-[#607287]"}`}
+              className={`min-w-11 shrink-0 rounded-q-control px-3 py-2 text-q-ui font-bold ${selectedVersion?.id === version.id ? "bg-q-header text-q-on-primary" : "bg-q-surface-2 text-q-text-2"}`}
             >
               v{version.version_label || version.version_no} ·{" "}
               {legalLabels[version.legal_status] ?? version.legal_status}
-            </button>
+            </QButton>
           ))}
         </div>
         {stage === "rules" && rulesItem && (
@@ -1009,10 +1014,10 @@ export function PolicyManagementWorkspace({
             wide
           >
             <div
-              className={`mb-3 rounded-xl border px-4 py-3 text-[9px] leading-5 ${
+              className={`mb-3 rounded-q-control border px-4 py-3 text-q-caption leading-5 ${
                 rulesItem.requires_executable_rule
-                  ? "border-blue-200 bg-blue-50 text-blue-800"
-                  : "border-slate-200 bg-slate-50 text-slate-600"
+                  ? "border-q-border bg-q-surface-2 text-q-link"
+                  : "border-q-border bg-q-neutral-soft text-q-text-2"
               }`}
             >
               {rulesItem.requires_executable_rule
@@ -1029,21 +1034,21 @@ export function PolicyManagementWorkspace({
         )}
         {stage === "legal" && selectedVersion && (
           <Modal title="بيانات الإصدار القانونية" onClose={closeModal} wide>
-            <section className="bg-[var(--q-bg)] px-1 py-1">
+            <section className="bg-q-bg px-1 py-1">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <p className="text-[9px] font-black text-[#ff7a00]">
+                  <p className="text-q-caption font-bold text-q-link">
                     بيانات قانونية للإصدار
                   </p>
-                  <h3 className="mt-1 text-[11px] font-black text-[var(--q-text)]">
+                  <h3 className="mt-1 text-q-caption font-bold text-q-text">
                     الإصدار{" "}
                     {selectedVersion.version_label ||
                       selectedVersion.version_no}
                   </h3>
                 </div>
-                <span className="rounded-full bg-[var(--q-surface-2)] px-2.5 py-1 text-[8px] font-black text-[var(--q-primary)]">
+                <QBadge className="rounded-full bg-q-surface-2 px-2.5 py-1 text-q-caption font-bold text-q-primary">
                   تخص الوثيقة كاملة وليست بندًا
-                </span>
+                </QBadge>
               </div>
               <div className="grid gap-3 md:grid-cols-3">
                 <Field label="الجهة المصدرة">
@@ -1161,13 +1166,13 @@ export function PolicyManagementWorkspace({
                   />
                 </Field>
                 {selectedVersion.legal_status === "draft" && (
-                  <button
+                  <QButton type="submit" variant="ghost"
                     disabled={busy}
                     onClick={() => void saveLegalVersionMetadata()}
-                    className="h-10 rounded-xl bg-[#0a1830] px-4 text-[9px] font-black text-white disabled:opacity-50"
+                    className="min-w-11 min-h-11 rounded-q-control bg-q-header px-4 text-q-ui font-bold text-q-on-primary disabled:opacity-50"
                   >
                     حفظ بيانات الإصدار
-                  </button>
+                  </QButton>
                 )}
               </div>
             </section>
@@ -1176,42 +1181,42 @@ export function PolicyManagementWorkspace({
         {!selectedVersion ? (
           <div className="grid min-h-48 place-items-center p-6 text-center">
             <div>
-              <FileText className="mx-auto text-[#8aa7c3]" />
-              <p className="mt-3 text-[11px] font-black text-[#2c4058]">
+              <FileText className="mx-auto text-q-text-3" />
+              <p className="mt-3 text-q-caption font-bold text-q-text">
                 لا يوجد إصدار عمل
               </p>
-              <button
+              <QButton type="submit" variant="ghost"
                 onClick={() => openStage("version")}
-                className="mt-3 rounded-xl bg-[var(--q-primary)] px-4 py-2 text-[9px] font-black text-white"
+                className="min-w-11 mt-3 rounded-q-control bg-q-primary px-4 py-2 text-q-ui font-bold text-q-on-primary"
               >
                 إنشاء الإصدار الأول
-              </button>
+              </QButton>
             </div>
           </div>
         ) : (
           <div className="space-y-5 p-4">
             <div className="space-y-4">
-              <section className="min-h-[560px] overflow-hidden rounded-2xl border border-[#d9e6f1] bg-white shadow-[0_12px_30px_rgba(36,74,112,0.07)]">
-                <div className="flex items-center justify-between bg-[var(--q-bg)] px-3 py-2.5">
+              <section className="min-h-[560px] overflow-hidden rounded-q-card border border-q-border bg-q-surface ">
+                <div className="flex items-center justify-between bg-q-bg px-3 py-2.5">
                   <div>
-                    <h3 className="text-[11px] font-black text-[var(--q-text)]">
+                    <h3 className="text-q-caption font-bold text-q-text">
                       بنود اللائحة
                     </h3>
-                    <p className="mt-0.5 text-[8px] text-[var(--q-text-3)]">
+                    <p className="mt-0.5 text-q-caption text-q-text-3">
                       المواد وشروط المطابقة والمسارات المرتبطة.
                     </p>
                   </div>
                   {selectedVersion.legal_status === "draft" && (
-                    <button
+                    <QButton type="submit" variant="ghost"
                       onClick={() => openStage("item")}
-                      className="rounded-lg bg-[var(--q-primary)] px-3 py-2 text-[8px] font-black text-white"
+                      className="min-w-11 rounded-q-control bg-q-primary px-3 py-2 text-q-ui font-bold text-q-on-primary"
                     >
                       <Plus className="ml-1 inline" size={11} />
                       إضافة بند
-                    </button>
+                    </QButton>
                   )}
                 </div>
-                <div className="min-h-[480px] space-y-2 bg-[var(--q-bg)] p-4">
+                <div className="min-h-[480px] space-y-2 bg-q-bg p-4">
                   {selectedVersion.items
                     .filter(
                       (item) =>
@@ -1227,7 +1232,7 @@ export function PolicyManagementWorkspace({
                     )
                     .map((item) => renderTreeNode(item))}
                   {!selectedVersion.items.length && (
-                    <p className="rounded-xl border border-dashed border-[#cbd9e7] bg-white p-8 text-center text-[9px] text-[#8393a6]">
+                    <p className="rounded-q-control border border-dashed border-q-border bg-q-surface p-8 text-center text-q-caption text-q-text-3">
                       لم تُضف بنود بعد. أضف فصلاً أولاً ثم اربط المواد به.
                     </p>
                   )}
@@ -1239,26 +1244,26 @@ export function PolicyManagementWorkspace({
                       className="grid gap-2 px-3 py-3 md:grid-cols-[1fr_auto] md:items-center"
                     >
                       <div>
-                        <strong className="text-[10px] text-[#253750]">
+                        <strong className="text-q-caption text-q-text">
                           {item.title_ar}
                         </strong>
-                        <p className="mt-1 line-clamp-2 text-[8px] leading-4 text-[#75869a]">
+                        <p className="mt-1 line-clamp-2 text-q-caption leading-normal text-q-text-3">
                           {item.body_text || "لا يوجد نص."}
                         </p>
-                        <span className="mt-1 inline-flex text-[7px] text-[#8998aa]">
+                        <span className="mt-1 inline-flex text-q-caption text-q-text-3">
                           {item.item_code} · ترتيب {item.sort_order}
                         </span>
                       </div>
                       {selectedVersion.legal_status === "draft" && (
                         <div className="flex gap-1">
-                          <button
+                          <QButton type="submit" variant="ghost"
                             aria-label={`تعديل ${item.title_ar}`}
                             onClick={() => editItem(item)}
-                            className="rounded-lg p-2 text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
+                            className="min-w-11 rounded-q-control p-2 text-q-primary hover:bg-q-surface-2"
                           >
                             <Pencil size={13} />
-                          </button>
-                          <button
+                          </QButton>
+                          <QButton type="submit" variant="ghost"
                             aria-label={`حذف ${item.title_ar}`}
                             onClick={() =>
                               remove(
@@ -1267,16 +1272,16 @@ export function PolicyManagementWorkspace({
                                 "تم حذف البند.",
                               )
                             }
-                            className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                            className="min-w-11 rounded-q-control p-2 text-q-danger hover:bg-q-danger-soft"
                           >
                             <Trash2 size={13} />
-                          </button>
+                          </QButton>
                         </div>
                       )}
                     </article>
                   ))}
                   {!selectedVersion.items.length && (
-                    <p className="p-8 text-center text-[9px] text-[#8393a6]">
+                    <p className="p-8 text-center text-q-caption text-q-text-3">
                       لم تُضف بنود بعد.
                     </p>
                   )}
@@ -1284,38 +1289,38 @@ export function PolicyManagementWorkspace({
               </section>
             </div>
             <aside className="hidden">
-              <section className="rounded-xl border border-[var(--q-border)] p-3">
+              <section className="rounded-q-control border border-q-border p-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[10px] font-black text-[var(--q-text)]">
-                    <Route className="ml-1 inline text-[var(--q-primary)]" size={14} />
+                  <h3 className="text-q-caption font-bold text-q-text">
+                    <Route className="ml-1 inline text-q-primary" size={14} />
                     نطاقات التطبيق
                   </h3>
                   {selectedVersion.legal_status === "draft" && (
-                    <button
+                    <QButton type="submit" variant="ghost"
                       onClick={() => openStage("scope")}
-                      className="rounded-lg border border-[#cfe0ef] px-2 py-1.5 text-[8px] font-black text-[var(--q-primary)]"
+                      className="min-w-11 rounded-q-control border border-q-border px-2 py-1.5 text-q-ui font-bold text-q-primary"
                     >
                       إضافة
-                    </button>
+                    </QButton>
                   )}
                 </div>
                 <div className="mt-3 space-y-2">
                   {selectedVersion.scopes.map((scope) => (
                     <div
                       key={scope.id}
-                      className="flex items-center justify-between rounded-lg bg-[var(--q-bg)] p-2.5"
+                      className="flex items-center justify-between rounded-q-control bg-q-bg p-2.5"
                     >
                       <div>
-                        <strong className="text-[9px] text-[#30445c]">
+                        <strong className="text-q-caption text-q-text-2">
                           {scopeLabels[scope.scope_type] ?? scope.scope_type}
                         </strong>
-                        <span className="mt-1 block text-[7px] text-[#8494a7]">
+                        <span className="mt-1 block text-q-caption text-q-text-3">
                           الأولوية {scope.priority} ·{" "}
                           {scope.valid_from || "عند التفعيل"}
                         </span>
                       </div>
                       {selectedVersion.legal_status === "draft" && (
-                        <button
+                        <QButton type="submit" variant="ghost"
                           aria-label="حذف النطاق"
                           onClick={() =>
                             remove(
@@ -1324,22 +1329,22 @@ export function PolicyManagementWorkspace({
                               "تم حذف النطاق.",
                             )
                           }
-                          className="p-1.5 text-red-600"
+                          className="min-w-11 p-1.5 text-q-danger"
                         >
                           <Trash2 size={12} />
-                        </button>
+                        </QButton>
                       )}
                     </div>
                   ))}
                   {!selectedVersion.scopes.length && (
-                    <p className="text-[8px] text-[#8393a6]">لا توجد نطاقات.</p>
+                    <p className="text-q-caption text-q-text-3">لا توجد نطاقات.</p>
                   )}
                 </div>
               </section>
-              <section className="rounded-xl border border-[var(--q-border)] p-3">
-                <h3 className="text-[10px] font-black text-[var(--q-text)]">
+              <section className="rounded-q-control border border-q-border p-3">
+                <h3 className="text-q-caption font-bold text-q-text">
                   <ShieldCheck
-                    className="ml-1 inline text-emerald-600"
+                    className="ml-1 inline text-q-success"
                     size={14}
                   />
                   الجاهزية ودورة الاعتماد
@@ -1348,10 +1353,10 @@ export function PolicyManagementWorkspace({
                   {readiness.map((check) => (
                     <div
                       key={check.label}
-                      className="flex items-center gap-2 text-[8px] text-[#607287]"
+                      className="flex items-center gap-2 text-q-caption text-q-text-2"
                     >
                       <span
-                        className={`grid h-5 w-5 place-items-center rounded-full ${check.done ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-700"}`}
+                        className={`grid h-5 w-5 place-items-center rounded-full ${check.done ? "bg-q-success text-q-on-primary" : "bg-q-warning-soft text-q-warning"}`}
                       >
                         {check.done ? <Check size={10} /> : "!"}
                       </span>
@@ -1361,53 +1366,53 @@ export function PolicyManagementWorkspace({
                 </div>
                 <div className="mt-4 grid gap-2">
                   {selectedVersion.legal_status === "draft" && (
-                    <button
+                    <QButton type="submit" variant="ghost"
                       disabled={!canSubmit}
                       onClick={() => openStage("review")}
-                      className="h-9 rounded-lg bg-[var(--q-primary)] text-[9px] font-black text-white disabled:cursor-not-allowed disabled:bg-[#aab8c7]"
+                      className="min-w-11 min-h-11 rounded-q-control bg-q-primary text-q-ui font-bold text-q-on-primary disabled:cursor-not-allowed disabled:bg-q-surface-2"
                     >
                       <Send className="ml-1 inline" size={12} />
                       إرسال للمراجعة
-                    </button>
+                    </QButton>
                   )}
                   {selectedVersion.legal_status === "under_review" && (
-                    <button
+                    <QButton type="submit" variant="ghost"
                       onClick={() => openStage("approve")}
-                      className="h-9 rounded-lg bg-emerald-700 text-[9px] font-black text-white"
+                      className="min-w-11 min-h-11 rounded-q-control bg-q-success text-q-ui font-bold text-q-on-primary"
                     >
                       اعتماد الإصدار
-                    </button>
+                    </QButton>
                   )}
                   {selectedVersion.legal_status === "approved" && (
-                    <button
+                    <QButton type="submit" variant="ghost"
                       disabled={!canActivate}
                       onClick={() => openStage("activate")}
-                      className="h-9 rounded-lg bg-[var(--q-primary)] text-[9px] font-black text-white disabled:bg-[#aab8c7]"
+                      className="min-w-11 min-h-11 rounded-q-control bg-q-primary text-q-ui font-bold text-q-on-primary disabled:bg-q-surface-2"
                     >
                       تحديد النفاذ والتفعيل
-                    </button>
+                    </QButton>
                   )}
                   {selectedVersion.legal_status === "effective" && (
-                    <button
+                    <QButton type="submit" variant="ghost"
                       onClick={() => openStage("suspend")}
-                      className="h-9 rounded-lg bg-red-700 text-[9px] font-black text-white"
+                      className="min-w-11 min-h-11 rounded-q-control bg-q-danger text-q-ui font-bold text-q-on-primary"
                     >
                       تعليق الإصدار
-                    </button>
+                    </QButton>
                   )}
-                  <button
+                  <QButton type="submit" variant="ghost"
                     onClick={() => openStage("workflow")}
-                    className="h-9 rounded-lg border border-[#cfe0ef] text-[9px] font-black text-[var(--q-primary)]"
+                    className="min-w-11 min-h-11 rounded-q-control border border-q-border text-q-ui font-bold text-q-primary"
                   >
                     <Workflow className="ml-1 inline" size={12} />
                     إدارة مسارات الاعتماد
-                  </button>
+                  </QButton>
                 </div>
               </section>
             </aside>
           </div>
         )}
-      </div>
+      </QCard>
 
       {stage === "attachment" && (
         <Modal title="مرفقات اللائحة" onClose={closeModal} wide>
@@ -1567,30 +1572,30 @@ export function PolicyManagementWorkspace({
               />
             </div>
             <div>
-              <h3 className="mb-3 text-[11px] font-black text-[var(--q-text)]">
+              <h3 className="mb-3 text-q-caption font-bold text-q-text">
                 المرفقات الحالية
               </h3>
               <div className="space-y-2">
                 {visibleAttachments.map((attachment) => (
                   <div
                     key={attachment.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-[var(--q-border)] p-3"
+                    className="flex items-center justify-between gap-3 rounded-q-control border border-q-border p-3"
                   >
                     <div className="min-w-0">
                       <a
                         href={attachment.file_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-1 truncate text-[10px] font-black text-[var(--q-primary)]"
+                        className="inline-flex min-h-11 min-w-11 items-center flex items-center gap-1 truncate text-q-caption font-bold text-q-primary"
                       >
                         {attachment.file_name}
                         <ExternalLink size={11} />
                       </a>
-                      <span className="mt-1 block text-[8px] text-[#8392a5]">
+                      <span className="mt-1 block text-q-caption text-q-text-3">
                         {attachment.targetLabel}
                       </span>
                     </div>
-                    <button
+                    <QButton type="submit" variant="ghost"
                       aria-label={`حذف ${attachment.file_name}`}
                       onClick={() =>
                         remove(
@@ -1599,14 +1604,14 @@ export function PolicyManagementWorkspace({
                           "تم حذف المرفق.",
                         )
                       }
-                      className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                      className="min-w-11 rounded-q-control p-2 text-q-danger hover:bg-q-danger-soft"
                     >
                       <Trash2 size={13} />
-                    </button>
+                    </QButton>
                   </div>
                 ))}
                 {!visibleAttachments.length && (
-                  <p className="rounded-xl border border-dashed p-8 text-center text-[9px] text-[#8392a5]">
+                  <p className="rounded-q-control border border-dashed p-8 text-center text-q-caption text-q-text-3">
                     لا توجد مرفقات بعد.
                   </p>
                 )}
@@ -1831,12 +1836,12 @@ export function PolicyManagementWorkspace({
                 <option value="procedure">إجراء</option>
               </select>
             </Field>
-            <section className="sm:col-span-2 rounded-2xl border border-[#dce7f2] bg-[#f7fbff] p-4">
+            <section className="sm:col-span-2 rounded-q-card border border-q-border bg-q-surface p-4">
               <div className="mb-3">
-                <h3 className="text-[11px] font-black text-[#21344d]">
+                <h3 className="text-q-caption font-bold text-q-text">
                   متى ينطبق هذا البند؟
                 </h3>
-                <p className="mt-1 text-[9px] leading-5 text-[var(--q-text-3)]">
+                <p className="mt-1 text-q-caption leading-5 text-q-text-3">
                   اختر الصفة التي يراجعها النظام ثم اكتب القيمة المتوقعة. اتركها دون شرط ليطبق البند على الجميع.
                 </p>
               </div>
@@ -1877,7 +1882,7 @@ export function PolicyManagementWorkspace({
                     }
                   />
                 </Field>
-                <button
+                <QButton variant="ghost"
                   type="button"
                   disabled={!itemCriterion.field}
                   onClick={() =>
@@ -1886,16 +1891,16 @@ export function PolicyManagementWorkspace({
                       inverted: !itemCriterion.inverted,
                     })
                   }
-                  className={`h-10 rounded-xl border px-4 text-[10px] font-bold disabled:cursor-not-allowed disabled:opacity-40 ${
+                  className={`min-w-11 min-h-11 rounded-q-control border px-4 text-q-ui font-bold disabled:cursor-not-allowed disabled:opacity-40 ${
                     itemCriterion.inverted
-                      ? "border-amber-300 bg-amber-50 text-amber-800"
-                      : "border-[var(--q-border)] bg-white text-[var(--q-text-2)]"
+                      ? "border-q-border bg-q-warning-soft text-q-warning"
+                      : "border-q-border bg-q-surface text-q-text-2"
                   }`}
                 >
                   {itemCriterion.inverted ? "استثناء: لا يساوي" : "يساوي"}
-                </button>
+                </QButton>
               </div>
-              <p className="mt-3 rounded-xl bg-white px-3 py-2 text-[9px] leading-5 text-[var(--q-text-2)]">
+              <p className="mt-3 rounded-q-control bg-q-surface px-3 py-2 text-q-caption leading-5 text-q-text-2">
                 {!itemCriterion.field
                   ? "سيطبق هذا البند على جميع الموضوعات ضمن الفئة والنطاق المحددين."
                   : `سيطبق البند عندما يكون ${
@@ -2119,7 +2124,7 @@ export function PolicyManagementWorkspace({
               />
             </Field>
             {scopeForm.type === "unit_subtree" && (
-              <label className="flex items-center gap-2 text-[10px] font-bold text-[#344861]">
+              <label className="flex items-center gap-2 text-q-caption font-bold text-q-text-2">
                 <input
                   type="checkbox"
                   checked={scopeForm.descendants}
@@ -2143,13 +2148,13 @@ export function PolicyManagementWorkspace({
       )}
       {stage === "workflow" && (
         <Modal title="إدارة مسار الاعتماد" onClose={closeModal}>
-          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-[10px] leading-6 text-blue-900">
+          <QCard className="p-0 rounded-q-control border border-q-border bg-q-surface-2 p-4 text-q-caption leading-6 text-q-link">
             أنشئ المسار وفعّله أولًا، ثم عد إلى بند اللائحة واختر الإصدار الفعال
             للمسار. البنود الإلزامية لا تُرسل للمراجعة دون مسار فعال.
-          </div>
+          </QCard>
           <Link
             href="/admin/regulations?section=workflows"
-            className="mt-4 flex h-10 items-center justify-between rounded-xl bg-[var(--q-primary)] px-4 text-[10px] font-black text-white"
+            className="inline-flex min-h-11 min-w-11 items-center mt-4 flex min-h-11 items-center justify-between rounded-q-control bg-q-primary px-4 text-q-caption font-bold text-q-on-primary"
           >
             فتح مصمم المسارات <Workflow size={15} />
           </Link>
@@ -2161,7 +2166,7 @@ export function PolicyManagementWorkspace({
             {readiness.map((check) => (
               <div
                 key={check.label}
-                className={`flex items-center gap-2 rounded-lg border p-3 text-[9px] ${check.done ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}
+                className={`flex items-center gap-2 rounded-q-control border p-3 text-q-caption ${check.done ? "border-q-border bg-q-success-soft text-q-success" : "border-q-border bg-q-warning-soft text-q-warning"}`}
               >
                 {check.done ? <Check size={13} /> : <AlertCircle size={13} />}{" "}
                 {check.label}
@@ -2171,22 +2176,22 @@ export function PolicyManagementWorkspace({
           {legislativeReadiness && (
             <div className="mt-3 space-y-2">
               {legislativeReadiness.errors.map((item) => (
-                <div
+                <QCard
                   key={item.code}
-                  className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-[9px] text-red-800"
+                  className="p-0 flex items-start gap-2 rounded-q-control border border-q-border bg-q-danger-soft p-3 text-q-caption text-q-danger"
                 >
                   <AlertCircle className="mt-0.5 shrink-0" size={13} />
                   <span>{item.message}</span>
-                </div>
+                </QCard>
               ))}
               {legislativeReadiness.warnings.map((item) => (
-                <div
+                <QCard
                   key={item.code}
-                  className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[9px] text-amber-900"
+                  className="p-0 flex items-start gap-2 rounded-q-control border border-q-border bg-q-warning-soft p-3 text-q-caption text-q-warning"
                 >
                   <AlertCircle className="mt-0.5 shrink-0" size={13} />
                   <span>{item.message}</span>
-                </div>
+                </QCard>
               ))}
             </div>
           )}
@@ -2208,10 +2213,10 @@ export function PolicyManagementWorkspace({
       )}
       {stage === "approve" && selectedVersion && (
         <Modal title="اعتماد الإصدار" onClose={closeModal}>
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-[10px] leading-6 text-amber-900">
+          <QCard className="p-0 rounded-q-control border border-q-border bg-q-warning-soft p-4 text-q-caption leading-6 text-q-warning">
             يشترط أن ينفذ الاعتماد مستخدم آخر غير مقدم الإصدار. سيتم تسجيل هوية
             المعتمد ووقت الاعتماد في سجل التدقيق.
-          </div>
+          </QCard>
           <Action
             busy={busy}
             label="تأكيد الاعتماد"
@@ -2317,14 +2322,14 @@ function Action({
 }) {
   return (
     <div className="mt-5 flex justify-end">
-      <button
+      <QButton variant="ghost"
         type="button"
         disabled={busy || disabled}
         onClick={onClick}
-        className={`flex h-10 items-center gap-2 rounded-xl px-4 text-[10px] font-black text-white disabled:cursor-not-allowed disabled:opacity-50 ${danger ? "bg-red-700" : "bg-[var(--q-primary)]"}`}
+        className={`min-w-11 flex min-h-11 items-center gap-2 rounded-q-control px-4 text-q-ui font-bold text-q-on-primary disabled:cursor-not-allowed disabled:opacity-50 ${danger ? "bg-q-danger" : "bg-q-primary"}`}
       >
         {busy && <LoaderCircle className="animate-spin" size={14} />} {label}
-      </button>
+      </QButton>
     </div>
   );
 }

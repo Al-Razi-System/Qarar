@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { NotificationAdminWorkspace, type NotificationWorkspaceData } from "@/features/notifications/ui/notification-admin-workspace";
 import { getOpenWaProviderStatus } from "@/features/notifications/server/openwa-admin";
 import { qararRpc } from "@/shared/api/qarar-server";
-import { Card } from "@/shared/ui/card";
+import { PageHeader } from "@/shared/ui/page-header";
 
 export const metadata: Metadata = { title: "إشعارات واتساب" };
 
@@ -19,10 +19,7 @@ export default async function NotificationSettingsPage() {
     loadError = "تعذر تحميل إعدادات الإشعارات وسجل الإرسال. أعد المحاولة بعد التحقق من اتصال قاعدة البيانات.";
   }
   return <div className="mx-auto max-w-[1480px] space-y-6">
-    <Card className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <div><p className="text-q-caption font-bold text-q-link">إعدادات النظام</p><h1 className="mt-2 text-q-h1 font-bold">إشعارات واتساب</h1><p className="mt-2 max-w-3xl text-q-ui text-q-text-2">إدارة رقم الإرسال، حالة الاتصال، قوالب الرسائل، مواعيد التذكير وسجل التسليم.</p></div>
-      <p className="text-q-caption text-q-text-3">خاص بمسؤول النظام</p>
-    </Card>
+    <PageHeader title="إشعارات واتساب" description="إدارة رقم الإرسال، حالة الاتصال، قوالب الرسائل، مواعيد التذكير وسجل التسليم." meta={<p className="text-q-caption text-q-text-3">خاص بمسؤول النظام</p>} />
     <NotificationAdminWorkspace initialData={data} initialProvider={provider} loadError={loadError} />
   </div>;
 }

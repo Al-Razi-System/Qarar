@@ -1,14 +1,19 @@
 "use client";
 
+import { Card as QCard } from "@/shared/ui/card";
+
+import { Button as QButton } from "@/shared/ui/button";
+import { Dialog } from "@/shared/ui/dialog";
+import { InlineMessage } from "@/shared/ui/inline-message";
+
 import {
   cloneElement,
   isValidElement,
-  useEffect,
   useId,
   type ReactElement,
   type ReactNode,
 } from "react";
-import { AlertCircle, CheckCircle2, LoaderCircle, X } from "lucide-react";
+import { LoaderCircle, X } from "lucide-react";
 
 export type AuthoringMutation = (
   action: () => Promise<unknown>,
@@ -16,9 +21,9 @@ export type AuthoringMutation = (
 ) => Promise<void>;
 
 export const authoringInput =
-  "h-11 w-full rounded-xl border border-[#d8e4ef] bg-white px-3 text-[11px] text-[#21364e] outline-none transition placeholder:text-[#9aa9b8] focus:border-[#72b5ee] focus:ring-4 focus:ring-[var(--q-primary)]/7 disabled:cursor-not-allowed disabled:bg-[#f1f4f7] disabled:text-[#7b8998]";
+  "h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui text-q-text outline-none transition placeholder:text-q-text-3 focus:border-q-primary focus:ring-4 focus:ring-q-primary/7 disabled:cursor-not-allowed disabled:bg-q-surface-2 disabled:text-q-text-3";
 export const authoringTextarea =
-  "min-h-28 w-full resize-y rounded-xl border border-[#d8e4ef] bg-white p-3 text-[11px] leading-6 text-[#21364e] outline-none transition placeholder:text-[#9aa9b8] focus:border-[#72b5ee] focus:ring-4 focus:ring-[var(--q-primary)]/7 disabled:cursor-not-allowed disabled:bg-[#f1f4f7]";
+  "min-h-28 w-full resize-y rounded-q-control border border-q-border bg-q-surface p-3 text-q-caption leading-6 text-q-text outline-none transition placeholder:text-q-text-3 focus:border-q-primary focus:ring-4 focus:ring-q-primary/7 disabled:cursor-not-allowed disabled:bg-q-surface-2";
 
 export function AuthoringField({
   label,
@@ -48,12 +53,12 @@ export function AuthoringField({
 
   return (
     <div className="block min-w-0">
-      <label htmlFor={fieldId} className="mb-1.5 flex items-center gap-1 text-[9px] font-black text-[#415a73]">
+      <label htmlFor={fieldId} className="mb-1.5 flex items-center gap-1 text-q-caption font-bold text-q-text-2">
         {label}
-        {required && <span className="text-red-600">*</span>}
+        {required && <span className="text-q-danger">*</span>}
       </label>
       {field}
-      {hint && <span id={hintId} className="mt-1.5 block text-[8px] leading-4 text-[#7d8ea1]">{hint}</span>}
+      {hint && <span id={hintId} className="mt-1.5 block text-q-caption leading-normal text-q-text-3">{hint}</span>}
     </div>
   );
 }
@@ -71,29 +76,9 @@ export function AuthoringDialog({
   children: ReactNode;
   wide?: boolean;
 }) {
-  useEffect(() => {
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#071b39]/55 p-3 backdrop-blur-sm sm:p-6" role="presentation">
-      <button type="button" aria-label="إغلاق النافذة" title="إغلاق النافذة" onClick={onClose} className="fixed inset-0 cursor-default" />
-      <section role="dialog" aria-modal="true" aria-labelledby="authoring-dialog-title" className={`relative mx-auto my-3 overflow-hidden rounded-3xl border border-white/70 bg-[var(--q-bg)] shadow-2xl ${wide ? "max-w-5xl" : "max-w-2xl"}`}>
-        <header className="flex items-start justify-between gap-4 border-b border-[#dfe9f2] bg-white px-5 py-4 sm:px-6">
-          <div>
-            <h2 id="authoring-dialog-title" className="text-sm font-black text-[#142a43]">{title}</h2>
-            {description && <p className="mt-1 text-[9px] leading-5 text-[#73859a]">{description}</p>}
-          </div>
-          <button type="button" aria-label="إغلاق" title="إغلاق دون حفظ" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--q-border)] text-[#6c7e91] hover:bg-[#f2f6fa] hover:text-[#0b2848]"><X size={16} /></button>
-        </header>
-        <div className="p-5 sm:p-6">{children}</div>
-      </section>
-    </div>
-  );
+  return <Dialog title={title} description={description} onClose={onClose} size={wide ? "xl" : "lg"}>
+    {children}
+  </Dialog>;
 }
 
 export function AuthoringNotice({
@@ -106,11 +91,10 @@ export function AuthoringNotice({
   if (!notice) return null;
   const success = notice.kind === "success";
   return (
-    <div role={success ? "status" : "alert"} className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-[10px] font-bold ${success ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>
-      {success ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
+    <InlineMessage tone={success ? "success" : "error"} className="flex items-center gap-2">
       <span className="min-w-0 flex-1">{notice.message}</span>
-      <button type="button" title="إخفاء الرسالة" aria-label="إخفاء الرسالة" onClick={onDismiss} className="grid h-7 w-7 place-items-center rounded-lg hover:bg-black/5"><X size={13} /></button>
-    </div>
+      <QButton variant="ghost" type="button" title="إخفاء الرسالة" aria-label="إخفاء الرسالة" onClick={onDismiss} className="min-w-11 grid min-h-11 min-w-11 place-items-center"><X size={13} /></QButton>
+    </InlineMessage>
   );
 }
 
@@ -130,10 +114,10 @@ export function PrimaryAction({
   tone?: "blue" | "red";
 }) {
   return (
-    <button type="button" title={title} disabled={busy || disabled} onClick={onClick} className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-[10px] font-black text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-45 ${tone === "red" ? "bg-red-700 hover:bg-red-800" : "bg-[var(--q-primary)] hover:bg-[var(--q-primary)]"}`}>
+    <QButton variant={tone === "red" ? "danger" : "primary"} type="button" title={title} disabled={busy || disabled} onClick={onClick} className={`min-w-11 inline-flex min-h-11 items-center justify-center gap-2 rounded-q-control px-4 text-q-ui font-bold text-q-on-primary  transition disabled:cursor-not-allowed disabled:opacity-45 ${tone === "red" ? "bg-q-danger hover:bg-q-danger" : "bg-q-primary hover:bg-q-primary"}`}>
       {busy && <LoaderCircle size={14} className="animate-spin" />}
       {children}
-    </button>
+    </QButton>
   );
 }
 
@@ -149,8 +133,8 @@ export function EmptyAuthoringState({
   action?: ReactNode;
 }) {
   return (
-    <div className="grid min-h-64 place-items-center rounded-2xl border border-dashed border-[#cbdbea] bg-[#f9fbfd] p-6 text-center">
-      <div className="max-w-sm"><span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">{icon}</span><h3 className="mt-3 text-sm font-black text-[#263b54]">{title}</h3><p className="mt-1 text-[9px] leading-5 text-[#7b8da1]">{description}</p>{action && <div className="mt-4">{action}</div>}</div>
-    </div>
+    <QCard className="p-0 grid min-h-64 place-items-center rounded-q-card border border-dashed border-q-border bg-q-surface p-6 text-center">
+      <div className="max-w-sm"><span className="mx-auto grid h-12 w-12 place-items-center rounded-q-card bg-q-surface-2 text-q-primary">{icon}</span><h3 className="mt-3 text-q-ui font-bold text-q-text">{title}</h3><p className="mt-1 text-q-caption leading-5 text-q-text-3">{description}</p>{action && <div className="mt-4">{action}</div>}</div>
+    </QCard>
   );
 }

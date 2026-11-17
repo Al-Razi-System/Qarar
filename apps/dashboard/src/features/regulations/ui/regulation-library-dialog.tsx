@@ -1,5 +1,8 @@
 "use client";
 
+import { SegmentedControl } from "@/shared/ui/segmented-control";
+import { Button as QButton } from "@/shared/ui/button";
+
 import { useEffect, useId, useRef, useState } from "react";
 import { LoaderCircle, X } from "lucide-react";
 import { LibraryError } from "../api/regulation-library-client";
@@ -69,18 +72,18 @@ export function RegulationLibraryDialog({ dialog, onClose, onSave, onReload }: {
     }
   }}>
     <form onSubmit={(event) => { event.preventDefault(); void submit(event.currentTarget); }}>
-      <header className={styles.dialogHeader}><div><small>مكتبة اللوائح</small><h2 id={titleId}>{titleLabel}</h2></div><button type="button" aria-label="إغلاق" disabled={busy} onClick={onClose}><X size={22} /></button></header>
+      <header className={styles.dialogHeader}><div><h2 id={titleId}>{titleLabel}</h2></div><QButton variant="ghost" type="button" aria-label="إغلاق" disabled={busy} onClick={onClose}><X size={22} /></QButton></header>
       <fieldset disabled={busy} className={styles.dialogBody}>
         {dialog.kind === "create" && <p className={styles.hint}>ابدأ بالاسم. ينشئ النظام المرجع ومسودة العمل تلقائيًا، ثم أضف المواد والبنود.</p>}
         {(dialog.kind === "create" || dialog.kind === "identity") && <>
           <label>اسم اللائحة<input required minLength={3} maxLength={300} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="مثل: لائحة الشؤون الأكاديمية" /></label>
-          <details className={styles.advanced}><summary>وصف مختصر · اختياري</summary><div className={styles.field}><label htmlFor={`${titleId}-description`}>الوصف</label><textarea id={`${titleId}-description`} name="description" rows={3} defaultValue={dialog.kind === "identity" ? dialog.policy.description ?? "" : ""} maxLength={4000} /></div></details>
+          <details className={styles.advanced}><summary className="min-h-11 content-center">وصف مختصر · اختياري</summary><div className={styles.field}><label htmlFor={`${titleId}-description`}>الوصف</label><textarea id={`${titleId}-description`} name="description" rows={3} defaultValue={dialog.kind === "identity" ? dialog.policy.description ?? "" : ""} maxLength={4000} /></div></details>
         </>}
         {dialog.kind === "item" && <>
-          <div className={styles.typeSwitch} aria-label="نوع النص"><button type="button" aria-pressed={type === "article"} onClick={() => setType("article")}>مادة</button><button type="button" aria-pressed={type === "clause"} onClick={() => setType("clause")}>بند</button></div>
+          <SegmentedControl label="نوع النص" value={type} onChange={setType} options={[{ value: "article", label: "مادة" }, { value: "clause", label: "بند" }]} />
           <label>عنوان البند<input required minLength={2} maxLength={500} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="مثل: تشكيل مجلس القسم" /></label>
           <div className={styles.field}><label htmlFor={`${titleId}-text`}>النص النظامي</label><textarea id={`${titleId}-text`} required={!["chapter", "section"].includes(type)} value={text} onChange={(event) => setText(event.target.value)} rows={7} maxLength={60000} placeholder="أدخل النص الأصلي كما ورد في اللائحة…" /></div>
-          <details className={styles.advanced}><summary>تنظيم النص وبيانات المصدر · اختياري</summary>
+          <details className={styles.advanced}><summary className="min-h-11 content-center">تنظيم النص وبيانات المصدر · اختياري</summary>
             <label>نوع النص<select value={type} onChange={(event) => setType(event.target.value)}><option value="article">مادة</option><option value="clause">بند</option><option value="chapter">باب تجميعي</option><option value="section">فصل تجميعي</option><option value="procedure">إجراء وارد في اللائحة</option></select></label>
             <label>يندرج تحت<select value={parent} onChange={(event) => setParent(event.target.value)}><option value="">مباشرة تحت اللائحة</option>{dialog.items.filter((item) => !blocked.has(item.id)).map((item) => <option key={item.id} value={item.id}>{item.title_ar}</option>)}</select></label>
             <label>موضع النص في المصدر<input name="source_locator" defaultValue={source?.source_locator ?? ""} maxLength={1000} placeholder="مثل: المادة الخامسة" /></label>
@@ -91,14 +94,14 @@ export function RegulationLibraryDialog({ dialog, onClose, onSave, onReload }: {
         </>}
         {dialog.kind === "confirm" && <><p className={styles.hint}>{dialog.description}</p>{dialog.reason && <div className={styles.field}><label htmlFor={`${titleId}-reason`}>سبب الإعادة</label><textarea id={`${titleId}-reason`} name="reason" required maxLength={4000} rows={3} /></div>}</>}
       </fieldset>
-      {failure && <div role="alert" className={styles.error}>{failure.message}{failure.requestId && <small>مرجع المتابعة: <bdi>{failure.requestId}</bdi></small>}{["40001", "PT409"].includes(failure.code ?? "") && <button type="button" disabled={busy} onClick={async () => {
+      {failure && <div role="alert" className={styles.error}>{failure.message}{failure.requestId && <small>مرجع المتابعة: <bdi>{failure.requestId}</bdi></small>}{["40001", "PT409"].includes(failure.code ?? "") && <QButton variant="ghost" type="button" disabled={busy} onClick={async () => {
         if (lock.current) return;
         lock.current = true; setBusy(true);
         try { await onReload(); setFailure(new LibraryError("تم تحميل التعديل الأحدث. نصك ما زال هنا؛ راجعه قبل إعادة الحفظ.")); }
         catch { setFailure(new LibraryError("تعذر تحميل التعديل الأحدث. لم تتغير مدخلاتك؛ أعد المحاولة.", "40001")); }
         finally { lock.current = false; setBusy(false); }
-      }}>تحميل التعديل الأحدث مع الاحتفاظ بمدخلاتي</button>}</div>}
-      <footer className={styles.dialogFooter}><button type="submit" className={dialog.kind === "confirm" && dialog.destructive ? styles.danger : styles.primary} disabled={busy}>{busy ? <><LoaderCircle size={18} className={styles.spinner} />جارٍ الحفظ…</> : submitLabel}</button><button type="button" className={styles.secondary} disabled={busy} onClick={onClose}>إلغاء</button></footer>
+      }}>تحميل التعديل الأحدث مع الاحتفاظ بمدخلاتي</QButton>}</div>}
+      <footer className={styles.dialogFooter}><QButton variant="ghost" type="submit" className={dialog.kind === "confirm" && dialog.destructive ? styles.danger : styles.primary} disabled={busy}>{busy ? <><LoaderCircle size={18} className={styles.spinner} />جارٍ الحفظ…</> : submitLabel}</QButton><QButton variant="ghost" type="button" className={styles.secondary} disabled={busy} onClick={onClose}>إلغاء</QButton></footer>
     </form>
   </dialog>;
 }

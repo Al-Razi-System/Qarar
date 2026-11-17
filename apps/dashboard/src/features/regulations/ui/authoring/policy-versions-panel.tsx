@@ -1,5 +1,9 @@
 "use client";
 
+import { Card as QCard } from "@/shared/ui/card";
+
+import { Button as QButton } from "@/shared/ui/button";
+
 import { useState } from "react";
 import {
   CheckCircle2,
@@ -100,17 +104,17 @@ export function PolicyVersionsPanel({
   }
 
   return (
-    <section className="rounded-2xl border border-[var(--q-border)] bg-white p-5 shadow-sm sm:p-6">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[#ebf0f5] pb-4">
+    <section className="rounded-q-card border border-q-border bg-q-surface p-5 sm:p-6">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-q-border pb-4">
         <div className="flex items-start gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
+          <span className="grid h-10 w-10 place-items-center rounded-q-control bg-q-surface-2 text-q-primary">
             <GitBranch size={18} />
           </span>
           <div>
-            <h3 className="text-sm font-black text-[#1b3049]">
+            <h3 className="text-q-ui font-bold text-q-text">
               نسخ اللائحة وإصداراتها
             </h3>
-            <p className="mt-1 text-[9px] leading-5 text-[#718398]">
+            <p className="mt-1 text-q-caption leading-5 text-q-text-3">
               الإصدار هو نسخة قانونية محفوظة من اللائحة، وليس مجرد رقم تقني.
             </p>
           </div>
@@ -144,7 +148,7 @@ export function PolicyVersionsPanel({
           tone="green"
         />
       </div>
-      <p className="mt-3 rounded-xl border border-[#d6e7f6] bg-[#f4f9fe] px-4 py-3 text-[9px] leading-6 text-[#416079]">
+      <p className="mt-3 rounded-q-control border border-q-border bg-q-surface px-4 py-3 text-q-caption leading-6 text-q-text-2">
         لا تنشئ إصداراً لكل تعديل صغير. أنشئ إصداراً جديداً فقط عندما تحتاج إلى
         تعديل نسخة سبق اعتمادها أو دخلت حيز النفاذ؛ وبذلك يبقى التاريخ النظامي
         قابلاً للتدقيق.
@@ -158,31 +162,31 @@ export function PolicyVersionsPanel({
             return (
               <article
                 key={version.id}
-                className={`rounded-2xl border p-4 transition ${selected ? "border-[#83bff2] bg-[#f1f8ff] shadow-sm" : "border-[var(--q-border)] bg-white hover:border-[#b8d6ee]"}`}
+                className={`rounded-q-card border p-4 transition ${selected ? "border-q-primary bg-q-surface " : "border-q-border bg-q-surface hover:border-q-primary"}`}
               >
-                <button
+                <QButton variant="ghost"
                   type="button"
                   title="اختيار هذا الإصدار للتحرير والعرض"
                   onClick={() => onSelectVersion(version.id)}
-                  className="w-full text-right"
+                  className="min-w-11 w-full text-right"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-[8px] font-black ${editable ? "bg-amber-100 text-amber-800" : version.legal_status === "effective" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700"}`}
+                        className={`inline-flex rounded-full px-2.5 py-1 text-q-caption font-bold ${editable ? "bg-q-warning-soft text-q-warning" : version.legal_status === "effective" ? "bg-q-success-soft text-q-success" : "bg-q-neutral-soft text-q-text-2"}`}
                       >
                         {statusLabels[version.legal_status] ??
                           version.legal_status}
                       </span>
-                      <h4 className="mt-2 text-sm font-black text-[#20364f]">
+                      <h4 className="mt-2 text-q-ui font-bold text-q-text">
                         {version.version_label ||
                           `الإصدار ${version.version_no}`}
                       </h4>
-                      <p className="mt-1 line-clamp-2 text-[9px] leading-5 text-[#718398]">
+                      <p className="mt-1 line-clamp-2 text-q-caption leading-5 text-q-text-3">
                         {version.change_summary || "لا يوجد ملخص تغييرات مسجل."}
                       </p>
                     </div>
-                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-white text-[var(--q-primary)] shadow-sm">
+                    <span className="grid h-9 w-9 place-items-center rounded-q-control bg-q-surface text-q-primary ">
                       <FileClock size={16} />
                     </span>
                   </div>
@@ -200,9 +204,9 @@ export function PolicyVersionsPanel({
                       value={`${version.readiness_percent ?? version.automation_readiness_pct ?? 0}%`}
                     />
                   </div>
-                </button>
-                <div className="mt-3 flex items-center justify-between border-t border-[#dce8f2] pt-3">
-                  <span className="text-[8px] font-bold text-[#718398]">
+                </QButton>
+                <div className="mt-3 flex items-center justify-between border-t border-q-border pt-3">
+                  <span className="text-q-caption font-bold text-q-text-3">
                     {selected
                       ? "نسخة العمل المعروضة الآن"
                       : version.legal_status === "effective"
@@ -212,15 +216,15 @@ export function PolicyVersionsPanel({
                           : "سجل نظامي للقراءة فقط"}
                   </span>
                   {canDeleteVersion(version) && (
-                    <button
+                    <QButton variant="ghost"
                       type="button"
                       title="حذف هذه المسودة الفارغة نهائياً"
                       aria-label={`حذف الإصدار ${version.version_label || version.version_no}`}
                       onClick={() => setDeleting(version)}
-                      className="grid h-8 w-8 place-items-center rounded-lg text-red-600 hover:bg-red-50"
+                      className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control text-q-danger hover:bg-q-danger-soft"
                     >
                       <Trash2 size={14} />
-                    </button>
+                    </QButton>
                   )}
                 </div>
               </article>
@@ -234,14 +238,14 @@ export function PolicyVersionsPanel({
             title="لا يوجد إصدار بعد"
             description="أنشئ مسودة الإصدار الأول قبل إضافة المواد والنطاقات."
             action={
-              <button
+              <QButton variant="ghost"
                 type="button"
                 title="إنشاء الإصدار الأول"
                 onClick={() => setCreating(true)}
-                className="rounded-xl bg-[var(--q-primary)] px-4 py-2.5 text-[10px] font-black text-white"
+                className="min-w-11 rounded-q-control bg-q-primary px-4 py-2.5 text-q-ui font-bold text-q-on-primary"
               >
                 إنشاء الإصدار الأول
-              </button>
+              </QButton>
             }
           />
         </div>
@@ -300,20 +304,20 @@ export function PolicyVersionsPanel({
           description="هذا الإجراء نهائي ومتاح فقط للمسودة غير المرتبطة بأي محتوى أو نطاق أو مرفق."
           onClose={() => setDeleting(undefined)}
         >
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-[10px] leading-6 text-red-900">
+          <QCard className="p-0 rounded-q-control border border-q-border bg-q-danger-soft p-4 text-q-caption leading-6 text-q-danger">
             سيتم حذف «
             {deleting.version_label || `الإصدار ${deleting.version_no}`}». لن
             تتأثر بقية الإصدارات.
-          </div>
+          </QCard>
           <div className="mt-5 flex justify-end gap-2">
-            <button
+            <QButton variant="ghost"
               type="button"
               title="إلغاء الحذف"
               onClick={() => setDeleting(undefined)}
-              className="h-10 rounded-xl border border-[var(--q-border)] px-4 text-[10px] font-black text-[#52677e]"
+              className="min-w-11 min-h-11 rounded-q-control border border-q-border px-4 text-q-ui font-bold text-q-text-2"
             >
               إلغاء
-            </button>
+            </QButton>
             <PrimaryAction
               busy={busy}
               tone="red"
@@ -342,16 +346,16 @@ function VersionPurpose({
 }) {
   const colors =
     tone === "blue"
-      ? "border-blue-200 bg-blue-50 text-blue-800"
+      ? "border-q-border bg-q-surface-2 text-q-link"
       : tone === "amber"
-        ? "border-amber-200 bg-amber-50 text-amber-800"
-        : "border-emerald-200 bg-emerald-50 text-emerald-800";
+        ? "border-q-border bg-q-warning-soft text-q-warning"
+        : "border-q-border bg-q-success-soft text-q-success";
   return (
-    <div className={`flex items-start gap-2 rounded-xl border p-3 ${colors}`}>
+    <div className={`flex items-start gap-2 rounded-q-control border p-3 ${colors}`}>
       <span className="mt-0.5">{icon}</span>
       <div>
-        <strong className="text-[9px] font-black">{title}</strong>
-        <p className="mt-1 text-[8px] leading-5 opacity-80">{description}</p>
+        <strong className="text-q-caption font-bold">{title}</strong>
+        <p className="mt-1 text-q-caption leading-5 opacity-80">{description}</p>
       </div>
     </div>
   );
@@ -365,9 +369,9 @@ function VersionMetric({
   value: string | number;
 }) {
   return (
-    <div className="rounded-lg bg-white px-2 py-2">
-      <strong className="block text-[11px] text-[#213750]">{value}</strong>
-      <span className="text-[8px] text-[#8191a3]">{label}</span>
+    <div className="rounded-q-control bg-q-surface px-2 py-2">
+      <strong className="block text-q-caption text-q-text">{value}</strong>
+      <span className="text-q-caption text-q-text-3">{label}</span>
     </div>
   );
 }

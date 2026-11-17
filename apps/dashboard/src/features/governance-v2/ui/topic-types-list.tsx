@@ -1,5 +1,7 @@
 "use client";
 
+import { Button as QButton } from "@/shared/ui/button";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CalendarClock, FileText, GitBranch, Paperclip, RotateCw, Search, Tags } from "lucide-react";
@@ -80,23 +82,23 @@ export function TopicTypesList({ onEdit, initialBundleId }: { onEdit?: (detail: 
     <form className={styles.toolbar} onSubmit={event => { event.preventDefault(); setList(null); setPage(1); setQuery(search); setAttempt(value => value + 1); }}>
       <label className={styles.search}><Search size={18}/><input aria-label="البحث عن تصنيف" placeholder="ابحث باسم التصنيف…" value={search} maxLength={300} onChange={event => setSearch(event.target.value)}/></label>
       <select aria-label="حالة التصنيف" value={status} onChange={event => { setList(null); setStatus(event.target.value); setPage(1); }}><option value="">كل الحالات</option>{Object.entries(statuses).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
-      <button type="submit">بحث</button><button type="button" aria-label="تحديث التصنيفات" onClick={reload}><RotateCw size={18}/></button>
+      <QButton variant="ghost" type="submit">بحث</QButton><QButton variant="ghost" type="button" aria-label="تحديث التصنيفات" onClick={reload}><RotateCw size={18}/></QButton>
     </form>
     <div className={styles.columns}>
       <section className={styles.list} aria-label="التصنيفات المحفوظة">
         <header><h2>التصنيفات</h2>{list && <span>{list.total}</span>}</header>
-        {error ? <div role="alert" className={styles.message}>{error}<button type="button" onClick={reload}>إعادة المحاولة</button></div> : !list ? <p role="status" className={styles.message}>جارٍ تحميل التصنيفات…</p> : !list.items.length ? <div className={styles.message}><Tags size={30}/><h3>{query || status ? "لا توجد نتائج مطابقة" : "ابدأ بأول تصنيف"}</h3><p>{query || status ? "غيّر البحث أو الحالة لعرض نتائج أخرى." : "أنشئ تصنيفًا لتحديد مساره ومتطلباته."}</p></div> : <>
-          <div className={styles.rows}>{list.items.map(row => <button key={row.bundle_id} type="button" aria-label={`عرض ${row.name_ar}`} aria-pressed={selected?.bundle_id === row.bundle_id} onClick={() => selectRow(row)}><span className={styles.rowIcon}><FileText size={19}/></span><span><strong>{row.name_ar}</strong><small>{row.classification_name}{row.submitted_topic_count !== undefined ? ` · ${row.submitted_topic_count} موضوع` : ""}</small></span><em>{rowStatus(row)}</em><ArrowLeft size={16}/></button>)}</div>
-          <footer><button type="button" disabled={page <= 1} onClick={() => { setList(null); setPage(value => value - 1); }}><ArrowRight size={16}/>السابق</button><span>صفحة {page}</span><button type="button" disabled={page * 20 >= list.total} onClick={() => { setList(null); setPage(value => value + 1); }}>التالي<ArrowLeft size={16}/></button></footer>
+        {error ? <div role="alert" className={styles.message}>{error}<QButton variant="ghost" type="button" onClick={reload}>إعادة المحاولة</QButton></div> : !list ? <p role="status" className={styles.message}>جارٍ تحميل التصنيفات…</p> : !list.items.length ? <div className={styles.message}><Tags size={30}/><h3>{query || status ? "لا توجد نتائج مطابقة" : "ابدأ بأول تصنيف"}</h3><p>{query || status ? "غيّر البحث أو الحالة لعرض نتائج أخرى." : "أنشئ تصنيفًا لتحديد مساره ومتطلباته."}</p></div> : <>
+          <div className={styles.rows}>{list.items.map(row => <QButton variant="ghost" key={row.bundle_id} type="button" aria-label={`عرض ${row.name_ar}`} aria-pressed={selected?.bundle_id === row.bundle_id} onClick={() => selectRow(row)}><span className={styles.rowIcon}><FileText size={19}/></span><span><strong>{row.name_ar}</strong><small>{row.classification_name}{row.submitted_topic_count !== undefined ? ` · ${row.submitted_topic_count} موضوع` : ""}</small></span><em>{rowStatus(row)}</em><ArrowLeft size={16}/></QButton>)}</div>
+          <footer><QButton variant="ghost" type="button" disabled={page <= 1} onClick={() => { setList(null); setPage(value => value - 1); }}><ArrowRight size={16}/>السابق</QButton><span>صفحة {page}</span><QButton variant="ghost" type="button" disabled={page * 20 >= list.total} onClick={() => { setList(null); setPage(value => value + 1); }}>التالي<ArrowLeft size={16}/></QButton></footer>
         </>}
       </section>
       <section className={styles.detail} aria-label="تفاصيل التصنيف">
         {!selected ? <div className={styles.message}><FileText size={34}/><h2>كل إعدادات التصنيف في مكان واحد</h2><p>اختر تصنيفًا لعرض نطاقه وأسانيده ومتطلبات تقديمه.</p></div> : <>
           <header><div className={styles.detailIdentity}><span className={styles.detailIcon}><Tags size={23}/></span><div><span>{detail?.classification?.name_ar ?? selected.classification_name}</span><h2>{detail?.topic_type?.name_ar ?? selected.name_ar}</h2></div></div><span className={styles.statusBadge}>{detail?.management?.has_effective && !detail.management.is_enabled ? "معطّل للتقديم الجديد" : detail?.bundle?.status ? statuses[detail.bundle.status] ?? "غير متاح" : rowStatus(selected)}</span></header>
-          {detailError ? <div role="alert" className={styles.message}>{detailError}<button type="button" onClick={() => { setDetailError(""); setDetailAttempt(value => value + 1); }}>إعادة المحاولة</button></div> : !detail ? <p role="status" className={styles.message}>جارٍ تحميل التفاصيل…</p> : <>
+          {detailError ? <div role="alert" className={styles.message}>{detailError}<QButton variant="ghost" type="button" onClick={() => { setDetailError(""); setDetailAttempt(value => value + 1); }}>إعادة المحاولة</QButton></div> : !detail ? <p role="status" className={styles.message}>جارٍ تحميل التفاصيل…</p> : <>
             {operationNotice && <p role="status" className={styles.operationNotice}>{operationNotice}</p>}
             <div className={styles.detailControls}>
-              {selected.can_edit && (!detail.bundle?.status || ["draft", "changes_requested"].includes(detail.bundle.status)) && onEdit && <button type="button" className={styles.edit} onClick={() => onEdit(detail)}>تعديل التصنيف</button>}
+              {selected.can_edit && (!detail.bundle?.status || ["draft", "changes_requested"].includes(detail.bundle.status)) && onEdit && <QButton variant="ghost" type="button" className={styles.edit} onClick={() => onEdit(detail)}>تعديل التصنيف</QButton>}
               {detail.management && <TopicTypeActions key={`${detail.bundle.id}:${detail.bundle.lock_version}`} bundleId={detail.bundle.id} lockVersion={detail.bundle.lock_version} actions={detail.management.actions} reasons={detail.management.reasons} onChanged={afterAction}/>}
             </div>
             <dl className={styles.facts}><div><dt>نطاق الإتاحة</dt><dd>{detail.authoring?.scope_kind === "councils" ? "مجالس محددة" : detail.authoring?.scope_kind === "classes" ? "مستويات مجالس محددة" : "حسب بداية المسار"}</dd></div><div><dt>المرفقات المطلوبة</dt><dd>{detail.authoring?.required_attachment_count ? `${detail.authoring.required_attachment_count} على الأقل` : "غير مطلوبة"}</dd></div><div><dt>الدورية</dt><dd>{schedules[detail.schedule?.rule_type ?? "none"] ?? "غير متاح"}</dd></div><div><dt>التقديم</dt><dd>{detail.authoring?.submission_mode === "automatic_agenda" ? "مقترح مجدول لجدول الأعمال" : "طلب من مقدم الموضوع"}</dd></div><div><dt>الموضوعات المقدمة</dt><dd>{detail.submitted_topic_count ?? "تعذر قراءة العدد"}</dd></div></dl>
@@ -107,7 +109,7 @@ export function TopicTypesList({ onEdit, initialBundleId }: { onEdit?: (detail: 
             <TopicInstructions title="تعليمات المناقشة" text={detail.authoring?.discussion_instructions}/>
             <div className={styles.requirementHint}><Paperclip size={17}/><p>{detail.authoring?.required_attachment_count ? "تُرفع المرفقات من تفاصيل الموضوع لاستكمال متطلبات مناقشته." : "يمكن تقديم الموضوع دون مرفقات إلزامية."}</p></div>
             <section className={styles.sources}><h3>الأسانيد المرتبطة</h3>{detail.authorities?.length ? detail.authorities.map((source, index) => <article key={index}>{source.source_document_name && <strong>{source.source_document_name}</strong>}<p>{source.authority_text}</p></article>) : <p>لا توجد أسانيد مرتبطة.</p>}</section>
-            {detail.management?.has_effective && detail.management.is_enabled && <div className={styles.sources}><Link className={styles.edit} href="/admin/topics/new">تقديم موضوع من تصنيف</Link></div>}
+            {detail.management?.has_effective && detail.management.is_enabled && <div className={styles.sources}><Link className={`inline-flex min-h-11 min-w-11 items-center ${styles.edit}`} href="/admin/topics/new">تقديم موضوع من تصنيف</Link></div>}
           </>}
         </>}
       </section>

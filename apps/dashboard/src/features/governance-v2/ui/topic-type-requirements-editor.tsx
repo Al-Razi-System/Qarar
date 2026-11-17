@@ -1,3 +1,4 @@
+import { Button as QButton } from "@/shared/ui/button";
 import { useState } from "react";
 import { InstructionEditor } from "@/shared/ui/instruction-editor";
 import { type NamedOption, type Requirements, type ScopeKind, type ScheduleKind, scheduleNames, seasonText } from "../model/topic-type-requirements";
@@ -34,14 +35,14 @@ export function TopicTypeRequirementsEditor({ value, onChange, sourceItems, load
   }));
   return <div className={styles.requirements}>
     <section className={styles.settingsSection}><h3>أسانيد التصنيف</h3><p>اختر بنود الاختصاص التي يستند إليها هذا النوع. يمكن استخدام البند نفسه لأكثر من تصنيف؛ لن تتغير نصوص اللوائح.</p>
-      {loading ? <p role="status">جارٍ تحميل البنود النافذة…</p> : error ? <div role="alert" className={styles.error}>{error}<button type="button" onClick={onRetry} className={styles.secondary}>إعادة تحميل الخيارات</button></div> : <SelectionList title="بنود الاختصاص النافذة" options={sourceItems} selected={value.sourceItemIds} onChange={ids => update("sourceItemIds", ids)} empty="لا توجد بنود نشطة منشورة. أضف بندًا ونشّطه من اللوائح والبنود؛ يمكنك حفظ التصنيف كمسودة الآن."/>}
+      {loading ? <p role="status">جارٍ تحميل البنود النافذة…</p> : error ? <div role="alert" className={styles.error}>{error}<QButton variant="ghost" type="button" onClick={onRetry} className={styles.secondary}>إعادة تحميل الخيارات</QButton></div> : <SelectionList title="بنود الاختصاص النافذة" options={sourceItems} selected={value.sourceItemIds} onChange={ids => update("sourceItemIds", ids)} empty="لا توجد بنود نشطة منشورة. أضف بندًا ونشّطه من اللوائح والبنود؛ يمكنك حفظ التصنيف كمسودة الآن."/>}
     </section>
     <section className={styles.settingsSection}><h3>متطلبات التقديم</h3>
       <label className={styles.toggle}><input type="checkbox" checked={value.requiredAttachmentCount !== 0} onChange={event => update("requiredAttachmentCount", event.target.checked ? 1 : 0)}/><span><strong>يتطلب مرفقات</strong><small>العدد الأدنى المطلوب لاستكمال الموضوع، وليس حدًا أقصى.</small></span></label>
       {value.requiredAttachmentCount !== 0 && <label className={styles.control}>الحد الأدنى للمرفقات<input type="number" min={1} max={50} value={Number.isNaN(value.requiredAttachmentCount) ? "" : value.requiredAttachmentCount} onChange={event => update("requiredAttachmentCount", event.target.value === "" || Number(event.target.value) === 0 ? Number.NaN : Number(event.target.value))}/></label>}
     </section>
     <details className={styles.settingsSection}>
-      <summary>التعليمات <small>اختياري</small></summary>
+      <summary className="min-h-11 content-center">التعليمات <small>اختياري</small></summary>
       <p>إرشادات تساعد على إعداد الموضوع ومناقشته؛ لا تُضيف شروطًا إلزامية.</p>
       <InstructionEditor label="تعليمات التقديم" value={value.submissionInstructions} onChange={next => update("submissionInstructions", next)} hint="تظهر لمقدم الموضوع عند اختيار هذا التصنيف."/>
       <InstructionEditor label="تعليمات المناقشة" value={value.discussionInstructions} onChange={next => update("discussionInstructions", next)} hint="تظهر للمجلس عند فتح الموضوع في الجلسة الحية."/>
@@ -61,9 +62,9 @@ export function TopicTypeRequirementsEditor({ value, onChange, sourceItems, load
             <label className={styles.control}>شهر نهاية الفترة {index + 1}<input aria-label={`شهر نهاية الفترة الموسمية ${index + 1}`} type="number" min={1} max={12} value={item.toMonth} onChange={event => updateSeasonalDate(index, "toMonth", Number(event.target.value))}/></label>
             <label className={styles.control}>يوم نهاية الفترة {index + 1}<input aria-label={`يوم نهاية الفترة الموسمية ${index + 1}`} type="number" min={1} max={31} value={item.toDay} onChange={event => updateSeasonalDate(index, "toDay", Number(event.target.value))}/></label>
           </div>}
-          {value.seasonalDates.length > 1 && <button type="button" className={styles.secondary} onClick={() => update("seasonalDates", value.seasonalDates.filter((_, itemIndex) => itemIndex !== index))}>حذف الموعد</button>}
+          {value.seasonalDates.length > 1 && <QButton variant="ghost" type="button" className={styles.secondary} onClick={() => update("seasonalDates", value.seasonalDates.filter((_, itemIndex) => itemIndex !== index))}>حذف الموعد</QButton>}
         </div>)}
-        {value.seasonalDates.length < 24 && <button type="button" className={styles.secondary} onClick={() => update("seasonalDates", [...value.seasonalDates, { month: 1, day: 1 }])}>إضافة موعد موسمي</button>}
+        {value.seasonalDates.length < 24 && <QButton variant="ghost" type="button" className={styles.secondary} onClick={() => update("seasonalDates", [...value.seasonalDates, { month: 1, day: 1 }])}>إضافة موعد موسمي</QButton>}
       </div>}
       {(value.scheduleKind === "monthly_week" || value.scheduleKind === "seasonal") && <div className={styles.controlGrid}><label className={styles.control}>بداية الدورية<input type="date" value={value.startsOn} onChange={event => update("startsOn", event.target.value)}/></label><label className={styles.control}>نهاية الدورية <small>اختياري</small><input type="date" min={value.startsOn} value={value.endsOn} onChange={event => update("endsOn", event.target.value)}/></label></div>}
       {value.scheduleKind !== "none" && <p className={styles.settingsHint}>{value.scheduleKind === "monthly_week" ? `كل شهر في الأسبوع ${["الأول", "الثاني", "الثالث", "الرابع"][value.week - 1]}` : value.scheduleKind === "seasonal" ? `كل سنة في ${seasonText(value.seasonalDates)}` : value.date || "حدد التاريخ"}{value.endsOn && value.scheduleKind !== "fixed_date" ? `، حتى ${value.endsOn}` : ""}. يحفظ الموعد دون إنشاء اجتماعات تلقائيًا.</p>}

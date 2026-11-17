@@ -1,5 +1,9 @@
 "use client";
 
+import { Card as QCard } from "@/shared/ui/card";
+
+import { Button as QButton } from "@/shared/ui/button";
+
 import { useEffect, useState } from "react";
 import {
   BookOpenCheck,
@@ -180,22 +184,20 @@ export function PolicyAuthoringWorkspace({
 
   return (
     <section id="policy-authoring" className="space-y-4 scroll-mt-28">
-      <header className="overflow-hidden rounded-3xl border border-[#d9e6f1] bg-white shadow-[0_14px_42px_rgba(20,54,92,.07)]">
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-[linear-gradient(120deg,#0a2c55,var(--q-primary))] px-5 py-5 text-white sm:px-6">
+      <header className="overflow-hidden rounded-q-card border border-q-border bg-q-surface ">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-q-header px-5 py-5 text-q-on-primary sm:px-6">
           <div>
-            <p className="text-[9px] font-black text-[#ffbd86]">
-              مساحة التأليف النظامي
-            </p>
-            <h2 className="mt-1 text-base font-black">
+
+            <h2 className="mt-1 text-q-ui font-bold">
               حرر الإصدار ضمن خطوات واضحة وآمنة
             </h2>
-            <p className="mt-1 max-w-2xl text-[9px] leading-5 text-white/70">
+            <p className="mt-1 max-w-2xl text-q-caption leading-5 text-q-on-primary/70">
               اختر إصدار العمل، ثم ابنِ المحتوى وحدد نطاقه قبل الانتقال إلى
               القواعد والمراجعة.
             </p>
           </div>
           <label className="min-w-56">
-            <span className="mb-1 block text-[8px] font-bold text-white/70">
+            <span className="mb-1 block text-q-caption font-bold text-q-on-primary/70">
               إصدار العمل الحالي
             </span>
             <select
@@ -203,7 +205,7 @@ export function PolicyAuthoringWorkspace({
               title="اختيار الإصدار المستخدم في الهيكل والنطاق"
               value={selectedVersion?.id ?? ""}
               onChange={(event) => setSelectedVersionId(event.target.value)}
-              className="h-10 w-full rounded-xl border border-white/20 bg-white px-3 text-[10px] font-black text-[#1b3551] outline-none"
+              className="min-h-11 w-full rounded-q-control border border-q-surface/20 bg-q-surface px-3 text-q-caption font-bold text-q-text outline-none"
             >
               {policy.versions?.map((version) => (
                 <option key={version.id} value={version.id}>
@@ -225,38 +227,38 @@ export function PolicyAuthoringWorkspace({
             const Icon = item.icon;
             const active = section === item.id;
             return (
-              <button
+              <QButton variant="ghost"
                 key={item.id}
                 role="tab"
                 aria-selected={active}
                 type="button"
                 title={item.hint}
                 onClick={() => selectSection(item.id)}
-                className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-right transition ${active ? "border-[#85c0f2] bg-[#edf7ff] text-[var(--q-primary)]" : "border-[#e2eaf2] bg-white text-[#526980] hover:border-[#b8d7ef]"}`}
+                className={`min-w-11 flex items-center gap-3 rounded-q-control border px-3 py-3 text-right transition ${active ? "border-q-primary bg-q-surface-2 text-q-primary" : "border-q-border bg-q-surface text-q-text-2 hover:border-q-primary"}`}
               >
                 <span
-                  className={`grid h-9 w-9 place-items-center rounded-xl ${active ? "bg-[var(--q-primary)] text-white" : "bg-[#f1f5f9]"}`}
+                  className={`grid h-9 w-9 place-items-center rounded-q-control ${active ? "bg-q-primary text-q-on-primary" : "bg-q-surface-2"}`}
                 >
                   <Icon size={16} />
                 </span>
                 <span>
-                  <strong className="block text-[10px] font-black">
+                  <strong className="block text-q-caption font-bold">
                     {item.label}
                   </strong>
-                  <span className="mt-0.5 block text-[8px] opacity-70">
+                  <span className="mt-0.5 block text-q-caption opacity-70">
                     {item.hint}
                   </span>
                 </span>
-              </button>
+              </QButton>
             );
           })}
         </nav>
-        <div className="grid gap-2 border-t border-[#dce8f2] bg-[#f4f9fe] px-4 py-3 sm:grid-cols-[1fr_auto]">
-          <p className="text-[9px] leading-6 text-[#587087]">
-            <strong className="text-[#174b75]">ماذا تفعل هنا؟ </strong>
+        <div className="grid gap-2 border-t border-q-border bg-q-surface px-4 py-3 sm:grid-cols-[1fr_auto]">
+          <p className="text-q-caption leading-6 text-q-text-2">
+            <strong className="text-q-text-2">ماذا تفعل هنا؟ </strong>
             {selectedSection.guide}
           </p>
-          <span className="rounded-xl border border-[#cfe2f2] bg-white px-3 py-2 text-[8px] font-black text-[#356487]">
+          <span className="rounded-q-control border border-q-border bg-q-surface px-3 py-2 text-q-caption font-bold text-q-text-2">
             {selectedSection.output}
           </span>
         </div>
@@ -266,29 +268,29 @@ export function PolicyAuthoringWorkspace({
         <AuthoringNotice notice={notice} onDismiss={() => setNotice(null)} />
       </div>
       {loadingReferences && (
-        <div
+        <QCard
           role="status"
-          className="flex items-center gap-2 rounded-xl border border-[var(--q-border)] bg-white px-4 py-3 text-[9px] font-bold text-[#60758b]"
+          className="p-0 flex items-center gap-2 rounded-q-control border border-q-border bg-q-surface px-4 py-3 text-q-caption font-bold text-q-text-2"
         >
-          <LoaderCircle size={14} className="animate-spin text-[var(--q-primary)]" />
+          <LoaderCircle size={14} className="animate-spin text-q-primary" />
           جارٍ تحميل المجالس والتصنيفات والخيارات المرجعية...
-        </div>
+        </QCard>
       )}
       {referenceError && (
-        <div
+        <QCard
           role="alert"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[9px] font-bold text-red-800"
+          className="p-0 flex flex-wrap items-center justify-between gap-3 rounded-q-control border border-q-border bg-q-danger-soft px-4 py-3 text-q-caption font-bold text-q-danger"
         >
           <span>{referenceError}</span>
-          <button
+          <QButton variant="ghost"
             type="button"
             title="إعادة تحميل القوائم المرجعية"
             onClick={() => void reloadReferences()}
-            className="inline-flex h-8 items-center gap-1 rounded-lg bg-white px-3 text-red-700 shadow-sm"
+            className="min-w-11 inline-flex min-h-11 items-center gap-1 rounded-q-control bg-q-surface px-3 text-q-danger "
           >
             <RefreshCw size={12} /> إعادة المحاولة
-          </button>
-        </div>
+          </QButton>
+        </QCard>
       )}
 
       <div role="tabpanel">

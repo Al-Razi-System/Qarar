@@ -1,5 +1,9 @@
 "use client";
 
+import { Card as QCard } from "@/shared/ui/card";
+
+import { Button as QButton } from "@/shared/ui/button";
+
 import { useState } from "react";
 import {
   AlertCircle,
@@ -65,7 +69,7 @@ const presets: Array<{
   },
 ];
 const input =
-  "h-10 w-full rounded-xl border border-[var(--q-border)] bg-white px-3 text-[10px] outline-none focus:border-[var(--q-primary)]";
+  "h-10 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-caption outline-none focus:border-q-primary";
 
 async function rpc(contract: string, params: Record<string, unknown>) {
   const response = await fetch("/api/admin/regulations", {
@@ -327,15 +331,15 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
     }
   }
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#d8e4ef] bg-white shadow-sm">
-      <header className="border-b border-[#e7edf4] bg-gradient-to-l from-[#082451] to-[var(--q-primary)] p-5 text-white">
-        <p className="text-[9px] font-black text-orange-200">
+    <section className="overflow-hidden rounded-q-card border border-q-border bg-q-surface ">
+      <header className="border-b border-q-border bg-gradient-to-l from-q-header to-q-primary p-5 text-q-on-primary">
+        <p className="text-q-caption font-bold text-q-warning">
           قواعد مستخرجة من نصوص اللائحة
         </p>
-        <h2 className="mt-1 text-lg font-black">
+        <h2 className="mt-1 text-q-body font-bold">
           إعداد قواعد الاجتماعات والنصاب والتصويت
         </h2>
-        <p className="mt-2 text-[10px] text-blue-100">
+        <p className="mt-2 text-q-caption text-q-link">
           هذه الشاشة لا تنشئ اجتماعاً؛ بل تحول مادة قانونية إلى قيد يتحقق منه
           النظام عند إدارة الاجتماع.
         </p>
@@ -344,7 +348,7 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
         {notice && (
           <div
             role="status"
-            className={`rounded-xl border p-3 text-[10px] font-bold ${notice.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}
+            className={`rounded-q-control border p-3 text-q-caption font-bold ${notice.kind === "success" ? "border-q-border bg-q-success-soft text-q-success" : "border-q-border bg-q-danger-soft text-q-danger"}`}
           >
             {notice.kind === "success" ? (
               <Check className="ml-2 inline" size={14} />
@@ -374,12 +378,12 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
             active={Boolean(item)}
           />
         </div>
-        <section className="rounded-2xl border border-[var(--q-border)] p-4">
-          <h3 className="text-[10px] font-black text-[#223c56]">
+        <section className="rounded-q-card border border-q-border p-4">
+          <h3 className="text-q-caption font-bold text-q-text">
             1. المادة القانونية التي تفرض القاعدة
           </h3>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <label className="text-[9px] font-black text-[#344861]">
+            <label className="text-q-caption font-bold text-q-text-2">
               مسودة الإصدار
               <select
                 title="اختر نسخة العمل التي ستضاف إليها القاعدة"
@@ -397,7 +401,7 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
                 ))}
               </select>
             </label>
-            <label className="text-[9px] font-black text-[#344861]">
+            <label className="text-q-caption font-bold text-q-text-2">
               المادة أو البند
               <select
                 title="اختر النص القانوني المصدر للقاعدة"
@@ -415,43 +419,43 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
             </label>
           </div>
           {!item && (
-            <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-[9px] text-amber-800">
+            <p className="mt-3 rounded-q-control bg-q-warning-soft px-3 py-2 text-q-caption text-q-warning">
               اختر مادة أولاً. لن ينشئ النظام قاعدة بلا مصدر قانوني واضح.
             </p>
           )}
         </section>
-        <section className="rounded-2xl border border-[var(--q-border)] p-4">
-          <h3 className="text-[10px] font-black text-[#223c56]">
+        <section className="rounded-q-card border border-q-border p-4">
+          <h3 className="text-q-caption font-bold text-q-text">
             2. السلوك المطلوب من النظام
           </h3>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {presets.map((entry) => (
-              <button
+              <QButton variant="ghost"
                 type="button"
                 title={`اختيار قاعدة ${entry.title}: ${entry.description}`}
                 aria-pressed={preset === entry.id}
                 key={entry.id}
                 onClick={() => setPreset(entry.id)}
-                className={`rounded-xl border p-3 text-right transition ${preset === entry.id ? "border-[#69adf0] bg-[var(--q-surface-2)] text-[var(--q-primary)] shadow-sm" : "border-[#e1e9f1] text-[#40546b] hover:border-[#b9d7ee]"}`}
+                className={`min-w-11 rounded-q-control border p-3 text-right transition ${preset === entry.id ? "border-q-primary bg-q-surface-2 text-q-primary " : "border-q-border text-q-text-2 hover:border-q-primary"}`}
               >
-                <span className="mb-2 grid h-8 w-8 place-items-center rounded-lg bg-white shadow-sm">
+                <span className="mb-2 grid h-8 w-8 place-items-center rounded-q-control bg-q-surface ">
                   {entry.icon}
                 </span>
-                <strong className="block text-[10px]">{entry.title}</strong>
-                <small className="mt-1 block text-[8px] leading-5 opacity-75">
+                <strong className="block text-q-caption">{entry.title}</strong>
+                <small className="mt-1 block text-q-caption leading-5 opacity-75">
                   {entry.description}
                 </small>
-              </button>
+              </QButton>
             ))}
           </div>
         </section>
-        <section className="rounded-2xl border border-[var(--q-border)] p-4">
-          <h3 className="text-[10px] font-black text-[#223c56]">
+        <section className="rounded-q-card border border-q-border p-4">
+          <h3 className="text-q-caption font-bold text-q-text">
             3. القيمة والنتيجة المتوقعة
           </h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {(preset === "quorum" || preset === "vote") && (
-              <label className="text-[9px] font-bold">
+              <label className="text-q-caption font-bold">
                 النسبة المطلوبة %
                 <input
                   title="النسبة التي يجب بلوغها"
@@ -465,7 +469,7 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
               </label>
             )}
             {preset === "notice" && (
-              <label className="text-[9px] font-bold">
+              <label className="text-q-caption font-bold">
                 مهلة الدعوة بالأيام
                 <input
                   title="الحد الأدنى لعدد الأيام قبل الاجتماع"
@@ -477,16 +481,16 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
                 />
               </label>
             )}
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[9px] leading-6 text-emerald-900 sm:col-span-2">
+            <QCard className="p-0 rounded-q-control border border-q-border bg-q-success-soft p-3 text-q-caption leading-6 text-q-success sm:col-span-2">
               <strong>ما الذي سيفعله النظام؟</strong>
               <p>{presetPreview(preset, threshold, days)}</p>
-            </div>
+            </QCard>
           </div>
-          <details className="mt-3 rounded-xl border border-[#e3eaf1] bg-[#fafcfe] p-3">
-            <summary className="flex cursor-pointer list-none items-center justify-between text-[9px] font-black text-[#536a80]">
+          <details className="mt-3 rounded-q-control border border-q-border bg-q-surface p-3">
+            <summary className="min-h-11 content-center flex cursor-pointer list-none items-center justify-between text-q-caption font-bold text-q-text-2">
               إعداد متقدم: أولوية القاعدة <ChevronDown size={13} />
             </summary>
-            <label className="mt-3 block max-w-xs text-[9px] font-bold">
+            <label className="mt-3 block max-w-xs text-q-caption font-bold">
               الأولوية
               <input
                 title="تستخدم لحسم ترتيب القواعد عند التداخل"
@@ -499,20 +503,20 @@ export function CouncilRulePresets({ policy }: { policy: Policy }) {
             </label>
           </details>
         </section>
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#f7fafc] p-3">
-          <p className="text-[9px] text-[#60758a]">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-q-control bg-q-surface p-3">
+          <p className="text-q-caption text-q-text-2">
             بعد الحفظ ستظهر القاعدة تحت المادة في «ماذا تنفذ المادة؟» ويمكن
             تعديل تفاصيلها المتقدمة هناك.
           </p>
-          <button
+          <QButton variant="ghost"
             type="button"
             title="إنشاء القاعدة وربطها بالمادة المختارة"
             disabled={busy || !item}
             onClick={() => void save()}
-            className="h-10 rounded-xl bg-[var(--q-primary)] px-5 text-[10px] font-black text-white disabled:opacity-50"
+            className="min-w-11 min-h-11 rounded-q-control bg-q-primary px-5 text-q-ui font-bold text-q-on-primary disabled:opacity-50"
           >
             {busy ? "جارٍ إنشاء القاعدة..." : "إنشاء القاعدة وربطها بالمادة"}
-          </button>
+          </QButton>
         </div>
       </div>
     </section>
@@ -532,16 +536,16 @@ function Step({
 }) {
   return (
     <div
-      className={`flex items-start gap-2 rounded-xl border p-3 ${active ? "border-[#acd3f5] bg-[#f1f8ff]" : "border-[#e2e9f0] bg-white"}`}
+      className={`flex items-start gap-2 rounded-q-control border p-3 ${active ? "border-q-primary bg-q-surface" : "border-q-border bg-q-surface"}`}
     >
       <span
-        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[8px] font-black ${active ? "bg-[var(--q-primary)] text-white" : "bg-[#edf2f6] text-[#65798e]"}`}
+        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-q-caption font-bold ${active ? "bg-q-primary text-q-on-primary" : "bg-q-surface-2 text-q-text-2"}`}
       >
         {number}
       </span>
       <div>
-        <strong className="text-[9px] text-[#29445e]">{title}</strong>
-        <p className="mt-1 text-[8px] text-[#74869a]">{text}</p>
+        <strong className="text-q-caption text-q-text">{title}</strong>
+        <p className="mt-1 text-q-caption text-q-text-3">{text}</p>
       </div>
     </div>
   );

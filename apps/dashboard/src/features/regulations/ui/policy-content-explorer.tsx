@@ -1,5 +1,10 @@
 "use client";
 
+import { Card as QCard } from "@/shared/ui/card";
+import { Badge as QBadge } from "@/shared/ui/badge";
+
+import { Button as QButton } from "@/shared/ui/button";
+
 import {
   useDeferredValue,
   useState,
@@ -88,20 +93,20 @@ function Metric({
   tone?: "blue" | "orange" | "green";
 }) {
   const toneClass = {
-    blue: "bg-[var(--q-surface-2)] text-[var(--q-primary)]",
-    orange: "bg-[#fff2e8] text-[#d96712]",
-    green: "bg-emerald-50 text-emerald-700",
+    blue: "bg-q-surface-2 text-q-primary",
+    orange: "bg-q-surface-2 text-q-link",
+    green: "bg-q-success-soft text-q-success",
   }[tone];
   return (
-    <div className="flex min-w-28 items-center gap-2 rounded-xl border border-white/70 bg-white/90 px-3 py-2 shadow-sm backdrop-blur">
-      <span className={`grid h-8 w-8 place-items-center rounded-lg ${toneClass}`}>
+    <QCard className="p-0 flex min-w-28 items-center gap-2 rounded-q-control border border-q-surface/70 bg-q-surface/90 px-3 py-2 backdrop-blur">
+      <span className={`grid h-8 w-8 place-items-center rounded-q-control ${toneClass}`}>
         {icon}
       </span>
       <span>
-        <strong className="block text-sm font-black text-[#10233d]">{value}</strong>
-        <span className="text-[9px] font-bold text-[#76879a]">{label}</span>
+        <strong className="block text-q-ui font-bold text-q-text">{value}</strong>
+        <span className="text-q-caption font-bold text-q-text-3">{label}</span>
       </span>
-    </div>
+    </QCard>
   );
 }
 
@@ -130,10 +135,10 @@ function TreeBranch({
       aria-selected={selected}
     >
       <div
-        className={`group flex items-center gap-1.5 rounded-xl border px-2 py-1.5 transition ${
+        className={`group flex items-center gap-1.5 rounded-q-control border px-2 py-1.5 transition ${
           selected
-            ? "border-[#8dc4f5] bg-[var(--q-surface-2)] shadow-sm"
-            : "border-transparent hover:border-[#e0eaf3] hover:bg-white"
+            ? "border-q-primary bg-q-surface-2 "
+            : "border-transparent hover:border-q-border hover:bg-q-surface"
         }`}
         style={{ marginInlineStart: `${Math.min(depth, 6) * 12}px` }}
       >
@@ -146,7 +151,7 @@ function TreeBranch({
               : "لا توجد عناصر تابعة"
           }
         >
-          <button
+          <QButton variant="ghost"
             type="button"
             disabled={!hasChildren}
             onClick={() => onToggle(node.item.id)}
@@ -157,10 +162,10 @@ function TreeBranch({
                   : `طي ${node.item.title_ar}`
                 : `${node.item.title_ar} بلا عناصر تابعة`
             }
-            className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${
+            className={`min-w-11 grid min-h-11 min-w-11 shrink-0 place-items-center rounded-q-control ${
               hasChildren
-                ? "text-[var(--q-primary)] hover:bg-[#dceeff]"
-                : "text-[#b2bfcc]"
+                ? "text-q-primary hover:bg-q-surface-2"
+                : "text-q-text-3"
             }`}
           >
             {hasChildren ? (
@@ -171,42 +176,42 @@ function TreeBranch({
             ) : (
               <span className="h-1 w-1 rounded-full bg-current" />
             )}
-          </button>
+          </QButton>
         </ActionTooltip>
-        <button
+        <QButton variant="ghost"
           type="button"
           title={`عرض ${typeLabels[node.item.item_type] ?? "العنصر"}`}
           onClick={() => onSelect(node.item.id)}
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-1 text-right"
+          className="min-w-11 flex min-w-0 flex-1 items-center gap-2 rounded-q-control py-1 text-right"
         >
           <span
-            className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${
+            className={`grid h-7 w-7 shrink-0 place-items-center rounded-q-control ${
               selected
-                ? "bg-[var(--q-primary)] text-white"
-                : "bg-[#f0f5fa] text-[#65809d]"
+                ? "bg-q-primary text-q-on-primary"
+                : "bg-q-surface-2 text-q-text-3"
             }`}
           >
             <ItemTypeIcon type={node.item.item_type} size={13} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-1.5">
-              <strong className="truncate text-[10px] text-[#1c3049]">
+            <span className="flex flex-wrap items-center gap-1.5">
+              <strong className="truncate text-q-caption text-q-text">
                 {node.item.title_ar}
               </strong>
               {hasChildren && (
-                <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[8px] font-black text-[#66809b]">
+                <QBadge className="shrink-0 rounded-full bg-q-surface px-1.5 py-0.5 text-q-caption font-bold text-q-text-3">
                   {node.children.length}
-                </span>
+                </QBadge>
               )}
             </span>
-            <span className="mt-0.5 block truncate text-[8px] text-[#8494a6]">
+            <span className="mt-0.5 block truncate text-q-caption text-q-text-3">
               {typeLabels[node.item.item_type] ?? node.item.item_type} · {node.item.item_code}
             </span>
           </span>
-        </button>
+        </QButton>
       </div>
       {hasChildren && !collapsed && (
-        <ul role="group" className="mt-1 space-y-1 border-r border-[#dde7f0] pr-1">
+        <ul role="group" className="mt-1 space-y-1 border-r border-q-border pr-1">
           {node.children.map((child) => (
             <TreeBranch
               key={child.item.id}
@@ -234,28 +239,28 @@ function SearchResult({
   onSelect: () => void;
 }) {
   return (
-    <button
+    <QButton variant="ghost"
       type="button"
       title={`فتح ${entry.item.title_ar}`}
       onClick={onSelect}
-      className={`w-full rounded-xl border p-3 text-right transition ${
+      className={`min-w-11 w-full rounded-q-control border p-3 text-right transition ${
         selected
-          ? "border-[#8dc4f5] bg-[var(--q-surface-2)]"
-          : "border-[#e5edf4] bg-white hover:border-[#a9d1f4]"
+          ? "border-q-primary bg-q-surface-2"
+          : "border-q-border bg-q-surface hover:border-q-primary"
       }`}
     >
       <span className="flex items-center gap-2">
-        <span className="rounded-full bg-[var(--q-surface-2)] px-2 py-0.5 text-[8px] font-black text-[var(--q-primary)]">
+        <QBadge className="rounded-full bg-q-surface-2 px-2 py-0.5 text-q-caption font-bold text-q-primary">
           {typeLabels[entry.item.item_type] ?? entry.item.item_type}
-        </span>
-        <strong className="truncate text-[10px] text-[#1c3049]">
+        </QBadge>
+        <strong className="truncate text-q-caption text-q-text">
           {entry.item.title_ar}
         </strong>
       </span>
-      <span className="mt-1.5 block truncate text-[8px] text-[#8797aa]">
+      <span className="mt-1.5 block truncate text-q-caption text-q-text-3">
         {[...entry.ancestors.map((item) => item.title_ar), entry.item.item_code].join(" / ")}
       </span>
-    </button>
+    </QButton>
   );
 }
 
@@ -353,42 +358,42 @@ export function PolicyContentExplorer({
 
   if (!selectedVersion) {
     return (
-      <section className="grid min-h-[420px] place-items-center rounded-3xl border border-dashed border-[#cbdbea] bg-[var(--q-bg)] p-8 text-center">
+      <section className="grid min-h-[420px] place-items-center rounded-q-card border border-dashed border-q-border bg-q-bg p-8 text-center">
         <div className="max-w-md">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-q-card bg-q-surface-2 text-q-primary">
             <Layers3 size={25} />
           </span>
-          <h2 className="mt-4 text-base font-black text-[#12263f]">لا يوجد إصدار للعرض</h2>
-          <p className="mt-2 text-xs leading-6 text-[#6f8195]">
+          <h2 className="mt-4 text-q-ui font-bold text-q-text">لا يوجد إصدار للعرض</h2>
+          <p className="mt-2 text-q-caption leading-6 text-q-text-3">
             أنشئ إصدار عمل أولاً، ثم أضف الفصول والمواد والبنود داخله.
           </p>
-          <button
+          <QButton variant="ghost"
             type="button"
             title="الانتقال إلى أدوات إنشاء الإصدار"
             onClick={onEditContent}
-            className="mt-5 rounded-xl bg-[var(--q-primary)] px-5 py-2.5 text-[11px] font-black text-white shadow-lg shadow-blue-200"
+            className="min-w-11 mt-5 rounded-q-control bg-q-primary px-5 py-2.5 text-q-ui font-bold text-q-on-primary  "
           >
             إنشاء إصدار العمل
-          </button>
+          </QButton>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-[#d9e6f1] bg-white shadow-[0_16px_50px_rgba(20,54,92,.08)]">
-      <header className="relative overflow-hidden border-b border-[#dbe8f3] bg-[linear-gradient(120deg,#f7fbff_0%,#eef7ff_55%,#fff7ef_100%)] px-4 py-4 sm:px-6">
-        <div className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full border-[34px] border-[var(--q-primary)]/5" />
+    <section className="overflow-hidden rounded-q-card border border-q-border bg-q-surface ">
+      <header className="relative overflow-hidden border-b border-q-border bg-q-surface-2 px-4 py-4 sm:px-6">
+        <div className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full border-[34px] border-q-primary/5" />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div className="max-w-2xl">
-            <div className="flex items-center gap-2 text-[10px] font-black text-[#d96712]">
+            <div className="flex items-center gap-2 text-q-caption font-bold text-q-link">
               <ListTree size={14} />
               مستكشف المحتوى النظامي
             </div>
-            <h2 className="mt-1 text-base font-black text-[#10233d]">
+            <h2 className="mt-1 text-q-ui font-bold text-q-text">
               اقرأ اللائحة كما بُنيت، من الفصل إلى البند
             </h2>
-            <p className="mt-1 text-[10px] leading-5 text-[#657a91]">
+            <p className="mt-1 text-q-caption leading-5 text-q-text-2">
               اختر عنصراً من الشجرة لعرض نصه الرسمي ومصدره وقواعده دون الدخول في وضع التحرير.
             </p>
           </div>
@@ -401,16 +406,16 @@ export function PolicyContentExplorer({
       </header>
 
       <div className="grid min-h-[650px] xl:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="border-b border-[#e0e9f2] bg-[#f7fafd] xl:border-b-0 xl:border-l">
-          <div className="sticky top-0 z-10 space-y-3 border-b border-[#e1eaf2] bg-[#f7fafd]/95 p-3 backdrop-blur">
+        <aside className="border-b border-q-border bg-q-surface xl:border-b-0 xl:border-l">
+          <div className="sticky top-0 z-10 space-y-3 border-b border-q-border bg-q-surface/95 p-3 backdrop-blur">
             <label className="block">
-              <span className="mb-1.5 block text-[9px] font-black text-[#536a83]">الإصدار المعروض</span>
+              <span className="mb-1.5 block text-q-caption font-bold text-q-text-2">الإصدار المعروض</span>
               <select
                 aria-label="اختيار إصدار اللائحة"
                 title="اختر الإصدار الذي تريد قراءة محتواه"
                 value={selectedVersion.id}
                 onChange={(event) => selectVersion(event.target.value)}
-                className="h-10 w-full rounded-xl border border-[#d7e4ef] bg-white px-3 text-[10px] font-bold text-[var(--q-text)] outline-none focus:border-[#6fb2ed]"
+                className="min-h-11 w-full rounded-q-control border border-q-border bg-q-surface px-3 text-q-caption font-bold text-q-text outline-none focus:border-q-primary"
               >
                 {versions.map((version) => (
                   <option key={version.id} value={version.id}>
@@ -421,58 +426,58 @@ export function PolicyContentExplorer({
             </label>
             <div className="flex gap-2">
               <label className="relative min-w-0 flex-1">
-                <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8496aa]" />
+                <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-q-text-3" />
                 <input
                   aria-label="البحث في مواد وبنود اللائحة"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="ابحث بالرمز أو النص..."
-                  className="h-10 w-full rounded-xl border border-[#d7e4ef] bg-white pr-9 pl-9 text-[10px] outline-none focus:border-[#6fb2ed]"
+                  className="min-h-11 w-full rounded-q-control border border-q-border bg-q-surface pr-9 pl-9 text-q-caption outline-none focus:border-q-primary"
                 />
                 {query && (
-                  <button
+                  <QButton variant="ghost"
                     type="button"
                     title="مسح عبارة البحث"
                     aria-label="مسح البحث"
                     onClick={() => setQuery("")}
-                    className="absolute left-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-[#7c8fa4] hover:bg-[#eef4f9]"
+                    className="min-w-11 absolute left-2 top-1/2 grid min-h-11 min-w-11 -translate-y-1/2 place-items-center rounded-q-control text-q-text-3 hover:bg-q-surface-2"
                   >
                     <X size={13} />
-                  </button>
+                  </QButton>
                 )}
               </label>
               <ActionTooltip label="طي الشجرة كاملة أو توسيعها">
-                <button
+                <QButton variant="ghost"
                   type="button"
                   aria-label="طي أو توسيع شجرة المحتوى"
                   onClick={toggleAll}
-                  className="grid h-10 w-10 place-items-center rounded-xl border border-[#d7e4ef] bg-white text-[var(--q-primary)] hover:bg-[var(--q-surface-2)]"
+                  className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control border border-q-border bg-q-surface text-q-primary hover:bg-q-surface-2"
                 >
                   {collapsedIds.size ? <FolderOpen size={16} /> : <Folder size={16} />}
-                </button>
+                </QButton>
               </ActionTooltip>
             </div>
             {deferredQuery && (
-              <p role="status" className="text-[9px] font-bold text-[#6d8095]">
+              <p role="status" className="text-q-caption font-bold text-q-text-3">
                 {results.length} نتيجة مطابقة من أصل {counts.total}
               </p>
             )}
           </div>
           <div className="thin-scrollbar max-h-[660px] overflow-y-auto p-3">
             {!entries.length ? (
-              <div className="rounded-2xl border border-dashed border-[#cad9e7] bg-white p-6 text-center">
-                <FileText className="mx-auto text-[#98abc0]" size={24} />
-                <strong className="mt-3 block text-xs text-[#263b54]">الإصدار بلا محتوى</strong>
-                <p className="mt-1 text-[9px] leading-5 text-[#7b8da1]">أضف فصلاً أو مادة لبدء بناء هيكل اللائحة.</p>
-                <button type="button" title="فتح محرر هيكل اللائحة" onClick={onEditContent} className="mt-3 rounded-lg bg-[var(--q-primary)] px-3 py-2 text-[9px] font-black text-white">إضافة المحتوى</button>
-              </div>
+              <QCard className="p-0 rounded-q-card border border-dashed border-q-border bg-q-surface p-6 text-center">
+                <FileText className="mx-auto text-q-text-3" size={24} />
+                <strong className="mt-3 block text-q-caption text-q-text">الإصدار بلا محتوى</strong>
+                <p className="mt-1 text-q-caption leading-5 text-q-text-3">أضف فصلاً أو مادة لبدء بناء هيكل اللائحة.</p>
+                <QButton variant="ghost" type="button" title="فتح محرر هيكل اللائحة" onClick={onEditContent} className="min-w-11 mt-3 rounded-q-control bg-q-primary px-3 py-2 text-q-ui font-bold text-q-on-primary">إضافة المحتوى</QButton>
+              </QCard>
             ) : deferredQuery ? (
               <div className="space-y-2">
                 {results.map((entry) => (
                   <SearchResult key={entry.item.id} entry={entry} selected={entry.item.id === selectedItem?.id} onSelect={() => selectItem(entry.item.id)} />
                 ))}
                 {!results.length && (
-                  <div className="rounded-2xl bg-white p-6 text-center text-[10px] text-[#75879b]">لم نجد مادة أو بنداً مطابقاً. جرّب كلمة أقصر أو رمز المادة.</div>
+                  <div className="rounded-q-card bg-q-surface p-6 text-center text-q-caption text-q-text-3">لم نجد مادة أو بنداً مطابقاً. جرّب كلمة أقصر أو رمز المادة.</div>
                 )}
               </div>
             ) : (
@@ -485,54 +490,54 @@ export function PolicyContentExplorer({
           </div>
         </aside>
 
-        <main className="min-w-0 bg-white">
+        <main className="min-w-0 bg-q-surface">
           {selectedItem ? (
             <article className="mx-auto max-w-4xl px-4 py-5 sm:px-8 sm:py-7">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e5edf4] pb-4">
-                <nav aria-label="مسار العنصر" className="flex min-w-0 flex-wrap items-center gap-1 text-[9px] text-[#7b8da1]">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-q-border pb-4">
+                <nav aria-label="مسار العنصر" className="flex min-w-0 flex-wrap items-center gap-1 text-q-caption text-q-text-3">
                   {selectedEntry.ancestors.map((ancestor) => (
                     <span key={ancestor.id} className="flex items-center gap-1">
                       <span className="max-w-40 truncate">{ancestor.title_ar}</span>
                       <ChevronLeft size={11} />
                     </span>
                   ))}
-                  <strong className="max-w-52 truncate text-[#31516f]">{selectedItem.title_ar}</strong>
+                  <strong className="max-w-52 truncate text-q-text-2">{selectedItem.title_ar}</strong>
                 </nav>
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <ActionTooltip label={copyState === "copied" ? "تم نسخ الرابط" : copyState === "failed" ? "تعذر النسخ" : "نسخ رابط مباشر لهذا العنصر"}>
-                    <button type="button" aria-label="نسخ رابط مباشر للعنصر" onClick={() => void copyDirectLink()} className="grid h-9 w-9 place-items-center rounded-xl border border-[#dce6ef] text-[#58718b] hover:border-[#9fc9ee] hover:bg-[#f2f8fd] hover:text-[var(--q-primary)]">
+                    <QButton variant="ghost" type="button" aria-label="نسخ رابط مباشر للعنصر" onClick={() => void copyDirectLink()} className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control border border-q-border text-q-text-2 hover:border-q-primary hover:bg-q-surface hover:text-q-primary">
                       {copyState === "copied" ? <Check size={15} /> : <Link2 size={15} />}
-                    </button>
+                    </QButton>
                   </ActionTooltip>
-                  <button type="button" title="فتح أدوات تحرير هيكل ومحتوى الإصدار" onClick={onEditContent} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#b9d8f3] bg-[#f3f9ff] px-3 text-[9px] font-black text-[var(--q-primary)] hover:bg-[#e7f3ff]"><Pencil size={13} /> تحرير المحتوى</button>
-                  <button type="button" title="إدارة القواعد التنفيذية والمسارات المرتبطة" onClick={onManageRules} className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[var(--q-primary)] px-3 text-[9px] font-black text-white shadow-md shadow-blue-100 hover:bg-[var(--q-primary)]"><Gavel size={13} /> القواعد والمسارات</button>
+                  <QButton variant="ghost" type="button" title="فتح أدوات تحرير هيكل ومحتوى الإصدار" onClick={onEditContent} className="min-w-11 inline-flex min-h-11 items-center gap-1.5 rounded-q-control border border-q-primary bg-q-surface px-3 text-q-ui font-bold text-q-primary hover:bg-q-surface-2"><Pencil size={13} /> تحرير المحتوى</QButton>
+                  <QButton variant="ghost" type="button" title="إدارة القواعد التنفيذية والمسارات المرتبطة" onClick={onManageRules} className="min-w-11 inline-flex min-h-11 items-center gap-1.5 rounded-q-control bg-q-primary px-3 text-q-ui font-bold text-q-on-primary   hover:bg-q-primary"><Gavel size={13} /> القواعد والمسارات</QButton>
                 </div>
               </div>
 
               <header className="py-6">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--q-surface-2)] px-3 py-1 text-[9px] font-black text-[var(--q-primary)]"><ItemTypeIcon type={selectedItem.item_type} size={12} />{typeLabels[selectedItem.item_type] ?? selectedItem.item_type}</span>
-                  <code dir="ltr" className="rounded-full bg-[#f2f5f8] px-3 py-1 text-[9px] font-bold text-[#526b84]">{selectedItem.item_code}</code>
-                  <span className={`rounded-full px-3 py-1 text-[9px] font-black ${selectedItem.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{selectedItem.is_active ? "فعال" : "غير فعال"}</span>
-                  {selectedItem.legal_status && <span className="rounded-full bg-[#fff4e9] px-3 py-1 text-[9px] font-black text-[#c85f13]">{legalStatusLabels[selectedItem.legal_status] ?? selectedItem.legal_status}</span>}
+                  <QBadge className="inline-flex items-center gap-1.5 rounded-full bg-q-surface-2 px-3 py-1 text-q-caption font-bold text-q-primary"><ItemTypeIcon type={selectedItem.item_type} size={12} />{typeLabels[selectedItem.item_type] ?? selectedItem.item_type}</QBadge>
+                  <code dir="ltr" className="rounded-full bg-q-surface-2 px-3 py-1 text-q-caption font-bold text-q-text-2">{selectedItem.item_code}</code>
+                  <span className={`rounded-full px-3 py-1 text-q-caption font-bold ${selectedItem.is_active ? "bg-q-success-soft text-q-success" : "bg-q-neutral-soft text-q-text-2"}`}>{selectedItem.is_active ? "فعال" : "غير فعال"}</span>
+                  {selectedItem.legal_status && <QBadge className="rounded-full bg-q-surface-2 px-3 py-1 text-q-caption font-bold text-q-link">{legalStatusLabels[selectedItem.legal_status] ?? selectedItem.legal_status}</QBadge>}
                 </div>
-                <h2 className="mt-4 text-2xl font-black leading-[1.65] text-[#0b1f3a]">{selectedItem.title_ar}</h2>
-                {selectedItem.title_en && <p dir="ltr" className="mt-1 text-left text-xs text-[#8594a5]">{selectedItem.title_en}</p>}
+                <h2 className="mt-4 text-q-h2 font-bold leading-[1.65] text-q-text">{selectedItem.title_ar}</h2>
+                {selectedItem.title_en && <p dir="ltr" className="mt-1 text-left text-q-caption text-q-text-3">{selectedItem.title_en}</p>}
               </header>
 
-              <section aria-labelledby="official-text-title" className="relative overflow-hidden rounded-2xl border border-[#dce8f2] bg-[var(--q-bg)] p-5 sm:p-7">
-                <span className="absolute right-0 top-0 h-full w-1 bg-[linear-gradient(var(--q-primary),#ff7a00)]" />
+              <section aria-labelledby="official-text-title" className="relative overflow-hidden rounded-q-card border border-q-border bg-q-bg p-5 sm:p-7">
+                <span className="absolute right-0 top-0 h-full w-1 bg-q-primary" />
                 <div className="flex items-center gap-2">
-                  <Clipboard size={15} className="text-[var(--q-primary)]" />
-                  <h3 id="official-text-title" className="text-xs font-black text-[#203650]">النص الرسمي</h3>
+                  <Clipboard size={15} className="text-q-primary" />
+                  <h3 id="official-text-title" className="text-q-caption font-bold text-q-text">النص الرسمي</h3>
                 </div>
-                <p className="mt-4 whitespace-pre-wrap text-[13px] leading-9 text-[#263c55]">{selectedItem.official_text || selectedItem.body_text || "لم يُسجل نص رسمي لهذا العنصر بعد."}</p>
+                <p className="mt-4 whitespace-pre-wrap text-q-body leading-9 text-q-text">{selectedItem.official_text || selectedItem.body_text || "لم يُسجل نص رسمي لهذا العنصر بعد."}</p>
               </section>
 
               {selectedItem.interpretation_text && (
-                <section className="mt-4 rounded-2xl border border-[#f2dcc7] bg-[#fffaf5] p-5">
-                  <div className="flex items-center gap-2 text-[#bd5b13]"><Info size={15} /><h3 className="text-xs font-black">التفسير والإرشاد</h3></div>
-                  <p className="mt-3 whitespace-pre-wrap text-[11px] leading-7 text-[#634d3d]">{selectedItem.interpretation_text}</p>
+                <section className="mt-4 rounded-q-card border border-q-border bg-q-surface-2 p-5">
+                  <div className="flex items-center gap-2 text-q-link"><Info size={15} /><h3 className="text-q-caption font-bold">التفسير والإرشاد</h3></div>
+                  <p className="mt-3 whitespace-pre-wrap text-q-caption leading-7 text-q-text-2">{selectedItem.interpretation_text}</p>
                 </section>
               )}
 
@@ -544,20 +549,20 @@ export function PolicyContentExplorer({
               </div>
 
               {selectedItem.amendment_note && (
-                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-[10px] leading-6 text-amber-900"><strong>ملاحظة التعديل:</strong> {selectedItem.amendment_note}</div>
+                <QCard className="p-0 mt-4 rounded-q-control border border-q-border bg-q-warning-soft p-4 text-q-caption leading-6 text-q-warning"><strong>ملاحظة التعديل:</strong> {selectedItem.amendment_note}</QCard>
               )}
 
-              <footer className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-[#e7edf3] pt-4">
-                <p className="text-[9px] text-[#7e8fa2]">العنصر {selectedIndex + 1} من {entries.length} حسب ترتيب الإصدار</p>
+              <footer className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-q-border pt-4">
+                <p className="text-q-caption text-q-text-3">العنصر {selectedIndex + 1} من {entries.length} حسب ترتيب الإصدار</p>
                 <div className="flex gap-2">
-                  <button type="button" title="الانتقال إلى العنصر السابق في ترتيب اللائحة" disabled={selectedIndex <= 0} onClick={() => selectItem(entries[selectedIndex - 1].item.id)} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#dce6ef] px-3 text-[9px] font-black text-[#536b84] hover:bg-[#f5f9fc] disabled:opacity-35"><ChevronRight size={14} /> السابق</button>
-                  <button type="button" title="الانتقال إلى العنصر التالي في ترتيب اللائحة" disabled={selectedIndex < 0 || selectedIndex >= entries.length - 1} onClick={() => selectItem(entries[selectedIndex + 1].item.id)} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#dce6ef] px-3 text-[9px] font-black text-[#536b84] hover:bg-[#f5f9fc] disabled:opacity-35">التالي <ChevronLeft size={14} /></button>
+                  <QButton variant="ghost" type="button" title="الانتقال إلى العنصر السابق في ترتيب اللائحة" disabled={selectedIndex <= 0} onClick={() => selectItem(entries[selectedIndex - 1].item.id)} className="min-w-11 inline-flex min-h-11 items-center gap-1.5 rounded-q-control border border-q-border px-3 text-q-ui font-bold text-q-text-2 hover:bg-q-surface disabled:opacity-35"><ChevronRight size={14} /> السابق</QButton>
+                  <QButton variant="ghost" type="button" title="الانتقال إلى العنصر التالي في ترتيب اللائحة" disabled={selectedIndex < 0 || selectedIndex >= entries.length - 1} onClick={() => selectItem(entries[selectedIndex + 1].item.id)} className="min-w-11 inline-flex min-h-11 items-center gap-1.5 rounded-q-control border border-q-border px-3 text-q-ui font-bold text-q-text-2 hover:bg-q-surface disabled:opacity-35">التالي <ChevronLeft size={14} /></QButton>
                 </div>
               </footer>
             </article>
           ) : (
             <div className="grid min-h-[620px] place-items-center p-8 text-center">
-              <div><FileText className="mx-auto text-[#9eb0c1]" size={28} /><h3 className="mt-3 text-sm font-black text-[#263b54]">اختر عنصراً لقراءة محتواه</h3><p className="mt-1 text-[10px] text-[#7b8da1]">استخدم الشجرة أو البحث للوصول إلى المادة أو البند المطلوب.</p></div>
+              <div><FileText className="mx-auto text-q-text-3" size={28} /><h3 className="mt-3 text-q-ui font-bold text-q-text">اختر عنصراً لقراءة محتواه</h3><p className="mt-1 text-q-caption text-q-text-3">استخدم الشجرة أو البحث للوصول إلى المادة أو البند المطلوب.</p></div>
             </div>
           )}
         </main>
@@ -568,9 +573,9 @@ export function PolicyContentExplorer({
 
 function DetailCard({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
   return (
-    <div className="rounded-xl border border-[#e2eaf2] bg-white p-3 shadow-sm">
-      <span className="flex items-center gap-1.5 text-[8px] font-black text-[#71859b]">{icon}{label}</span>
-      <strong className="mt-2 block break-words text-[10px] leading-5 text-[#253b54]">{value}</strong>
-    </div>
+    <QCard className="p-0 rounded-q-control border border-q-border bg-q-surface p-3 ">
+      <span className="flex items-center gap-1.5 text-q-caption font-bold text-q-text-3">{icon}{label}</span>
+      <strong className="mt-2 block break-words text-q-caption leading-5 text-q-text">{value}</strong>
+    </QCard>
   );
 }

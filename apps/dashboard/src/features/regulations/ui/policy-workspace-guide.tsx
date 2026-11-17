@@ -91,48 +91,48 @@ const ruleSettings = [
 
 export function PolicyWorkspaceGuide() {
   return (
-    <details className="group overflow-hidden rounded-2xl border border-[#cfe0ef] bg-white shadow-sm">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-[#f4f9fe] px-4 py-3 text-[#234762]">
+    <details className="group overflow-hidden rounded-q-card border border-q-border bg-q-surface ">
+      <summary className="min-h-11 content-center flex cursor-pointer list-none items-center justify-between gap-3 bg-q-surface px-4 py-3 text-q-text">
         <span className="flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-xl bg-[var(--q-primary)] text-white">
+          <span className="grid h-8 w-8 place-items-center rounded-q-control bg-q-primary text-q-on-primary">
             <CircleHelp size={16} />
           </span>
           <span>
-            <strong className="block text-[10px] font-black">
+            <strong className="block text-q-caption font-bold">
               شرح جميع التبويبات والإعدادات
             </strong>
-            <small className="mt-0.5 block text-[8px] text-[#6e8295]">
+            <small className="mt-0.5 block text-q-caption text-q-text-3">
               افتح هذا الدليل لمعرفة وظيفة كل قسم والنتيجة التي ينتجها.
             </small>
           </span>
         </span>
         <ChevronDown size={16} className="transition group-open:rotate-180" />
       </summary>
-      <div className="space-y-5 border-t border-[var(--q-border)] p-4">
+      <div className="space-y-5 border-t border-q-border p-4">
         <section>
-          <h3 className="flex items-center gap-2 text-[11px] font-black text-[#1d3851]">
-            <BookOpenCheck size={15} className="text-[var(--q-primary)]" />
+          <h3 className="flex items-center gap-2 text-q-caption font-bold text-q-text">
+            <BookOpenCheck size={15} className="text-q-primary" />
             التبويبات الرئيسية
           </h3>
           <div className="mt-3 grid gap-3 lg:grid-cols-5">
             {areas.map(({ icon: Icon, title, purpose, details, result }) => (
               <article
                 key={title}
-                className="rounded-2xl border border-[var(--q-border)] bg-[var(--q-bg)] p-3"
+                className="rounded-q-card border border-q-border bg-q-bg p-3"
               >
-                <span className="grid h-8 w-8 place-items-center rounded-xl bg-[var(--q-surface-2)] text-[var(--q-primary)]">
+                <span className="grid h-8 w-8 place-items-center rounded-q-control bg-q-surface-2 text-q-primary">
                   <Icon size={15} />
                 </span>
-                <h4 className="mt-2 text-[10px] font-black text-[#213b55]">
+                <h4 className="mt-2 text-q-caption font-bold text-q-text">
                   {title}
                 </h4>
-                <p className="mt-1 text-[8px] font-black text-[#d76717]">
+                <p className="mt-1 text-q-caption font-bold text-q-link">
                   {purpose}
                 </p>
-                <p className="mt-2 text-[8px] leading-5 text-[#687d91]">
+                <p className="mt-2 text-q-caption leading-5 text-q-text-2">
                   {details}
                 </p>
-                <p className="mt-2 border-t border-[#e3ebf2] pt-2 text-[8px] font-bold text-[#376789]">
+                <p className="mt-2 border-t border-q-border pt-2 text-q-caption font-bold text-q-text-2">
                   {result}
                 </p>
               </article>
@@ -143,7 +143,7 @@ export function PolicyWorkspaceGuide() {
           <GuideTable title="إعدادات نطاق التطبيق" rows={scopeSettings} />
           <GuideTable title="إعدادات القواعد والمسارات" rows={ruleSettings} />
         </div>
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[9px] leading-6 text-amber-900">
+        <p className="rounded-q-control border border-q-border bg-q-warning-soft px-4 py-3 text-q-caption leading-6 text-q-warning">
           <strong>الترتيب المقترح:</strong> بيانات اللائحة ← إصدار مسودة ←
           الهيكل والمحتوى ← نطاق التطبيق ← القواعد والمسارات ← قواعد الاجتماعات
           ← فحص الجاهزية ← المراجعة والاعتماد ← النفاذ.
@@ -155,18 +155,18 @@ export function PolicyWorkspaceGuide() {
 
 function GuideTable({ title, rows }: { title: string; rows: string[][] }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--q-border)]">
-      <h3 className="bg-[#f5f9fc] px-4 py-3 text-[10px] font-black text-[#294761]">
+    <section className="overflow-hidden rounded-q-card border border-q-border">
+      <h3 className="bg-q-surface px-4 py-3 text-q-caption font-bold text-q-text-2">
         {title}
       </h3>
-      <dl className="divide-y divide-[#e6edf3]">
+      <dl className="divide-y divide-q-border">
         {rows.map(([term, description]) => (
           <div
             key={term}
             className="grid gap-1 px-4 py-2.5 sm:grid-cols-[130px_1fr]"
           >
-            <dt className="text-[9px] font-black text-[var(--q-primary)]">{term}</dt>
-            <dd className="text-[8px] leading-5 text-[#667c90]">
+            <dt className="text-q-caption font-bold text-q-primary">{term}</dt>
+            <dd className="text-q-caption leading-5 text-q-text-2">
               {description}
             </dd>
           </div>

@@ -10,6 +10,6 @@ export function sourceFileUrl(value: string): string | null {
 export function RegulationSourceFiles({ attachments }: { attachments: PolicyAttachment[] }) {
   return <ul className={styles.sourceFiles}>{attachments.map((attachment) => {
     const href = sourceFileUrl(attachment.file_url);
-    return <li key={attachment.id}>{href ? <a href={href} target="_blank" rel="noopener noreferrer"><ExternalLink aria-hidden size={15} />{attachment.file_name}</a> : <span>{attachment.file_name} · رابط المصدر غير متاح</span>}{attachment.description && <small>{attachment.description}</small>}</li>;
+    return <li key={attachment.id}>{href ? <a className="inline-flex min-h-11 min-w-11 items-center" href={href} target="_blank" rel="noopener noreferrer"><ExternalLink aria-hidden size={15} />{attachment.file_name}</a> : <span>{attachment.file_name} · رابط المصدر غير متاح</span>}{attachment.description && <small>{attachment.description}</small>}</li>;
   })}</ul>;
 }
