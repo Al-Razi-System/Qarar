@@ -2,7 +2,9 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Building2, Plus, Search, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
+import { Button } from "@/shared/ui/button";
+import { PageHeader } from "@/shared/ui/page-header";
 import { councilRpc } from "../api/councils-client";
 import { InlineUnitTypeEditor } from "./inline-unit-type-editor";
 import { UnitStatusDialog } from "./unit-status-dialog";
@@ -95,7 +97,7 @@ export function OrganizationalUnitsWorkspace({ initialData, canManage, canManage
     finally { busy.current = false; setLoading(false); }
   }
   return <div className="space-y-5">
-    <header className="flex flex-wrap items-center justify-between gap-4 rounded-q-card border border-q-border bg-q-surface p-5 sm:p-7"><div><p className="text-q-caption font-bold text-q-accent-text">تجهيز الهيكل التنظيمي</p><h1 className="mt-2 flex items-center gap-2 text-q-h2 font-black text-q-text"><Building2 size={23} />الوحدات التنظيمية</h1><p className="mt-2 max-w-xl text-q-ui leading-7 text-q-text-2">أضف الكليات والأقسام والإدارات، ثم اخترها كنطاق للمجلس. الوحدات التنظيمية ليست مجالس.</p></div>{canManage && <button disabled={loading || (!data.types.length && !canManageTypes)} onClick={() => { setSuccess(""); setCreating(true); }} className="inline-flex min-h-11 items-center gap-2 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary disabled:opacity-50"><Plus size={17} />إضافة وحدة</button>}</header>
+    <PageHeader title="الوحدات التنظيمية" description="أضف الكليات والأقسام والإدارات، ثم اخترها كنطاق للمجلس. الوحدات التنظيمية ليست مجالس." actions={canManage ? <Button disabled={loading || (!data.types.length && !canManageTypes)} onClick={() => { setSuccess(""); setCreating(true); }}><Plus size={18} aria-hidden="true" />إضافة وحدة</Button> : undefined} />
     {success && <p role="status" className="rounded-q-control border border-q-success bg-q-success-soft p-4 text-q-ui text-q-success">{success} <Link href="/admin/councils" className="font-bold underline">الانتقال إلى إنشاء المجلس</Link></p>}
     {error && <p role="alert" className="rounded-q-control border border-q-danger bg-q-danger-soft p-4 text-q-ui text-q-danger">{error}</p>}
     {!data.types.length && <p className="rounded-q-control bg-q-warning-soft p-4 text-q-ui text-q-warning">لا توجد أنواع وحدات تنظيمية نشطة. يلزم تجهيز أنواع الوحدات قبل الإضافة.</p>}

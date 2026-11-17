@@ -98,6 +98,9 @@ const eslintConfig = defineConfig([
       "src/widgets/app-shell/ui/**/*.tsx",
       "src/features/home/ui/**/*.tsx",
       "src/features/performance/ui/**/*.tsx",
+      "src/app/(dashboard)/admin/settings/meeting-types/**/*.tsx",
+      "src/app/(dashboard)/admin/workflows/**/*.tsx",
+      "src/app/(dashboard)/admin/governance-model/loading.tsx",
       "src/app/(dashboard)/admin/performance/**/*.tsx",
       "src/app/(dashboard)/admin/page.tsx",
       // Parallel visual migration batch A.

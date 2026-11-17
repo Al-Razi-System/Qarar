@@ -41,7 +41,7 @@ export function InvitationTimingDialog({ meetingId, expectedUpdatedAt, startTime
   const query = new URLSearchParams({ start, end }).toString();
   const previewUrl = `/api/admin/meetings/${encodeURIComponent(meetingId)}/invitation/image?${query}`;
   const pdfUrl = `/api/admin/meetings/${encodeURIComponent(meetingId)}/invitation/pdf?${query}`;
-  return <div className="fixed inset-0 z-50 grid place-items-center bg-q-text/50 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="invitation-title">
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-q-scrim p-3" role="dialog" aria-modal="true" aria-labelledby="invitation-title">
     <form onSubmit={submit} className="max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-q-card bg-q-surface p-5  sm:p-7">
       <header className="flex items-start justify-between gap-3"><div><h2 id="invitation-title" className="text-q-h2 font-bold text-q-text">موعد الاجتماع والدعوات</h2><p className="mt-2 text-q-ui leading-7 text-q-text-2">حدد الوقت المخطط لعرضه في الدعوة. هذا ليس وقت فتح الجلسة الفعلي.</p></div><Button variant="ghost" type="button" aria-label="إغلاق" disabled={saving} onClick={onClose} className="rounded-q-control p-2 disabled:opacity-50"><X size={20} /></Button></header>
       <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">

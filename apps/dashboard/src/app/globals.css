@@ -64,8 +64,9 @@
   --q-success: #0f7a55;
   --q-success-soft: #e3f5ed;
   --q-on-success: #ffffff;
-  --q-warning: #7a4e00;
-  --q-warning-soft: #fff3d6;
+  /* "Needs attention" wears the logo orange, deepened so text on its soft tint stays legible. */
+  --q-warning: #a34f00;
+  --q-warning-soft: #fff0e0;
   --q-danger: #b3261e;
   --q-danger-soft: #fde8e6;
   --q-on-danger: #ffffff;
@@ -125,8 +126,8 @@
   --q-success: #3ecf98;
   --q-success-soft: #0f2f27;
   --q-on-success: #04261b;
-  --q-warning: #f2c14e;
-  --q-warning-soft: #33290f;
+  --q-warning: #f9a55a;
+  --q-warning-soft: #3a2410;
   --q-danger: #ff7b72;
   --q-danger-soft: #3a1614;
   --q-on-danger: #2a0705;
