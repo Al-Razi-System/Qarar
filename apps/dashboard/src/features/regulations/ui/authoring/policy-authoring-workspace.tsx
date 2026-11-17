@@ -185,19 +185,19 @@ export function PolicyAuthoringWorkspace({
   return (
     <section id="policy-authoring" className="space-y-4 scroll-mt-28">
       <header className="overflow-hidden rounded-q-card border border-q-border bg-q-surface ">
-        <div className="flex flex-wrap items-center justify-between gap-4 bg-q-header px-5 py-5 text-q-on-primary sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-q-rail px-5 py-5 text-q-text sm:px-6">
           <div>
 
             <h2 className="mt-1 text-q-ui font-bold">
               حرر الإصدار ضمن خطوات واضحة وآمنة
             </h2>
-            <p className="mt-1 max-w-2xl text-q-caption leading-5 text-q-on-primary/70">
+            <p className="mt-1 max-w-2xl text-q-caption leading-5 text-q-text-2">
               اختر إصدار العمل، ثم ابنِ المحتوى وحدد نطاقه قبل الانتقال إلى
               القواعد والمراجعة.
             </p>
           </div>
           <label className="min-w-56">
-            <span className="mb-1 block text-q-caption font-bold text-q-on-primary/70">
+            <span className="mb-1 block text-q-caption font-bold text-q-text-2">
               إصدار العمل الحالي
             </span>
             <select
@@ -237,7 +237,7 @@ export function PolicyAuthoringWorkspace({
                 className={`min-w-11 flex items-center gap-3 rounded-q-control border px-3 py-3 text-right transition ${active ? "border-q-primary bg-q-surface-2 text-q-primary" : "border-q-border bg-q-surface text-q-text-2 hover:border-q-primary"}`}
               >
                 <span
-                  className={`grid h-9 w-9 place-items-center rounded-q-control ${active ? "bg-q-primary text-q-on-primary" : "bg-q-surface-2"}`}
+                  className={`grid h-9 w-9 place-items-center rounded-q-control ${active ? "bg-q-primary text-q-text" : "bg-q-surface-2"}`}
                 >
                   <Icon size={16} />
                 </span>

@@ -12,7 +12,7 @@ export function GovernancePageHeader({ current, title, description, actions, id 
   current: typeof pages[number]["key"]; title: string; description: string; actions?: ReactNode; id?: string;
 }) {
   return <header className={styles.header}>
-    <div className={styles.heading}><div><span className={styles.eyebrow}>إعداد الحوكمة</span><h1 id={id}>{title}</h1><p>{description}</p></div>{actions && <div className={styles.actions}>{actions}</div>}</div>
+    <div className={styles.heading}><div><h1 id={id}>{title}</h1><p>{description}</p></div>{actions && <div className={styles.actions}>{actions}</div>}</div>
     <nav aria-label="إعدادات الحوكمة" className={styles.tabs}>{pages.map(page => <Link key={page.key} href={page.href} aria-current={page.key === current ? "page" : undefined}>{page.label}</Link>)}</nav>
   </header>;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/shared/ui/confirm-dialog";
 import { Card as QCard } from "@/shared/ui/card";
 import { Badge as QBadge } from "@/shared/ui/badge";
 
@@ -161,7 +162,7 @@ function Modal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-q-header/55 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-q-scrim p-4"
       onMouseDown={onClose}
     >
       <section
@@ -195,6 +196,7 @@ export function PolicyManagementWorkspace({
   policy: Policy;
   onPolicyChange: (policy: Policy) => void;
 }) {
+  const [confirm, confirmDialog] = useConfirm();
   const [selectedVersionId, setSelectedVersionId] = useState(
     policy.versions?.[0]?.id ?? "",
   );
@@ -424,9 +426,7 @@ export function PolicyManagementWorkspace({
   async function removeEmptyVersion() {
     if (!selectedVersion) return;
     if (
-      !window.confirm(
-        "سيُحذف الإصدار المسودة الفارغ نهائيًا. هل تريد المتابعة؟",
-      )
+      !(await confirm("سيُحذف الإصدار المسودة الفارغ نهائيًا. هل تريد المتابعة؟", { confirmLabel: "احذف الإصدار", danger: true }))
     )
       return;
     await run(
@@ -763,7 +763,7 @@ export function PolicyManagementWorkspace({
     params: Record<string, unknown>,
     success: string,
   ) {
-    if (!window.confirm("هل أنت متأكد من الحذف؟")) return;
+    if (!(await confirm("هل أنت متأكد من الحذف؟ لا يمكن التراجع عنه.", { confirmLabel: "احذف", danger: true }))) return;
     await run(() => rpc(contract, params), success);
   }
 
@@ -1000,7 +1000,7 @@ export function PolicyManagementWorkspace({
                 setSelectedVersionId(version.id);
                 void openStage("legal");
               }}
-              className={`min-w-11 shrink-0 rounded-q-control px-3 py-2 text-q-ui font-bold ${selectedVersion?.id === version.id ? "bg-q-header text-q-on-primary" : "bg-q-surface-2 text-q-text-2"}`}
+              className={`min-w-11 shrink-0 rounded-q-control px-3 py-2 text-q-ui font-bold ${selectedVersion?.id === version.id ? "bg-q-primary text-q-on-primary" : "bg-q-surface-2 text-q-text-2"}`}
             >
               v{version.version_label || version.version_no} ·{" "}
               {legalLabels[version.legal_status] ?? version.legal_status}
@@ -1169,7 +1169,7 @@ export function PolicyManagementWorkspace({
                   <QButton type="submit" variant="ghost"
                     disabled={busy}
                     onClick={() => void saveLegalVersionMetadata()}
-                    className="min-w-11 min-h-11 rounded-q-control bg-q-header px-4 text-q-ui font-bold text-q-on-primary disabled:opacity-50"
+                    className="min-w-11 min-h-11 rounded-q-control bg-q-primary px-4 text-q-ui font-bold text-q-on-primary hover:bg-q-primary-hover disabled:opacity-50"
                   >
                     حفظ بيانات الإصدار
                   </QButton>
@@ -2303,6 +2303,7 @@ export function PolicyManagementWorkspace({
           />
         </Modal>
       )}
+      {confirmDialog}
     </section>
   );
 }

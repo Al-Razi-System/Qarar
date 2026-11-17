@@ -68,7 +68,7 @@ const eslintConfig = defineConfig([
       "src/app/(dashboard)/admin/meetings/[meetingId]/page.tsx",
       "src/app/(dashboard)/admin/meetings/page.tsx",
       "src/app/(dashboard)/meetings/check-in/page.tsx",
-      "src/features/governance-v2/**/*.tsx", "src/features/regulations/**/!(route-designer|policy-management-workspace).tsx", "src/app/(dashboard)/admin/{regulations,workflows,governance-model,settings}/**/*.tsx",
+      "src/features/governance-v2/**/*.tsx", "src/features/regulations/**/*.tsx", "src/app/(dashboard)/admin/{regulations,workflows,governance-model,settings}/**/*.tsx",
       "src/shared/ui/**/*.tsx",
       "src/features/permissions/ui/permission-matrix.tsx",
       "src/app/(dashboard)/admin/permissions/**/*.tsx",
@@ -116,7 +116,6 @@ const eslintConfig = defineConfig([
     ],
     ignores: [
       "src/shared/ui/form-field.tsx",
-      "src/shared/ui/governance-page-header.tsx",
       "src/shared/ui/instruction-editor.tsx",
       "src/**/*.test.tsx",
     ],

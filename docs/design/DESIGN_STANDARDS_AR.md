@@ -103,6 +103,7 @@
 | `MetricStrip` | `metric-strip.tsx` | مؤشرات في شريط واحد، لكل مؤشر خط يقارنه بالمستهدف. بديل بطاقات الأرقام المتشابهة |
 | `ShareBar` | `share-bar.tsx` | توزيع مجموع على أجزائه: شريط واحد، وكل جزء مكتوب باسمه وعدده |
 | `StepTrack` | `step-track.tsx` | تقدّم موضوع في مساره: قطعة لكل مرحلة، والحالية برتقالية إن كانت متوقفة |
+| `useConfirm` | `confirm-dialog.tsx` | تأكيد داخل الصفحة بدل `window.confirm`: `await confirm(نص، {confirmLabel, danger})` |
 | `MemberSeat` | `member-seat.tsx` | عضو حول طاولة المجلس. لا يكشف اتجاه الصوت |
 
 تُعرض كلها بالوضعين في Storybook تحت «المعايير/المكونات الأساسية». مكوّن ناقص يُضاف

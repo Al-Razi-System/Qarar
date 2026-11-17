@@ -492,7 +492,7 @@ function Dialog({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-q-header/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-q-scrim p-4"
       onMouseDown={onClose}
     >
       <section

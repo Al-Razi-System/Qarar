@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/shared/ui/confirm-dialog";
 import { Button as QButton } from "@/shared/ui/button";
 
 import { useRef, useState, useSyncExternalStore } from "react";
@@ -14,6 +15,7 @@ const clientReady = () => true;
 const serverReady = () => false;
 
 export function RouteDesigner({ initialData }: { initialData: RouteInventory }) {
+  const [confirm, confirmDialog] = useConfirm();
   const ready = useSyncExternalStore(subscribeReady, clientReady, serverReady);
   const [data, setData] = useState(initialData);
   const [selected, setSelected] = useState<RouteRecord | null>(null);
@@ -31,8 +33,8 @@ export function RouteDesigner({ initialData }: { initialData: RouteInventory }) 
   const errors = spec ? routeErrors(spec, data) : [];
   const activationReason = !selected ? "احفظ المسودة أولًا." : dirty ? "احفظ تعديلاتك قبل التنشيط." : selected.version_status !== "draft" ? "المسار الحالي متاح بالفعل." : selected.validation_errors.length ? "أكمل ملاحظات التحقق الموضحة أدناه." : "";
 
-  function choose(record: RouteRecord | null) {
-    if (busy || (dirty && !window.confirm("لديك تعديلات غير محفوظة. هل تريد تركها؟"))) return;
+  async function choose(record: RouteRecord | null) {
+    if (busy || (dirty && !(await confirm("لديك تعديلات غير محفوظة. هل تريد تركها؟", { confirmLabel: "اترك التعديلات" })))) return;
     setSelected(record);
     setSpec(record?.payload ? structuredClone(record.payload) : record ? null : blankRoute());
     setAutomaticName(!record);
@@ -78,7 +80,7 @@ export function RouteDesigner({ initialData }: { initialData: RouteInventory }) 
     } finally { lock.current = false; setBusy(false); }
   }
   async function reload() {
-    if (lock.current || (dirty && !window.confirm("ستُستبدل تعديلاتك بآخر نسخة محفوظة. هل تريد المتابعة؟"))) return;
+    if (lock.current || (dirty && !(await confirm("ستُستبدل تعديلاتك بآخر نسخة محفوظة. هل تريد المتابعة؟", { confirmLabel: "استبدل تعديلاتي" })))) return;
     lock.current = true; setBusy(true);
     try {
       const result = verifyRouteInventory(await libraryRpc<RouteInventory>("admin_get_route_layouts_v2", {}));
@@ -137,5 +139,6 @@ export function RouteDesigner({ initialData }: { initialData: RouteInventory }) 
         {message && <div role={failure ? "alert" : "status"} className={failure ? styles.error : styles.success}>{message}{conflict && <QButton variant="ghost" type="button" disabled={busy} onClick={() => void reload()}>تحميل النسخة الأحدث</QButton>}</div>}
       </section>
     </div>
+    {confirmDialog}
   </main>;
 }

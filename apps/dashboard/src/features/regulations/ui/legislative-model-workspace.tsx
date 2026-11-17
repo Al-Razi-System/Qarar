@@ -586,17 +586,14 @@ export function LegislativeModelWorkspace({
         id="legislative-model"
         className="overflow-hidden rounded-q-card border border-q-border bg-q-surface "
       >
-        <header className="border-b border-q-border bg-q-header px-5 py-5 text-q-on-primary">
+        <header className="border-b border-q-rail-border bg-q-rail px-5 py-5 text-q-text">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-q-caption font-bold text-q-on-header">
-                العقل التشريعي والحوكمي
-              </p>
               <h2 className="mt-1 flex items-center gap-2 text-q-body font-bold">
                 <Scale size={20} />
                 النموذج التشريعي التنفيذي
               </h2>
-              <p className="mt-2 max-w-3xl text-q-caption leading-5 text-q-on-header">
+              <p className="mt-2 max-w-3xl text-q-caption leading-5 text-q-text-2">
                 افصل النص الرسمي عن تفسيره الرقمي، وحدد الشروط والمتطلبات
                 والجهات والنتائج والمسارات مع إمكانية التتبع والمقارنة.
               </p>
@@ -604,7 +601,7 @@ export function LegislativeModelWorkspace({
             <div className="flex items-center gap-2">
               <select
                 aria-label="الإصدار التشريعي"
-                className="h-11 rounded-q-control border border-q-surface/20 bg-q-surface/10 px-3 text-q-ui font-bold text-q-on-primary outline-none"
+                className="h-11 rounded-q-control border border-q-border bg-q-surface px-3 text-q-ui font-bold text-q-text outline-none"
                 value={versionId}
                 onChange={(event) => {
                   setVersionId(event.target.value);
@@ -629,7 +626,7 @@ export function LegislativeModelWorkspace({
               <QButton type="submit" variant="ghost"
                 onClick={() => void loadModel()}
                 aria-label="تحديث النموذج"
-                className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control border border-q-surface/20 bg-q-surface/10"
+                className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control border border-q-border bg-q-surface"
               >
                 <RefreshCw size={14} className={busy ? "animate-spin" : ""} />
               </QButton>
@@ -1689,7 +1686,7 @@ export function LegislativeModelWorkspace({
       </section>
       {ruleDrawerOpen && selectedItem && selectedItemCanHaveRules && (
         <div
-          className="fixed inset-0 z-50 bg-q-header/45 backdrop-blur-sm"
+          className="fixed inset-0 z-50 bg-q-scrim"
           role="dialog"
           aria-modal="true"
           aria-label="إدارة قواعد المادة"
@@ -1698,22 +1695,19 @@ export function LegislativeModelWorkspace({
             className="ml-auto flex h-full w-full max-w-xl flex-col overflow-hidden bg-q-surface shadow-2xl"
             dir="rtl"
           >
-            <header className="flex items-start justify-between gap-4 border-b border-q-border bg-q-header px-5 py-5 text-q-on-primary">
+            <header className="flex items-start justify-between gap-4 border-b border-q-rail-border bg-q-rail px-5 py-5 text-q-text">
               <div>
-                <p className="text-q-caption font-bold text-q-on-header">
-                  إدارة تشريعية
-                </p>
                 <h3 className="mt-1 text-q-ui font-bold">
                   قواعد المادة: {selectedItem.title_ar}
                 </h3>
-                <p className="mt-1 text-q-caption text-q-on-primary/75">
+                <p className="mt-1 text-q-caption text-q-text-2">
                   يمكن للمادة الواحدة أن تحتوي عدة قواعد مستقلة، لكل منها شروط
                   ومتطلبات وصلاحيات ونتائج.
                 </p>
               </div>
               <QButton type="submit" variant="ghost"
                 onClick={() => setRuleDrawerOpen(false)}
-                className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control border border-q-surface/20 bg-q-surface/10 text-q-body"
+                className="min-w-11 grid min-h-11 min-w-11 place-items-center rounded-q-control border border-q-border bg-q-surface text-q-body"
                 aria-label="إغلاق لوحة قواعد المادة"
               >
                 ×
